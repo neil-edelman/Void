@@ -5,7 +5,7 @@ Version 3.2.
 
 Usage: Void
 
-To win, blow up everything that's not you.
+To win, blow up everything.
 
 Player controls: left, right, up, down, space
 Window controls: F1 fullscreen

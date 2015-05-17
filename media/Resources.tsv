@@ -1,0 +1,5 @@
+# resource, ...; indexes are handled in programme
+type_of_object	string	bmp
+objects_in_space	autoincrement	type_of_object	vec2f
+ship_class	string	bmp	int	int
+alignment	string	alignment	alignment

@@ -1,0 +1,6 @@
+Stuff to make it work in Unix, thanks to Jesse McKeown
+------------------------------------------------------
+
+FILES = Glew $(FILES)
+CF = $(CF)  -DGLEW
+OF = -lglut -lGLEW

@@ -1,5 +1,4 @@
 build up asteroids from smaller chunks; hit them and calculate new chunks
 random background
 How to make bsp, kd, ect trees do collision detection - InsertionSort
-shadows
 fog

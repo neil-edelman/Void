@@ -1,0 +1,20 @@
+struct ArrayList;
+
+struct ArrayList *ArrayList(const int width);
+void ArrayList_(struct ArrayList **al_ptr);
+int ArrayListAdd(struct ArrayList *al, void *e);
+int ArrayListIndexAdd(struct ArrayList *al, const int index, void *const e);
+int ArrayListAddAll(struct ArrayList *al, const struct ArrayList *c);
+int ArrayListIndexAddAll(struct ArrayList *al, const int index, const struct ArrayList *c);
+void ArrayListClear(struct ArrayList *al);
+int ArrayListEnsureCapacity(struct ArrayList *al, const int min_capacity);
+void ArrayListForEach(const struct ArrayList *al, void (* const action)(void *));
+void *ArrayListGet(const struct ArrayList *al, const int index);
+int ArrayListIsEmpty(const struct ArrayList *al);
+void *ArrayListRemove(struct ArrayList *al, const int index);
+int ArrayListObjectRemove(struct ArrayList *al, const void *o);
+int ArrayListRemoveIf(struct ArrayList *al, int (* const filter)(void *), void  (* const remove)(void *));
+void *ArrayListSet(struct ArrayList *al, const int index, void *const element);
+int ArrayListSize(const struct ArrayList *al);
+void ArrayListSort(const struct ArrayList *al, int (* const c)(const void *, const void *));
+void ArrayListTrimToSize(struct ArrayList *al);

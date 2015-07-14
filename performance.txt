@@ -1,0 +1,35 @@
+66 sprites, old thing
+28%
+
+20 ms
+101 sprites
+38%
+1001 sprites
+62%
+w/o background
+53% <- fixme: use more than painters'
+w/o glBindBuffer every time
+58%
+with blBindBuffer on demand
+59%
+with not position buffer
+59%
+
+with collision detection, 101 sprites
+29% (?)
+1001 sprites
+96% (?)
+
+101 sprites, 100 collisions
+29%
+301 sprites, 100 collisions
+59%
+101 sprites, 300 collisions
+29%
+151 sprites, 300 collisions
+40%
+
+65 sprites (with cd)
+18%
+151 sprites (72)
+22%

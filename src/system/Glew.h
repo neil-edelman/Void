@@ -19,4 +19,5 @@
 
 #endif
 
-int OpenGlew(void);
+int Glew(void);
+void GlewGo(void);

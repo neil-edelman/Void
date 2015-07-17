@@ -84,7 +84,7 @@ static int collision(const float a_x, const float a_y,
 	dist_x = ca_x + vu_x * t;
 	dist_y = ca_y + vu_y * t;
 	dist_2 = dist_x * dist_x + dist_y * dist_y;
-	dist   = sqrt(dist_2); /* just for show */
+	dist   = sqrtf(dist_2); /* just for show */
 
 	*d_ptr = dist;
 
@@ -94,7 +94,7 @@ static int collision(const float a_x, const float a_y,
 	ca_2  = ca_x * ca_x + ca_y * ca_y;
 	det   = (ca_vu * ca_vu - vu_2 * (ca_2 - r * r));
 
-	t = (det <= 0.0f) ? 0.0f : (-ca_vu - sqrt(det)) / vu_2;
+	t = (det <= 0.0f) ? 0.0f : (-ca_vu - sqrtf(det)) / vu_2;
 	if(t < 0.0f) t = 0.0f; /* it can not be > 1 because dist < r^2 */
 
 	*t0_ptr = t;
@@ -126,7 +126,7 @@ static void test(FILE *data, FILE *gnu) {
 		q_y = c_y + (d_y - c_y) * t;
 		dist_x = q_x - p_x;
 		dist_y = q_y - p_y;
-		dist   = sqrt(dist_x * dist_x + dist_y * dist_y);
+		dist   = sqrtf(dist_x * dist_x + dist_y * dist_y);
 		fprintf(data, "%f\t%f\t%f\t%f\t%f\t%f\n", t, dist, p_x, p_y, q_x, q_y);
 	}
 

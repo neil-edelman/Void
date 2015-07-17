@@ -1,9 +1,6 @@
 /* Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
  General Public License, see copying.txt */
 
-#define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
-#define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
-
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
 #include <math.h>   /* cis */
@@ -14,6 +11,15 @@
 #include "../game/Light.h"
 #include "Draw.h"
 #include "Window.h"
+
+#define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
+#define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
+#ifndef M_SQRT1_2 /* for MSVC */
+#define M_SQRT1_2 0.70710678118654752440084436210484903928483593768847403658833986899536623923105351942519376716382078636750692311545614851
+#endif
+#ifdef C89_FMINF /* for MSVC2010 */
+#define fminf(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 /* hard coded resouce files; there should be the directory tools/ where you can
  compile utilities that can make these files; run "make" and this should be
@@ -386,6 +392,9 @@ static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attri
 		return 0;
 	}
 
+	/* immediately use the shader; we probably want to set some uniforms */
+	glUseProgram(shader);
+
 	/* catch any errors */
 	WindowIsGlError("shader");
 
@@ -453,7 +462,7 @@ static int light_compute_texture(void) {
 	float buffer[64][64][2];
 	const int buffer_ysize = sizeof(buffer)  / sizeof(*buffer);
 	const int buffer_xsize = sizeof(*buffer) / sizeof(**buffer);
-	const float buffer_norm = M_SQRT1_2 * 4.0f / sqrtf(buffer_xsize * buffer_xsize + buffer_ysize * buffer_ysize);
+	const float buffer_norm = (float)M_SQRT1_2 * 4.0f / sqrtf((float)buffer_xsize * buffer_xsize + buffer_ysize * buffer_ysize);
 	int name;
 
 	for(j = 0; j < buffer_ysize; j++) {
@@ -463,7 +472,7 @@ static int light_compute_texture(void) {
 			buffer[j][i][0] = fminf(sqrtf(x*x + y*y) * buffer_norm, 1.0f);
 			/* NOTE: opengl clips [0, 1), even if it says different;
 			 maybe it's GL_LINEAR? */
-			buffer[j][i][1] = fmodf(atan2f(y, x) + M_2PI, M_2PI) * (float)M_1_2PI;
+			buffer[j][i][1] = fmodf(atan2f(y, x) + (float)M_2PI, (float)M_2PI) * (float)M_1_2PI;
 		}
 	}
 	glGenTextures(1, (unsigned *)&name);
@@ -537,7 +546,7 @@ static void display(void) {
 			glBindTexture(GL_TEXTURE_2D, texture);
 			old_texture = texture;
 		}
-		glUniform1f(light_size_location, size);
+		glUniform1f(light_size_location, (float)size);
 		glUniform1f(light_angle_location, t);
 		glUniform2f(light_position_location, x, y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);

@@ -6,7 +6,8 @@
  add include directories eg ...\glew-1.9.0\include */
 #include <GL/glew.h>
 
-#define GLUT_DISABLE_ATEXIT_HACK /* I don't exactly know what this does */
+/* I don't exactly know what this does, but it seems to do nothing */
+#define GLUT_DISABLE_ATEXIT_HACK
 #define FREEGLUT_STATIC          /* (of course) */
 /* http://freeglut.sourceforge.net/
  add include directories eg ...\freeglut-2.8.1\include */

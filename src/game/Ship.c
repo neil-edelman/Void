@@ -14,7 +14,10 @@
 #include "../System/Timer.h"
 #include "../System/Key.h"
 
-#define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
+#define M_2PI 6.28318530717958647692528676655900576839433879875021164194988918461563281257241799725606965068423413596429617302656461329
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
+#endif
 
 /* Ship has license and is controlled by a player or an ai. Would be nice if
  Ship could inherit from Sprite (or actually from Debris which inherits from
@@ -24,7 +27,7 @@
  @version	3.2, 2015-06
  @since		3.2, 2015-06 */
 
-static const float epsilon = 0.001;
+static const float epsilon = 0.001f;
 
 /* ships */
 
@@ -45,7 +48,7 @@ const static float shot_recharge_ms = 500.0f;
 const static float ai_turn        = 0.2f;     /* rad/ms */
 const static float ai_too_close   = 3200.0f;  /* pixel^(1/2) */
 const static float ai_too_far     = 32000.0f; /* pixel^(1/2) */
-const static float ai_speed       = 15.0f;    /* pixel^2 / ms */
+const static int   ai_speed       = 15;       /* pixel^2 / ms */
 const static float ai_turn_sloppy = 0.4f;     /* rad */
 const static float ai_turn_constant = 10.0f;
 
@@ -240,17 +243,32 @@ void ShipUpdate(const float dt_s) {
 
 /** Called from {@code Game::update}. */
 void ShipShoot(struct Ship *ship, const int colour) {
-	const float time_ms = TimerLastTime();
+	const int time_ms = TimerLastTime();
 	if(!ship || time_ms < ship->recharge_wmd) return;
 	Wmd(ship->sprite, colour);
 	ship->recharge_wmd = time_ms + shot_recharge_ms;
+}
+
+/** Called from {@code Sprite::update} via shp_wmd.
+ @return	True if the ship should survive. */
+int ShipHit(struct Ship *ship, const int damage) {
+	if(!ship) return 0;
+	if(ship->hit > damage) {
+		ship->hit -= damage;
+		fprintf(stderr, "Shit::hit: Shp%u hit %d, now %d.\n", ShipGetId(ship), damage, ship->hit);
+		return -1;
+	} else {
+		ship->hit = 0;
+		fprintf(stderr, "Ship::hit: Shp%u destroyed.\n", ShipGetId(ship));
+		return 0;
+	}
 }
 
 /* private */
 
 /** Called from {@code Ship::update} (viz, not; nonsense bug.) */
 static void fire(struct Ship *ship, const int colour) { /* get s */
-	const float time_ms = TimerLastTime();
+	const int time_ms = TimerLastTime();
 	if(!ship || time_ms < ship->recharge_wmd) return;
 	Wmd(ship->sprite, colour);
 	ship->recharge_wmd = time_ms + shot_recharge_ms;
@@ -278,10 +296,10 @@ void do_ai(struct Ship *const ai, const float dt_s) {
 	 disttoenemy = hypot(target.x - ship[SHIP_CPU].p.x, target.y - ship[SHIP_CPU].p.y);*/
 	/* t is the error of where wants vs where it's at */
 	t = theta - a_theta;
-	if(t >= M_PI) { /* keep it in the branch cut */
-		t -= M_2PI;
+	if(t >= (float)M_PI) { /* keep it in the branch cut */
+		t -= (float)M_2PI;
 	} else if(t < -M_PI) {
-		t += M_2PI;
+		t += (float)M_2PI;
 	}
 	/* too close; ai only does one thing at once, or else it would be hard */
 	if(d_2 < ai_too_close) {
@@ -290,7 +308,7 @@ void do_ai(struct Ship *const ai, const float dt_s) {
 	}
 	/* turn */
 	if(t < -ai_turn || t > ai_turn) {
-		turning = t * ai_turn_constant;
+		turning = (int)(t * ai_turn_constant);
 		/*if(turning * dt_s fixme */
 		/*if(t < 0) {
 			t += (float)M_PI;

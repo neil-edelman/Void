@@ -17,6 +17,10 @@
 #include "../system/Draw.h"
 #include "../EntryPosix.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
+#endif
+
 static int is_started;
 
 /* public struct */
@@ -101,7 +105,7 @@ int Game(void) {
 	foo = MapGet(bmps, "Scorpion_bmp");
 
 	for(i = 0; i < 100; i++) {
-		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd(M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
+		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
 		printf("Game: new Asteroid, checking:\n");
 		if(SpriteGetCircle(x, y, 0.5f*BitmapGetWidth(bmp))) {
 			fprintf(stderr, "Game: collided new sprite, waiving.\n");
@@ -121,6 +125,12 @@ int Game(void) {
 	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
 	ShipSetOrientation(bad, -300.0f, -100.0f, 1.0f);
+	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
+	ShipSetOrientation(bad, 100.0f, -600.0f, 0.0f);
+	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
+	ShipSetOrientation(bad, 300.0f, 600.0f, 0.0f);
+	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
+	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;
@@ -173,7 +183,7 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 	game.turning      = KeyTime(k_left) - KeyTime(k_right);
 	game.acceleration = KeyTime(k_up)   - KeyTime(k_down);
 	game.shoot        = KeyTime(32);
-	if(game.acceleration < 0) game.acceleration = 0.0f;
+	if(game.acceleration < 0) game.acceleration = 0;
 
 	/* apply to player */
 	if((player = game.player)) {

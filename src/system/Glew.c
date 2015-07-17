@@ -22,11 +22,13 @@ static int is_started;
 /** Load OpenGL2+ from the library.
  @return	True if success. */
 int Glew(void) {
+#ifdef GLEW
+	GLenum err;
+#endif
 
 	if(is_started) return -1;
-#ifdef GLEW
 
-	GLenum err;
+#ifdef GLEW
 	if((err = glewInit()) != GLEW_OK) {
 		fprintf(stderr, "Glew: %s\n", glewGetErrorString(err));
 		return 0;
@@ -36,8 +38,8 @@ int Glew(void) {
 		return 0;
 	}
 	fprintf(stdout, "Glew: GLEW %s extension loading library ready for OpenGL 2.0+.\n", glewGetString(GLEW_VERSION));
-
 #endif
+
 	is_started = -1;
 
 	return -1;

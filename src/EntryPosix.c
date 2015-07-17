@@ -11,6 +11,7 @@
 #include "system/Draw.h"
 #include "system/Timer.h"
 #include "system/Key.h"
+#include "system/Glew.h"
 #include "general/Bitmap.h"
 #include "game/Game.h"
 
@@ -85,7 +86,8 @@ int main(int argc, char **argv) {
 	}
 
 	/* start up subsystems; window has to be first; timer ms */
-	if(!Window(programme, argc, argv)
+	if(!Glew()
+	    || !Window(programme, argc, argv)
 		|| !Key()
 		|| !Draw(entry.bmps) /* fixme: don't need the arg */
 	    || !Game()

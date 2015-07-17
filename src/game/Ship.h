@@ -14,3 +14,4 @@ struct Sprite *ShipGetSprite(const struct Ship *ship);
 int ShipGetId(const struct Ship *s);
 void ShipUpdate(const float dt_s);
 void ShipShoot(struct Ship *ship, const int colour);
+int ShipHit(struct Ship *ship, const int damage);

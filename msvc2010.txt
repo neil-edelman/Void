@@ -1,9 +1,12 @@
 Stuff to to to make it work in MSVC2010
 ---------------------------------------
 
+You'll have to manually build the stuff in tools before you can compile. See Makefile.
+
 http://glew.sourceforge.net/ build <glew>\build\vc10\glew.sln Release (the MX is multi-thread)
 
 http://freeglut.sourceforge.net/ build VisualStudio/2010/freeglut.sln Static Release
+make sure to turn off "Whole Program Optimization," as it will not work at all
 
 File, New, Project, Visual C++, Win32 Console Application
 Application Settings, Empty
@@ -20,7 +23,7 @@ Configuration Properties->VC++ Directories->Include Directories: add <glew>\incl
 
 Configuration Properties->C/C++->General->Warning Level: EnableAllWarnings (/Wall)
 
-Configuration Properties->C/C++->Preprocessor->Preprocessor Definitions: add GLEW
+Configuration Properties->C/C++->Preprocessor->Preprocessor Definitions: add GLEW, USE_MATH_DEFINES, and C89_FMINF
 
 Configuration Properties->C/C++->Enable C++ Exceptions: No
 
@@ -33,7 +36,11 @@ Configuration Properties->Linker->General->Version: 3.1
 Configuration Properties->Linker->Input->Additional Dependancies: uncheck Inherit from parent, <glew>\lib\Release\Win32\glew32s.lib;<glut>\lib\x86\freeglut_static.lib
 
 Configuration Properties->Linker->Input->Ignore Specific Default Libraries: LIBCMT
+(oh, now it wants it, well, never mind)
 
 Configuration Properties->Linker->Debugging->Generate Debug Info: No
 
 Configuration Properties->Linker->System->SubSystem: Console (/SUBSYSTEM:CONSOLE)
+
+-----------------------------------
+With MSVC2013, I have not successfully done this.

@@ -15,13 +15,13 @@
  @version	3.2, 2015-06
  @since		3.2, 2015-06 */
 
-static const float epsilon = 0.001;
+static const float epsilon = 0.001f;
 
 struct Debris {
 	struct Sprite *sprite;
 	float         omega, mass; /* Mg (t) */
 	int           hit;
-	void          (*on_kill)();
+	void          (*on_kill)(void);
 } debris[1024];
 static const int debris_capacity = sizeof(debris) / sizeof(struct Debris);
 static int       debris_size;

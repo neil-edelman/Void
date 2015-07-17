@@ -25,7 +25,7 @@ const static float shot_impact   = 6.0f; /* tonne pixels / s */
 
 struct Wmd {
 	struct Sprite *sprite;
-	float         expires;
+	int           expires;
 	struct Sprite *from;
 	int           light;
 	/* fixme: resource */

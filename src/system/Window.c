@@ -22,9 +22,6 @@ int Window(const char *title, int argc, char **argv) {
 
 	if(is_started) return -1;
 
-	/* load OpenGl2+ */
-	if(!Glew()) return 0;
-
 	/* glut */
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE);
@@ -37,6 +34,9 @@ int Window(const char *title, int argc, char **argv) {
 			GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 	/*glutMouseFunc(&mouse);
 	 glutIdleFunc(0); */
+
+	/* load OpenGl2+ (AFTER THE WINDOW!) */
+	if(!Glew()) return 0;
 
 	is_started = -1;
 	return -1;

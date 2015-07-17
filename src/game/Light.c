@@ -137,7 +137,7 @@ struct Vec2f *LightGetPositions(void) {
  @param index	Index.
  @param x
  @param y		*/
-void LightSetPosition(const int h_p1, const int x, const int y) {
+void LightSetPosition(const int h_p1, const float x, const float y) {
 	/*const int h = h_p1 - 1;
 	int no;*/
 	const int no = h_p1 - 1;

@@ -35,7 +35,7 @@
  the larger you set this, the farther it has to go to determine whether there's
  a collision, for every sprite! */
 static const int half_max_size = 128;
-static const float epsilon = 0.0005;
+static const float epsilon = 0.0005f;
 extern const float de_sitter;
 
 struct Sprite {
@@ -720,7 +720,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 	 multiple collisions interfering, and gremlins; you absolutly do not want
 	 objects to get stuck orbiting each other */
 	if(n_d2 < bounding * bounding) {
-		const float push = (bounding - sqrt(n_d2)) * 0.5f;
+		const float push = (bounding - sqrtf(n_d2)) * 0.5f;
 		/*fprintf(stderr, " \\pushing sprites %f distance apart\n", push);*/
 		a->x -= n_x * push;
 		a->y -= n_y * push;
@@ -778,7 +778,6 @@ static float mass(const struct Sprite *s) {
 		case S_NONE:
 		default:       return 1.0f;
 	}
-	return 1.0f;
 }
 
 /* for isort */
@@ -873,7 +872,9 @@ static void deb_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
 
 static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
 	struct Wmd *wmd = SpriteGetContainer(w);
+	struct Ship *ship = SpriteGetContainer(s);
 	push(s, atan2f(s->y - w->y, s->x - w->x), WmdGetImpact(wmd));
+	if(!ShipHit(ship, WmdGetDamage(wmd))) Ship_(&ship);
 	Wmd_(&wmd);
 }
 

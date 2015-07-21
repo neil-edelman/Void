@@ -1,5 +1,5 @@
-Copyright (C) 2000, 2013 Neil Edelman, see copying.txt.  neil dot
-edelman each mail dot mcgill dot ca
+Copyright (C) 2000, 2013 Neil Edelman, see copying.txt.
+neil dot edelman each mail dot mcgill dot ca
 
 Version 3.2.
 
@@ -9,9 +9,12 @@ To win, blow up everything.
 
 Player controls: left, right, up, down, space, F1 (fullscreen.)
 
-To build this, you need a C compiler, OpenGL 1.1, and GLUT.
+If you downloaded the source code and want to build, you need a C
+compiler, OpenGL 1.1, and GLUT. If you have a Mac, xCode should do
+it.
 
-https://www.opengl.org/ http://freeglut.sourceforge.net/
+https://www.opengl.org/
+http://freeglut.sourceforge.net/
 
 I do my primary development on Mac10.6.8. To build, type make. If
 you don't use GCC, and even if you do, you may need to tweak it to
@@ -30,7 +33,8 @@ to redistribute it under certain conditions; see copying.txt.
 
 Version 3.2, 2015-05:
 
-Improved running time O(n^2) -> O(n+m). Collisions. Subdirectory structure.
+Improved running time O(n^2) -> O(n+m). Collisions. Subdirectory
+structure.
 
 Version 3.1, 2013:
 

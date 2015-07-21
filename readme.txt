@@ -7,8 +7,7 @@ Usage: Void
 
 To win, blow up everything.
 
-Player controls: left, right, up, down, space Window controls: F1
-fullscreen
+Player controls: left, right, up, down, space, F1 (fullscreen.)
 
 To build this, you need a C compiler, OpenGL 1.1, and GLUT.
 
@@ -29,23 +28,23 @@ Void Copyright 2000, 2012 Neil Edelman This program comes with
 ABSOLUTELY NO WARRANTY.  This is free software, and you are welcome
 to redistribute it under certain conditions; see copying.txt.
 
-Version 3.2:
+Version 3.2, 2015-05:
 
-Getting back to it in 2015.
+Improved running time O(n^2) -> O(n+m). Collisions. Subdirectory structure.
 
-Version 3.1:
+Version 3.1, 2013:
 
 GL_LUMINANCE is not a thing anymore; worked around that. Should
 work on more machines.  Improved GL error reporting.
 
-Version 3.0:
+Version 3.0, 2013:
 
 OpenGL; uses GLSL for a significant speed increase. Multi-platform.
 
-Version 2.0:
+Version 2.0, 2001:
 
 DirectX 3.0; worked until Windows NT/98.
 
-Version 1.0:
+Version 1.0, 2000:
 
 ModeX; lost the source code.

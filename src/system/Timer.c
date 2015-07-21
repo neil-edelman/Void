@@ -9,8 +9,8 @@
 
 /** This is an idempotent class dealing with the interface to OpenGL.
  @author	Neil
- @version	3.0, 05-2015
- @since		2.0, 2014 */
+ @version	3.2, 2015-05
+ @since		2.0, 2014 (<- what?)*/
 
 static int is_started;
 

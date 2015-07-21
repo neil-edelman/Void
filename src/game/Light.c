@@ -15,7 +15,7 @@ struct Colour3f { float r, g, b; };
  Fixme: the other way, viz, having a pointer to change is probably better and
  more straightforward. (Fixed)
  @author	Neil
- @version	3.0, 05-2015
+ @version	3.2, 2015-05
  @since		1.0, 2000 */
 
 /* must be the same as in Lighting.fs */

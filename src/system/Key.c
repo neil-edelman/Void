@@ -10,7 +10,7 @@
 /** This is an idempotent class dealing with the interface to OpenGL.
  @author	Neil
  @version	3.0, 05-2015
- @since		2.0, 2014 */
+ @since		2.0, 2014 (<- what?) */
 
 static struct Key {
 	int state;

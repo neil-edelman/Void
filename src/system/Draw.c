@@ -31,7 +31,7 @@
 
 /** This is an idempotent class dealing with the interface to OpenGL.
  @author	Neil
- @version	3.0, 05-2015
+ @version	3.2, 2015-05
  @since		1.0, 2000 */
 
 /* if is started, we don't and can't start it again */

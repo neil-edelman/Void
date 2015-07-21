@@ -9,8 +9,8 @@
 
 /** This is an idempotent class dealing with the interface to OpenGL.
  @author	Neil
- @version	3.0, 05-2015
- @since		3.0, 05-2015 */
+ @version	3.0, 2015-05
+ @since		3.0, 2015-05 */
 
 static const int    no_fails = 64;
 static const double forget_s = 20.0;

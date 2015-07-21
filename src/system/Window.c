@@ -2,6 +2,8 @@
  General Public License, see copying.txt */
 
 #include <stdio.h>  /* fprintf */
+#include <time.h>   /* for errors: can't rely on external libraries */
+#include <stdlib.h> /* exit */
 #include "Glew.h"
 #include "Window.h"
 
@@ -10,8 +12,12 @@
  @version	3.0, 05-2015
  @since		3.0, 05-2015 */
 
+static const int    no_fails = 64;
+static const double forget_s = 20.0;
+
 /* if is started, we don't and can't start it again */
-static int is_started;
+static int    is_started;
+static time_t last_error;
 
 /** Gets the window started.
  @param title	The title of the window.
@@ -21,6 +27,9 @@ static int is_started;
 int Window(const char *title, int argc, char **argv) {
 
 	if(is_started) return -1;
+
+	/* we keep track of how many errors per time; too many, we exit */
+	time(&last_error);
 
 	/* glut */
 	glutInit(&argc, argv);
@@ -58,10 +67,22 @@ void WindowGo(void) {
  @param function	The calling function, for prepending to stderr.
  @return			Returns true if any errors (not very useful.) */
 int WindowIsGlError(const char *function) {
+	static int no_errs;
 	GLenum err;
 	int ohoh = 0;
 	while((err = glGetError()) != GL_NO_ERROR) {
-		fprintf(stderr, "Draw::isGLError(caught in %s:) OpenGL error: %s.\n", function, gluErrorString(err));
+		time_t now;
+		time(&now);
+		/* reset the kill errors */
+		if(difftime(now, last_error) > forget_s) {
+			no_errs = 0;
+			time(&last_error);
+		}
+		fprintf(stderr, "Window::isGLError(caught in %s:) OpenGL error: %s.\n", function, gluErrorString(err));
+		if(++no_errs > no_fails) {
+			fprintf(stderr, "Window::isGLError: too many errors! :[\n");
+			exit(EXIT_FAILURE);
+		}
 		ohoh = -1;
 	}
 	return ohoh;

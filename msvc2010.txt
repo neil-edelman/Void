@@ -52,5 +52,5 @@ No
 Configuration Properties->Linker->System->SubSystem: Console
 (/SUBSYSTEM:CONSOLE)
 
------------------------------------ With MSVC2013, I have not
-successfully done this.
+-----------------------------------
+With MSVC2013, more fiddling is required.

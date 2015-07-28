@@ -170,7 +170,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	fprintf(stderr, "~Sprite: returning to pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), sprite->texture);
 
 	/* deal with deleting it while iterating; fixme: have more complex? */
-	if(sprite < iterator) iterator--;
+	if(sprite <= iterator) iterator--; /* <? */
 
 	/* take it out of the lists */
 	if(sprite->prev_x) sprite->prev_x->next_x = sprite->next_x;
@@ -538,7 +538,7 @@ static void sort_notify(struct Sprite *s) {
  their bounding circles. Calls {@see collide_circles}, and if it passed,
  {@see elastic_bounce}. Calls the items in the collision matrix. */
 void collide(struct Sprite *a) {
-	struct Sprite *b;
+	struct Sprite *b, *b_adj_y;
 	void (*response)(struct Sprite *, struct Sprite *, const float);
 	float explore_x_min, explore_x_max, explore_y_min, explore_y_max;
 	float t0;
@@ -560,14 +560,16 @@ void collide(struct Sprite *a) {
 	}
 
 	/* consider y and maybe add it to the list of colliders */
-	for(b = a->prev_y; b && b->y >= explore_y_min; b = b->prev_y) {
+	for(b = a->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
+		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
 		if(b->is_possible_collision && a->y_min < b->y_max) {
 			if((response = collision_matrix[b->type - 1][a->type - 1])
 			   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y,
 			   b->x1, b->y1, a->bounding + b->bounding, &t0)) response(a, b, t0);
 		}
 	}
-	for(b = a->next_y; b && b->y <= explore_y_max; b = b->next_y) {
+	for(b = a->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
+		b_adj_y = b->next_y;
 		if(b->is_possible_collision && a->y_max > b->y_min) {
 			if((response = collision_matrix[b->type - 1][a->type - 1])
 			   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y,
@@ -806,7 +808,8 @@ static struct Sprite **address_next_y(struct Sprite *const a) {
 	return &a->next_y;
 }
 
-/* type collisions */
+/* type collisions; can not modify list of Sprites as it is in the middle of
+ x/ylist; use other method? */
 
 static void deb_deb(struct Sprite *a, struct Sprite *b, const float d0) {
 
@@ -824,6 +827,9 @@ static void deb_deb(struct Sprite *a, struct Sprite *b, const float d0) {
 	elastic_bounce(a, b, d0);
 
 	/* PV = nRT -> T = (PV)/(nR); enforce maximum temperature */
+	/*DebrisEnforce(a->container);*/ /* FIXME!! */
+	/*DebrisEnforce(b->container);*/
+
 	/*{
 		float limit = 500.0f;
 		int foo = 0;
@@ -862,7 +868,8 @@ static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
 	struct Wmd *wmd = SpriteGetContainer(w);
 	struct Debris *deb = SpriteGetContainer(d);
 	push(d, atan2f(d->y - w->y, d->x - w->x), WmdGetImpact(wmd));
-	if(!DebrisHit(deb, WmdGetDamage(wmd))) Debris_(&deb);
+	/* break into pieces */
+	if(!DebrisHit(deb, WmdGetDamage(wmd))) DebrisExplode(deb);
 	Wmd_(&wmd);
 }
 
@@ -875,7 +882,7 @@ static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
 	struct Ship *ship = SpriteGetContainer(s);
 	push(s, atan2f(s->y - w->y, s->x - w->x), WmdGetImpact(wmd));
 	if(!ShipHit(ship, WmdGetDamage(wmd))) Ship_(&ship);
-	Wmd_(&wmd);
+	Wmd_(&wmd); /* FIXME!!!!!!: can not be here! */
 }
 
 static void shp_wmd(struct Sprite *s, struct Sprite *w, const float d0) {

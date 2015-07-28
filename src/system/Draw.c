@@ -8,6 +8,7 @@
 #include "../general/Map.h"
 #include "../general/Bitmap.h"
 #include "../game/Sprite.h"
+#include "../game/Background.h"
 #include "../game/Light.h"
 #include "Draw.h"
 #include "Window.h"
@@ -26,6 +27,8 @@
  automated */
 #include "../../bin/shaders/Texture_vs.h"
 #include "../../bin/shaders/Texture_fs.h"
+#include "../../bin/shaders/Background_vs.h"
+#include "../../bin/shaders/Background_fs.h"
 #include "../../bin/shaders/Lighting_vs.h"
 #include "../../bin/shaders/Lighting_fs.h"
 
@@ -112,8 +115,12 @@ static void display(void);
 static void resize(int width, int height);
 
 /* so many globals! */
-GLuint  vbo_geom, /*spot_geom,*/ light_tex, *texture_ids, astr_tex, bg_tex, tex_map_shader, light_shader;
+GLuint  vbo_geom, /*spot_geom,*/ light_tex, *texture_ids, astr_tex, bg_tex, tex_map_shader, back_shader, light_shader;
 GLint   tex_map_matrix_location, tex_map_texture_location;
+
+GLint   back_size_location, back_angle_location, back_position_location, back_camera_location, back_texture_location, back_two_screen_location;
+GLint   back_dirang_location, back_dirclr_location;
+
 GLint   light_size_location, light_angle_location, light_position_location, light_camera_location, light_texture_location, light_two_screen_location;
 GLint   light_lights_location, light_lightpos_location, light_lightclr_location;
 GLint   light_dirang_location, light_dirclr_location;
@@ -200,10 +207,23 @@ int Draw(struct Map *bmps) {
 		return 0;
 	}
 
-	/* shaders */
+	/* shaders: simple texture */
 	if(!(tex_map_shader = link_shader(Texture_vs, Texture_fs, &tex_map_attrib))) { Draw_(bmps); return 0; }
 	tex_map_matrix_location  = glGetUniformLocation(tex_map_shader, "matrix");
 	tex_map_texture_location = glGetUniformLocation(tex_map_shader, "sampler");
+	/* background: lit, but not dynamically */
+	if(!(back_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(bmps); return 0; }
+	/* vs */
+	back_angle_location     = glGetUniformLocation(back_shader, "angle");
+	back_size_location      = glGetUniformLocation(back_shader, "size");
+	back_position_location  = glGetUniformLocation(back_shader, "position");
+	back_camera_location    = glGetUniformLocation(back_shader, "camera");
+	back_two_screen_location= glGetUniformLocation(back_shader, "two_screen");
+	/* fs */
+	back_texture_location = glGetUniformLocation(back_shader, "sampler");
+	glUniform1i(glGetUniformLocation(back_shader, "sampler_light"), T_LIGHT);
+	back_dirang_location  = glGetUniformLocation(back_shader, "directional_angle");
+	back_dirclr_location  = glGetUniformLocation(back_shader, "directional_colour");
 	/* this is the one that's doing the work */
 	if(!(light_shader = link_shader(Lighting_vs, Lighting_fs, &tex_map_attrib))) { Draw_(bmps); return 0; }
 	/* vs */
@@ -214,7 +234,7 @@ int Draw(struct Map *bmps) {
 	light_two_screen_location= glGetUniformLocation(light_shader, "two_screen");
 	/* fs */
 	light_texture_location = glGetUniformLocation(light_shader, "sampler");
-	glUniform1i(glGetUniformLocation(tex_map_shader, "sampler_light"), T_LIGHT);
+	glUniform1i(glGetUniformLocation(light_shader, "sampler_light"), T_LIGHT);
 	light_lights_location  = glGetUniformLocation(light_shader, "lights");
 	light_lightpos_location= glGetUniformLocation(light_shader, "light_position");
 	light_lightclr_location= glGetUniformLocation(light_shader, "light_colour");
@@ -224,6 +244,9 @@ int Draw(struct Map *bmps) {
 	/* sunshine; fixme: have it change in different regions */
 	{
 		float sunshine[] = { 1.0f * 3.0f, 0.97f * 3.0f, 0.46f * 3.0f };
+		glUseProgram(back_shader);
+		glUniform1f(back_dirang_location, -2.0);
+		glUniform3fv(back_dirclr_location, 1, sunshine);
 		glUseProgram(light_shader);
 		glUniform1f(light_dirang_location, -2.0);
 		glUniform3fv(light_dirclr_location, 1, sunshine);
@@ -258,6 +281,11 @@ void Draw_(struct Map *bmps) {
 		fprintf(stderr, "~Draw: erase Sdr%u.\n", light_shader);
 		glDeleteProgram(light_shader);
 		light_shader = 0;
+	}
+	if(back_shader) {
+		fprintf(stderr, "~Draw: erase Sdr%u.\n", back_shader);
+		glDeleteProgram(back_shader);
+		back_shader = 0;
 	}
 	if(tex_map_shader) {
 		fprintf(stderr, "~Draw: erase Sdr%u.\n", tex_map_shader);
@@ -509,7 +537,7 @@ static void display(void) {
 
 	/* fixme: don't use painters' algorithm; stencil test! */
 
-	/* background:
+	/* background (desktop):
 	 turn off transperency
 	 background vbo
 	 update glUniform1i(GLint location, GLint v0)
@@ -519,6 +547,29 @@ static void display(void) {
 	glUniform1i(tex_map_texture_location, T_BACKGROUND);
 	/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
 	glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
+
+	/* turn on background lighting (sprites) */
+	/*glUseProgram(back_shader);*/
+	glUseProgram(light_shader);
+	glUniform1i(light_lights_location, 0);
+
+	/* background sprites */
+	glEnable(GL_BLEND);
+	glUniform1i(back_texture_location, T_SPRITES);
+	glUniform2f(back_camera_location, camera_x, camera_y);
+	while(BackgroundIterate(&x, &y, &t, &texture, &size)) {
+		printf("Bg (%f,%f:%f)%d<%d.\n", x, y, t, texture, size);
+		if(old_texture != texture) {
+			glBindTexture(GL_TEXTURE_2D, texture);
+			old_texture = texture;
+		}
+		glUniform1f(back_size_location, (float)size);
+		glUniform1f(back_angle_location, t);
+		glUniform2f(back_position_location, x, y);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
+	}
+	printf("\n");
+	old_texture = 0;
 
 	/* turn on lighting */
 	glUseProgram(light_shader);
@@ -536,7 +587,7 @@ static void display(void) {
 	 -calculate matrix
 	 -upload to card
 	 -draw */
-	glEnable(GL_BLEND);
+	/*glEnable(GL_BLEND);*/
 	/* fixme: have different indices to textures; keep track with texture manager; have to worry about how many tex units there are */
 	glUniform1i(light_texture_location, T_SPRITES);
 	glUniform2f(light_camera_location, camera_x, camera_y);

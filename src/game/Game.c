@@ -7,6 +7,7 @@
 #include "Ship.h"
 #include "Game.h"
 #include "Sprite.h"
+#include "Background.h"
 #include "Debris.h"
 #include "Wmd.h"
 #include "Light.h"
@@ -111,7 +112,7 @@ int Game(void) {
 			fprintf(stderr, "Game: collided new sprite, waiving.\n");
 			continue;
 		}
-		asteroid = Debris(BitmapGetImageUnit(bmp), BitmapGetWidth(bmp));
+		asteroid = Debris(BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), 10.0f);
 		DebrisSetOrientation(asteroid,
 							 x, y, t, /* (x,y):t */
 							 vx, vy, o); /* (vx,vy):o */
@@ -120,7 +121,7 @@ int Game(void) {
 
 	bmp = MapGet(bmps, "Nautilus_bmp");
 	game.player = Ship(&game.player, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_HUMAN);
-	bmp = MapGet(bmps, "Scorpion_bmp");
+/*	bmp = MapGet(bmps, "Scorpion_bmp");
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
@@ -130,7 +131,9 @@ int Game(void) {
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 600.0f, 0.0f);
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
-	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
+	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);*/
+
+	Background(2, 256.0f);
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;

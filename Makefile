@@ -18,9 +18,9 @@ GME := game
 
 # files in sdir
 #FILES := Open OpenGlew Math Sprite Light Game Pilot Resources
-FILES := EntryPosix $(GEN)/Bitmap $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Debris $(GME)/Ship $(GME)/Wmd
-VS   := $(SDR)/Texture $(SDR)/Lighting
-FS   := $(SDR)/Texture $(SDR)/Lighting
+FILES := EntryPosix $(GEN)/Bitmap $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Background $(GME)/Debris $(GME)/Ship $(GME)/Wmd
+VS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
+FS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
 ICON := icon.ico
 
 # files in mdir

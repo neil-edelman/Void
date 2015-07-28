@@ -15,13 +15,17 @@
  @version	3.2, 2015-06
  @since		3.2, 2015-06 */
 
-static const float epsilon = 0.001f;
+static const float epsilon              = 0.001f;
+static const float hit_per_mass         = 5.0f;
+static const float maximum_speed_2      = 20.0f; /* 2000? */
+static const float explosion_elasticity = 0.5f; /* < 1 */
+static const float minimum_mass         = 1.0f;
 
 struct Debris {
 	struct Sprite *sprite;
 	float         omega, mass; /* Mg (t) */
 	int           hit;
-	void          (*on_kill)(void);
+	/*void          (*on_kill)(void); minerals? */
 } debris[1024];
 static const int debris_capacity = sizeof(debris) / sizeof(struct Debris);
 static int       debris_size;
@@ -30,7 +34,7 @@ static int       debris_size;
 
 /** Get a new debris from the pool of unused.
  @return		A debris or null. */
-struct Debris *Debris(const int texture, const int size) {
+struct Debris *Debris(const int texture, const int size, const float mass) {
 	struct Debris *deb;
 
 	if(debris_size >= debris_capacity) {
@@ -42,9 +46,9 @@ struct Debris *Debris(const int texture, const int size) {
 	if(!(deb->sprite = Sprite(S_DEBRIS, texture, size))) return 0;
 	SpriteSetContainer(deb, &deb->sprite);
 	deb->omega      = 0.0f;
-	deb->mass       = 10.0f;
-	deb->hit        = 100;
-	deb->on_kill    = 0;
+	deb->mass       = mass;
+	deb->hit        = mass * hit_per_mass;
+	/*deb->on_kill    = 0;*/
 	debris_size++;
 	fprintf(stderr, "Debris: created from pool, Deb%u->Spr%u.\n", DebrisGetId(deb), SpriteGetId(deb->sprite));
 
@@ -137,8 +141,56 @@ int DebrisHit(struct Debris *deb, const int hit) {
 		fprintf(stderr, "Debris::hit: Deb%u hit %d, now %d.\n", DebrisGetId(deb), hit, deb->hit);
 		return -1;
 	} else {
-		deb->hit = 0;
+		/*deb->hit = 0; should be carried forward to the next */
+		deb->hit -= hit;
 		fprintf(stderr, "Debris::hit: Deb%u destroyed.\n", DebrisGetId(deb));
 		return 0;
+	}
+}
+
+/** Enforces the maximum speed by breaking the debris into smaller chunks; the
+ process is not elastic, so it loses energy (speed.) */
+void DebrisEnforce(struct Debris *deb) {
+	float vx, vy;
+	float speed_2;
+
+	if(!deb || !deb->sprite) return;
+
+	SpriteGetVelocity(deb->sprite, &vx, &vy);
+	if((speed_2 = vx * vx + vy * vy) > maximum_speed_2) {
+		fprintf(stderr, "Debris::enforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
+		DebrisExplode(deb);
+	}
+}
+
+/** Spawns smaller Debris. */
+void DebrisExplode(struct Debris *deb) {
+	struct Debris *sub;
+	float x, y, theta, vx, vy;
+	static int foo;
+
+	if(!deb || !deb->sprite) return;
+	/*explosion_elasticity*/
+
+	/* destroy, keeping values */
+	SpriteGetOrientation(deb->sprite, &x, &y, &theta);
+	SpriteGetVelocity(deb->sprite, &vx, &vy);
+	fprintf(stderr, "!!!!!!! ********* Deb%u is exploding, (%.3f, %.3f).\n", DebrisGetId(deb), x, y);
+	Debris_(&deb); /* <- fixme: this line is fucked */
+
+	/* how to break up */
+	/*mass_div = */
+	vx *= explosion_elasticity;
+	vy *= explosion_elasticity;
+
+	/* new debris */
+	if(/*foo < 1*/1) {
+		sub = Debris(2, 16.0f, 5.0f);
+		SpriteSetOrientation(sub->sprite, x, y, theta);
+		/*SpriteSetOrientation(sub->sprite, 100.0f, 100.0f, theta);*/
+		SpriteGetOrientation(sub->sprite, &x, &y, &theta);
+		fprintf(stderr, "!!!!nooooooo it's not at (%f, %f)\n", x, y);
+		SpriteSetVelocity(sub->sprite, vx, vy);
+		foo++;
 	}
 }

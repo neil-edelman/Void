@@ -366,12 +366,11 @@ struct Sprite *SpriteGetCircle(const float x, const float y, const float r) {
  @param dt	Seconds since the last frame. */
 void SpriteUpdate(const float dt) {
 	struct Sprite *s;
-	/*struct Debris *debris; <- actually doesn't do anything */
-	/*struct Ship *ship;*/
+	struct Debris *debris;
+	struct Ship *ship;
 	struct Wmd *wmd;
 	/*float omega;*/
 	int t_ms = TimerLastTime();
-	int i;
 
 	/* sorts the sprites; they're (hopefully) almost sorted already from last
 	 frame, just freshens with insertion sort, O(n + m) where m is the
@@ -382,8 +381,7 @@ void SpriteUpdate(const float dt) {
 
 	/* pre-compute bounding boxes of where the sprite wants to go this frame,
 	 containing the projected circle along a vector x -> x + v*dt */
-	for(i = 0; i < sprites_size; i++) {
-		s     = &sprites[i];
+	while((s = iterate())) {
 		/* where they should be if there's no collision */
 		s->x1 = s->x + s->vx * dt;
 		s->y1 = s->y + s->vy * dt;
@@ -402,11 +400,9 @@ void SpriteUpdate(const float dt) {
 		collide(s);
 
 		if(!s->no_collisions) {
-
 			/* no collisions; apply position change, calculated above */
 			s->x = s->x1;
 			s->y = s->y1;
-
 		} else {
 			/* if you skip this step, it's unstable on multiple collisions */
 			const float one_collide = 1.0f / s->no_collisions;
@@ -434,15 +430,20 @@ void SpriteUpdate(const float dt) {
 
 		/* static; each element does what it wants after the commotion */
 		switch(SpriteGetType(s)) {
+				/* fixme: have more drama then just deleting */
 			case S_DEBRIS:
+				if(DebrisIsDestroyed(debris = s->container)) {
+					DebrisExplode(debris);
+					Debris_(&debris);
+				}
 				break;
 			case S_SHIP:
-				/*ShipUpdate(s->container, dt); <- no */
+				if(ShipIsDestroyed(ship = s->container)) Ship_(&ship);
 				break;
 			case S_WMD:
 				wmd = s->container;
 				/* expire? note: wmd after is null and s is invalid */
-				if(t_ms >= WmdGetExpires(wmd)) { Wmd_(&wmd); i--; break; }
+				if(t_ms >= WmdGetExpires(wmd)) { Wmd_(&wmd); break; }
 				/* update light */
 				WmdUpdateLight(wmd);
 				break;
@@ -450,6 +451,7 @@ void SpriteUpdate(const float dt) {
 			default:
 				fprintf(stderr, "Sprite::update: unknown type.\n");
 		}
+		/* if we were going to continue, we would check if s is valid (somehow) */
 	}
 }
 
@@ -536,7 +538,8 @@ static void sort_notify(struct Sprite *s) {
  separation theorem) and the ordered list of projections on the x and y axis
  that we have been keeping, to build up a list of possible colliders based on
  their bounding circles. Calls {@see collide_circles}, and if it passed,
- {@see elastic_bounce}. Calls the items in the collision matrix. */
+ {@see elastic_bounce}. Calls the items in the collision matrix.
+ @return	False if the sprite has been destroyed. */
 void collide(struct Sprite *a) {
 	struct Sprite *b, *b_adj_y;
 	void (*response)(struct Sprite *, struct Sprite *, const float);
@@ -562,19 +565,21 @@ void collide(struct Sprite *a) {
 	/* consider y and maybe add it to the list of colliders */
 	for(b = a->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
 		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
-		if(b->is_possible_collision && a->y_min < b->y_max) {
-			if((response = collision_matrix[b->type - 1][a->type - 1])
-			   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y,
-			   b->x1, b->y1, a->bounding + b->bounding, &t0)) response(a, b, t0);
-		}
+		if(b->is_possible_collision
+		   && a->y_min < b->y_max
+		   && (response = collision_matrix[b->type - 1][a->type - 1])
+		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
+							  b->y1, a->bounding + b->bounding, &t0))
+			response(a, b, t0);
 	}
 	for(b = a->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
 		b_adj_y = b->next_y;
-		if(b->is_possible_collision && a->y_max > b->y_min) {
-			if((response = collision_matrix[b->type - 1][a->type - 1])
-			   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y,
-			   b->x1, b->y1, a->bounding + b->bounding, &t0)) response(a, b, t0);
-		}
+		if(b->is_possible_collision
+		   && a->y_max > b->y_min
+		   && (response = collision_matrix[b->type - 1][a->type - 1])
+		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
+							  b->y1, a->bounding + b->bounding, &t0))
+			response(a, b, t0);
 	}
 
 	/* reset for next time; fixme: ugly */
@@ -809,7 +814,7 @@ static struct Sprite **address_next_y(struct Sprite *const a) {
 }
 
 /* type collisions; can not modify list of Sprites as it is in the middle of
- x/ylist; use other method? */
+ x/ylist or delete! */
 
 static void deb_deb(struct Sprite *a, struct Sprite *b, const float d0) {
 
@@ -868,9 +873,8 @@ static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
 	struct Wmd *wmd = SpriteGetContainer(w);
 	struct Debris *deb = SpriteGetContainer(d);
 	push(d, atan2f(d->y - w->y, d->x - w->x), WmdGetImpact(wmd));
-	/* break into pieces */
-	if(!DebrisHit(deb, WmdGetDamage(wmd))) DebrisExplode(deb);
-	Wmd_(&wmd);
+	DebrisHit(deb, WmdGetDamage(wmd));
+	WmdForceExpire(wmd);
 }
 
 static void deb_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
@@ -881,8 +885,8 @@ static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
 	struct Wmd *wmd = SpriteGetContainer(w);
 	struct Ship *ship = SpriteGetContainer(s);
 	push(s, atan2f(s->y - w->y, s->x - w->x), WmdGetImpact(wmd));
-	if(!ShipHit(ship, WmdGetDamage(wmd))) Ship_(&ship);
-	Wmd_(&wmd); /* FIXME!!!!!!: can not be here! */
+	ShipHit(ship, WmdGetDamage(wmd));
+	WmdForceExpire(wmd);
 }
 
 static void shp_wmd(struct Sprite *s, struct Sprite *w, const float d0) {

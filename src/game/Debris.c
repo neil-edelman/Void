@@ -134,18 +134,21 @@ struct Sprite *DebrisGetSprite(const struct Debris *deb) {
 	return deb->sprite;
 }
 
-int DebrisHit(struct Debris *deb, const int hit) {
-	if(!deb) return 0;
+void DebrisHit(struct Debris *deb, const int hit) {
+	if(!deb) return;
 	if(deb->hit > hit) {
 		deb->hit -= hit;
 		fprintf(stderr, "Debris::hit: Deb%u hit %d, now %d.\n", DebrisGetId(deb), hit, deb->hit);
-		return -1;
 	} else {
 		/*deb->hit = 0; should be carried forward to the next */
 		deb->hit -= hit;
 		fprintf(stderr, "Debris::hit: Deb%u destroyed.\n", DebrisGetId(deb));
-		return 0;
 	}
+}
+
+int DebrisIsDestroyed(const struct Debris *d) {
+	if(!d) return -1;
+	return d->hit <= 0 ? -1 : 0;
 }
 
 /** Enforces the maximum speed by breaking the debris into smaller chunks; the
@@ -163,11 +166,10 @@ void DebrisEnforce(struct Debris *deb) {
 	}
 }
 
-/** Spawns smaller Debris. */
+/** Spawns smaller Debris. Leaves you to destroy the large one. */
 void DebrisExplode(struct Debris *deb) {
 	struct Debris *sub;
 	float x, y, theta, vx, vy;
-	static int foo;
 
 	if(!deb || !deb->sprite) return;
 	/*explosion_elasticity*/
@@ -176,7 +178,6 @@ void DebrisExplode(struct Debris *deb) {
 	SpriteGetOrientation(deb->sprite, &x, &y, &theta);
 	SpriteGetVelocity(deb->sprite, &vx, &vy);
 	fprintf(stderr, "!!!!!!! ********* Deb%u is exploding, (%.3f, %.3f).\n", DebrisGetId(deb), x, y);
-	Debris_(&deb); /* <- fixme: this line is fucked */
 
 	/* how to break up */
 	/*mass_div = */
@@ -184,13 +185,10 @@ void DebrisExplode(struct Debris *deb) {
 	vy *= explosion_elasticity;
 
 	/* new debris */
-	if(/*foo < 1*/1) {
-		sub = Debris(2, 16.0f, 5.0f);
-		SpriteSetOrientation(sub->sprite, x, y, theta);
-		/*SpriteSetOrientation(sub->sprite, 100.0f, 100.0f, theta);*/
-		SpriteGetOrientation(sub->sprite, &x, &y, &theta);
-		fprintf(stderr, "!!!!nooooooo it's not at (%f, %f)\n", x, y);
-		SpriteSetVelocity(sub->sprite, vx, vy);
-		foo++;
-	}
+	sub = Debris(2, 16.0f, 5.0f);
+	SpriteSetOrientation(sub->sprite, x, y, theta);
+	/*SpriteSetOrientation(sub->sprite, 100.0f, 100.0f, theta);*/
+	SpriteGetOrientation(sub->sprite, &x, &y, &theta);
+	fprintf(stderr, "!!!!nooooooo it's not at (%f, %f)\n", x, y);
+	SpriteSetVelocity(sub->sprite, vx, vy);
 }

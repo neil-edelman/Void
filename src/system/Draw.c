@@ -118,10 +118,10 @@ static void resize(int width, int height);
 GLuint  vbo_geom, /*spot_geom,*/ light_tex, *texture_ids, astr_tex, bg_tex, tex_map_shader, back_shader, light_shader;
 GLint   tex_map_matrix_location, tex_map_texture_location;
 
-GLint   back_size_location, back_angle_location, back_position_location, back_camera_location, back_texture_location, back_two_screen_location;
+GLint   back_size_location, back_angle_location, back_position_location, back_camera_location, /*back_texture_location,*/ back_two_screen_location;
 GLint   back_dirang_location, back_dirclr_location;
 
-GLint   light_size_location, light_angle_location, light_position_location, light_camera_location, light_texture_location, light_two_screen_location;
+GLint   light_size_location, light_angle_location, light_position_location, light_camera_location, /*light_texture_location,*/ light_two_screen_location;
 GLint   light_lights_location, light_lightpos_location, light_lightclr_location;
 GLint   light_dirang_location, light_dirclr_location;
 GLfloat two_width, two_height;
@@ -220,7 +220,8 @@ int Draw(struct Map *bmps) {
 	back_camera_location    = glGetUniformLocation(back_shader, "camera");
 	back_two_screen_location= glGetUniformLocation(back_shader, "two_screen");
 	/* fs */
-	back_texture_location = glGetUniformLocation(back_shader, "sampler");
+	/*back_texture_location = glGetUniformLocation(back_shader, "sampler");*/
+	glUniform1i(glGetUniformLocation(back_shader, "sampler"),       T_SPRITES);
 	glUniform1i(glGetUniformLocation(back_shader, "sampler_light"), T_LIGHT);
 	back_dirang_location  = glGetUniformLocation(back_shader, "directional_angle");
 	back_dirclr_location  = glGetUniformLocation(back_shader, "directional_colour");
@@ -233,7 +234,8 @@ int Draw(struct Map *bmps) {
 	light_camera_location    = glGetUniformLocation(light_shader, "camera");
 	light_two_screen_location= glGetUniformLocation(light_shader, "two_screen");
 	/* fs */
-	light_texture_location = glGetUniformLocation(light_shader, "sampler");
+	/*light_texture_location = glGetUniformLocation(light_shader, "sampler"); <- if you want it to be variable */
+	glUniform1i(glGetUniformLocation(light_shader, "sampler"),       T_SPRITES);
 	glUniform1i(glGetUniformLocation(light_shader, "sampler_light"), T_LIGHT);
 	light_lights_location  = glGetUniformLocation(light_shader, "lights");
 	light_lightpos_location= glGetUniformLocation(light_shader, "light_position");
@@ -549,16 +551,17 @@ static void display(void) {
 	glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
 
 	/* turn on background lighting (sprites) */
-	/*glUseProgram(back_shader);*/
+	/*glUseProgram(back_shader); <- doesn't work */
 	glUseProgram(light_shader);
 	glUniform1i(light_lights_location, 0);
 
 	/* background sprites */
 	glEnable(GL_BLEND);
-	glUniform1i(back_texture_location, T_SPRITES);
+#if 0
+	glUniform1i(back_texture_location, T_SPRITES); /* <- this */
+#endif
 	glUniform2f(back_camera_location, camera_x, camera_y);
 	while(BackgroundIterate(&x, &y, &t, &texture, &size)) {
-		printf("Bg (%f,%f:%f)%d<%d.\n", x, y, t, texture, size);
 		if(old_texture != texture) {
 			glBindTexture(GL_TEXTURE_2D, texture);
 			old_texture = texture;
@@ -568,7 +571,6 @@ static void display(void) {
 		glUniform2f(back_position_location, x, y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	}
-	printf("\n");
 	old_texture = 0;
 
 	/* turn on lighting */
@@ -589,7 +591,7 @@ static void display(void) {
 	 -draw */
 	/*glEnable(GL_BLEND);*/
 	/* fixme: have different indices to textures; keep track with texture manager; have to worry about how many tex units there are */
-	glUniform1i(light_texture_location, T_SPRITES);
+	/*glUniform1i(light_texture_location, T_SPRITES); <- constant, now */
 	glUniform2f(light_camera_location, camera_x, camera_y);
 	while(SpriteIterate(&x, &y, &t, &texture, &size)) {
 		/* draw a sprite; fixme: minimise texture transitions */
@@ -616,6 +618,8 @@ static void display(void) {
 	/* disable, swap */
 	glUseProgram(0);
 	glutSwapBuffers();
+
+	WindowIsGlError("Draw::display");
 
 }
 
@@ -649,6 +653,8 @@ static void resize(int width, int height) {
 		vbo_bg_count * sizeof(struct Vertex), vbo + vbo_bg_first);
 
 	/* the shaders need to know as well */
+	glUseProgram(back_shader);
+	glUniform2f(back_two_screen_location, two_width, two_height);
 	glUseProgram(light_shader);
 	glUniform2f(light_two_screen_location, two_width, two_height);
 }

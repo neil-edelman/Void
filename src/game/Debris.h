@@ -9,6 +9,7 @@ void DebrisSetVelocity(struct Debris *deb, const float vx, const float vy);
 float DebrisGetMass(const struct Debris *d);
 int DebrisGetId(const struct Debris *d);
 struct Sprite *DebrisGetSprite(const struct Debris *deb);
-int DebrisHit(struct Debris *deb, const int hit);
+void DebrisHit(struct Debris *deb, const int hit);
+int DebrisIsDestroyed(const struct Debris *d);
 void DebrisEnforce(struct Debris *deb);
 void DebrisExplode(struct Debris *deb);

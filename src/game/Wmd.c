@@ -120,6 +120,11 @@ int WmdGetDamage(const struct Wmd *wmd) {
 	return shot_damage;
 }
 
+void WmdForceExpire(struct Wmd *wmd) {
+	if(!wmd) return;
+	wmd->expires = 0;
+}
+
 /** Updates the light to be at the Wmd.
  @param wmd		The Wmd. */
 void WmdUpdateLight(struct Wmd *wmd) {

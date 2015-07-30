@@ -1,31 +1,17 @@
 /* Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
  Public License, see copying.txt */
 
-#include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
-#include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
 #include "Background.h"
 #include "../general/Sorting.h"
-#include "../system/Timer.h" /* hmmm, Wmd should go in Wmd */
-/* types of sprites (subclasses) */
-#include "Debris.h"
-#include "Ship.h"
-#include "Wmd.h"
 
 /** Sprites in the background have a (world) position, a rotation, and a bitmap.
  They are sorted by bitmap and drawn by the gpu in ../system/Draw but not lit.
  <p>
  @author	Neil
- @version	3.2, 2015-06
- @since		3.2, 2015-06 */
-
-/* hmm, 256 is a lot of pixel space for the front layer, should be enough?
- the larger you set this, the farther it has to go to determine whether there's
- a collision, for every sprite! */
-static const int half_max_size = 128;
-static const float epsilon = 0.0005f;
-extern const float de_sitter;
+ @version	3.2, 2015-07
+ @since		3.2, 2015-07 */
 
 struct Background {
 	float x, y;     /* orientation */

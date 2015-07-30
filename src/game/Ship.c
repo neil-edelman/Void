@@ -213,6 +213,11 @@ struct Sprite *ShipGetSprite(const struct Ship *ship) {
 	return ship->sprite;
 }
 
+int ShipIsDestroyed(const struct Ship *s) {
+	if(!s) return -1;
+	return s->hit <= 0 ? -1 : 0;
+}
+
 int ShipGetId(const struct Ship *s) {
 	if(!s) return 0;
 	return (int)(s - ships) + 1;
@@ -251,16 +256,14 @@ void ShipShoot(struct Ship *ship, const int colour) {
 
 /** Called from {@code Sprite::update} via shp_wmd.
  @return	True if the ship should survive. */
-int ShipHit(struct Ship *ship, const int damage) {
-	if(!ship) return 0;
+void ShipHit(struct Ship *ship, const int damage) {
+	if(!ship) return;
 	if(ship->hit > damage) {
 		ship->hit -= damage;
 		fprintf(stderr, "Shit::hit: Shp%u hit %d, now %d.\n", ShipGetId(ship), damage, ship->hit);
-		return -1;
 	} else {
 		ship->hit = 0;
 		fprintf(stderr, "Ship::hit: Shp%u destroyed.\n", ShipGetId(ship));
-		return 0;
 	}
 }
 

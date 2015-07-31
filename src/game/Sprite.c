@@ -903,7 +903,7 @@ static void deb_shp(struct Sprite *d, struct Sprite *s, const float d0) {
 static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
 	struct Wmd *wmd = SpriteGetContainer(w);
 	struct Debris *deb = SpriteGetContainer(d);
-	/* could get into inifinite destruction loop if this is not here */
+	/* avoid inifinite destruction loop */
 	if(WmdIsDestroyed(wmd) || DebrisIsDestroyed(deb)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), WmdGetImpact(wmd));
 	DebrisHit(deb, WmdGetDamage(wmd));
@@ -917,7 +917,7 @@ static void deb_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
 static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
 	struct Wmd *wmd = SpriteGetContainer(w);
 	struct Ship *ship = SpriteGetContainer(s);
-	/* could get into inifinite destruction loop if this is not here */
+	/* avoid inifinite destruction loop */
 	if(WmdIsDestroyed(wmd) || ShipIsDestroyed(ship)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), WmdGetImpact(wmd));
 	ShipHit(ship, WmdGetDamage(wmd));

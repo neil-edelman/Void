@@ -120,6 +120,7 @@ int WmdGetDamage(const struct Wmd *wmd) {
 	return shot_damage;
 }
 
+/** The way that a Wmd is destroyed is with expires set to zero. */
 void WmdForceExpire(struct Wmd *wmd) {
 	if(!wmd) return;
 	wmd->expires = 0;

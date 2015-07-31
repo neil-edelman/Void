@@ -125,6 +125,11 @@ void WmdForceExpire(struct Wmd *wmd) {
 	wmd->expires = 0;
 }
 
+int WmdIsDestroyed(const struct Wmd *wmd) {
+	if(!wmd) return -1;
+	return wmd->expires ? 0 : -1;
+}
+
 /** Updates the light to be at the Wmd.
  @param wmd		The Wmd. */
 void WmdUpdateLight(struct Wmd *wmd) {

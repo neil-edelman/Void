@@ -66,6 +66,11 @@ static struct Sprite *first_x, *first_y; /* the projected axis sorting thing */
 
 static struct Sprite *iterator = sprites; /* for drawing and stuff */
 
+/* keep track of the dimensions of the window; it doesn't matter what the
+ initial values are, they will be erased by {@code SpriteSetViewport} */
+static int viewport_width  = 300;
+static int viewport_height = 200;
+
 /* private prototypes */
 
 static struct Sprite *iterate(void);
@@ -246,6 +251,12 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 
 /** This allows you to go part-way though and reset. Not very useful. */
 void SpriteResetIterator(void) { iterator = 0; }
+
+/** Iterate only in window. */
+int SpriteIterateWindow(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
+	/*...*/
+	return 0;
+}
 
 /** Sets the orientation with respect to the screen, pixels and (0, 0) is at
  the centre.
@@ -452,7 +463,27 @@ void SpriteUpdate(const float dt) {
 				fprintf(stderr, "Sprite::update: unknown type.\n");
 		}
 		/* if we were going to continue, we would check if s is valid (somehow) */
+		/* Debris::hit: Deb80 destroyed.
+		!!!!!!! ********* Deb80 is exploding, (0.000, 0.000).
+	Sprite: created from pool, Spr97->Tex2.
+	Debris: created from pool, Deb95->Spr97.
+		!!!!nooooooo it's not at (0.000000, 0.000000)
+		~Debris: returning to pool, Deb80->Spr80.
+		~Sprite: returning to pool, Spr80->Tex2.
+		~Sprite: Spr97 has become Spr80.
+		~Debris: Deb95 has become Deb80.
+		Debris::hit: Deb80 destroyed.
+...
+		uninteded interactions with new sprites? (what new sprites?) */
 	}
+}
+
+/** This gets called from {@code Draw::resize}.
+ @param width	px
+ @param height	px */
+void SpriteSetViewport(const int width, const int height) {
+	viewport_width  = width;
+	viewport_height = height;
 }
 
 int SpriteGetId(const struct Sprite *s) {
@@ -872,6 +903,8 @@ static void deb_shp(struct Sprite *d, struct Sprite *s, const float d0) {
 static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
 	struct Wmd *wmd = SpriteGetContainer(w);
 	struct Debris *deb = SpriteGetContainer(d);
+	/* could get into loop if this is not here */
+	if(WmdIsDestroyed(wmd) || DebrisIsDestroyed(deb)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), WmdGetImpact(wmd));
 	DebrisHit(deb, WmdGetDamage(wmd));
 	WmdForceExpire(wmd);
@@ -884,6 +917,8 @@ static void deb_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
 static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
 	struct Wmd *wmd = SpriteGetContainer(w);
 	struct Ship *ship = SpriteGetContainer(s);
+	/* could get into loop if this is not here */
+	if(WmdIsDestroyed(wmd) || ShipIsDestroyed(ship)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), WmdGetImpact(wmd));
 	ShipHit(ship, WmdGetDamage(wmd));
 	WmdForceExpire(wmd);

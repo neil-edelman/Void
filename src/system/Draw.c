@@ -632,6 +632,7 @@ static void resize(int width, int height) {
 
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
+	SpriteSetViewport(width, height);
 
 	/* update the inverse screen on the card */
 	two_width  = 2.0f / width;

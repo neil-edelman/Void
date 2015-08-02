@@ -260,7 +260,18 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 void SpriteResetIterator(void) { iterator = 0; }
 #endif
 
-/** Iterate only in window. */
+/** Returns true while there are more sprites, sets the values. The pointers
+ need to all be there or else there will surely be a segfault.
+ <p>
+ Called in ../system/Draw to draw spites.
+ <p>
+ Only draws the sprites within the window.
+ @param x_ptr		x
+ @param y_ptr		y
+ @param t_ptr		\theta
+ @param texture_ptr	OpenGl texture unit.
+ @param size_ptr	Size of the texture.
+ @return			True if the values have been set. */
 int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
 	static int x_min, x_max, y_min, y_max;
 	static int is_reset = -1;

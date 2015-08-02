@@ -229,6 +229,7 @@ void SpriteSetContainer(void *const container, struct Sprite **const notify) {
 	sprite->notify    = notify;
 }
 
+#if 0
 /** Returns true while there are more sprites, sets the values. The pointers
  need to all be there or else there will surely be a segfault.
  <p>
@@ -257,9 +258,10 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 
 /** This allows you to go part-way though and reset. Not very useful. */
 void SpriteResetIterator(void) { iterator = 0; }
+#endif
 
 /** Iterate only in window. */
-int SpriteIterateWindow(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
+int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
 	static int x_min, x_max, y_min, y_max;
 	static int is_reset = -1;
 	struct Sprite *s, *feeler;
@@ -269,7 +271,7 @@ int SpriteIterateWindow(float *x_ptr, float *y_ptr, float *theta_ptr, int *textu
 	if(is_reset/*!window_iterator*/) {
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
-		x_min = camera_x - half_max_size;
+		x_min = camera_x - half_max_size; /* FIXME: add window dimensions! */
 		x_max = camera_x + half_max_size;
 		y_min = camera_y - half_max_size;
 		y_max = camera_y + half_max_size;
@@ -597,8 +599,8 @@ void SpritePrint(const char *location) {
 /* private */
 
 /** This is a private iteration which uses the same variable as Sprite::iterate.
- This actually returns a Sprite. Use it when you want to delete a sprite as you
- go though the list. */
+ This actually returns a Sprite. Supports deleting Sprites (see @see{Sprite_}.)
+ This iterates over the whole Sprite list, not only the ones in the window. */
 static struct Sprite *iterate(void) {
 	if(iterator >= sprites + sprites_size) {
 		iterator = sprites;

@@ -601,7 +601,7 @@ static void display(void) {
 	/* fixme: have different indices to textures; keep track with texture manager; have to worry about how many tex units there are */
 	/*glUniform1i(light_texture_location, T_SPRITES); <- constant, now */
 	glUniform2f(light_camera_location, camera_x, camera_y);
-	while(SpriteIterateWindow(&x, &y, &t, &texture, &size)) {
+	while(SpriteIterate(&x, &y, &t, &texture, &size)) {
 		/* draw a sprite; fixme: minimise texture transitions */
 		if(old_texture != texture) {
 			glBindTexture(GL_TEXTURE_2D, texture);

@@ -329,6 +329,14 @@ void DrawSetCamera(const float x, const float y) {
 	camera_y = y;
 }
 
+/** Gets the camera position and stores it in (*x_ptr, *y_ptr) if it is
+ started. */
+void DrawGetCamera(float *x_ptr, float *y_ptr) {
+	if(!is_started) return;
+	*x_ptr = camera_x;
+	*y_ptr = camera_y;
+}
+
 /** Compiles, links and verifies a shader.
  @param vert_vs		Vertex shader source.
  @param frag_fs		Fragment shader source.
@@ -593,7 +601,7 @@ static void display(void) {
 	/* fixme: have different indices to textures; keep track with texture manager; have to worry about how many tex units there are */
 	/*glUniform1i(light_texture_location, T_SPRITES); <- constant, now */
 	glUniform2f(light_camera_location, camera_x, camera_y);
-	while(SpriteIterate(&x, &y, &t, &texture, &size)) {
+	while(SpriteIterateWindow(&x, &y, &t, &texture, &size)) {
 		/* draw a sprite; fixme: minimise texture transitions */
 		if(old_texture != texture) {
 			glBindTexture(GL_TEXTURE_2D, texture);

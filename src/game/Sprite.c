@@ -7,7 +7,9 @@
 #include <string.h> /* memset */
 #include "Sprite.h"
 #include "../general/Sorting.h"
+#include "../general/Map.h" /* needed for Draw */
 #include "../system/Timer.h" /* hmmm, Wmd should go in Wmd */
+#include "../system/Draw.h"
 /* types of sprites (subclasses) */
 #include "Debris.h"
 #include "Ship.h"
@@ -50,8 +52,8 @@ struct Sprite {
 	void          *container;
 	struct Sprite **notify;   /* inheritance */
 
-	int           is_possible_collision;      /* temp; per object per frame */
-	int           no_collisions;              /* temp; per frame */
+	int           is_selected;   /* temp; per object per frame */
+	int           no_collisions; /* temp; per frame */
 	float         x_min, x_max, y_min, y_max; /* temp; bounding box */
 	float         t0_dt_collide; /* temp; time to collide over frame time */
 	float         x1, y1;        /* temp; the spot where you want to go */
@@ -64,6 +66,7 @@ static int       sprites_size;
 
 static struct Sprite *first_x, *first_y; /* the projected axis sorting thing */
 
+static struct Sprite *first_x_window, *first_y_window, *window_iterator;
 static struct Sprite *iterator = sprites; /* for drawing and stuff */
 
 /* keep track of the dimensions of the window; it doesn't matter what the
@@ -140,15 +143,15 @@ struct Sprite *Sprite(const enum Sprites type, const int texture, const int size
 	sprite->notify    = 0;
 
 	/* stick sprite onto the head of the lists */
-	sprite->is_possible_collision = 0;
-	sprite->no_collisions         = 0;
+	sprite->is_selected         = 0;
+	sprite->no_collisions       = 0;
 	sprite->x1 = sprite->y1 = 0.0f;
-	sprite->prev_x                = 0;
-	sprite->next_x                = first_x;
-	sprite->prev_y                = 0;
-	sprite->next_y                = first_y;
-	if(first_x) first_x->prev_x   = sprite;
-	if(first_y) first_y->prev_y   = sprite;
+	sprite->prev_x              = 0;
+	sprite->next_x              = first_x;
+	sprite->prev_y              = 0;
+	sprite->next_y              = first_y;
+	if(first_x) first_x->prev_x = sprite;
+	if(first_y) first_y->prev_y = sprite;
 	first_x = first_y = sprite;
 
 	/* sort it (a waste of time; we will immediately call another function to
@@ -176,6 +179,9 @@ void Sprite_(struct Sprite **sprite_ptr) {
 
 	/* deal with deleting it while iterating; fixme: have more complex? */
 	if(sprite <= iterator) iterator--; /* <? */
+
+	/* if it's the first x in the window, advance the first x */
+	if(first_x_window == sprite) first_x_window = sprite->next_x;
 
 	/* take it out of the lists */
 	if(sprite->prev_x) sprite->prev_x->next_x = sprite->next_x;
@@ -254,7 +260,72 @@ void SpriteResetIterator(void) { iterator = 0; }
 
 /** Iterate only in window. */
 int SpriteIterateWindow(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
-	/*...*/
+	static int x_min, x_max, y_min, y_max;
+	static int is_reset = -1;
+	struct Sprite *s, *feeler;
+	float camera_x, camera_y;
+
+	/* go to the first spot in the window */
+	if(is_reset/*!window_iterator*/) {
+		/* determine the window */
+		DrawGetCamera(&camera_x, &camera_y);
+		x_min = camera_x - half_max_size;
+		x_max = camera_x + half_max_size;
+		y_min = camera_y - half_max_size;
+		y_max = camera_y + half_max_size;
+		/*fprintf(stderr, "window(%d:%d,%d,%d)\n", x_min, x_max, y_min, y_max);*/
+		/* no sprite anywhere? */
+		if(!first_x_window && !(first_x_window = first_x)) return 0;
+		/* place the first_x_window on the first x in the window */
+		if(first_x_window->x < x_min) {
+			do {
+				if(!(first_x_window = first_x_window->next_x)) return 0;
+			} while(first_x_window->x < x_min);
+		} else {
+			while((feeler = first_x_window->prev_x)
+				  && (x_min <= feeler->x)) first_x_window = feeler;
+		}
+		/*fprintf(stderr, "first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
+		/* mark x; O(n) :[ */
+		for(s = first_x_window; s && s->x <= x_max; s = s->next_x)
+			s->is_selected = -1;
+		/* now repeat for y; no sprite anywhere (this shouldn't happen!) */
+		if(!first_y_window && !(first_y_window = first_y)) return 0;
+		/* place the first_y_window on the first y in the window */
+		if(first_y_window->y < y_min) {
+			do {
+				if(!(first_y_window = first_y_window->next_y)) return 0;
+			} while(first_y_window->y < y_min);
+		} else {
+			while((feeler = first_y_window->prev_y)
+				  && (y_min <= feeler->y)) first_y_window = feeler;
+		}
+		/* select the first y; fixme: should probably go the other way around,
+		 less to mark since the y-extent is probably more; or maybe it's good
+		 to mark more? */
+		window_iterator = first_y_window;
+		is_reset = 0;
+	}
+
+	/* consider y */
+	while(window_iterator->y <= y_max) {
+		if(window_iterator->is_selected) {
+			/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
+			*x_ptr       = window_iterator->x;
+			*y_ptr       = window_iterator->y;
+			*theta_ptr   = window_iterator->theta;
+			*texture_ptr = window_iterator->texture;
+			*size_ptr    = window_iterator->size;
+			window_iterator = window_iterator->next_y;
+			return -1;
+		}
+		if(!(window_iterator = window_iterator->next_y)) break;
+	}
+
+	/* reset for next time */
+	for(s = first_x_window; s && s->x <= x_max; s = s->next_x)
+		s->is_selected = 0;
+	is_reset = -1;
 	return 0;
 }
 
@@ -345,14 +416,14 @@ struct Sprite *SpriteGetCircle(const float x, const float y, const float r) {
 	/*printf("* compiling list of x:");*/
 	for(t = s_x0; t && t->x <= explore_x_max; t = t->next_x) {
 		/*printf(" #%u", SpriteGetId(t));*/
-		t->is_possible_collision = -1;
+		t->is_selected = -1;
 	}
 
 	/* consider y and maybe add it to the list of colliders */
 	/*printf("\n* compiling list of y:");*/
 	for(t = s_y0; t && t->y <= explore_y_max; t = t->next_y) {
 		/*printf(" #%u", SpriteGetId(t));*/
-		if(t->is_possible_collision) {
+		if(t->is_selected) {
 			float dx = t->x - x, dy = t->y - y, dr = t->bounding + r;
 			/*printf("(maybe: (%.1f, %.1f)r%.1f)", t->x, t->y, t->bounding);*/
 			if(dx*dx + dy*dy <= dr*dr) {
@@ -364,7 +435,7 @@ struct Sprite *SpriteGetCircle(const float x, const float y, const float r) {
 
 	/* reset for next time; fixme: ugly */
 	for(t = s_x0; t && t->x <= explore_x_max; t = t->next_x) {
-		t->is_possible_collision = 0;
+		t->is_selected = 0;
 	}
 	/*printf("\n");*/
 	printf("getCircle: found: #%u\n", ret ? SpriteGetId(ret) : 0);
@@ -587,16 +658,16 @@ void collide(struct Sprite *a) {
 
 	/* mark x */
 	for(b = a->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
-		if(a < b && a->x_min < b->x_max) b->is_possible_collision = -1;
+		if(a < b && a->x_min < b->x_max) b->is_selected = -1;
 	}
 	for(b = a->next_x; b && b->x <= explore_x_max; b = b->next_x) {
-		if(a < b && a->x_max > b->x_min) b->is_possible_collision = -1;
+		if(a < b && a->x_max > b->x_min) b->is_selected = -1;
 	}
 
 	/* consider y and maybe add it to the list of colliders */
 	for(b = a->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
 		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
-		if(b->is_possible_collision
+		if(b->is_selected
 		   && a->y_min < b->y_max
 		   && (response = collision_matrix[b->type - 1][a->type - 1])
 		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
@@ -605,7 +676,7 @@ void collide(struct Sprite *a) {
 	}
 	for(b = a->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
 		b_adj_y = b->next_y;
-		if(b->is_possible_collision
+		if(b->is_selected
 		   && a->y_max > b->y_min
 		   && (response = collision_matrix[b->type - 1][a->type - 1])
 		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
@@ -615,10 +686,10 @@ void collide(struct Sprite *a) {
 
 	/* reset for next time; fixme: ugly */
 	for(b = a->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
-		b->is_possible_collision = 0;
+		b->is_selected = 0;
 	}
 	for(b = a->next_x; b && b->x <= explore_x_max; b = b->next_x) {
-		b->is_possible_collision = 0;
+		b->is_selected = 0;
 	}
 
 	/*if(collide) printf("collide: Spr%u: Spr%u...\n", SpriteGetId(s), SpriteGetId(collide));*/

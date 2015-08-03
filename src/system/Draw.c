@@ -638,9 +638,10 @@ static void resize(int width, int height) {
 	int w_tex, h_tex;
 	float w_w_tex, h_h_tex;
 
+	fprintf(stderr, "Draw::resize: %dx%d.\n", width, height);
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
-	SpriteSetViewport(width, height);
+	SpriteSetViewport(width, height); /* update the Sprite */
 
 	/* update the inverse screen on the card */
 	two_width  = 2.0f / width;

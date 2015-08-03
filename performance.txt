@@ -33,3 +33,6 @@ with collision detection, 101 sprites
 18%
 151 sprites (72)
 22%
+
+512 sprites, full-screen
+32%

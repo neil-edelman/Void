@@ -273,19 +273,26 @@ void SpriteResetIterator(void) { iterator = 0; }
  @param size_ptr	Size of the texture.
  @return			True if the values have been set. */
 int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
+	static int x_min_window, x_max_window, y_min_window, y_max_window;
 	static int x_min, x_max, y_min, y_max;
-	static int is_reset = -1;
+	static int is_reset = -1; /* oy, static */
 	struct Sprite *s, *feeler;
 	float camera_x, camera_y;
 
 	/* go to the first spot in the window */
 	if(is_reset/*!window_iterator*/) {
+		int w = (viewport_width  >> 1) + 1 - 20;
+		int	h = (viewport_height >> 1) + 1 - 20;
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
-		x_min = camera_x - half_max_size; /* FIXME: add window dimensions! */
-		x_max = camera_x + half_max_size;
-		y_min = camera_y - half_max_size;
-		y_max = camera_y + half_max_size;
+		x_min_window = camera_x - w;
+		x_max_window = camera_x + w;
+		y_min_window = camera_y - h;
+		y_max_window = camera_y + h;
+		x_min = x_min_window - half_max_size;
+		x_max = x_max_window + half_max_size;
+		y_min = y_min_window - half_max_size;
+		y_max = y_max_window + half_max_size;
 		/*fprintf(stderr, "window(%d:%d,%d,%d)\n", x_min, x_max, y_min, y_max);*/
 		/* no sprite anywhere? */
 		if(!first_x_window && !(first_x_window = first_x)) return 0;
@@ -323,14 +330,21 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 	/* consider y */
 	while(window_iterator->y <= y_max) {
 		if(window_iterator->is_selected) {
-			/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
-			*x_ptr       = window_iterator->x;
-			*y_ptr       = window_iterator->y;
-			*theta_ptr   = window_iterator->theta;
-			*texture_ptr = window_iterator->texture;
-			*size_ptr    = window_iterator->size;
-			window_iterator = window_iterator->next_y;
-			return -1;
+			int extent = window_iterator->size >> 1;
+			/* tighter bounds */
+			if(window_iterator->x + extent > x_min_window
+			   && window_iterator->x - extent < x_max_window
+			   && window_iterator->y + extent > y_min_window
+			   && window_iterator->y - extent < x_max_window) {
+				/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
+				*x_ptr       = window_iterator->x;
+				*y_ptr       = window_iterator->y;
+				*theta_ptr   = window_iterator->theta;
+				*texture_ptr = window_iterator->texture;
+				*size_ptr    = window_iterator->size;
+				window_iterator = window_iterator->next_y;
+				return -1;
+			}
 		}
 		if(!(window_iterator = window_iterator->next_y)) break;
 	}

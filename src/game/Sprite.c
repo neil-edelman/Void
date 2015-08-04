@@ -258,7 +258,8 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 
 /** This allows you to go part-way though and reset. Not very useful. */
 void SpriteResetIterator(void) { iterator = 0; }
-#endif
+
+#else
 
 /** Returns true while there are more sprites, sets the values. The pointers
  need to all be there or else there will surely be a segfault.
@@ -281,8 +282,9 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 
 	/* go to the first spot in the window */
 	if(is_reset/*!window_iterator*/) {
-		int w = (viewport_width  >> 1) + 1 - 20;
-		int	h = (viewport_height >> 1) + 1 - 20;
+		/* fixme: -50 is for debugging! take it out */
+		int w = (viewport_width  >> 1) + 1 - 50;
+		int	h = (viewport_height >> 1) + 1 - 50;
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
 		x_min_window = camera_x - w;
@@ -328,14 +330,14 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 	}
 
 	/* consider y */
-	while(window_iterator->y <= y_max) {
+	while(window_iterator && window_iterator->y <= y_max) {
 		if(window_iterator->is_selected) {
-			int extent = window_iterator->size >> 1;
+			int extent = (window_iterator->size >> 1) + 1;
 			/* tighter bounds */
-			if(window_iterator->x + extent > x_min_window
-			   && window_iterator->x - extent < x_max_window
-			   && window_iterator->y + extent > y_min_window
-			   && window_iterator->y - extent < x_max_window) {
+			if(   window_iterator->x > x_min_window - extent
+			   && window_iterator->x < x_max_window + extent
+			   && window_iterator->y > y_min_window - extent
+			   && window_iterator->y < y_max_window + extent) {
 				/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
 				*x_ptr       = window_iterator->x;
 				*y_ptr       = window_iterator->y;
@@ -344,9 +346,11 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 				*size_ptr    = window_iterator->size;
 				window_iterator = window_iterator->next_y;
 				return -1;
-			}
+			}/* else {
+				fprintf(stderr, "Tighter bounds rejected Spr%u(%f,%f)\n", SpriteGetId(window_iterator), window_iterator->x, window_iterator->y);
+			}*/
 		}
-		if(!(window_iterator = window_iterator->next_y)) break;
+		window_iterator = window_iterator->next_y;
 	}
 
 	/* reset for next time */
@@ -355,6 +359,7 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 	is_reset = -1;
 	return 0;
 }
+#endif
 
 /** Sets the orientation with respect to the screen, pixels and (0, 0) is at
  the centre.

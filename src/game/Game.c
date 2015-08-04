@@ -121,7 +121,7 @@ int Game(void) {
 
 	bmp = MapGet(bmps, "Nautilus_bmp");
 	game.player = Ship(&game.player, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_HUMAN);
-/*	bmp = MapGet(bmps, "Scorpion_bmp");
+	bmp = MapGet(bmps, "Scorpion_bmp");
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
@@ -131,7 +131,7 @@ int Game(void) {
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 600.0f, 0.0f);
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
-	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);*/
+	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
 
 	Background(2, 256.0f);
 
@@ -181,6 +181,7 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 	}
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress(k_f1)) WindowToggleFullScreen();
+	if(KeyPress('a'))  SpritePrint("Game::update");
 
 	/* in-game */
 	game.turning      = KeyTime(k_left) - KeyTime(k_right);

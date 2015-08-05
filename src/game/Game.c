@@ -105,6 +105,7 @@ int Game(void) {
 	bmp = MapGet(bmps, "Asteroid_bmp");
 	foo = MapGet(bmps, "Scorpion_bmp");
 
+	/* some asteroids */
 	for(i = 0; i < 512; i++) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
 		printf("Game: new Asteroid, checking:\n");
@@ -119,6 +120,7 @@ int Game(void) {
 		printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);
 	}
 
+	/* sprinkle some ships */
 	bmp = MapGet(bmps, "Nautilus_bmp");
 	game.player = Ship(&game.player, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_HUMAN);
 	bmp = MapGet(bmps, "Scorpion_bmp");
@@ -133,6 +135,7 @@ int Game(void) {
 	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
 	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
 
+	/* planets */
 	Background(2, 256.0f);
 
 	fprintf(stderr, "Game: on.\n");

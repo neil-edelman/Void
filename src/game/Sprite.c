@@ -333,7 +333,7 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 	while(window_iterator && window_iterator->y <= y_max) {
 		if(window_iterator->is_selected) {
 			int extent = (window_iterator->size >> 1) + 1;
-			/* tighter bounds */
+			/* tighter bounds -- slow, but worth it; fixme: optimise for b-t */
 			if(   window_iterator->x > x_min_window - extent
 			   && window_iterator->x < x_max_window + extent
 			   && window_iterator->y > y_min_window - extent

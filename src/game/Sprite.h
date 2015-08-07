@@ -16,6 +16,6 @@ enum Sprites SpriteGetType(const struct Sprite *sprite);
 void *SpriteGetContainer(const struct Sprite *sprite);
 struct Sprite *SpriteGetCircle(const float x, const float y, const float r);
 void SpriteUpdate(const float s);
-void SpriteSetViewport(const int width, const int height);
+/*void SpriteSetViewport(const int width, const int height);*/
 int SpriteGetId(const struct Sprite *s);
 void SpritePrint(const char *location);

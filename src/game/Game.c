@@ -136,7 +136,7 @@ int Game(void) {
 	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
 
 	/* planets */
-	Background(2, 256.0f);
+	Background(2, 1024.0f);
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;

@@ -115,17 +115,19 @@ static void display(void);
 static void resize(int width, int height);
 
 /* so many globals! */
-GLuint  vbo_geom, /*spot_geom,*/ light_tex, *texture_ids, astr_tex, bg_tex, tex_map_shader, back_shader, light_shader;
-GLint   tex_map_matrix_location, tex_map_texture_location;
+/* used as extern in Sprite, Background */
+/*static*/ int     screen_width = 300, screen_height = 200;
+static GLuint  vbo_geom, /*spot_geom,*/ light_tex, *texture_ids, astr_tex, bg_tex, tex_map_shader, back_shader, light_shader;
+static GLint   tex_map_matrix_location, tex_map_texture_location;
 
-GLint   back_size_location, back_angle_location, back_position_location, back_camera_location, /*back_texture_location,*/ back_two_screen_location;
-GLint   back_dirang_location, back_dirclr_location;
+static GLint   back_size_location, back_angle_location, back_position_location, back_camera_location, /*back_texture_location,*/ back_two_screen_location;
+static GLint   back_dirang_location, back_dirclr_location;
 
-GLint   light_size_location, light_angle_location, light_position_location, light_camera_location, /*light_texture_location,*/ light_two_screen_location;
-GLint   light_lights_location, light_lightpos_location, light_lightclr_location;
-GLint   light_dirang_location, light_dirclr_location;
-GLfloat two_width, two_height;
-float   camera_x, camera_y;
+static GLint   light_size_location, light_angle_location, light_position_location, light_camera_location, /*light_texture_location,*/ light_two_screen_location;
+static GLint   light_lights_location, light_lightpos_location, light_lightclr_location;
+static GLint   light_dirang_location, light_dirclr_location;
+static GLfloat two_width, two_height;
+static float   camera_x, camera_y;
 
 /** Gets all the graphics stuff started.
  @return		All good to draw? */
@@ -336,6 +338,12 @@ void DrawGetCamera(float *x_ptr, float *y_ptr) {
 	*x_ptr = camera_x;
 	*y_ptr = camera_y;
 }
+
+/** Gets the width and height. Use extern screen_* */
+/*void DrawGetScreen(int *width_ptr, int *height_ptr) {
+	if(!is_started) return;
+	*width_ptr = 
+}*/
 
 /** Compiles, links and verifies a shader.
  @param vert_vs		Vertex shader source.
@@ -641,7 +649,9 @@ static void resize(int width, int height) {
 	fprintf(stderr, "Draw::resize: %dx%d.\n", width, height);
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
-	SpriteSetViewport(width, height); /* update the Sprite */
+	screen_width  = width;
+	screen_height = height;
+	/*SpriteSetViewport(width, height);*/ /* update the Sprite */
 
 	/* update the inverse screen on the card */
 	two_width  = 2.0f / width;

@@ -33,9 +33,14 @@
  @version	3.2, 2015-06
  @since		3.2, 2015-06 */
 
+/* from Draw */
+extern int screen_width, screen_height;
+
 /* hmm, 256 is a lot of pixel space for the front layer, should be enough?
  the larger you set this, the farther it has to go to determine whether there's
- a collision, for every sprite! */
+ a collision, for every sprite! however, this means that the maximum value for
+ a sprite is 256x256 to be guaranteed to be without clipping and collision
+ artifacts */
 static const int half_max_size = 128;
 static const float epsilon = 0.0005f;
 extern const float de_sitter;
@@ -71,8 +76,8 @@ static struct Sprite *iterator = sprites; /* for drawing and stuff */
 
 /* keep track of the dimensions of the window; it doesn't matter what the
  initial values are, they will be erased by {@code SpriteSetViewport} */
-static int viewport_width  = 300;
-static int viewport_height = 200;
+/* static int viewport_width  = 300;
+static int viewport_height = 200; taken care of by global screen_* */
 
 /* private prototypes */
 
@@ -283,8 +288,8 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 	/* go to the first spot in the window */
 	if(is_reset/*!window_iterator*/) {
 		/* fixme: -50 is for debugging! take it out */
-		int w = (viewport_width  >> 1) + 1 - 50;
-		int	h = (viewport_height >> 1) + 1 - 50;
+		int w = (screen_width  >> 1) + 1 - 50;
+		int	h = (screen_height >> 1) + 1 - 50;
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
 		x_min_window = camera_x - w;
@@ -583,11 +588,12 @@ void SpriteUpdate(const float dt) {
 
 /** This gets called from {@code Draw::resize}.
  @param width	px
- @param height	px */
-void SpriteSetViewport(const int width, const int height) {
+ @param height	px
+ @depriciated		extern screen_* takes care of it */
+/*void SpriteSetViewport(const int width, const int height) {
 	viewport_width  = width;
 	viewport_height = height;
-}
+}*/
 
 int SpriteGetId(const struct Sprite *s) {
 	if(!s) return 0;

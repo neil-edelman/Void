@@ -5,6 +5,8 @@
 #include <string.h> /* memset */
 #include "Background.h"
 #include "../general/Sorting.h"
+#include "../general/Map.h" /* for Draw */
+#include "../system/Draw.h"
 
 /** Sprites in the background have a (world) position, a rotation, and a bitmap.
  They are sorted by bitmap and drawn by the gpu in ../system/Draw but not lit.
@@ -13,18 +15,26 @@
  @version	3.2, 2015-07
  @since		3.2, 2015-07 */
 
+/* from Draw */
+extern int screen_width, screen_height;
+
+/* the backgrounds can be larger than the sprites, 1024x1024? */
+static int half_max_size = 512;
+
 struct Background {
 	float x, y;     /* orientation */
 	float theta;
 	int   size;     /* the (x, y) size; they are the same */
 	int   texture;  /* in the gpu */
 	struct Background *prev_x, *next_x, *prev_y, *next_y; /* sort by axes */
+	int   is_selected;
 } backgrounds[1024];
 static const int backgrounds_capacity = sizeof(backgrounds) / sizeof(struct Background);
 static int       backgrounds_size;
 
 static struct Background *first_x, *first_y; /* the projected axis sorting thing */
 
+static struct Background *first_x_window, *first_y_window, *window_iterator;
 static struct Background *iterator = backgrounds; /* for drawing and stuff */
 
 /* private prototypes */
@@ -123,6 +133,7 @@ void Background_(struct Background **bg_ptr) {
 	*bg_ptr = bg = 0;
 }
 
+#if 0
 /** Returns true while there are more, sets the values. The pointers need to
  all be there or else there will surely be a segfault.
  <p>
@@ -151,6 +162,94 @@ int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture
 	iterator++;
 	return -1;
 }
+#else
+/** This is the exact copy of SpriteIterate. */
+int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
+	static int x_min_window, x_max_window, y_min_window, y_max_window;
+	static int x_min, x_max, y_min, y_max;
+	static int is_reset = -1; /* oy, static */
+	struct Background *b, *feeler;
+	float camera_x, camera_y;
+
+	/* go to the first spot in the window */
+	if(is_reset) {
+		/* fixme: -50 is for debugging! take it out */
+		int w = (screen_width  >> 1) + 1 - 50;
+		int	h = (screen_height >> 1) + 1 - 50;
+		/* determine the window */
+		DrawGetCamera(&camera_x, &camera_y);
+		x_min_window = camera_x - w;
+		x_max_window = camera_x + w;
+		y_min_window = camera_y - h;
+		y_max_window = camera_y + h;
+		x_min = x_min_window - half_max_size;
+		x_max = x_max_window + half_max_size;
+		y_min = y_min_window - half_max_size;
+		y_max = y_max_window + half_max_size;
+		/* no sprite anywhere? */
+		if(!first_x_window && !(first_x_window = first_x)) return 0;
+		/* place the first_x_window on the first x in the window */
+		if(first_x_window->x < x_min) {
+			do {
+				if(!(first_x_window = first_x_window->next_x)) return 0;
+			} while(first_x_window->x < x_min);
+		} else {
+			while((feeler = first_x_window->prev_x)
+				  && (x_min <= feeler->x)) first_x_window = feeler;
+		}
+		/*fprintf(stderr, "first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
+		/* mark x; O(n) :[ */
+		for(b = first_x_window; b && b->x <= x_max; b = b->next_x)
+			b->is_selected = -1;
+		/* now repeat for y; no sprite anywhere (this shouldn't happen!) */
+		if(!first_y_window && !(first_y_window = first_y)) return 0;
+		/* place the first_y_window on the first y in the window */
+		if(first_y_window->y < y_min) {
+			do {
+				if(!(first_y_window = first_y_window->next_y)) return 0;
+			} while(first_y_window->y < y_min);
+		} else {
+			while((feeler = first_y_window->prev_y)
+				  && (y_min <= feeler->y)) first_y_window = feeler;
+		}
+		/* select the first y; fixme: should probably go the other way around,
+		 less to mark since the y-extent is probably more; or maybe it's good
+		 to mark more? */
+		window_iterator = first_y_window;
+		is_reset = 0;
+	}
+	
+	/* consider y */
+	while(window_iterator && window_iterator->y <= y_max) {
+		if(window_iterator->is_selected) {
+			int extent = (window_iterator->size >> 1) + 1;
+			/* tighter bounds -- slow, but worth it; fixme: optimise for b-t */
+			if(   window_iterator->x > x_min_window - extent
+			   && window_iterator->x < x_max_window + extent
+			   && window_iterator->y > y_min_window - extent
+			   && window_iterator->y < y_max_window + extent) {
+				/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
+				*x_ptr       = window_iterator->x;
+				*y_ptr       = window_iterator->y;
+				*theta_ptr   = window_iterator->theta;
+				*texture_ptr = window_iterator->texture;
+				*size_ptr    = window_iterator->size;
+				window_iterator = window_iterator->next_y;
+				return -1;
+			}/* else {
+			  fprintf(stderr, "Tighter bounds rejected Spr%u(%f,%f)\n", SpriteGetId(window_iterator), window_iterator->x, window_iterator->y);
+			  }*/
+		}
+		window_iterator = window_iterator->next_y;
+	}
+
+	/* reset for next time */
+	for(b = first_x_window; b && b->x <= x_max; b = b->next_x)
+		b->is_selected = 0;
+	is_reset = -1;
+	return 0;
+}
+#endif
 
 /** Sets the orientation with respect to the screen, pixels and (0, 0) is at
  the centre.

@@ -1,0 +1,36 @@
+Credit: NASA/JPL
+View/Download Full Resolution Image
+View/Download Poster (PDF)
+Distance from Earth: 2 to 15 light minutes
+Size: 12104 km
+Telescope: Magellan
+Light: Radar imaging showing elevations under thick atmosphere
+
+
+(I believe this is an enhanced version of:
+
+PIA00252: Venus - Computer Simulated Global View of Northern Hemisphere 
+
+ 
+	
+ Target Name: 	Venus
+ Is a satellite of: 	Sol (our sun)
+ Mission: 	 Magellan 
+ Spacecraft: 	 Magellan
+ Instrument: 	 Imaging Radar 
+ Product Size: 	4096 x 4096 pixels (w x h) 
+ Produced By: 	 JPL 
+ Producer ID: 	 P39224  
+ Addition Date: 	1996-03-14 
+ Primary Data Set: 	Magellan MIDRs 
+ Full-Res TIFF: 	 PIA00252.tif (7.686 MB)
+ Full-Res JPEG: 	 PIA00252.jpg (1.608 MB)  
+Click on the image above to download a moderately sized image in JPEG format (possibly reduced in size from original)
+Original Caption Released with Image:
+The northern hemisphere is displayed in this global view of the surface of Venus. The north pole is at the center of the image, with 0 degrees, 90 degrees, 180 degrees, 270 degrees east longitudes at the 6, 3, 12, 9 o'clock positions, respectively, of an imaginary clock face. Magellan synthetic aperture radar mosaics from the first cycle of Magellan mapping are mapped onto a computer-simulated globe to create this image. Data gaps are filled with Pioneer Venus Orbiter data, or a constant mid-range value. Simulated color is used to enhance small-scale structure. The simulated hues are based on color images recorded by the Soviet Venera 13 and 14 spacecraft. The image was produced at the JPL Multimission Image Processing Laboratory and is a single frame from a video released at the October 29, 1991, JPL news conference.
+
+Image Credit:
+NASA/JPL
+
+Image Addition Date:
+1996-03-14)

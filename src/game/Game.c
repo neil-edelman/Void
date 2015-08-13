@@ -51,6 +51,7 @@ int Game(void) {
 	struct Bitmap *bmp;
 	struct Debris *asteroid;
 	struct Ship   *bad;
+	struct Background *bg;
 	int i;
 
 	if(is_started) return -1;
@@ -137,8 +138,12 @@ int Game(void) {
 
 	/* planets */
 	bmp = MapGet(bmps, "Mercury_bmp");
-	Background(BitmapGetImageUnit(bmp), 344.0f/*1024.0f*/);
-
+	bg  = Background(BitmapGetImageUnit(bmp), BitmapGetWidth(bmp)/*344.0f*//*1024.0f*/);
+	/*BackgroundSetOrientation(bg, -300.0f, 500.0f, 0.0f);*/
+	bmp = MapGet(bmps, "Venus_bmp");
+	bg  = Background(BitmapGetImageUnit(bmp), BitmapGetWidth(bmp));
+	BackgroundSetOrientation(bg, 600.0f, 500.0f, 0.0f);
+	
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;
 

@@ -21,6 +21,7 @@
 #include "../bin/Nautilus_bmp.h"
 #include "../bin/Scorpion_bmp.h"
 #include "../bin/Mercury_bmp.h"
+#include "../bin/Venus_bmp.h"
 
 /** Entry point for command-line, unix-like operating systems (ie, all of them.)
  <p>
@@ -89,7 +90,12 @@ int main(int argc, char **argv) {
 		Bitmap_(&bmp);
 		return EXIT_FAILURE;
 	}
-
+	if(!(bmp = Bitmap(Venus_bmp_width, Venus_bmp_height, Venus_bmp_depth, Venus_bmp_bmp, B_SPRITE))
+	   || !MapPut(entry.bmps, Venus_bmp_name, bmp)) {
+		Bitmap_(&bmp);
+		return EXIT_FAILURE;
+	}
+	
 	/* start up subsystems; window has to be first; timer ms */
 	if(!Window(programme, argc, argv)
 		|| !Key()

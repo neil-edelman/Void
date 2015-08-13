@@ -43,6 +43,7 @@ FS_FS := $(patsubst %,$(SDIR)/%.fs,$(FS))
 VS_H  := $(patsubst %,$(BDIR)/%_vs.h,$(VS))
 FS_H  := $(patsubst %,$(BDIR)/%_fs.h,$(FS))
 BMP_BMP:=$(patsubst %,$(MDIR)/%.bmp,$(BMP))
+BMP_TXT:=$(patsubst %,$(MDIR)/%.txt,$(BMP))
 BMP_H :=$(patsubst %,$(BDIR)/%_bmp.h,$(BMP))
 TSV_TSV:=$(patsubst %,$(MDIR)/%.tsv,$(TSV))
 TSV_H :=$(patsubst %,$(BDIR)/%_tsv.h,$(TSV))
@@ -168,7 +169,7 @@ clean:
 
 backup:
 	@mkdir -p $(BACK)
-	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) # $(BMP_BMP) (that last one is too large)
+	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) # $(BMP_BMP) (that last one is too large)
 
 setup: default
 	@mkdir -p $(BDIR)/$(INST)

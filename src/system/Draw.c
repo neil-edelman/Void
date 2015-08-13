@@ -117,7 +117,7 @@ static void resize(int width, int height);
 /* so many globals! */
 /* used as extern in Sprite, Background */
 /*static*/ int     screen_width = 300, screen_height = 200;
-static GLuint  vbo_geom, /*spot_geom,*/ light_tex, *texture_ids, astr_tex, bg_tex, tex_map_shader, back_shader, light_shader;
+static GLuint  vbo_geom, /*spot_geom,*/ light_tex, /* *texture_ids,*/ astr_tex, bg_tex, tex_map_shader, back_shader, light_shader;
 static GLint   tex_map_matrix_location, tex_map_texture_location;
 
 static GLint   back_size_location, back_angle_location, back_position_location, back_camera_location, /*back_texture_location,*/ back_two_screen_location;
@@ -222,7 +222,7 @@ int Draw(struct Map *bmps) {
 	back_camera_location    = glGetUniformLocation(back_shader, "camera");
 	back_two_screen_location= glGetUniformLocation(back_shader, "two_screen");
 	/* fs */
-	/*back_texture_location = glGetUniformLocation(back_shader, "sampler");*/
+	/*const->back_texture_location = glGetUniformLocation(back_shader, "sampler");*/
 	glUniform1i(glGetUniformLocation(back_shader, "sampler"),       T_SPRITES);
 	glUniform1i(glGetUniformLocation(back_shader, "sampler_light"), T_LIGHT);
 	back_dirang_location  = glGetUniformLocation(back_shader, "directional_angle");
@@ -567,17 +567,15 @@ static void display(void) {
 	glUniform1i(tex_map_texture_location, T_BACKGROUND);
 	/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
 	glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
+	glEnable(GL_BLEND);
 
 	/* turn on background lighting (sprites) */
-	/*glUseProgram(back_shader); <- doesn't work */
-	glUseProgram(light_shader);
-	glUniform1i(light_lights_location, 0);
+	glUseProgram(back_shader);
+	/*glUseProgram(light_shader);
+	glUniform1i(light_lights_location, 0);*/
 
 	/* background sprites */
-	glEnable(GL_BLEND);
-#if 0
-	glUniform1i(back_texture_location, T_SPRITES); /* <- this */
-#endif
+	/*const->glUniform1i(back_texture_location, T_SPRITES); */
 	glUniform2f(back_camera_location, camera_x, camera_y);
 	while(BackgroundIterate(&x, &y, &t, &texture, &size)) {
 		if(old_texture != texture) {
@@ -593,8 +591,7 @@ static void display(void) {
 
 	/* turn on lighting */
 	glUseProgram(light_shader);
-	lights = LightGetNo();
-	glUniform1i(light_lights_location, lights);
+	glUniform1i(light_lights_location, lights = LightGetNo());
 	if(lights) {
 		glUniform2fv(light_lightpos_location, lights, (GLfloat *)LightGetPositions());
 		glUniform3fv(light_lightclr_location, lights, (GLfloat *)LightGetColours());

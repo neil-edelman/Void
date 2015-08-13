@@ -19,7 +19,8 @@
 extern int screen_width, screen_height;
 
 /* the backgrounds can be larger than the sprites, 1024x1024? */
-static int half_max_size = 512;
+static int half_max_size    = 512;
+static float foreshortening = 2.1f;
 
 struct Background {
 	float x, y;     /* orientation */
@@ -154,8 +155,8 @@ int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture
 		iterator = backgrounds;
 		return 0;
 	}
-	*x_ptr       = iterator->x;
-	*y_ptr       = iterator->y;
+	*x_ptr       = iterator->x * foreshortening;
+	*y_ptr       = iterator->y * foreshortening;
 	*theta_ptr   = iterator->theta;
 	*texture_ptr = iterator->texture;
 	*size_ptr    = iterator->size;
@@ -166,7 +167,7 @@ int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture
 /** This is the exact copy of SpriteIterate. */
 int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
 	static int x_min_window, x_max_window, y_min_window, y_max_window;
-	static int x_min, x_max, y_min, y_max;
+	static int x_min, x_max, y_min, y_max; /* these are more expansive */
 	static int is_reset = -1; /* oy, static */
 	struct Background *b, *feeler;
 	float camera_x, camera_y;
@@ -178,6 +179,9 @@ int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture
 		int	h = (screen_height >> 1) + 1 - 50;
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
+		/*camera_x *= foreshortening;
+		camera_y *= foreshortening;
+		camera_x = camera_y = 0.0f;*/
 		x_min_window = camera_x - w;
 		x_max_window = camera_x + w;
 		y_min_window = camera_y - h;
@@ -229,8 +233,8 @@ int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture
 			   && window_iterator->y > y_min_window - extent
 			   && window_iterator->y < y_max_window + extent) {
 				/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
-				*x_ptr       = window_iterator->x;
-				*y_ptr       = window_iterator->y;
+				*x_ptr       = window_iterator->x /* * foreshortening*/;
+				*y_ptr       = window_iterator->y /* * foreshortening*/;
 				*theta_ptr   = window_iterator->theta;
 				*texture_ptr = window_iterator->texture;
 				*size_ptr    = window_iterator->size;

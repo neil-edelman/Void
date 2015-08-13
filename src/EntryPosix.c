@@ -20,6 +20,7 @@
 #include "../bin/Asteroid_bmp.h"
 #include "../bin/Nautilus_bmp.h"
 #include "../bin/Scorpion_bmp.h"
+#include "../bin/Mercury_bmp.h"
 
 /** Entry point for command-line, unix-like operating systems (ie, all of them.)
  <p>
@@ -80,6 +81,11 @@ int main(int argc, char **argv) {
 	}
 	if(!(bmp = Bitmap(Scorpion_bmp_width, Scorpion_bmp_height, Scorpion_bmp_depth, Scorpion_bmp_bmp, B_SPRITE))
 	   || !MapPut(entry.bmps, Scorpion_bmp_name, bmp)) {
+		Bitmap_(&bmp);
+		return EXIT_FAILURE;
+	}
+	if(!(bmp = Bitmap(Mercury_bmp_width, Mercury_bmp_height, Mercury_bmp_depth, Mercury_bmp_bmp, B_SPRITE))
+	   || !MapPut(entry.bmps, Mercury_bmp_name, bmp)) {
 		Bitmap_(&bmp);
 		return EXIT_FAILURE;
 	}

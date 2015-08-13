@@ -48,7 +48,7 @@ int Game(void) {
 	struct Bitmap *bitmap, *bmp[3];
 	struct Game   *game;*/
 	struct Map    *bmps;
-	struct Bitmap *bmp, *foo;
+	struct Bitmap *bmp;
 	struct Debris *asteroid;
 	struct Ship   *bad;
 	int i;
@@ -102,8 +102,8 @@ int Game(void) {
 	 300 -- 59%
 	1000 -- 95%
 	 collision detection is negligible, polygons are not (gpu-cpu bound?) */
+
 	bmp = MapGet(bmps, "Asteroid_bmp");
-	foo = MapGet(bmps, "Scorpion_bmp");
 
 	/* some asteroids */
 	for(i = 0; i < 512; i++) {
@@ -136,7 +136,8 @@ int Game(void) {
 	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
 
 	/* planets */
-	Background(2, 1024.0f);
+	bmp = MapGet(bmps, "Mercury_bmp");
+	Background(BitmapGetImageUnit(bmp), 344.0f/*1024.0f*/);
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;

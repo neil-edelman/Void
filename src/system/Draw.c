@@ -247,7 +247,9 @@ int Draw(struct Map *bmps) {
 
 	/* sunshine; fixme: have it change in different regions */
 	{
-		float sunshine[] = { 1.0f * 3.0f, 0.97f * 3.0f, 0.46f * 3.0f };
+		/* scientificly inaccurate
+		float sunshine[] = { 1.0f * 3.0f, 0.97f * 3.0f, 0.46f * 3.0f }; */
+		float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
 		glUseProgram(back_shader);
 		glUniform1f(back_dirang_location, -2.0);
 		glUniform3fv(back_dirclr_location, 1, sunshine);
@@ -505,7 +507,7 @@ static int texture(const char *name, const int width, const int height, const in
 static int light_compute_texture(void) {
 	int   i, j;
 	float x, y;
-	float buffer[64][64][2];
+	float buffer[512][512][2];
 	const int buffer_ysize = sizeof(buffer)  / sizeof(*buffer);
 	const int buffer_xsize = sizeof(*buffer) / sizeof(**buffer);
 	const float buffer_norm = (float)M_SQRT1_2 * 4.0f / sqrtf((float)buffer_xsize * buffer_xsize + buffer_ysize * buffer_ysize);

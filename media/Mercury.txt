@@ -1,0 +1,8 @@
+Global Coverage 
+Date: 22 Feb 2013
+
+The view shown here is similar to an earlier one, posted in October 2011, but now the coverage is more complete. The globe on the left was created from the MDIS monochrome surface morphology base map campaign. The globe on the right was produced from the MDIS color base map campaign. Each map is composed of thousands of images, and the color view was created by using 3 of the 8 color filters acquired. (1000, 750, and 430 nm wavelengths are displayed in red, green and blue, respectively.)
+
+Last Update: 8 Mar 2013 (AMB)
+
+Credit: NASA/Johns Hopkins University Applied Physics Laboratory/Carnegie Institution of Washington

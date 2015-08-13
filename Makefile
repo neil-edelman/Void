@@ -25,7 +25,7 @@ ICON := icon.ico
 
 # files in mdir
 RES_F := $(MDIR)/Resources.tsv
-BMP   := Ngc4038_4039 Asteroid Nautilus Scorpion
+BMP   := Ngc4038_4039 Asteroid Nautilus Scorpion Mercury
 TSV   := type_of_object objects_in_space alignment ship_class
 
 # files in bdir

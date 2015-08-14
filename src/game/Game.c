@@ -34,7 +34,7 @@ struct Game {
 const static float asteroid_max_speed = 0.03f;
 
 /* positions larger then this value will be looped around */
-const float de_sitter = 1000.0f;
+const float de_sitter = 8192.0f;
 
 /* private */
 float rnd(const float limit);

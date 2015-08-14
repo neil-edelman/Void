@@ -19,8 +19,11 @@
 extern int screen_width, screen_height;
 
 /* the backgrounds can be larger than the sprites, 1024x1024? */
-static int half_max_size    = 512;
-static float foreshortening = 2.1f;
+static const int half_max_size    = 512;
+/* changed? update shader Background.vs! should be 0.00007:14285.714; space is
+ big! too slow to get anywhere, so fudge it (basically this makes space much
+ smaller or us very big) */
+static const float foreshortening = 0.2f, one_foreshortening = 5.0f;
 
 struct Background {
 	float x, y;     /* orientation */
@@ -175,13 +178,12 @@ int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture
 	/* go to the first spot in the window */
 	if(is_reset) {
 		/* fixme: -50 is for debugging! take it out */
-		int w = (screen_width  >> 1) + 1 - 50;
-		int	h = (screen_height >> 1) + 1 - 50;
+		int w = (screen_width  >> 1) + 1;
+		int	h = (screen_height >> 1) + 1;
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
-		/*camera_x *= foreshortening;
+		camera_x *= foreshortening;
 		camera_y *= foreshortening;
-		camera_x = camera_y = 0.0f;*/
 		x_min_window = camera_x - w;
 		x_max_window = camera_x + w;
 		y_min_window = camera_y - h;
@@ -226,15 +228,15 @@ int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture
 	/* consider y */
 	while(window_iterator && window_iterator->y <= y_max) {
 		if(window_iterator->is_selected) {
-			int extent = (window_iterator->size >> 1) + 1;
+			int extent = ((window_iterator->size >> 1) + 1) * one_foreshortening;
 			/* tighter bounds -- slow, but worth it; fixme: optimise for b-t */
 			if(   window_iterator->x > x_min_window - extent
 			   && window_iterator->x < x_max_window + extent
 			   && window_iterator->y > y_min_window - extent
 			   && window_iterator->y < y_max_window + extent) {
 				/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
-				*x_ptr       = window_iterator->x /* * foreshortening*/;
-				*y_ptr       = window_iterator->y /* * foreshortening*/;
+				*x_ptr       = window_iterator->x;
+				*y_ptr       = window_iterator->y;
 				*theta_ptr   = window_iterator->theta;
 				*texture_ptr = window_iterator->texture;
 				*size_ptr    = window_iterator->size;
@@ -263,8 +265,8 @@ int BackgroundIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture
  @param t		\theta */
 void BackgroundSetOrientation(struct Background *back, const float x, const float y, const float theta) {
 	if(!back) return;
-	back->x     = x;
-	back->y     = y;
+	back->x     = x/* * one_foreshortening*/;
+	back->y     = y/* * one_foreshortening*/;
 	back->theta = theta;
 	inotify((void **)&first_x, (void *)back, (int (*)(const void *, const void *))&compare_x, (void **(*)(void *const))&address_prev_x, (void **(*)(void *const))&address_next_x);
 	inotify((void **)&first_y, (void *)back, (int (*)(const void *, const void *))&compare_y, (void **(*)(void *const))&address_prev_y, (void **(*)(void *const))&address_next_y);

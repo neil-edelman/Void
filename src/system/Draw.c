@@ -6,12 +6,14 @@
 #include <math.h>   /* cis */
 #include "Glew.h"
 #include "../general/Map.h"
-#include "../general/Bitmap.h"
+#include "../general/Image.h"
 #include "../game/Sprite.h"
 #include "../game/Background.h"
 #include "../game/Light.h"
+#include "../game/Resources.h"
 #include "Draw.h"
 #include "Window.h"
+#include "../EntryPosix.h" /* hmm */
 
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
@@ -109,7 +111,7 @@ static const int  spot_colour_size    = 3;*/
 /* private prototypes */
 static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attrib)(const GLuint));
 static void tex_map_attrib(const GLuint shader);
-static int texture(const char *name, const int width, const int height, const int depth, const unsigned char *bmp);
+static int texture(const char *name, const int width, const int height, const int depth, const unsigned char *img);
 static int light_compute_texture(void);
 static void display(void);
 static void resize(int width, int height);
@@ -117,7 +119,7 @@ static void resize(int width, int height);
 /* so many globals! */
 /* used as extern in Sprite, Background */
 /*static*/ int     screen_width = 300, screen_height = 200;
-static GLuint  vbo_geom, /*spot_geom,*/ light_tex, /* *texture_ids,*/ astr_tex, bg_tex, tex_map_shader, back_shader, light_shader;
+static GLuint  vbo_geom, /*spot_geom,*/ light_tex, /* *texture_ids, astr_tex,*/ bg_tex, tex_map_shader, back_shader, light_shader;
 static GLint   tex_map_matrix_location, tex_map_texture_location;
 
 static GLint   back_size_location, back_angle_location, back_position_location, back_camera_location, /*back_texture_location,*/ back_two_screen_location;
@@ -131,11 +133,11 @@ static float   camera_x, camera_y;
 
 /** Gets all the graphics stuff started.
  @return		All good to draw? */
-int Draw(struct Map *bmps) {
-	struct Bitmap *bmp;
+int Draw(void) {
+	struct Map *imgs = ResourcesGetImages();
+	struct Image *img;
 	char *name;
 	int tex;
-	int is_textures_loaded = 0;
 
 	if(is_started) return -1;
 
@@ -150,6 +152,10 @@ int Draw(struct Map *bmps) {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glPointSize(5);
 	glEnable(GL_POINT_SMOOTH);
+
+	/* we don't need z-buffer depth things */
+	/*glDepthFunc(GL_ALWAYS);*/
+	glDisable(GL_DEPTH_TEST);
 
 	/* vbo; glVertexAttribPointer(index attrib, size, type, normaised, stride, offset) */
 	glGenBuffers(1, (GLuint *)&vbo_geom);
@@ -168,53 +174,46 @@ int Draw(struct Map *bmps) {
 	/* lighting */
 	glActiveTexture(GT_LIGHT);
 	light_tex = light_compute_texture();
-	/* textures stored in bmps */
-	while(MapIterate(bmps, (const void **)&name, (void **)&bmp)) {
-		switch(BitmapGetType(bmp)) {
-			case B_BACKGROUND:
+	/* textures stored in imgs */
+	while(MapIterate(imgs, (const void **)&name, (void **)&img)) {
+		/* fixme: hinge on alpha */
+		switch(ImageGetDepth(img)) {
+			case 3:
 				glActiveTexture(GT_BACKGROUND);
-				if(!(tex = texture(name, BitmapGetWidth(bmp), BitmapGetHeight(bmp), BitmapGetDepth(bmp), BitmapGetData(bmp)))) break;
-				BitmapSetImageUnit(bmp, tex);
+				if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;
+				ImageSetTexture(img, tex);
 				glBindTexture(GL_TEXTURE_2D, tex);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				
 				break;
-			case B_SPRITE:
+			case 4:
 				glActiveTexture(GT_SPRITES);
-				if(!(tex = texture(name, BitmapGetWidth(bmp), BitmapGetHeight(bmp), BitmapGetDepth(bmp), BitmapGetData(bmp)))) break;
-				BitmapSetImageUnit(bmp, tex);
+				if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;
+				ImageSetTexture(img, tex);
 				break;
-			case B_DONT_KNOW:
 			default:
-				fprintf(stderr, "Draw: bitmap \"%s\" has an invalid type.\n", name);
+				fprintf(stderr, "Draw: image \"%s\" has a depth, %u, that's not supported.\n", name, ImageGetDepth(img));
 		}
+		/* fixme: delete the img! it's not used */
 	}
-	/* hard-code textures */
-	do {
-		int unit;
-
-		bmp = MapGet(bmps, "Ngc4038_4039_bmp");
-		if(!(unit = BitmapGetImageUnit(bmp))) break;
-		bg_tex = unit;
-		bmp = MapGet(bmps, "Nautilus_bmp");
-		if(!(unit = BitmapGetImageUnit(bmp))) break;
-		astr_tex = unit;
-		is_textures_loaded = -1;
-	} while(0);
-	if(!is_textures_loaded) {
-		fprintf(stderr, "Draw: don't have minimal textures.\n");
-		Draw_(bmps);
-		return 0;
-	}
+	/* hard-code textures (fixme: I don't know what this is doing, probably
+	 simplify a lot) -- this doesn't do anything except set the size */
+	/* fixme: DrawSetBackground() */
+#if 0
+	/*img = MapGet(imgs, "Ngc4038_4039_bmp");*/
+	img = MapGet(imgs, "Dorado_bmp");
+	if(!(bg_tex = ImageGetImageUnit(img))) fprintf(stderr, "Draw: background?\n");
+#endif
 
 	/* shaders: simple texture */
-	if(!(tex_map_shader = link_shader(Texture_vs, Texture_fs, &tex_map_attrib))) { Draw_(bmps); return 0; }
+	if(!(tex_map_shader = link_shader(Texture_vs, Texture_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	tex_map_matrix_location  = glGetUniformLocation(tex_map_shader, "matrix");
 	tex_map_texture_location = glGetUniformLocation(tex_map_shader, "sampler");
 	/* background: lit, but not dynamically */
-	if(!(back_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(bmps); return 0; }
+	if(!(back_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	/* vs */
 	back_angle_location     = glGetUniformLocation(back_shader, "angle");
 	back_size_location      = glGetUniformLocation(back_shader, "size");
@@ -228,7 +227,7 @@ int Draw(struct Map *bmps) {
 	back_dirang_location  = glGetUniformLocation(back_shader, "directional_angle");
 	back_dirclr_location  = glGetUniformLocation(back_shader, "directional_colour");
 	/* this is the one that's doing the work */
-	if(!(light_shader = link_shader(Lighting_vs, Lighting_fs, &tex_map_attrib))) { Draw_(bmps); return 0; }
+	if(!(light_shader = link_shader(Lighting_vs, Lighting_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	/* vs */
 	light_angle_location     = glGetUniformLocation(light_shader, "angle");
 	light_size_location      = glGetUniformLocation(light_shader, "size");
@@ -262,21 +261,28 @@ int Draw(struct Map *bmps) {
 	/*glGenBuffers(1, (GLuint *)&spot_geom);
 	glBindBuffer(GL_ARRAY_BUFFER, spot_geom);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(spots), spots, GL_STREAM_DRAW);
-	fprintf(stderr, "Draw: created spot particle buffer, Vbo%u.\n", spot_geom);*/
+	fprintf(stderr, "Draw: created spot particle buffer, Vbo%u.\n", spot_geom); */
 
 	glUseProgram(0);
 
 	WindowIsGlError("Draw");
+
+	/* FIXME */
+	/*glActiveTexture(GT_BACKGROUND);
+	glBindTexture(GL_TEXTURE_2D, ImageGetImageUnit(MapGet(imgs, "Dorado_bmp")));
+	glActiveTexture(GT_SPRITES);
+	 /\ this creates poping, for some reason? */
 
 	is_started = -1;
 	return -1;
 }
 
 /** Destructor. */
-void Draw_(struct Map *bmps) {
-	struct Bitmap *bmp;
+void Draw_(void) {
+	struct Map *imgs = ResourcesGetImages();
+	struct Image *img;
 	char *name;
-	int unit;
+	int tex;
 
 	/*if(glIsBuffer(spot_geom)) {
 		glDeleteBuffers(1, &spot_geom);
@@ -299,12 +305,12 @@ void Draw_(struct Map *bmps) {
 		tex_map_shader = 0;
 	}
 	/* erase the textures */
-	if(bmps) {
-		while(MapIterate(bmps, (const void **)&name, (void **)&bmp)) {
-			if(!bmp || !(unit = BitmapGetImageUnit(bmp))) continue;
-			fprintf(stderr, "~Draw: erase \"%s,\" Tex%u.\n", name, unit);
-			glDeleteTextures(1, (unsigned *)&unit);
-			BitmapSetImageUnit(bmp, 0);
+	if(imgs) {
+		while(MapIterate(imgs, (const void **)&name, (void **)&img)) {
+			if(!img || !(tex = ImageGetTexture(img))) continue;
+			fprintf(stderr, "~Draw: erase \"%s,\" Tex%u.\n", name, tex);
+			glDeleteTextures(1, (unsigned *)&tex);
+			ImageSetTexture(img, 0);
 		}
 	}
 	if(light_tex) {
@@ -346,6 +352,21 @@ void DrawGetCamera(float *x_ptr, float *y_ptr) {
 	if(!is_started) return;
 	*width_ptr = 
 }*/
+
+/** Sets background. Fixme: only GT_BACKGROUND textures will work? */
+void DrawSetDesktop(const struct Image *const img) {
+	bg_tex = ImageGetTexture(img);
+	glActiveTexture(GT_BACKGROUND);
+	glBindTexture(GL_TEXTURE_2D, bg_tex);
+	/*update_background_size();*/
+	glActiveTexture(GT_SPRITES); /* fixme: this has to be here, and shouldn't; also covers up poping; fuck you so much . . . wtf is it doing? */
+	/*GLuint boundTexture = 0;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, (GLint*) &boundTexture);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, pname, param);
+    glBindTexture(GL_TEXTURE_2D, boundTexture);*/
+	fprintf(stderr, "Tex%u set as desktop.\n", ImageGetTexture(img));
+}
 
 /** Compiles, links and verifies a shader.
  @param vert_vs		Vertex shader source.
@@ -462,17 +483,17 @@ static void tex_map_attrib(const GLuint shader) {
  @param width
  @param height
  @param depth
- @param bmp		The bitmap; must be the product of the last three long.
+ @param img		The bitmap; must be the product of the last three long.
  @return		The name (int) of the newly created texture or 0 on error. */
-static int texture(const char *name, const int width, const int height, const int depth, const unsigned char *bmp) {
+static int texture(const char *name, const int width, const int height, const int depth, const unsigned char *img) {
 	int format = 0, internal = 0;
 	int id;
 
-	if(width <= 0 || height <= 0 || !bmp) return 0;
+	if(width <= 0 || height <= 0 || !img) return 0;
 	if(depth == 1) {
 		/* we use exclusively for shaders, so I don't think this matters */
 		internal = GL_RGB;
-		/*format = GL_LUMINANCE; <- "core context depriciated" what */
+		/* GL_LUMINANCE; <- "core context depriciated," I was using that */
 		format   = GL_RED;
 	} else if(depth == 3) {
 		internal = GL_RGB8;
@@ -490,10 +511,12 @@ static int texture(const char *name, const int width, const int height, const in
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0); /* no mipmap */
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	/* void glTexImage2D(target, level, internalFormat, width, height,
 	 border, format, type, *data); */
 	glTexImage2D(GL_TEXTURE_2D, 0, internal, width, height,
-				 0, format, GL_UNSIGNED_BYTE, bmp);
+				 0, format, GL_UNSIGNED_BYTE, img);
 	fprintf(stderr, "Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);
 
 	WindowIsGlError("texture");
@@ -549,11 +572,15 @@ static void display(void) {
 	float x, y, t;
 	int old_texture = 0, texture, size;
 
+	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); <- use this instead. "The buffers should always be cleared. On much older hardware, there was a technique to get away without clearing the scene, but on even semi-recent hardware, this will actually make things slower. So always do the clear." */
+
 	/* use sprites */
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_geom);
 
 	/* use simple tex_map_shader */
 	glUseProgram(tex_map_shader);
+	/* fixme: more complex; take out that hack mirrored_repeat and have a size
+	 that updates on resize */
 
 	/* fixme: don't use painters' algorithm; stencil test! */
 
@@ -563,10 +590,12 @@ static void display(void) {
 	 update glUniform1i(GLint location, GLint v0)
 	 update glUniformMatrix4fv(location, count, transpose, *value)
 	 glDrawArrays(type flag, offset, no) */
-	glDisable(GL_BLEND);
-	glUniform1i(tex_map_texture_location, T_BACKGROUND);
-	/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
-	glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
+	if(bg_tex) {
+		glDisable(GL_BLEND);
+		glUniform1i(tex_map_texture_location, T_BACKGROUND);
+		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
+	}
 	glEnable(GL_BLEND);
 
 	/* turn on background lighting (sprites) */
@@ -656,12 +685,15 @@ static void resize(int width, int height) {
 	two_width  = 2.0f / width;
 	two_height = 2.0f / height;
 
-	glBindTexture(GL_TEXTURE_2D, bg_tex);
+	/* resize the background */
+	/*update_background_size();*/
+	/* glActiveTexture(T_BACKGROUND); this does nothing */
+	glBindTexture(GL_TEXTURE_2D, bg_tex); /* this is everything, but the wrong texture */
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);
 	/*fprintf(stderr, "w %d h %d\n", w_tex, h_tex);*/
-	w_w_tex = (float)width  / w_tex;
-	h_h_tex = (float)height / h_tex;
+	w_w_tex = (float)screen_width  / w_tex;
+	h_h_tex = (float)screen_height / h_tex;
 
 	/* update the background texture vbo on the card */
 	vbo[0].s = vbo[1].s =  w_w_tex;
@@ -669,8 +701,8 @@ static void resize(int width, int height) {
 	vbo[0].t = vbo[2].t =  h_h_tex;
 	vbo[1].t = vbo[3].t = -h_h_tex;
 	glBufferSubData(GL_ARRAY_BUFFER, vbo_bg_first,
-		vbo_bg_count * sizeof(struct Vertex), vbo + vbo_bg_first);
-
+					vbo_bg_count * sizeof(struct Vertex), vbo + vbo_bg_first);
+	
 	/* the shaders need to know as well */
 	glUseProgram(back_shader);
 	glUniform2f(back_two_screen_location, two_width, two_height);

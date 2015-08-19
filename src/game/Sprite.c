@@ -7,7 +7,6 @@
 #include <string.h> /* memset */
 #include "Sprite.h"
 #include "../general/Sorting.h"
-#include "../general/Map.h" /* needed for Draw */
 #include "../system/Timer.h" /* hmmm, Wmd should go in Wmd */
 #include "../system/Draw.h"
 /* types of sprites (subclasses) */
@@ -424,7 +423,8 @@ void *SpriteGetContainer(const struct Sprite *sprite) {
 	return sprite->container;
 }
 
-/** @return		The first sprite it sees in the circle. */
+/** @return		The first sprite it sees in the circle. Not really useful now
+				that it's negatively stable, but, whatever. */
 struct Sprite *SpriteGetCircle(const float x, const float y, const float r) {
 	struct Sprite *t, *ret = 0, *s_x0, *s_y0;
 	float explore_x_min, explore_x_max, explore_y_min, explore_y_max;
@@ -475,7 +475,7 @@ struct Sprite *SpriteGetCircle(const float x, const float y, const float r) {
 		t->is_selected = 0;
 	}
 	/*printf("\n");*/
-	printf("getCircle: found: #%u\n", ret ? SpriteGetId(ret) : 0);
+	/*printf("getCircle: found: #%u\n", ret ? SpriteGetId(ret) : 0);*/
 
 	return ret;
 }

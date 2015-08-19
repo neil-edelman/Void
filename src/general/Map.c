@@ -81,7 +81,8 @@ struct Map *Map(char *const name, int (*const compare)(const void *, const void 
 	return m;
 }
 
-/** Destructor. Make sure you appropreately free the pointers first.
+/** Destructor. Make sure you appropreately free the pointers first;
+ {@see MapSetDestructor} may be useful.
  @param m_ptr	A reference to the object that is to be deleted. */
 void Map_(struct Map **m_ptr) {
 	struct Map *m;
@@ -171,7 +172,7 @@ void MapTrimToSize(struct Map *m) {
  @param m	The Map. */
 void MapSort(struct Map *m) {
 	if(!m) return;
-	fprintf(stderr, "Map: \"%s\" sorting %d elements.\n", m->name, m->size);
+	/*fprintf(stderr, "Map: \"%s\" sorting %d elements.\n", m->name, m->size);*/
 	compare_keys = m->compare;
 	qsort(m->entries, m->size, sizeof(struct Entry), (int (*)(const void *, const void *))compare_entries);
 	m->is_sorted = -1;

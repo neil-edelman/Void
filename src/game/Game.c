@@ -11,8 +11,9 @@
 #include "Debris.h"
 #include "Wmd.h"
 #include "Light.h"
+#include "Resources.h"
 #include "../general/Map.h"
-#include "../general/Bitmap.h"
+#include "../general/Image.h"
 #include "../system/Key.h"
 #include "../system/Window.h"
 #include "../system/Draw.h"
@@ -45,18 +46,18 @@ float rnd(const float limit);
 int Game(void) {
 /*	struct TypeOfObject *too;
 	struct ObjectsInSpace *ois;
-	struct Bitmap *bitmap, *bmp[3];
+	struct Image *bitmap, *bmp[3];
 	struct Game   *game;*/
-	struct Map    *bmps;
-	struct Bitmap *bmp;
+	struct Map    *imgs;
+	struct Image  *img;
 	struct Debris *asteroid;
 	struct Ship   *bad;
 	struct Background *bg;
 	int i;
 
 	if(is_started) return -1;
-	if(!(bmps = EntryGetBitmaps())) {
-		fprintf(stderr, "Game: couldn't get bitmaps.\n");
+	if(!(imgs = ResourcesGetImages())) {
+		fprintf(stderr, "Game: couldn't get images.\n");
 		return 0;
 	}
 
@@ -104,46 +105,57 @@ int Game(void) {
 	1000 -- 95%
 	 collision detection is negligible, polygons are not (gpu-cpu bound?) */
 
-	bmp = MapGet(bmps, "Asteroid_bmp");
+	img = MapGet(imgs, "Asteroid_bmp");
+	ImagePrint(img, stdout);
 
 	/* some asteroids */
 	for(i = 0; i < 512; i++) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
-		printf("Game: new Asteroid, checking:\n");
-		if(SpriteGetCircle(x, y, 0.5f*BitmapGetWidth(bmp))) {
-			fprintf(stderr, "Game: collided new sprite, waiving.\n");
+		/*printf("Game: new Asteroid, checking:\n");*/
+		if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
+			fprintf(stderr, "Game: would cause collision with sprite; waiving asteroid.\n");
 			continue;
 		}
-		asteroid = Debris(BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), 10.0f);
+		asteroid = Debris(ImageGetTexture(img), ImageGetWidth(img), 10.0f);
 		DebrisSetOrientation(asteroid,
 							 x, y, t, /* (x,y):t */
 							 vx, vy, o); /* (vx,vy):o */
-		printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);
+		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
 
 	/* sprinkle some ships */
-	bmp = MapGet(bmps, "Nautilus_bmp");
-	game.player = Ship(&game.player, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_HUMAN);
-	bmp = MapGet(bmps, "Scorpion_bmp");
-	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
+	img = MapGet(imgs, "Nautilus_bmp");
+	game.player = Ship(&game.player, ImageGetTexture(img), ImageGetWidth(img), B_HUMAN);
+	img = MapGet(imgs, "Scorpion_bmp");
+	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
-	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
+	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
 	ShipSetOrientation(bad, -300.0f, -100.0f, 1.0f);
-	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
+	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
 	ShipSetOrientation(bad, 100.0f, -600.0f, 0.0f);
-	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
+	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 600.0f, 0.0f);
-	bad = Ship(0, BitmapGetImageUnit(bmp), BitmapGetWidth(bmp), B_STUPID);
+	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
 	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
 
 	/* planets */
-	bmp = MapGet(bmps, "Mercury_bmp");
-	bg  = Background(BitmapGetImageUnit(bmp), BitmapGetWidth(bmp)/*344.0f*//*1024.0f*/);
+	img = MapGet(imgs, "Mercury_bmp");
+	bg  = Background(ImageGetTexture(img), ImageGetWidth(img));
 	/*BackgroundSetOrientation(bg, -300.0f, 500.0f, 0.0f);*/
-	bmp = MapGet(bmps, "Venus_bmp");
-	bg  = Background(BitmapGetImageUnit(bmp), BitmapGetWidth(bmp));
+	img = MapGet(imgs, "Venus_bmp");
+	bg  = Background(ImageGetTexture(img), ImageGetWidth(img));
 	BackgroundSetOrientation(bg, 600.0f, 500.0f, 0.0f);
-	
+	img = MapGet(imgs, "Pluto_bmp");
+	bg  = Background(ImageGetTexture(img), ImageGetWidth(img));
+	BackgroundSetOrientation(bg, 200.0f, -400.0f, 0.0f);
+
+#if 1
+	img = MapGet(imgs, "Dorado_bmp");
+	/*img = MapGet(imgs, "Pluto_bmp");*/
+	fprintf(stderr, "Game: background Tex%u.\n", ImageGetTexture(img));
+	DrawSetDesktop(img);
+#endif
+
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;
 

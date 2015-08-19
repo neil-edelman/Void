@@ -14,6 +14,7 @@
 
 static const int    no_fails = 64;
 static const double forget_s = 20.0;
+static const int    warn_texture_size = 1024;
 
 /* if is started, we don't and can't start it again */
 static int    is_started;
@@ -25,6 +26,7 @@ static time_t last_error;
  @param argv	main() program arguments; passed to glutInit().
  @return		Whether the graphics library is ready. */
 int Window(const char *title, int argc, char **argv) {
+	GLint max_tex;
 
 	if(is_started) return -1;
 
@@ -36,11 +38,14 @@ int Window(const char *title, int argc, char **argv) {
 	glutInitDisplayMode(GLUT_DOUBLE);
 	glutInitWindowSize(600, 400);
 	glutCreateWindow(title ? title : "Untitled");
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex);
 	fprintf(stderr,
-			"Window: started; GLSL stats: vendor %s; version %s; renderer %s; shading language version %s; combined texture image units %d.\n",
+			"Window: started; GLSL stats: vendor %s; version %s; renderer %s; shading language version %s; combined texture image units %d; maximum texture size %d.\n",
 			glGetString(GL_VENDOR), glGetString(GL_VERSION),
 			glGetString(GL_RENDERER), glGetString(GL_SHADING_LANGUAGE_VERSION),
-			GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+			GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, max_tex);
+	if(max_tex < warn_texture_size)
+		fprintf(stderr, "Window: maximum texture size is too small, %d/%d; warning! bad! (supposed to be 8 or larger.)\n", max_tex, warn_texture_size);
 	/*glutMouseFunc(&mouse);
 	 glutIdleFunc(0); */
 

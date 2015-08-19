@@ -15,32 +15,30 @@
 static const char *programme   = "Tsv2h";
 static const char *year        = "2014";
 static const int versionMajor  = 1;
-static const int versionMinor  = 0;
+static const int versionMinor  = 2;
 
 /* private */
 static void usage(const char *argvz);
 
-/* fixme: this is not the way to do it, it should be a struct */
-
-enum int_types {
+/* these have special meaning; associate Field with fields */
+enum Field {
 	FOREIGN,
 	AUTOINCREMENT,
-	BMP,
 	INT,
-	VEC2F,
-	STRING
+	STRING,
+	FLOAT,
+	IMAGE
 };
-
-static const char *types[] = {
+static const char *const fields[] = {
 	"foreign",
 	"autoincrement",
-	"bmp",
 	"int",
-	"vec2f",
-	"string"
+	"string",
+	"float",
+	"image"
 };
 
-static const int no_types = sizeof(types) / sizeof(char *);
+static const int no_fields = sizeof(fields) / sizeof(char *);
 
 static const int auto_increment_start = 1;
 static const char *delimiters = "\t\n\r";
@@ -53,10 +51,10 @@ int main(int argc, char **argv) {
 	/* may need to change the bounds */
 	char name[1024], classname[1024], *a, *base, *res_fn, *tsv_fn;
 	char read[1024], *line, *word;
-	int len, type, first, ai;
-	int no_tsv_types = 0;
-	int tsv_type[64];
-	const int max_tsv_types = sizeof(tsv_type) / sizeof(int);
+	int len, field, first, ai;
+	int no_tsv_fields = 0;
+	int tsv_field[64];
+	const int max_tsv_fields = sizeof(tsv_field) / sizeof(int);
 	FILE *fp;
 
 	/* check that the user specified file and give meaningful names to args */
@@ -117,19 +115,19 @@ int main(int argc, char **argv) {
 		while((word = strsep(&line, delimiters)) && *word) {
 			/*fprintf(stderr, "read <%s>\n", word);*/
 			/* lol; I guess it doesn't have to be fast */
-			for(type = 0; type < no_types; type++) {
-				/*printf(" cmp(<%s>, <%s>)?\n", word, types[type]);*/
-				if(!strcmp(word, types[type])) break;
+			for(field = 0; field < no_fields; field++) {
+				/*printf(" cmp(<%s>, <%s>)?\n", word, fields[field]);*/
+				if(!strcmp(word, fields[field])) break;
 			}
 			/* assume it's a foreign key since it doesn't match */
-			if(type >= no_types) type = FOREIGN;
-			tsv_type[no_tsv_types] = type;
-			no_tsv_types++;
-			if(no_tsv_types >= max_tsv_types) {
-				fprintf(stderr, "Warning: type truncated at <%s>; %d maximum.\n", word, max_tsv_types);
+			if(field >= no_fields) field = FOREIGN;
+			tsv_field[no_tsv_fields] = field;
+			no_tsv_fields++;
+			if(no_tsv_fields >= max_tsv_fields) {
+				fprintf(stderr, "Warning: field truncated at <%s>; %d maximum.\n", word, max_tsv_fields);
 				break;
 			}
-			fprintf(stdout, "field %s\n", types[type]);
+			fprintf(stdout, "field %s\n", fields[field]);
 		}
 		printf("end. */\n\n");
 		break;
@@ -149,40 +147,45 @@ int main(int argc, char **argv) {
 			printf("\t{ ");
 			if(!(len = strlen(read))) break;
 			first = -1;
-			for(type = 0; type < no_tsv_types; type++) {
+			for(field = 0; field < no_tsv_fields; field++) {
 				if(first) {
 					first = 0;
 				} else {
 					printf(", ");
 				}
-				switch(tsv_type[type]) {
+				/* fixme: type validation */
+				switch(tsv_field[field]) {
 					case FOREIGN:
-						/* this is done at runtime by resolve_foreign_keys() */
+						/* this is done at runtime by resolve_foreign_keys();
+						 field contains two elements */
 						if(!(word = strsep(&line, delimiters))) word = "null";
 						printf("\"%s\", 0 /* fk */", word);
 						break;
 					case AUTOINCREMENT:
-						/* probably won't use this -- impossible to override
-						 specific ones */
 						printf("%d", ai);
-						break;
-					case BMP:
-						if(!(word = strsep(&line, delimiters))) word = "null";
-						printf("\"%s\", 0 /* bmp */", word);
 						break;
 					case INT:
 						if(!(word = strsep(&line, delimiters))) word = "0";
 						printf("%s", word);
 						break;
-					case VEC2F:
+					case STRING:
+						if(!(word = strsep(&line, delimiters))) word = "null";
+						printf("\"%s\"", word);
+						break;
+					case FLOAT:
+						if(!(word = strsep(&line, delimiters))) word = "0.0";
+						printf("\"%s\"", word);
+						break;
+					case IMAGE:
+						if(!(word = strsep(&line, delimiters))) word = "null";
+						printf("\"%s\", 0 /* image */", word);
+						break;
+					/*case VEC2F:
 						if(!(word = strsep(&line, delimiters))) word = "0.0f";
 						printf("{ %s, ", word);
 						if(!(word = strsep(&line, delimiters))) word = "0.0f";
 						printf("%s }", word);
-						break;
-					case STRING:
-						if(!(word = strsep(&line, delimiters))) word = "null";
-						printf("\"%s\"", word);
+						break;*/
 				}
 			}
 			printf(" }");
@@ -190,7 +193,7 @@ int main(int argc, char **argv) {
 		}
 	}
 	printf("\n};\n\n");
-	printf("static const int no_%s = sizeof(%s) / sizeof(struct %s);\n\n", name, name, classname);
+	printf("static const int no_%s = sizeof(%s) / sizeof(struct %s);\n", name, name, classname);
 
 	return EXIT_SUCCESS;
 }

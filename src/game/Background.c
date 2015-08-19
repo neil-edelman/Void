@@ -5,7 +5,6 @@
 #include <string.h> /* memset */
 #include "Background.h"
 #include "../general/Sorting.h"
-#include "../general/Map.h" /* for Draw */
 #include "../system/Draw.h"
 
 /** Sprites in the background have a (world) position, a rotation, and a bitmap.

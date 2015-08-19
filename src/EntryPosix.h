@@ -1,3 +1,2 @@
+struct Map;
 struct Entry;
-
-struct Map *EntryGetBitmaps(void);

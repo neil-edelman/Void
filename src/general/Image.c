@@ -92,6 +92,10 @@ int ImageGetTexture(const struct Image *img) {
 	return img->texture;
 }
 
+/** Prints out the red channel in text format for debugging purposes; please
+ don't call it on large images!
+ @param img		The image.
+ @param fp		File pointer where you want the image to go; eg, stdout. */
 void ImagePrint(const struct Image *img, FILE *const fp) {
 	int x, y;
 

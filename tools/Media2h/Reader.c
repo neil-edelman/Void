@@ -54,7 +54,7 @@ struct Reader *Reader(const char *fn) {
 	reader->fn[max_fn - 1] = '\0';
 	reader->fp             = 0;
 	reader->number         = 0;
-	fprintf(stderr, "Reader: new, #%p.\n", (void *)reader);
+	/*fprintf(stderr, "Reader: new, #%p.\n", (void *)reader);*/
 	if(!(reader->fp = fopen(fn, "r"))) {
 		perror(fn);
 		Reader_(&reader);
@@ -70,7 +70,7 @@ void Reader_(struct Reader **reader_ptr) {
 	struct Reader *reader;
 	
 	if(!reader_ptr || !(reader = *reader_ptr)) return;
-	fprintf(stderr, "~Reader: erase, #%p.\n", (void *)reader);
+	/*fprintf(stderr, "~Reader: erase, #%p.\n", (void *)reader);*/
 	if(reader->fp && fclose(reader->fp)) perror(reader->fn);
 	free(reader);
 	*reader_ptr = reader = 0;

@@ -47,38 +47,30 @@ static const struct Error {
 	{ E_KEYWORD,     "already a keyword" }
 };
 
-/* these are the types of fields */
-enum TypeCode {
-	FOREIGN,
-	AUTOINCREMENT,
-	SPACER,
-	INT,
-	FLOAT,
-	STRING,
-	TEXT,
-	IMAGE
-};
+/* these are the types of fields -- must be in order by the name */
 static const struct Type {
-	enum TypeCode code;
 	char          *name;
+	char          *type_name;
 	void *        (*constructor)(FILE *fp);
 } types[] = {
-	{ FOREIGN,       "foreign",       0/*&load_fk*/ },
-	{ AUTOINCREMENT, "autoincrement", 0/*&load_ai*/ },
-	{ SPACER,        "-",             0/*&load_spacer*/ },
-	{ INT,           "int",           0/*&load_int*/ },
-	{ FLOAT,         "float",         0/*&load_float*/ },
-	{ STRING,        "string",        0/*&load_string*/ },
-	{ TEXT,          "text",          0/*&load_text*/ },
-	{ IMAGE,         "image",         0/*&load_image*/ }
+	{ "-",             "void *", 0/*&load_spacer*/ },
+	{ "autoincrement", "int ",   0/*&load_ai*/ },
+	{ "float",         "float ", 0/*&load_float*/ },
+	{ "foreign",       "void *", 0/*&load_fk*/ },
+	{ "image",         "struct Image *", 0/*&load_image*/ },
+	{ "int",           "int ",   0/*&load_int*/ },
+	{ "string",        "char *", 0/*&load_string*/ },
+	{ "text",          "char *", 0/*&load_text*/ }
 };
 static const int max_types = sizeof(types) / sizeof(struct Type);
 
 /* field */
 struct Field {
-	enum TypeCode type;
-	char          name[1024];
+	struct Type *type;
+	char        type_name[1024];
+	char        name[1024];
 };
+static const int max_field_type = sizeof((struct Field *)0)->type_name / sizeof(char);
 static const int max_field_name = sizeof((struct Field *)0)->name / sizeof(char);
 
 /* a record is made up of fields */
@@ -96,43 +88,99 @@ static int no_records;
 /* constants */
 static const int autoincrement_start = 1;
 static const char *delimiters = " \t\n\r";
-static const char *media_file = "Media";
+static const char *ext_type = ".type";
 
 /* private prototypes */
+int suffix(char *const str, const char *suf);
+char *trim(char *const str);
+void output_type(const char *dir);
 int load_resources(const char *fn);
 int load_resource(struct Reader *r);
-enum TypeCode string_to_type(const char *str);
+int type_comp(const char **key_ptr, const struct Type *elem);
+struct Type *string_to_type(const char *str);
+char *field_type_name(struct Field *const field);
+
+/** @return		True is the suffix of the string {@code str} is {@code suf}. */
+int suffix(char *const str, const char *suf) {
+	char *sub = str;
+	const int len = strlen(suf);
+	while((sub = strstr(sub, suf))) if(*(sub += len) == '\0') return -1;
+	return 0;
+}
+
+/** @return		The trimmed string. The original is trimmed from the end. */
+char *trim(char *const str) {
+	char *start, *end;
+
+	if(!str) return 0;
+	/* trim the end */
+	for(end = str + strlen(str) - 1; str <= end && isspace(*end); end--);
+	*(++end) = '\0';
+	/* trim the start */
+	for(start = str; start < end && isspace(*start); start++);
+	return start;
+}
 
 /** Entry point. */
 int main(int argc, char **argv) {
-	struct Record *record;
-	int i, j;
+	struct dirent *de;
+	DIR           *dir;
+	char      fn[1024];
+	const int max_fn = sizeof(fn) / sizeof(char) - 1;
+	int is_output_type;
 
 	/* check that the user specified file and give meaningful names to args */
-	if(argc != 2 || *argv[1] == '-') {
+	if(argc == 2 && *argv[1] != '-') {
+		is_output_type = -1;
+	} else if(argc == 3) {
+		is_output_type = 0;
+	} else {
 		usage(argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	printf("/** auto-generated from %s/ by %s %d.%d */\n\n",
-		   argv[1], programme, versionMajor, versionMinor);
-
-	fprintf(stderr, "Changing directory to <%s>.\n", argv[1]);
-	if(chdir(argv[1])) { perror(argv[1]); return EXIT_FAILURE; }
-	if(!load_resources(media_file)) {
+	/* load the types in directory argv[1] */
+	if(!(dir = opendir(argv[1]))) { perror(argv[1]); return EXIT_FAILURE; }
+	while((de = readdir(dir))) {
+		if(!suffix(de->d_name, ext_type)) continue;
+		if(snprintf(fn, sizeof(fn) / sizeof(char), "%s/%s", argv[1], de->d_name) > max_fn) {
+			fprintf(stderr, "%s: file name buffer maxed out at %u characters.\n", fn, max_fn);
+			continue;
+		}
+		fprintf(stderr, "Loading types from \"%s.\"\n", fn);
+		load_resources(fn);
 	}
+	if(closedir(dir)) { perror(argv[1]); }
+
+	/* now that we've loaded it, convert to .h if we don't have any more args */
+	if(is_output_type) {
+		output_type(argv[1]);
+		return EXIT_SUCCESS;
+	}
+
+	/* deeper; we've loaded the types, now we need to load the resources */
+
+	/***************** here! ********************/
+
+	return EXIT_SUCCESS;
+}
+
+/** Convert it to .h struct. */
+void output_type(const char *dir) {
+	struct Record *record;
+	int i, j;
+
+	printf("/** auto-generated from %s/ by %s %d.%d */\n\n",
+	       dir, programme, versionMajor, versionMinor);
 	for(i = 0; i < no_records; i++) {
 		record = &records[i];
 		printf("struct %s {\n", record->name);
-		printf("\t%s %s; /* key */\n", types[record->key.type].name, record->key.name);
+		printf("\t%s%s; /* key */\n", field_type_name(&record->key), record->key.name);
 		for(j = 0; j < record->no_fields; j++) {
-			printf("\t%s %s;\n", types[record->fields[j].type].name, record->fields[j].name);
+			printf("\t%s%s;\n", field_type_name(&record->fields[j]), record->fields[j].name);
 		}
-		printf("}\n\n");
+		printf("};\n\n");
 	}
-	/*opendir(".");*/
-
-	return EXIT_SUCCESS;
 }
 
 /** Loads the meta-data on the types. */
@@ -160,14 +208,13 @@ int load_resource(struct Reader *r) {
 	if(no_records >= max_records) { error = E_MAX_RECORDS; return 0; }
 	record = &records[no_records];
 	record->name[0] = '\0';
-	record->key.type = FOREIGN;
 	record->key.name[0] = '\0';
 	record->no_fields = 0;
 	/* line: get the title */
 	while((line = ReaderReadLine(r))) {
-		fprintf(stderr, "Line \"%s\"\n", line);
-		/* fixme: trim */
+		/*fprintf(stderr, "Line \"%s\"\n", line);*/
 		/* comment */
+		line = trim(line);
 		if(*line == '#') continue;
 		/* break it up */
 		if(!(word[0] = strsep(&line, delimiters))) continue;
@@ -185,39 +232,83 @@ int load_resource(struct Reader *r) {
 		/* yay, we got though */
 		if(no_content == 0) {
 			if(word[1]) { error = E_SYNTAX; return 0; }
-			if(string_to_type(word[0]) != FOREIGN) {
+			if((string_to_type(word[0]))) { /* must not be a keyword */
 				error = E_KEYWORD; return 0;
 			}
 			strncpy(record->name, word[0], max_record_name - 1);
 			record->name[max_record_name - 1] = '\0';
-			fprintf(stderr, "New type: %s.\n", record->name);
+			/*fprintf(stderr, "New type: %s.\n", record->name);*/
 		} else {
-			enum TypeCode type = string_to_type(word[0]);
+			/* synatax check */
 			if(record->no_fields >= max_record_fields) {
 				error = E_MAX_FIELDS; return 0;
 			}
 			if(!word[1] || word[2]) {
 				error = E_SYNTAX; return 0;
 			}
+
+			/* field extraction */
 			field = (no_content == 1) ?
 			        &record->key : &record->fields[record->no_fields++];
+
+			/* filling in the field */
+			strncpy(field->type_name, word[0], max_field_type - 1);
+			field->name[max_field_type - 1] = '\0';
+
+			field->type = string_to_type(word[0]);
+
 			strncpy(field->name, word[1], max_field_name - 1);
 			field->name[max_field_name - 1] = '\0';
-			field->type = type;
 		}
 		no_content++;
 	}
-	if(is_loaded) no_records++;
+	if(is_loaded) {
+		int i;
+		/* make sure that this type does not cause a naming conflict;
+		 fixme: sort! */
+		for(i = 0; i < no_records; i++) {
+			if(!strcmp(record->name, records[i].name)) {
+				fprintf(stderr, "Warning: record \"%s\" already exists; keeping existing.\n", record->name);
+				return is_loaded;
+			}
+		}
+		no_records++;
+	}
 	return is_loaded;
 }
 
+/** comparable types */
+int type_comp(const char **key_ptr, const struct Type *elem) {
+	/*fprintf(stderr, "key: %s; elem: %s\n", *key_ptr, elem->name);*/
+	return strcmp(*key_ptr, elem->name);
+}
+
+/** Keyword search.
+ @return	Type matching the keyword or null if it is not a keyword. */
+struct Type *string_to_type(const char *str) {
+	return bsearch(&str, types,
+				   sizeof(types) / sizeof(struct Type), sizeof(struct Type),
+				   (int (*)(const void *, const void *))&type_comp);
+}
+
 /** Matches string to type. */
-enum TypeCode string_to_type(const char *str) {
-	int t;
-	/* fixme */
-	for(t = 0; t < max_types; t++) if(!strcmp(types[t].name, str)) break;
-	if(t >= max_types) return FOREIGN;
-	return types[t].code;
+char *field_type_name(struct Field *const field) {
+	static char foreign[1024];
+	struct Type *type;
+	const char *str = field->type_name;
+	char *type_name;
+
+	/*fprintf(stderr, "field_type_name: %s -> %s\n", field->type_name, str);*/
+	type = bsearch(&str, types,
+				   sizeof(types) / sizeof(struct Type), sizeof(struct Type),
+				   (int (*)(const void *, const void *))&type_comp);
+	if(type) {
+		type_name = type->type_name;
+	} else {
+		snprintf(foreign, sizeof(foreign) / sizeof(char), "struct %s *", str);
+		type_name = foreign;
+	}
+	return type_name;
 }
 
 #if 0

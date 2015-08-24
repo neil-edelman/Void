@@ -1,9 +1,9 @@
 PROJ  := Media2h
 PROJw := $(PROJ).exe
-FILES := Media2h Reader
+FILES := Reader Error Type Record Lore Media2h
 BDIR  := bin
 BACK  := backup
-EXTRA :=
+EXTRA := Functions.h
 OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES))
 SRCS  := $(patsubst %,%.c,$(FILES))
 H     := $(patsubst %,%.h,$(FILES))
@@ -30,4 +30,4 @@ clean:
 
 backup:
 	@mkdir -p $(BACK)
-	zip $(BACK)/$(PROJ)-`date +%Y-%m-%dT%H%M%S`.zip $(SRCS) Makefile
+	zip $(BACK)/$(PROJ)-`date +%Y-%m-%dT%H%M%S`.zip $(SRCS) $(H) $(EXTRA) Makefile

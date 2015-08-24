@@ -32,7 +32,7 @@ RSRC  := icon.rsrc
 INST  := $(PROJ)-$(VA)_$(VB)
 
 # extra stuff we should back up
-EXTRA := $(SDIR)/icon.rc todo.txt msvc2010.txt unix.txt performance.txt $(TDIR)/Text2h/Makefile $(TDIR)/Text2h/Text2h.c $(TDIR)/Bmp2h/Makefile $(TDIR)/Bmp2h/Bmp2h.c $(TDIR)/Bmp2h/Bitmap.c $(TDIR)/Bmp2h/Bitmap.h $(TDIR)/Tsv2h/Makefile $(TDIR)/Tsv2h/Tsv2h.c $(TDIR)/Automator/Automator.c $(TDIR)/Automator/Makefile $(TDIR)/Media2h/Makefile $(TDIR)/Media2h/Reader.c $(TDIR)/Media2h/Reader.h $(TDIR)/Media2h/Media2h.c $(SDIR)/test/SortingTest.c $(SDIR)/test/Collision.c
+EXTRA := $(SDIR)/icon.rc todo.txt msvc2010.txt unix.txt performance.txt $(TDIR)/Text2h/Makefile $(TDIR)/Text2h/Text2h.c $(TDIR)/Bmp2h/Makefile $(TDIR)/Bmp2h/Bmp2h.c $(TDIR)/Bmp2h/Bitmap.c $(TDIR)/Bmp2h/Bitmap.h $(TDIR)/Tsv2h/Makefile $(TDIR)/Tsv2h/Tsv2h.c $(TDIR)/Automator/Automator.c $(TDIR)/Automator/Makefile $(TDIR)/Media2h/Makefile $(TDIR)/Media2h/Reader.c $(TDIR)/Media2h/Reader.h $(TDIR)/Media2h/Media2h.c $(TDIR)/Media2h/Type.c $(TDIR)/Media2h/Type.h $(TDIR)/Media2h/Record.c $(TDIR)/Media2h/Record.h $(TDIR)/Media2h/Lore.c $(TDIR)/Media2h/Lore.h $(TDIR)/Media2h/Functions.h $(TDIR)/Media2h/Error.c $(TDIR)/Media2h/Error.h $(SDIR)/test/SortingTest.c $(SDIR)/test/Collision.c
 
 OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES))
 SRCS  := $(patsubst %,$(SDIR)/%.c,$(FILES))

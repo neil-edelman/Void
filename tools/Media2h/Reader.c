@@ -7,7 +7,7 @@
 #include <errno.h>  /* errno */
 #include "Reader.h"
 
-/* This is an attempt to copy some functionality of JavaSE8's Reader.
+/* This is an attempt to copy some functionality of JavaSE8's LineNumberReader.
 
  "A buffered character-input stream that keeps track of line numbers. This class
  defines methods setLineNumber(int) and getLineNumber() for setting and getting
@@ -23,9 +23,9 @@
  carriage return ('\r'), or a carriage return followed immediately by a
  linefeed."
  
- @author Neil
- @version 1
- @since 2015 */
+ @author	Neil
+ @version	1.0, 2015-08
+ @since		1.0, 2015-08 */
 
 struct Reader {
 	char     fn[256];
@@ -107,6 +107,9 @@ char *ReaderReadLine(struct Reader *r) {
 	if(*last == '\n') {
 		*last = '\0';
 		r->number++;
+	} else {
+		/* fixme: maybe we should have it user-set what to do in this case? */
+		fprintf(stderr, "Reader \"%s\" line %u: warning, gone over maximum %u characters.\n", ReaderGetFilename(r), ReaderGetLineNumber(r), (unsigned)(sizeof(read) / sizeof(char)) - 1);
 	}
 
 	return read;

@@ -84,6 +84,11 @@ char *RecordGetName(const struct Record *const r) {
 	return (char *)r->name;
 }
 
+struct Type *RecordGetKeyType(const struct Record *const r) {
+	if(!r) return 0/*T_UNKNOWN*/;
+	return r->key.type;
+}
+
 #if 0
 /** May overwrite between calls. */
 char *RecordFieldType(const struct Field *const field) {
@@ -102,6 +107,11 @@ char *RecordFieldType(const struct Field *const field) {
 	return "type ";/*TypeTypeName(field->type);*/
 }
 #endif
+
+int RecordCompare(const struct Record *r1, const struct Record *r2) {
+	if(!r1 || !r2) return 0;
+	return record_comp(r1, r2);
+}
 
 /** Convert it to .h struct. */
 void RecordOutput(void) {
@@ -127,6 +137,8 @@ int RecordLoadInstance(const struct Record *const record, char *data[MAX_FIELDS]
 
 	if(!record || !data || !read) return 0;
 
+	if(!is_sorted) sort();
+
 	/*if(!load_field_instance(&record->key, &data[0], read)) return 0;*/
 	if(!TypeLoader(record->key.type, &data[0], read)) return 0;
 	for(i = 0; i < record->no_fields; i++) {
@@ -142,6 +154,8 @@ void RecordEraseInstance(const struct Record *const record, char *data[MAX_FIELD
 
 	if(!record || !data) return;
 
+	if(!is_sorted) sort();
+
 	fprintf(stderr, "~Lore: freeing lore data.\n");
 	for(i = 0; i <= record->no_fields; i++) {
 		if(!TypeIsLoaded(!i ? record->key.type : record->fields[i - 1].type)) continue;
@@ -150,6 +164,32 @@ void RecordEraseInstance(const struct Record *const record, char *data[MAX_FIELD
 		fprintf(stderr, "Freeing data, #%p.\n", data[i]);
 		free(data[i]);
 	}
+}
+
+void RecordPrintInstance(const struct Record *record, const char *const data[MAX_FIELDS]) {
+	int i;
+
+	if(!record || !data) return;
+
+	if(!is_sorted) sort();
+
+	/*
+	printf(" / * %s: ", record->name);
+	printf("%s%s [key]", field_to_name(&record->key), record->key.name);
+	for(i = 0; i < record->no_fields; i++) {
+		printf(", %s%s", field_to_name(&record->fields[i]), record->fields[i].name);
+	}
+	printf(" * /\n");
+	*/
+
+	printf("\t{ ");
+	TypePrintData(record->key.type, &data[0]);
+	for(i = 0; i < record->no_fields; i++) {
+		printf(", ");
+		TypePrintData(record->fields[i].type, &data[i + 1]);
+	}
+	printf(" }");
+
 }
 
 /** Iterator; first get key, then fields. */

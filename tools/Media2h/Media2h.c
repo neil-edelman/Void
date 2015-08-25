@@ -76,8 +76,6 @@ int main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
-	RecordOutput();
-
 	/* deeper; we've loaded the types (.type), now we need to load the
 	 resources (.lore) */
 	if(!(dir = opendir(argv[1]))) { perror(argv[1]); return EXIT_FAILURE; }

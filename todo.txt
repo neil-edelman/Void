@@ -1,3 +1,5 @@
-build up asteroids from smaller chunks; hit them and calculate new chunks
-random background
 fog
+fill in space between planets and foreground, etc
+build up asteroids from smaller chunks; hit them and calculate new chunks
+fix awful mirrored repeat
+make a database

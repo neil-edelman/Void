@@ -15,9 +15,10 @@ SYS := system
 SDR := shaders
 GEN := general
 GME := game
+FMT := format
 
 # files in sdir
-FILES := EntryPosix $(GEN)/Image $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Background $(GME)/Debris $(GME)/Ship $(GME)/Wmd $(GME)/Resources
+FILES := EntryPosix $(GEN)/Image $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Background $(GME)/Debris $(GME)/Ship $(GME)/Wmd $(GME)/Resources $(FMT)/Bitmap $(FMT)/lodepng $(FMT)/nanojpeg
 VS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
 FS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
 ICON := icon.ico
@@ -32,7 +33,7 @@ RSRC  := icon.rsrc
 INST  := $(PROJ)-$(VA)_$(VB)
 
 # extra stuff we should back up
-EXTRA := $(SDIR)/icon.rc todo.txt msvc2010.txt unix.txt performance.txt $(TDIR)/Text2h/Makefile $(TDIR)/Text2h/Text2h.c $(TDIR)/Bmp2h/Makefile $(TDIR)/Bmp2h/Bmp2h.c $(TDIR)/Bmp2h/Bitmap.c $(TDIR)/Bmp2h/Bitmap.h $(TDIR)/Tsv2h/Makefile $(TDIR)/Tsv2h/Tsv2h.c $(TDIR)/Automator/Automator.c $(TDIR)/Automator/Makefile $(TDIR)/Media2h/Makefile $(TDIR)/Media2h/Reader.c $(TDIR)/Media2h/Reader.h $(TDIR)/Media2h/Media2h.c $(TDIR)/Media2h/Type.c $(TDIR)/Media2h/Type.h $(TDIR)/Media2h/Record.c $(TDIR)/Media2h/Record.h $(TDIR)/Media2h/Lore.c $(TDIR)/Media2h/Lore.h $(TDIR)/Media2h/Functions.h $(TDIR)/Media2h/Error.c $(TDIR)/Media2h/Error.h $(SDIR)/test/SortingTest.c $(SDIR)/test/Collision.c
+EXTRA := $(SDIR)/icon.rc todo.txt msvc2010.txt unix.txt performance.txt $(SDIR)/test/SortingTest.c $(SDIR)/test/Collision.c $(SDIR)/test/Fileformat/Makefile $(SDIR)/test/Fileformat/src/Asteroid_png.h $(SDIR)/test/Fileformat/src/Pluto_jpeg.h $(SDIR)/test/Fileformat/src/Fileformat.c
 
 OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES))
 SRCS  := $(patsubst %,$(SDIR)/%.c,$(FILES))
@@ -52,7 +53,7 @@ TEXT2H_DEP := tools/Text2h/Text2h.c tools/Text2h/Makefile
 TEXT2H     := tools/Text2h/bin/Text2h
 
 BMP2H_DIR  := tools/Bmp2h
-TEXT2H_DEP := tools/Bmp2h/Bmp2h.c tools/Bmp2h/Bitmap.c tools/Bmp2h/Bitmap.h tools/Bmp2h/Makefile
+BMP2H_DEP := tools/Bmp2h/Bmp2h.c tools/Bmp2h/Bitmap.c tools/Bmp2h/Bitmap.h tools/Bmp2h/Makefile
 BMP2H      := tools/Bmp2h/bin/Bmp2h
 
 TSV2H_DIR  := tools/Tsv2h
@@ -62,6 +63,10 @@ TSV2H      := tools/Tsv2h/bin/Tsv2h
 AUTOMATOR_DIR  := tools/Automator
 AUTOMATOR_DEP  := tools/Automator/Automator.c tools/Automator/Makefile
 AUTOMATOR      := tools/Automator/bin/Automator
+
+FILE2H_DIR := tools/File2h
+FILE2H_DEP := tools/File2h/src/File2h.c tools/File2h/Makefile
+FILE2H     := tools/File2h/bin/File2h
 
 CC   := gcc
 CF   := -Wall -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi #-std=c99 # ansi doesn't have fmath fn's # UNIX/PC: -DGLEW
@@ -82,7 +87,7 @@ endif
 ######
 # compiles the programme by default
 
-default: $(TEXT2H) $(BMP2H) $(TSV2H) $(AUTOMATOR) $(BDIR)/$(PROJ)
+default: $(TEXT2H) $(BMP2H) $(TSV2H) $(FILE2H) $(AUTOMATOR) $(BDIR)/$(PROJ)
 	# . . . setting icon on a Mac.
 	cp $(SDIR)/$(ICON) $(BDIR)/$(ICON)
 	sips --addIcon $(BDIR)/$(ICON)
@@ -101,6 +106,7 @@ $(OBJS): $(BDIR)/%.o: $(SDIR)/%.c $(VS_VS) $(FS_FS) $(H)
 	@mkdir -p $(BDIR)/$(SYS)
 	@mkdir -p $(BDIR)/$(GEN)
 	@mkdir -p $(BDIR)/$(GME)
+	@mkdir -p $(BDIR)/$(FMT)
 	$(CC) $(CF) -c $(SDIR)/$*.c -o $@
 
 $(BDIR)/%_vs.h: $(SDIR)/%.vs $(TEXT2H)
@@ -119,6 +125,7 @@ $(BDIR)/%_bmp.h: $(MDIR)/%.bmp $(BMP2H)
 	# . . . pictures into headers.
 	@mkdir -p $(BDIR)
 	$(BMP2H) $< > $@
+	#$(FILE2H) $< > $@
 
 $(BDIR)/%_tsv.h: $(MDIR)/%.tsv $(TSV2H)
 	# . . . text resources into headers.
@@ -161,6 +168,10 @@ $(AUTOMATOR): $(AUTOMATOR_DEP)
 	@echo . . . compiling Automator.
 	make --directory $(AUTOMATOR_DIR)
 
+$(FILE2H): $(FILE2H_DEP)
+	@echo . . . compiling Automator.
+	make --directory $(FILE2H_DIR)
+
 ######
 # test programmes
 
@@ -185,7 +196,7 @@ clean:
 
 backup:
 	@mkdir -p $(BACK)
-	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) # $(BMP_BMP) (that last one is too large)
+	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(BMP2H_DEP) $(TSV2H_DEP) $(AUTOMATOR_DEP) $(FILE2H_DEP) # $(BMP_BMP) (that last one is too large)
 
 setup: default
 	@mkdir -p $(BDIR)/$(INST)

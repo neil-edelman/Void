@@ -89,4 +89,9 @@ static void usage(void) {
 	fprintf(stderr, "This program comes with ABSOLUTELY NO WARRANTY.\n");
 	fprintf(stderr, "This is free software, and you are welcome to redistribute it\n");
 	fprintf(stderr, "under certain conditions; see copying.txt.\n\n");
+	fprintf(stderr, "Image credit: NASA; JPL; ESA; Caltech; UCLA; MPS; DLR; IDA; Johns\nHopkins University APL; Carnegie Institution of Washington; DSS\nConsortium; SDSS.\n\n");
+	fprintf(stderr, "lodepng: Copyright (c) 2005-2015 Lode Vandevenne\n");
+	fprintf(stderr, "http://lodev.org/lodepng/\n\n");
+	fprintf(stderr, "nanojpeg: by Martin J. Fiedler\n");
+	fprintf(stderr, "http://keyj.emphy.de/nanojpeg/\n\n");
 }

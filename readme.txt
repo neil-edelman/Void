@@ -1,6 +1,16 @@
 Copyright (C) 2000, 2013 Neil Edelman, see copying.txt.
 neil dot edelman each mail dot mcgill dot ca
 
+Image credit: NASA; JPL; ESA; Caltech; UCLA; MPS; DLR; IDA; Johns
+Hopkins University APL; Carnegie Institution of Washington; DSS
+Consortium; SDSS.
+
+src/fileformat/lodepng: Copyright (c) 2005-2015 Lode Vandevenne
+http://lodev.org/lodepng/
+
+src/fileformat/nanojpeg: by Martin J. Fiedler <martin.fiedler@gmx.net>
+http://keyj.emphy.de/nanojpeg/
+
 Version 3.2.
 
 Usage: Void

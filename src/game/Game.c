@@ -35,7 +35,8 @@ struct Game {
 const static float asteroid_max_speed = 0.03f;
 
 /* positions larger then this value will be looped around */
-const float de_sitter = 8192.0f;
+/*const float de_sitter = 8192.0f;*/
+const float de_sitter = 4098.0f;
 
 /* private */
 float rnd(const float limit);
@@ -109,7 +110,7 @@ int Game(void) {
 	ImagePrint(img, stdout);
 
 	/* some asteroids */
-	for(i = 0; i < 512; i++) {
+	for(i = 0; i < 1000/* fixme: ~1024 is the limit . . . don't know why */; i++) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
 		/*printf("Game: new Asteroid, checking:\n");*/
 		if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {

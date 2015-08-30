@@ -99,7 +99,7 @@ int ImageGetTexture(const struct Image *img) {
 void ImagePrint(const struct Image *img, FILE *const fp) {
 	int x, y;
 
-	if(!img) fprintf(fp, "0\n");
+	if(!img) { fprintf(fp, "0\n"); return; }
 	for(y = 0; y < img->height; y++) {
 		for(x = 0; x < img->width; x++) {
 			/* red */

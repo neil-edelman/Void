@@ -11,7 +11,6 @@
 #include "Debris.h"
 #include "Wmd.h"
 #include "Light.h"
-#include "Resources.h"
 #include "../general/Map.h"
 #include "../general/Image.h"
 #include "../system/Key.h"
@@ -19,9 +18,15 @@
 #include "../system/Draw.h"
 #include "../EntryPosix.h"
 
+/* auto-generated */
+#include "../../bin/Lore.h"
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
 #endif
+
+extern struct Image images[];
+extern const int max_images;
 
 static int is_started;
 
@@ -49,7 +54,7 @@ int Game(void) {
 	struct ObjectsInSpace *ois;
 	struct Image *bitmap, *bmp[3];
 	struct Game   *game;*/
-	struct Map    *imgs;
+	/*struct Map    *imgs;*/
 	struct Image  *img;
 	struct Debris *asteroid;
 	struct Ship   *bad;
@@ -57,10 +62,10 @@ int Game(void) {
 	int i;
 
 	if(is_started) return -1;
-	if(!(imgs = ResourcesGetImages())) {
+	/*if(!(imgs = ResourcesGetImages())) {
 		fprintf(stderr, "Game: couldn't get images.\n");
 		return 0;
-	}
+	} <- static now! */
 
 	/* initilise */
 	game.t_s /*= game.dt_s*/ = 0;
@@ -106,8 +111,9 @@ int Game(void) {
 	1000 -- 95%
 	 collision detection is negligible, polygons are not (gpu-cpu bound?) */
 
-	img = MapGet(imgs, "Asteroid_bmp");
-	ImagePrint(img, stdout);
+	/*img = MapGet(imgs, "Asteroid_bmp");
+	ImagePrint(img, stdout);*/
+	bsearch("");
 
 	/* some asteroids */
 	for(i = 0; i < 1000/* fixme: ~1024 is the limit . . . don't know why */; i++) {

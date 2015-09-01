@@ -18,15 +18,13 @@ GME := game
 FMT := format
 
 # files in sdir
-FILES := EntryPosix $(GEN)/Image $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Background $(GME)/Debris $(GME)/Ship $(GME)/Wmd $(GME)/Resources $(FMT)/Bitmap $(FMT)/lodepng $(FMT)/nanojpeg
+FILES := ../bin/Lore EntryPosix $(GEN)/Image $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Background $(GME)/Debris $(GME)/Ship $(GME)/Wmd $(FMT)/Bitmap $(FMT)/lodepng $(FMT)/nanojpeg
 VS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
 FS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
 ICON := icon.ico
 
 # files in mdir
-RES_F := $(MDIR)/Resources.tsv
-BMP   := Ngc4038_4039 Dorado Asteroid Nautilus Scorpion Mercury Venus Pluto
-TSV   := type_of_object objects_in_space alignment ship_class
+# holy cow, we'll just backup all; the Loader takes care of it
 
 # files in bdir
 RSRC  := icon.rsrc
@@ -42,31 +40,33 @@ VS_VS := $(patsubst %,$(SDIR)/%.vs,$(VS))
 FS_FS := $(patsubst %,$(SDIR)/%.fs,$(FS))
 VS_H  := $(patsubst %,$(BDIR)/%_vs.h,$(VS))
 FS_H  := $(patsubst %,$(BDIR)/%_fs.h,$(FS))
-BMP_BMP:=$(patsubst %,$(MDIR)/%.bmp,$(BMP))
-BMP_TXT:=$(patsubst %,$(MDIR)/%.txt,$(BMP))
-BMP_H :=$(patsubst %,$(BDIR)/%_bmp.h,$(BMP))
 TSV_TSV:=$(patsubst %,$(MDIR)/%.tsv,$(TSV))
 TSV_H :=$(patsubst %,$(BDIR)/%_tsv.h,$(TSV))
+
+FILE2H_DIR := tools/File2h
+FILE2H_DEP := tools/File2h/src/File2h.c tools/File2h/Makefile
+FILE2H     := tools/File2h/bin/File2h
 
 TEXT2H_DIR := tools/Text2h
 TEXT2H_DEP := tools/Text2h/Text2h.c tools/Text2h/Makefile
 TEXT2H     := tools/Text2h/bin/Text2h
 
-BMP2H_DIR  := tools/Bmp2h
-BMP2H_DEP := tools/Bmp2h/Bmp2h.c tools/Bmp2h/Bitmap.c tools/Bmp2h/Bitmap.h tools/Bmp2h/Makefile
-BMP2H      := tools/Bmp2h/bin/Bmp2h
+LOADER_FILES := Error Loader Lore Reader Record Type
+LOADER_DIR   := tools/Loader
+LOADER_DEP   := $(LOADER_DIR)/Makefile $(patsubst %,$(LOADER_DIR)/$(SDIR)/%.c,$(LOADER_FILES)) $(patsubst %,$(LOADER_DIR)/$(SDIR)/%.h,$(LOADER_FILES)) $(LOADER_DIR)/$(SDIR)/Functions.h
+LOADER       := tools/Loader/bin/Loader
 
-TSV2H_DIR  := tools/Tsv2h
-TSV2H_DEP  := tools/Tsv2h/Tsv2h.c tools/Tsv2h/Makefile
-TSV2H      := tools/Tsv2h/bin/Tsv2h
-
-AUTOMATOR_DIR  := tools/Automator
-AUTOMATOR_DEP  := tools/Automator/Automator.c tools/Automator/Makefile
-AUTOMATOR      := tools/Automator/bin/Automator
-
-FILE2H_DIR := tools/File2h
-FILE2H_DEP := tools/File2h/src/File2h.c tools/File2h/Makefile
-FILE2H     := tools/File2h/bin/File2h
+# Loader recouces
+TYPE   := $(wildcard $(MDIR)/*.type)
+LORE_H := $(BDIR)/Lore.h
+LORE   := $(wildcard $(MDIR)/*.lore)
+LORE_C := $(BDIR)/Lore.c
+PNG    := $(wildcard $(MDIR)/*.png)
+PNG_H  := $(patsubst $(MDIR)/%.png,$(BDIR)/%_png.h,$(PNG))
+JPEG   := $(wildcard $(MDIR)/*.jpeg)
+JPEG_H := $(patsubst $(MDIR)/%.jpeg,$(BDIR)/%_jpeg.h,$(JPEG))
+BMP    := $(wildcard $(MDIR)/*.bmp)
+BMP_H  := $(patsubst $(MDIR)/%.bmp,$(BDIR)/%_bmp.h,$(BMP))
 
 CC   := gcc
 CF   := -Wall -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi #-std=c99 # ansi doesn't have fmath fn's # UNIX/PC: -DGLEW
@@ -87,7 +87,7 @@ endif
 ######
 # compiles the programme by default
 
-default: $(TEXT2H) $(BMP2H) $(TSV2H) $(FILE2H) $(AUTOMATOR) $(BDIR)/$(PROJ)
+default: $(BDIR)/$(PROJ)
 	# . . . setting icon on a Mac.
 	cp $(SDIR)/$(ICON) $(BDIR)/$(ICON)
 	sips --addIcon $(BDIR)/$(ICON)
@@ -97,7 +97,7 @@ default: $(TEXT2H) $(BMP2H) $(TSV2H) $(FILE2H) $(AUTOMATOR) $(BDIR)/$(PROJ)
 	# . . . success; executable is in $(BDIR)/$(PROJ)
 
 # linking
-$(BDIR)/$(PROJ): $(VS_H) $(FS_H) $(BMP_H) $(TSV_H) $(BDIR)/Automator.c $(OBJS)
+$(BDIR)/$(PROJ): $(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(OBJS)
 	$(CC) $(CF) $(OF) $(OBJS) -o $@
 
 # compiling
@@ -121,21 +121,30 @@ $(BDIR)/%_fs.h: $(SDIR)/%.fs $(TEXT2H)
 	@mkdir -p $(BDIR)/$(SDR)
 	$(TEXT2H) $< > $@
 
-$(BDIR)/%_bmp.h: $(MDIR)/%.bmp $(BMP2H)
-	# . . . pictures into headers.
+$(LORE_H): $(LOADER) $(FILE2H) $(TYPE)
+	# . . . resources lore.h
 	@mkdir -p $(BDIR)
-	$(BMP2H) $< > $@
-	#$(FILE2H) $< > $@
+	$(LOADER) $(MDIR) > $(LORE_H)
 
-$(BDIR)/%_tsv.h: $(MDIR)/%.tsv $(TSV2H)
-	# . . . text resources into headers.
+$(LORE_C): $(LOADER) $(FILE2H) $(TYPE) $(LORE) $(PNG_H) $(JPEG_H) $(BMP_H)
+	# . . . resources lore.c
 	@mkdir -p $(BDIR)
-	$(TSV2H) $(RES_F) $< > $@
+	$(LOADER) $(MDIR) $(MDIR) > $(LORE_C)
 
-$(BDIR)/Automator.c: $(AUTOMATOR_DIR)/Automator.c $(BMP_BMP)
-	# . . . making $(BDIR)/Automator.c
+$(BDIR)/%_png.h: $(MDIR)/%.png $(FILE2H)
+	# . . . File2h png
 	@mkdir -p $(BDIR)
-	$(AUTOMATOR) $(BDIR) > $@
+	$(FILE2H) $< > $@
+
+$(BDIR)/%_jpeg.h: $(MDIR)/%.jpeg $(FILE2H)
+	# . . . File2h jpeg
+	@mkdir -p $(BDIR)
+	$(FILE2H) $< > $@
+
+$(BDIR)/%_bmp.h: $(MDIR)/%.bmp $(FILE2H)
+	# . . . File2h bmp
+	@mkdir -p $(BDIR)
+	$(FILE2H) $< > $@
 
 # additional dependancies
 
@@ -156,21 +165,13 @@ $(TEXT2H): $(TEXT2H_DEP)
 	# . . . compiling Text2h.
 	make --directory $(TEXT2H_DIR)
 
-$(BMP2H): $(BMP2H_DEP)
-	@echo . . . compiling Bmp2h.
-	make --directory $(BMP2H_DIR)
-
-$(TSV2H): $(TSV2H_DEP)
-	@echo . . . compiling Tsv2h.
-	make --directory $(TSV2H_DIR)
-
-$(AUTOMATOR): $(AUTOMATOR_DEP)
-	@echo . . . compiling Automator.
-	make --directory $(AUTOMATOR_DIR)
-
 $(FILE2H): $(FILE2H_DEP)
-	@echo . . . compiling Automator.
+	@echo . . . compiling File2h.
 	make --directory $(FILE2H_DIR)
+
+$(LOADER): $(LOADER_DEP)
+	@echo . . . compiling Loader.
+	make --directory $(LOADER_DIR)
 
 ######
 # test programmes
@@ -188,15 +189,13 @@ $(BDIR)/cd: $(SDIR)/test/Collision.c
 
 clean:
 	-make --directory $(TEXT2H_DIR) clean
-	-make --directory $(BMP2H_DIR) clean
-	-make --directory $(TSV2H_DIR) clean
-	-make --directory $(AUTOMATOR_DIR) clean
-	# *.h is a hack
-	-rm -fd $(OBJS) $(BDIR)/$(ICON) $(BDIR)/$(RSRC) $(BDIR)/*.h $(VS_H) $(FS_H) $(BDIR)/sort $(BDIR)/cd $(BDIR)/$(SYS) $(BDIR)/$(GEN) $(BDIR)/$(GME) $(BDIR)/$(SDR) $(BDIR)/Automator.c
+	-make --directory $(FILE2H_DIR) clean
+	-make --directory $(LOADER_DIR) clean
+	-rm -fd $(OBJS) $(BDIR)/$(ICON) $(BDIR)/$(RSRC) $(VS_H) $(FS_H) $(TEXT2H) $(FILE2H) $(LOADER) $(BDIR)/sort $(BDIR)/cd $(BDIR)/$(SYS) $(BDIR)/$(GEN) $(BDIR)/$(GME) $(BDIR)/$(SDR) $(BDIR)/$(FMT) $(LORE_H) $(LORE_C) $(PNG_H) $(JPEG_H) $(BMP_H)
 
 backup:
 	@mkdir -p $(BACK)
-	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(BMP2H_DEP) $(TSV2H_DEP) $(AUTOMATOR_DEP) $(FILE2H_DEP) # $(BMP_BMP) (that last one is too large)
+	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) #$(MDIR)/*.*
 
 setup: default
 	@mkdir -p $(BDIR)/$(INST)

@@ -1,0 +1,23 @@
+# resource, key, field*, ~
+TypeOfObject
+string name
+image image
+~
+ObjectsInSpace
+autoincrement id
+string name
+TypeOfObject type
+int x
+int y
+~
+ShipClass
+string name
+image image
+int shild
+int ms_rechage
+~
+Alignment
+string name
+Alignment likes
+Alignment hates
+~

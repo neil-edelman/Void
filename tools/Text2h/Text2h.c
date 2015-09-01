@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 	for(a = name; *a; a++) {
 		if((*a < 'A' || *a > 'Z')
 		   && (*a < 'a' || *a > 'z')
-		   && (*a < '0' || *a > '9')) *a = '_';
+		   && (*a < '0' || *a > '9' || a == name)) *a = '_';
 	}
 
 	/* print output */

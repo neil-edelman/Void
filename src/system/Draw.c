@@ -6,11 +6,10 @@
 #include <math.h>   /* cis */
 #include "Glew.h"
 #include "../general/Map.h"
-#include "../general/Image.h"
+/*#include "../general/Image.h"*/
 #include "../game/Sprite.h"
 #include "../game/Background.h"
 #include "../game/Light.h"
-#include "../game/Resources.h"
 #include "Draw.h"
 #include "Window.h"
 #include "../EntryPosix.h" /* hmm */
@@ -24,9 +23,10 @@
 #define fminf(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-/* hard coded resouce files; there should be the directory tools/ where you can
- compile utilities that can make these files; run "make" and this should be
- automated */
+/* auto-generated, hard coded resouce files; there should be the directory
+ tools/ where you can compile utilities that can make these files; run "make"
+ and this should be automated; ignore errors about ISO C90 string length 509  */
+#include "../../bin/Lore.h"
 #include "../../bin/shaders/Texture_vs.h"
 #include "../../bin/shaders/Texture_fs.h"
 #include "../../bin/shaders/Background_vs.h"
@@ -38,6 +38,9 @@
  @author	Neil
  @version	3.2, 2015-05
  @since		1.0, 2000 */
+
+extern struct Image images[];
+extern const int max_images;
 
 /* if is started, we don't and can't start it again */
 static int is_started;
@@ -111,7 +114,7 @@ static const int  spot_colour_size    = 3;*/
 /* private prototypes */
 static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attrib)(const GLuint));
 static void tex_map_attrib(const GLuint shader);
-static int texture(const char *name, const int width, const int height, const int depth, const unsigned char *img);
+static int texture(/*const char *name,*/ const int width, const int height, const int depth, const unsigned char *img);
 static int light_compute_texture(void);
 static void display(void);
 static void resize(int width, int height);
@@ -134,9 +137,12 @@ static float   camera_x, camera_y;
 /** Gets all the graphics stuff started.
  @return		All good to draw? */
 int Draw(void) {
-	struct Map *imgs = ResourcesGetImages();
-	struct Image *img;
-	char *name;
+	/*struct Map *imgs = ResourcesGetImages();
+	 struct Image *img;*/
+	int i;
+	struct Image *image;
+
+	/*char *name;*/
 	int tex;
 
 	if(is_started) return -1;
@@ -175,27 +181,31 @@ int Draw(void) {
 	glActiveTexture(GT_LIGHT);
 	light_tex = light_compute_texture();
 	/* textures stored in imgs */
-	while(MapIterate(imgs, (const void **)&name, (void **)&img)) {
-		/* fixme: hinge on alpha */
-		switch(ImageGetDepth(img)) {
+	/*while(MapIterate(imgs, (const void **)&name, (void **)&img)) {*/
+	for(i = 0; i < max_images; i++) {
+		image = &images[i];
+		switch(/*ImageGetDepth(img)*/image->depth) {
 			case 3:
 				glActiveTexture(GT_BACKGROUND);
-				if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;
-				ImageSetTexture(img, tex);
+				/*if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;*/
+				if(!(tex = texture(/*name,*/ image->width, image->height, image->depth, image->data))) break; /* fixme: uncompress */
+				/*ImageSetTexture(img, tex);*/ image->texture = tex;
 				glBindTexture(GL_TEXTURE_2D, tex);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				
 				break;
 			case 4:
 				glActiveTexture(GT_SPRITES);
-				if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;
-				ImageSetTexture(img, tex);
+				/*if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;*/
+				if(!(tex = texture(/*name,*/ image->width, image->height, image->depth, image->data))) break; /* fixme: uncompress */
+				/*ImageSetTexture(img, tex);*/
+				image->texture = tex;
 				break;
 			default:
-				fprintf(stderr, "Draw: image \"%s\" has a depth, %u, that's not supported.\n", name, ImageGetDepth(img));
+				/*fprintf(stderr, "Draw: image \"%s\" has a depth, %u, that's not supported.\n", name, ImageGetDepth(img));*/
+				fprintf(stderr, "Draw: image has a depth, %u, that's not supported.\n", image->depth);
 		}
 		/* fixme: delete the img! it's not used */
 	}
@@ -279,10 +289,10 @@ int Draw(void) {
 
 /** Destructor. */
 void Draw_(void) {
-	struct Map *imgs = ResourcesGetImages();
+	/*struct Map *imgs = ResourcesGetImages();
 	struct Image *img;
 	char *name;
-	int tex;
+	int tex;*/
 
 	/*if(glIsBuffer(spot_geom)) {
 		glDeleteBuffers(1, &spot_geom);
@@ -305,14 +315,14 @@ void Draw_(void) {
 		tex_map_shader = 0;
 	}
 	/* erase the textures */
-	if(imgs) {
+	/*if(imgs) {
 		while(MapIterate(imgs, (const void **)&name, (void **)&img)) {
 			if(!img || !(tex = ImageGetTexture(img))) continue;
 			fprintf(stderr, "~Draw: erase \"%s,\" Tex%u.\n", name, tex);
 			glDeleteTextures(1, (unsigned *)&tex);
 			ImageSetTexture(img, 0);
 		}
-	}
+	} <- static now! */
 	if(light_tex) {
 		fprintf(stderr, "~Draw: erase lighting texture, Tex%u.\n", light_tex);
 		glDeleteTextures(1, &light_tex);
@@ -355,7 +365,7 @@ void DrawGetCamera(float *x_ptr, float *y_ptr) {
 
 /** Sets background. Fixme: only GT_BACKGROUND textures will work? */
 void DrawSetDesktop(const struct Image *const img) {
-	bg_tex = ImageGetTexture(img);
+	bg_tex = /*ImageGetTexture(img)*/img->texture;
 	glActiveTexture(GT_BACKGROUND);
 	glBindTexture(GL_TEXTURE_2D, bg_tex);
 	/*update_background_size();*/
@@ -365,7 +375,7 @@ void DrawSetDesktop(const struct Image *const img) {
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexParameteri(GL_TEXTURE_2D, pname, param);
     glBindTexture(GL_TEXTURE_2D, boundTexture);*/
-	fprintf(stderr, "Tex%u set as desktop.\n", ImageGetTexture(img));
+	fprintf(stderr, "Tex%u set as desktop.\n", /*ImageGetTexture(img)*/img->texture);
 }
 
 /** Compiles, links and verifies a shader.
@@ -485,7 +495,7 @@ static void tex_map_attrib(const GLuint shader) {
  @param depth
  @param img		The bitmap; must be the product of the last three long.
  @return		The name (int) of the newly created texture or 0 on error. */
-static int texture(const char *name, const int width, const int height, const int depth, const unsigned char *img) {
+static int texture(/*const char *name,*/ const int width, const int height, const int depth, const unsigned char *img) {
 	int format = 0, internal = 0;
 	int id;
 
@@ -517,7 +527,8 @@ static int texture(const char *name, const int width, const int height, const in
 	 border, format, type, *data); */
 	glTexImage2D(GL_TEXTURE_2D, 0, internal, width, height,
 				 0, format, GL_UNSIGNED_BYTE, img);
-	fprintf(stderr, "Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);
+	/*fprintf(stderr, "Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);*/
+	fprintf(stderr, "Draw::texture: created %dx%dx%d texture, Tex%u.\n", width, height, depth, id);
 
 	WindowIsGlError("texture");
 

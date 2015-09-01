@@ -1,0 +1,45 @@
+Core Presets
+Neil
+~
+# Alignment name, likes, hates
+Alignment
+humans
+-
+aliens
+Alignment
+aliens
+-
+humans
+# TypeOfObject name, image
+TypeOfObject
+asteroid
+Asteroid.png
+# ObjectsInSpace name, TypeOfObject, x, y
+ObjectsInSpace
+Sex Rock
+asteroid
+100
+100
+ObjectsInSpace
+Mining Rock
+asteroid
+0
+50
+# ShipClass name, image, shield, recharge
+ShipClass
+Nautilus
+Nautilus.png
+320
+1024
+ShipClass
+Scorpion
+Scorpion.png
+40
+1024
+# whatever
+ObjectsInSpace
+Sex Rock
+asteroid
+-100
+100
+~

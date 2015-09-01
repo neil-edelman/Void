@@ -11,7 +11,6 @@
 #include "system/Timer.h"
 #include "system/Key.h"
 #include "game/Game.h"
-#include "game/Resources.h"
 
 /** Entry point for command-line, unix-like operating systems (ie, all of them.)
  <p>
@@ -52,8 +51,7 @@ int main(int argc, char **argv) {
 	if(atexit(&main_)) perror("atexit");
 
 	/* start up subsystems; window has to be first; timer ms */
-	if(!Resources()
-	    || !Window(programme, argc, argv)
+	if(!Window(programme, argc, argv)
 		|| !Key()
 		|| !Draw()
 	    || !Game()
@@ -73,7 +71,6 @@ static void main_(void) {
 	Timer_();
 	Game_();
 	Draw_();
-	Resources_();
 }
 
 /** Help screen. */

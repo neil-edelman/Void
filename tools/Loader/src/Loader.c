@@ -107,17 +107,39 @@ int main(int argc, char **argv) {
 		printf("/** auto-generated from %s%s by %s %d.%d %s */\n\n",
 			   types_dir, types_dir[strlen(argv[1]) - 1] != '/' ? "/" : "",
 			   programme, versionMajor, versionMinor, year);
+		printf("#include <stddef.h> /* size_t */\n\n");
 		printf("enum ImageFormat { IF_UNKNOWN, IF_PNG, IF_JPEG, IF_BMP };\n\n");
 		printf("/* image is a base datatype; it's not in c; we need this */\n");
 		printf("struct Image {\n");
 		printf("\tconst char *name;\n");
-		printf("\tconst enum ImageFormat format;\n");
+		printf("\tconst enum ImageFormat data_format;\n");
+		printf("\tconst size_t           data_size;\n");
 		printf("\tconst unsigned char    *data;\n");
 		printf("\tconst unsigned         width;\n");
 		printf("\tconst unsigned         height;\n");
 		printf("\tconst unsigned         depth;\n");
 		printf("\tunsigned               texture;\n");
 		printf("};\n\n");
+
+#if 0
+		/** Prints out the red channel in text format for debugging purposes; please
+		 don't call it on large images!
+		 @param img		The image.
+		 @param fp		File pointer where you want the image to go; eg, stdout. */
+		void ImagePrint(const struct Image *img, FILE *const fp) {
+			int x, y;
+			
+			if(!img) { fprintf(fp, "0\n"); return; }
+			for(y = 0; y < img->height; y++) {
+				for(x = 0; x < img->width; x++) {
+					/* red */
+					fprintf(fp, "%1.1d", img->data[(y * img->width + x) * img->depth] >> 5);
+				}
+				fprintf(fp, "\n");
+			}
+		}
+#endif
+		
 		printf("/* these are datatypes that are loaded from %s%s */\n\n", types_dir, types_dir[strlen(argv[1]) - 1] != '/' ? "/" : "");
 		/*printf("void ImageSetTexture(struct Image *image, const int tex) { if(!image) return; image->texture = tex; }\n\n");*/
 		RecordOutput();
@@ -149,6 +171,74 @@ int main(int argc, char **argv) {
 
 	/* finally, the data */
 	LoreOutput();
+
+#if 0 /* fixme: later, when it's perfected */
+	/* oh, let's put this here, too? */
+	printf("#include <stdio.h> /* fprintf */\n\n");
+	printf("/** creates a new raw RBG[A] decompressed image which you can pass to OpenGl,\n");
+	printf(" or returns zero. Free with {@code free()}. */");
+	printf("unsigned char *decode(const struct Image *image) {\n");
+	printf("\tsw");
+	switch(image->format) {
+		case IF_PNG:
+			{
+				unsigned error;
+				if((error = lodepng_decode32(&data, &width, &height, image->data, sizeof image->data))) {
+					fprintf(stderr, "lodepng error %u: %s\n", error, lodepng_error_text(error));
+					return 0;
+				}
+			}
+			break;
+		case IF_JPEG:
+			enum { E_NO_ERR = 0, E_PERROR, E_READ, E_DECODE } err = E_NO_ERR;
+			FILE          *fp = 0;
+			size_t        size;
+			unsigned char *buffer = 0;
+			do { /* try */
+				/* nanojpeg doesn't do io */
+				if(!(fp = fopen(pn, "r"))) { err = E_PERROR; break; }
+				fseek(fp, 0, SEEK_END);
+				size = ftell(fp);
+				fseek(fp, 0, SEEK_SET);
+				rewind(fp);
+				if(!(buffer = malloc(size))) { err = E_PERROR; break; }
+				if(fread(buffer, sizeof(char), size, fp) != size)
+				{ err = E_READ; break; }
+				/* decode */
+				if(njDecode(buffer, size) || !njIsColor())
+				{ err = E_DECODE; break; }
+				width  = njGetWidth();
+				height = njGetHeight();
+				depth  = 3; /* colour always, but no alpha */
+			} while(0); { /* finally */
+				njDone();
+				free(buffer);
+				fclose(fp);
+			} if(err) { /* catch */
+				if(err == E_PERROR) perror(pn);
+				else fprintf(stderr, "%s: decoding failed.\n", pn);
+				return 0;
+			}
+		case IF_BMP:
+			struct Bitmap *bmp;
+			if(!(bmp = BitmapFile(pn))) return 0;
+			width  = BitmapGetWidth(bmp);
+			height = BitmapGetHeight(bmp);
+			depth  = BitmapGetDepth(bmp);
+			Bitmap_(&bmp);
+		case IF_UNKNOWN:
+		default:
+			fprintf(stderr, "Unknown image format.\n");
+			return 0;
+	}
+	
+	printf("\t{ \"%s\", %s, %s, %u, %u, %u, 0 }%s", fn, type, to_name(fn), width, height, depth, i != no_image_names - 1 ? ",\n" : "\n");
+
+	
+	
+	printf("}\n");
+	printf("/* fixme: fix vertical chirality */\n");
+#endif
 
 	main_();
 	return EXIT_SUCCESS;
@@ -245,6 +335,7 @@ static int include_images(void) {
 }
 
 static int print_images(const char *const directory) {
+	size_t size = 0;
 	static char pn[1024];
 	const int   max_pn = sizeof(pn) / sizeof(char);
 	int i;
@@ -277,7 +368,15 @@ static int print_images(const char *const directory) {
 
 		/* fixme: ick, no, compare then have an enum */
 		if(!strcmp("IF_PNG", type)) {
+			FILE *fp;
 			unsigned error;
+
+			/* get file size */
+			if(!(fp = fopen(pn, "r"))
+			   || fseek(fp, 0, SEEK_END)
+			   || (size = ftell(fp)) == -1
+			   || fclose(fp)) { perror(fn); fclose(fp); return 0; }
+			/* re-open it in lodepng to get the other info */
 			if((error = lodepng_decode32_file(&data, &width, &height, pn))) {
 				fprintf(stderr, "Loader: lodepng error %u on %s: %s\n", error, pn, lodepng_error_text(error));
 				return 0;
@@ -289,7 +388,6 @@ static int print_images(const char *const directory) {
 		} else if(!strcmp("IF_JPEG", type)) {
 			enum { E_NO_ERR = 0, E_PERROR, E_READ, E_DECODE } err = E_NO_ERR;
 			FILE          *fp = 0;
-			size_t        size;
 			unsigned char *buffer = 0;
 			do { /* try */
 				/* nanojpeg doesn't do io */
@@ -317,7 +415,14 @@ static int print_images(const char *const directory) {
 				return 0;
 			}
 		} else if(!strcmp("IF_BMP", type)) {
+			FILE *fp;
 			struct Bitmap *bmp;
+			/* get file size */
+			if(!(fp = fopen(pn, "r"))
+			   || fseek(fp, 0, SEEK_END)
+			   || (size = ftell(fp)) == -1
+			   || fclose(fp)) { perror(fn); fclose(fp); return 0; }
+			/* re-open */
 			if(!(bmp = BitmapFile(pn))) return 0;
 			width  = BitmapGetWidth(bmp);
 			height = BitmapGetHeight(bmp);
@@ -328,7 +433,7 @@ static int print_images(const char *const directory) {
 			return 0;
 		}
 
-		printf("\t{ \"%s\", %s, %s, %u, %u, %u, 0 }%s", fn, type, to_name(fn), width, height, depth, i != no_image_names - 1 ? ",\n" : "\n");
+		printf("\t{ \"%s\", %s, %u, %s, %u, %u, %u, 0 }%s", fn, type, (unsigned)size, to_name(fn), width, height, depth, i != no_image_names - 1 ? ",\n" : "\n");
 	}
 	printf("};\n");
 	printf("const int max_images = sizeof images / sizeof(struct Image);\n\n");

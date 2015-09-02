@@ -4,6 +4,7 @@
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
 #include <math.h>   /* M_PI */
+#include <string.h> /* strcmp for bsearch */
 #include "Ship.h"
 #include "Game.h"
 #include "Sprite.h"
@@ -12,7 +13,6 @@
 #include "Wmd.h"
 #include "Light.h"
 #include "../general/Map.h"
-#include "../general/Image.h"
 #include "../system/Key.h"
 #include "../system/Window.h"
 #include "../system/Draw.h"
@@ -20,13 +20,14 @@
 
 /* auto-generated */
 #include "../../bin/Lore.h"
+extern struct Image images[];
+extern const int max_images;
+extern struct TypeOfObject type_of_object[];
+extern const int max_type_of_object;
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
 #endif
-
-extern struct Image images[];
-extern const int max_images;
 
 static int is_started;
 
@@ -55,13 +56,19 @@ int Game(void) {
 	struct Image *bitmap, *bmp[3];
 	struct Game   *game;*/
 	/*struct Map    *imgs;*/
-	struct Image  *img;
+	/*struct Image  *img;*/
 	struct Debris *asteroid;
 	struct Ship   *bad;
 	struct Background *bg;
 	int i;
+	/* defined in Lore.h (hopefully!) */
+	struct TypeOfObject *type;
+	const struct Image *image;
+
+	printf("Game!\n");
 
 	if(is_started) return -1;
+	printf("Not started.\n");
 	/*if(!(imgs = ResourcesGetImages())) {
 		fprintf(stderr, "Game: couldn't get images.\n");
 		return 0;
@@ -113,17 +120,25 @@ int Game(void) {
 
 	/*img = MapGet(imgs, "Asteroid_bmp");
 	ImagePrint(img, stdout);*/
-	bsearch("");
+	if(!(type = bsearch("asteroid", type_of_object, max_type_of_object, sizeof(struct TypeOfObject), (int (*)(const void *, const void *))&strcmp))) {
+		for(i = 0; i < max_type_of_object; i++)
+			fprintf(stderr, "Found %s.\n", type_of_object[i].name);
+		fprintf(stderr, "Game: didn't find asteroid.\n");
+		/*return 0;*/
+	}
+	type = &type_of_object[0];
+	image = type->image;
 
 	/* some asteroids */
 	for(i = 0; i < 1000/* fixme: ~1024 is the limit . . . don't know why */; i++) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
 		/*printf("Game: new Asteroid, checking:\n");*/
-		if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
+		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
 			fprintf(stderr, "Game: would cause collision with sprite; waiving asteroid.\n");
 			continue;
 		}
-		asteroid = Debris(ImageGetTexture(img), ImageGetWidth(img), 10.0f);
+		asteroid = Debris(ImageGetTexture(img), ImageGetWidth(img), 10.0f);*/
+		asteroid = Debris(image->texture, image->width, 10.0f);
 		DebrisSetOrientation(asteroid,
 							 x, y, t, /* (x,y):t */
 							 vx, vy, o); /* (vx,vy):o */
@@ -131,6 +146,7 @@ int Game(void) {
 	}
 
 	/* sprinkle some ships */
+#if 0 /* fixme! */
 	img = MapGet(imgs, "Nautilus_bmp");
 	game.player = Ship(&game.player, ImageGetTexture(img), ImageGetWidth(img), B_HUMAN);
 	img = MapGet(imgs, "Scorpion_bmp");
@@ -155,8 +171,9 @@ int Game(void) {
 	img = MapGet(imgs, "Pluto_bmp");
 	bg  = Background(ImageGetTexture(img), ImageGetWidth(img));
 	BackgroundSetOrientation(bg, 200.0f, -400.0f, 0.0f);
+#endif
 
-#if 1
+#if 0
 	img = MapGet(imgs, "Dorado_bmp");
 	/*img = MapGet(imgs, "Pluto_bmp");*/
 	fprintf(stderr, "Game: background Tex%u.\n", ImageGetTexture(img));

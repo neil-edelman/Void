@@ -114,7 +114,8 @@ static const int  spot_colour_size    = 3;*/
 /* private prototypes */
 static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attrib)(const GLuint));
 static void tex_map_attrib(const GLuint shader);
-static int texture(/*const char *name,*/ const int width, const int height, const int depth, const unsigned char *img);
+/*static int texture(const int width, const int height, const int depth, const unsigned char *img);*/
+static int texture(struct Image *image);
 static int light_compute_texture(void);
 static void display(void);
 static void resize(int width, int height);
@@ -183,12 +184,15 @@ int Draw(void) {
 	/* textures stored in imgs */
 	/*while(MapIterate(imgs, (const void **)&name, (void **)&img)) {*/
 	for(i = 0; i < max_images; i++) {
-		image = &images[i];
+		texture(&images[i]);
+	}
+#if 0
+	image = &images[i];
 		switch(/*ImageGetDepth(img)*/image->depth) {
 			case 3:
 				glActiveTexture(GT_BACKGROUND);
 				/*if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;*/
-				if(!(tex = texture(/*name,*/ image->width, image->height, image->depth, image->data))) break; /* fixme: uncompress */
+				if(!(tex = texture(/*name,*/ image->width, image->height, image->depth, decode(image)))) break; /* fixme: uncompress */
 				/*ImageSetTexture(img, tex);*/ image->texture = tex;
 				glBindTexture(GL_TEXTURE_2D, tex);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
@@ -199,7 +203,7 @@ int Draw(void) {
 			case 4:
 				glActiveTexture(GT_SPRITES);
 				/*if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;*/
-				if(!(tex = texture(/*name,*/ image->width, image->height, image->depth, image->data))) break; /* fixme: uncompress */
+				if(!(tex = texture(/*name,*/ image->width, image->height, image->depth, decode(image)))) break; /* fixme: uncompress */
 				/*ImageSetTexture(img, tex);*/
 				image->texture = tex;
 				break;
@@ -209,6 +213,7 @@ int Draw(void) {
 		}
 		/* fixme: delete the img! it's not used */
 	}
+#endif
 	/* hard-code textures (fixme: I don't know what this is doing, probably
 	 simplify a lot) -- this doesn't do anything except set the size */
 	/* fixme: DrawSetBackground() */
@@ -489,6 +494,7 @@ static void tex_map_attrib(const GLuint shader) {
 	glBindAttribLocation(shader, G_TEXTURE,  "vbo_texture");
 }
 
+#if 0
 /** Creates a texture from a bitmap in memory.
  @param width
  @param height
@@ -534,6 +540,128 @@ static int texture(/*const char *name,*/ const int width, const int height, cons
 
 	return id;
 }
+#else
+
+#include "../format/lodepng.h"
+#include "../format/nanojpeg.h"
+#include "../format/Bitmap.h"
+
+/** Creates a texture from an image; sets the image texture unit.
+ @param image
+ @return	Success. */
+static int texture(struct Image *image) {
+	struct Bitmap *bmp;
+	unsigned width, height, depth, error;
+	unsigned char *pic;
+	int is_alloc = 0, is_bad = 0;
+	int format = 0, internal = 0;
+	int tex = 0;
+
+	if(!image || image->texture) return 0;
+
+	/* uncompress the image! */
+	switch(image->data_format) {
+		case IF_PNG:
+			if((error = lodepng_decode32(&pic, &width, &height, image->data, image->data_size))) {
+				fprintf(stderr, "lodepng error %u: %s\n", error, lodepng_error_text(error));
+				break;
+			}
+			is_alloc = -1;
+			depth    = 4; /* fixme: not all pngs have four */
+			break;
+		case IF_JPEG:
+			if(njDecode(image->data, image->data_size)) break;
+			is_alloc = -1;
+			pic = njGetImage();
+			if(!njIsColor()) is_bad = -1;
+			width  = njGetWidth();
+			height = njGetHeight();
+			depth  = 3;
+			break;
+		case IF_BMP:
+			if(!(bmp = Bitmap())) break;
+			is_alloc = -1;
+			width    = BitmapGetWidth(bmp);
+			height   = BitmapGetHeight(bmp);
+			depth    = BitmapGetDepth(bmp);
+			pic      = BitmapGetData(bmp);
+			break;
+		case IF_UNKNOWN:
+		default:
+			fprintf(stderr, "Unknown image format.\n");
+	}
+	if(!is_alloc) {
+		fprintf(stderr, "texture: allocation failed.\n");
+		return 0;
+	}
+	if(width != image->width || height != image->height || depth != image->depth) {
+		fprintf(stderr, "texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n", image->width, image->height, image->depth, width, height, depth);
+		is_bad = -1;
+	}
+	/* select image format */
+	switch(depth) {
+		case 1:
+			/* we use exclusively for shaders, so I don't think this matters */
+			/* GL_LUMINANCE; <- "core context depriciated," I was using that */
+			internal = GL_RGB;
+			format   = GL_RED;
+			break;
+		case 3:
+			/* non-transparent */
+			internal = GL_RGB8;
+			format   = GL_RGB;
+			break;
+		case 4:
+			internal = GL_RGBA8;
+			format   = GL_RGBA;
+			break;
+		default:
+			fprintf(stderr, "texture: not a recognised depth, %d.\n", depth);
+			is_bad = -1;
+	}
+	/* fixme: invert as necessary */
+	/* load the uncompressed image into a texture */
+	if(!is_bad) {
+		glGenTextures(1, (unsigned *)&tex);
+		glBindTexture(GL_TEXTURE_2D, tex);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0); /* no mipmap */
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		/* void glTexImage2D(target, level, internalFormat, width, height,
+		 border, format, type, *data); */
+		glTexImage2D(GL_TEXTURE_2D, 0, internal, width, height, 0, format,
+					 GL_UNSIGNED_BYTE, pic);
+		image->texture = tex;
+		/*fprintf(stderr, "Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);*/
+	}
+	/* free the pic */
+	switch(image->data_format) {
+		case IF_PNG:
+			free(pic);
+			break;
+		case IF_JPEG:
+			njDone();
+			break;
+		case IF_BMP:
+			Bitmap_(&bmp);
+		default:
+			break;
+	}
+	fprintf(stderr, "texture: created %dx%dx%d texture, Tex%u.\n", width, height, depth, tex);
+
+	WindowIsGlError("texture");
+
+	return tex ? -1 : 0;
+}
+
+#endif
+/** creates a new raw RBG[A] decompressed image which you can pass to OpenGl,
+ or returns zero. Free with {@code free()}. */
+/*unsigned char *decode(const struct Image *image) {
+}*/
 
 /* Creates a hardcoded lighting texture with the Red the radius and Green the
  angle.

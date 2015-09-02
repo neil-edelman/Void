@@ -129,6 +129,8 @@ int Game(void) {
 	type = &type_of_object[0];
 	image = type->image;
 
+	image_print(image);
+
 	/* some asteroids */
 	for(i = 0; i < 1000/* fixme: ~1024 is the limit . . . don't know why */; i++) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);

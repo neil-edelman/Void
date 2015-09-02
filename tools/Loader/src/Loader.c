@@ -121,25 +121,9 @@ int main(int argc, char **argv) {
 		printf("\tunsigned               texture;\n");
 		printf("};\n\n");
 
-#if 0
-		/** Prints out the red channel in text format for debugging purposes; please
-		 don't call it on large images!
-		 @param img		The image.
-		 @param fp		File pointer where you want the image to go; eg, stdout. */
-		void ImagePrint(const struct Image *img, FILE *const fp) {
-			int x, y;
-			
-			if(!img) { fprintf(fp, "0\n"); return; }
-			for(y = 0; y < img->height; y++) {
-				for(x = 0; x < img->width; x++) {
-					/* red */
-					fprintf(fp, "%1.1d", img->data[(y * img->width + x) * img->depth] >> 5);
-				}
-				fprintf(fp, "\n");
-			}
-		}
-#endif
-		
+		/* debug thing */
+		printf("void image_print(const struct Image *image);\n\n");
+
 		printf("/* these are datatypes that are loaded from %s%s */\n\n", types_dir, types_dir[strlen(argv[1]) - 1] != '/' ? "/" : "");
 		/*printf("void ImageSetTexture(struct Image *image, const int tex) { if(!image) return; image->texture = tex; }\n\n");*/
 		RecordOutput();
@@ -161,7 +145,26 @@ int main(int argc, char **argv) {
 	       lores_dir, lores_dir[strlen(argv[2]) - 1] != '/' ? "/" : "",
 	       programme, versionMajor, versionMinor, year);
 
+	printf("#include <stdio.h> /* fprintf */\n");
 	printf("#include \"Lore.h\"; /* or whatever you ./Loader dir/ > Lore.h */\n\n");
+
+	/* debug! */
+	printf("struct Image;\n\n");
+	printf("/** Prints out the red channel in text format for debugging purposes; please\n");
+	printf("don't call it on large images!\n");
+	printf(" @param img\t\tThe image.\n");
+	printf(" @param fp\t\tFile pointer where you want the image to go; eg, stdout. */\n");
+	printf("void image_print(const struct Image *image) {\n");
+	printf("\tint x, y;\n\n");
+	printf("\tif(!image) { fprintf(stderr, \"0\\n\"); return; }\n");
+	printf("\tfor(y = 0; y < image->height; y++) {\n");
+	printf("\t\tfor(x = 0; x < image->width; x++) {\n");
+	printf("\t\t\t/* red */\n");
+	printf("\t\t\tfprintf(stderr, \"%%1.1d\", image->data[(y * image->width + x) * image->depth] >> 5);\n");
+	printf("\t\t}\n");
+	printf("\t\tfprintf(stderr, \"\\n\");\n");
+	printf("\t}\n");
+	printf("}\n\n");
 
 	/* #include all images; it assumes that they've been converted by File2h */
 	include_images();

@@ -183,10 +183,9 @@ int Draw(void) {
 	light_tex = light_compute_texture();
 	/* textures stored in imgs */
 	/*while(MapIterate(imgs, (const void **)&name, (void **)&img)) {*/
-	for(i = 0; i < max_images; i++) {
-		texture(&images[i]);
-	}
-#if 0
+#if 1
+	for(i = 0; i < max_images; i++) texture(&images[i]);
+#else
 	image = &images[i];
 		switch(/*ImageGetDepth(img)*/image->depth) {
 			case 3:
@@ -221,12 +220,16 @@ int Draw(void) {
 	/*img = MapGet(imgs, "Ngc4038_4039_bmp");*/
 	img = MapGet(imgs, "Dorado_bmp");
 	if(!(bg_tex = ImageGetImageUnit(img))) fprintf(stderr, "Draw: background?\n");
+#else
+	image = &images[1];
+	if(!(bg_tex = image->texture)) fprintf(stderr, "Draw: background?\n");
 #endif
 
 	/* shaders: simple texture */
 	if(!(tex_map_shader = link_shader(Texture_vs, Texture_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	tex_map_matrix_location  = glGetUniformLocation(tex_map_shader, "matrix");
 	tex_map_texture_location = glGetUniformLocation(tex_map_shader, "sampler");
+
 	/* background: lit, but not dynamically */
 	if(!(back_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	/* vs */
@@ -281,6 +284,11 @@ int Draw(void) {
 	glUseProgram(0);
 
 	WindowIsGlError("Draw");
+
+	glActiveTexture(GT_BACKGROUND);
+	glBindTexture(GL_TEXTURE_2D, bg_tex);
+	printf("*********set bg_tex to %u.\n", bg_tex);
+	/*glActiveTexture(GT_SPRITES);*/
 
 	/* FIXME */
 	/*glActiveTexture(GT_BACKGROUND);
@@ -567,7 +575,7 @@ static int texture(struct Image *image) {
 				break;
 			}
 			is_alloc = -1;
-			depth    = 4; /* fixme: not all pngs have four */
+			depth    = 4; /* fixme: not all pngs have four? */
 			break;
 		case IF_JPEG:
 			if(njDecode(image->data, image->data_size)) break;
@@ -623,6 +631,7 @@ static int texture(struct Image *image) {
 	/* load the uncompressed image into a texture */
 	if(!is_bad) {
 		glGenTextures(1, (unsigned *)&tex);
+		glActiveTexture(image->depth == 3 ? GT_BACKGROUND : GT_SPRITES);
 		glBindTexture(GL_TEXTURE_2D, tex);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -635,6 +644,17 @@ static int texture(struct Image *image) {
 		glTexImage2D(GL_TEXTURE_2D, 0, internal, width, height, 0, format,
 					 GL_UNSIGNED_BYTE, pic);
 		image->texture = tex;
+		if(image->depth == 3) {
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		}
+#if 1
+		if(image->width <= 80) image_print(image, pic);
+		else fprintf(stderr, "...too big to show.\n");
+		printf("Tex: %u.\n", image->texture);
+#endif
 		/*fprintf(stderr, "Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);*/
 	}
 	/* free the pic */
@@ -731,11 +751,18 @@ static void display(void) {
 	 glDrawArrays(type flag, offset, no) */
 	if(bg_tex) {
 		glDisable(GL_BLEND);
+
+		/* why?? */
+		glActiveTexture(GT_BACKGROUND);
+
 		glUniform1i(tex_map_texture_location, T_BACKGROUND);
 		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
 	}
 	glEnable(GL_BLEND);
+
+	/* why? the glsl entirely specifies this */
+	glActiveTexture(GT_SPRITES);
 
 	/* turn on background lighting (sprites) */
 	glUseProgram(back_shader);

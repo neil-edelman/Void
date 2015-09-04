@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 		printf("};\n\n");
 
 		/* debug thing */
-		printf("void image_print(const struct Image *image);\n\n");
+		printf("void image_print(const struct Image *, const unsigned char *);\n\n");
 
 		printf("/* these are datatypes that are loaded from %s%s */\n\n", types_dir, types_dir[strlen(argv[1]) - 1] != '/' ? "/" : "");
 		/*printf("void ImageSetTexture(struct Image *image, const int tex) { if(!image) return; image->texture = tex; }\n\n");*/
@@ -154,13 +154,13 @@ int main(int argc, char **argv) {
 	printf("don't call it on large images!\n");
 	printf(" @param img\t\tThe image.\n");
 	printf(" @param fp\t\tFile pointer where you want the image to go; eg, stdout. */\n");
-	printf("void image_print(const struct Image *image) {\n");
+	printf("void image_print(const struct Image *image, const unsigned char *data) {\n");
 	printf("\tint x, y;\n\n");
-	printf("\tif(!image) { fprintf(stderr, \"0\\n\"); return; }\n");
+	printf("\tif(!image || !data) { fprintf(stderr, \"0\\n\"); return; }\n");
 	printf("\tfor(y = 0; y < image->height; y++) {\n");
 	printf("\t\tfor(x = 0; x < image->width; x++) {\n");
 	printf("\t\t\t/* red */\n");
-	printf("\t\t\tfprintf(stderr, \"%%1.1d\", image->data[(y * image->width + x) * image->depth] >> 5);\n");
+	printf("\t\t\tfprintf(stderr, \"%%1.1d\", data[(y * image->width + x) * image->depth] >> 5);\n");
 	printf("\t\t}\n");
 	printf("\t\tfprintf(stderr, \"\\n\");\n");
 	printf("\t}\n");

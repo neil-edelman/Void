@@ -116,6 +116,7 @@ int Game(void) {
 	 150 -- 40%
 	 300 -- 59%
 	1000 -- 95%
+	 fixed! 1024 -- ~15%
 	 collision detection is negligible, polygons are not (gpu-cpu bound?) */
 
 	/*img = MapGet(imgs, "Asteroid_bmp");
@@ -128,8 +129,6 @@ int Game(void) {
 	}
 	type = &type_of_object[0];
 	image = type->image;
-
-	image_print(image);
 
 	/* some asteroids */
 	for(i = 0; i < 1000/* fixme: ~1024 is the limit . . . don't know why */; i++) {

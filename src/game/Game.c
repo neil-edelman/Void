@@ -126,13 +126,8 @@ int Game(void) {
 	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
 	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
 
-#if 0 /* fixme: have settable */
-	img = MapGet(imgs, "Dorado_bmp");
-	/*img = MapGet(imgs, "Pluto_bmp");*/
-	fprintf(stderr, "Game: background Tex%u.\n", ImageGetTexture(img));
-	DrawSetDesktop(img);
-#endif
-	DrawSetDesktop("Dorado.jpeg");/* <- ? */
+	/* set background */
+	DrawSetDesktop("Dorado.jpeg");
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;

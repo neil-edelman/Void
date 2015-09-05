@@ -65,70 +65,24 @@ int Game(void) {
 	struct TypeOfObject *type;
 	const struct Image *image;
 
-	printf("Game!\n");
+	struct ShipClass *nautilus, *scorpion;
 
 	if(is_started) return -1;
-	printf("Not started.\n");
-	/*if(!(imgs = ResourcesGetImages())) {
-		fprintf(stderr, "Game: couldn't get images.\n");
-		return 0;
-	} <- static now! */
 
 	/* initilise */
 	game.t_s /*= game.dt_s*/ = 0;
-
-	/* start human */
-	/*if(!(game->pilot = Pilot())) {
-		fprintf(stderr, "Couldn't load human.\n");
-		Game_(&game);
-		return 0;
-	}*/
-	/* fixme: have a function that randomises the names */
-	/*game->player = ship(game, Sprite(bmp[0]->id, bmp[0]->width, bmp[0]->height), "Nautilus");
-	game->ai     = ship(game, Sprite(bmp[1]->id, bmp[1]->width, bmp[1]->height), "Scorpion");
-	{
-		int i;
-		struct Ship *asteroid;
-
-		for(i = 0; i < 64; i++) {
-			asteroid = ship(game, Sprite(bmp[2]->id, bmp[2]->width, bmp[2]->height), "Asteriod");
-			SpritePush(asteroid->sprite, rand() * randNorm * asteroid_max_speed);
-		}
-	}
-	while((ois = ResourcesEnumObjectsInSpace(game->resources))) {
-		fprintf(stderr, "Game: %d %s (%f, %f)\n", ois->id, ois->type_name, ois->position.x, ois->position.y);
-		if(!(too = ois->type)) continue;
-		if(!(bitmap = too->bmp)) continue;
-		ship(game, Sprite(bitmap->id, bitmap->width, bitmap->height), "Resource");
-	}*/
-	/*fprintf(stderr, "Game: ship_%d(p[%f,%f],r%d,s%d).\n", i, ship->p.x, ship->p.y, ship->r, ship->shield);*/
-	/* set the star in the middle of the screen to light! */
 
 	/* initial conditions */
 	/*game.star_light = Light(32.0f, 1.0f, 1.0f, 1.0f);
 	game.cool_light = Light(16.0f, 0.0f, 0.0f, 1.0f);
 	LightSetPosition(game.cool_light, -100.0f, -10.0f);*/
 
-	/* width == height for sprites! it's your own fault if you do not respect this! (actually I'm lazy, and didn't want to stick another variable in
-	    my calculations) */
-	/* resource use on my computer:
-	 100 -- 29%
-	 150 -- 40%
-	 300 -- 59%
-	1000 -- 95%
-	 fixed! 1024 -- ~15%
-	 collision detection is negligible, polygons are not (gpu-cpu bound?) */
-
-	/*img = MapGet(imgs, "Asteroid_bmp");
-	ImagePrint(img, stdout);*/
-	if(!(type = bsearch("asteroid", type_of_object, max_type_of_object, sizeof(struct TypeOfObject), (int (*)(const void *, const void *))&strcmp))) {
-		for(i = 0; i < max_type_of_object; i++)
-			fprintf(stderr, "Found %s.\n", type_of_object[i].name);
-		fprintf(stderr, "Game: didn't find asteroid.\n");
-		/*return 0;*/
-	}
-	type = &type_of_object[0];
-	image = type->image;
+	if(!(type = TypeOfObjectSearch("asteroid"))
+	   || !(nautilus = ShipClassSearch("Nautilus"))
+	   || !(scorpion = ShipClassSearch("Scorpion"))) {
+		fprintf(stderr, "Game: couldn't find required game elements.\n");
+		return 0;
+	};
 
 	/* some asteroids */
 	for(i = 0; i < 1000/* fixme: ~1024 is the limit . . . don't know why */; i++) {
@@ -137,9 +91,8 @@ int Game(void) {
 		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
 			fprintf(stderr, "Game: would cause collision with sprite; waiving asteroid.\n");
 			continue;
-		}
-		asteroid = Debris(ImageGetTexture(img), ImageGetWidth(img), 10.0f);*/
-		asteroid = Debris(image->texture, image->width, 10.0f);
+		}*/
+		asteroid = Debris(type->image->texture, type->image->width, 10.0f);
 		DebrisSetOrientation(asteroid,
 							 x, y, t, /* (x,y):t */
 							 vx, vy, o); /* (vx,vy):o */
@@ -147,21 +100,22 @@ int Game(void) {
 	}
 
 	/* sprinkle some ships */
-#if 0 /* fixme! */
-	img = MapGet(imgs, "Nautilus_bmp");
-	game.player = Ship(&game.player, ImageGetTexture(img), ImageGetWidth(img), B_HUMAN);
-	img = MapGet(imgs, "Scorpion_bmp");
-	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
+
+	game.player = Ship(&game.player, nautilus->image->texture, nautilus->image->width, B_HUMAN);
+	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
-	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
+	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
+	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
+	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
 	ShipSetOrientation(bad, -300.0f, -100.0f, 1.0f);
-	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
+	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
 	ShipSetOrientation(bad, 100.0f, -600.0f, 0.0f);
-	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
+	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 600.0f, 0.0f);
-	bad = Ship(0, ImageGetTexture(img), ImageGetWidth(img), B_STUPID);
+	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
 	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
 
+#if 0 /* fixme! */
 	/* planets */
 	img = MapGet(imgs, "Mercury_bmp");
 	bg  = Background(ImageGetTexture(img), ImageGetWidth(img));
@@ -174,23 +128,14 @@ int Game(void) {
 	BackgroundSetOrientation(bg, 200.0f, -400.0f, 0.0f);
 #endif
 
-#if 0
+#if 0 /* fixme: have settable */
 	img = MapGet(imgs, "Dorado_bmp");
 	/*img = MapGet(imgs, "Pluto_bmp");*/
 	fprintf(stderr, "Game: background Tex%u.\n", ImageGetTexture(img));
 	DrawSetDesktop(img);
 #endif
+	/* DrawSetDesktop("Dorido.jpeg"); <- */
 
-	{
-		struct TypeOfObject *ast = TypeOfObjectSearch("asteroid");
-		struct ObjectsInSpace *obj = ObjectsInSpaceSearch(1);
-		struct ObjectsInSpace *obj2 = ObjectsInSpaceSearch(0);
-		fprintf(stderr, "TypeOfObjectSearch(\"asteroid\") = #%p\n", ast);
-		fprintf(stderr, "'%s'\n", ast->name);
-		fprintf(stderr, "ObjectsInSpaceSearch(1) = #%p\n", obj);
-		fprintf(stderr, "'%s'\n", obj->name);
-		fprintf(stderr, "ObjectsInSpaceSearch(0) = #%p\n", obj2);
-	}
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;
 

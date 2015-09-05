@@ -220,7 +220,7 @@ int Draw(void) {
 	/*img = MapGet(imgs, "Ngc4038_4039_bmp");*/
 	img = MapGet(imgs, "Dorado_bmp");
 	if(!(bg_tex = ImageGetImageUnit(img))) fprintf(stderr, "Draw: background?\n");
-#else
+#else /********************************* fixme!!!!!!!!! ***********/
 	image = &images[1];
 	if(!(bg_tex = image->texture)) fprintf(stderr, "Draw: background?\n");
 #endif

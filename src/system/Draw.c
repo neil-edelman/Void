@@ -8,7 +8,7 @@
 #include "../general/Map.h"
 /*#include "../general/Image.h"*/
 #include "../game/Sprite.h"
-#include "../game/Background.h"
+#include "../game/Far.h"
 #include "../game/Light.h"
 #include "Draw.h"
 #include "Window.h"
@@ -714,7 +714,7 @@ static void display(void) {
 	/* background sprites */
 	/*const->glUniform1i(back_texture_location, T_SPRITES); */
 	glUniform2f(back_camera_location, camera_x, camera_y);
-	while(BackgroundIterate(&x, &y, &t, &texture, &size)) {
+	while(FarIterate(&x, &y, &t, &texture, &size)) {
 		if(old_texture != texture) {
 			glBindTexture(GL_TEXTURE_2D, texture);
 			old_texture = texture;

@@ -8,7 +8,7 @@
 #include "Ship.h"
 #include "Game.h"
 #include "Sprite.h"
-#include "Background.h"
+#include "Far.h"
 #include "Debris.h"
 #include "Wmd.h"
 #include "Light.h"
@@ -61,7 +61,7 @@ int Game(void) {
 	/*struct Image  *img;*/
 	struct Debris *asteroid;
 	struct Ship   *bad;
-	struct Background *bg;
+	struct Far *bg;
 	int i;
 	/* defined in Lore.h (hopefully!) */
 	const struct TypeOfObject *type;
@@ -104,9 +104,7 @@ int Game(void) {
 	/* set up Objects in Space */
 	for(i = 0; i < max_objects_in_space; i++) {
 		ois = &objects_in_space[i];
-		bg  = Background(ois->type->image->texture, ois->type->image->width);
-		/* fixme: Background constructor. */
-		BackgroundSetOrientation(bg, ois->x, ois->x, 0.0f /* fixme: diurnal variation */);
+		bg  = Far(ois);
 		fprintf(stderr, "Set up Object in Space: %s.\n", ois->name);
 	}
 

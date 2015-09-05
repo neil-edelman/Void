@@ -18,7 +18,7 @@ GME := game
 FMT := format
 
 # files in sdir
-FILES := ../bin/Lore EntryPosix $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Background $(GME)/Debris $(GME)/Ship $(GME)/Wmd $(FMT)/Bitmap $(FMT)/lodepng $(FMT)/nanojpeg
+FILES := ../bin/Lore EntryPosix $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Far $(GME)/Debris $(GME)/Ship $(GME)/Wmd $(FMT)/Bitmap $(FMT)/lodepng $(FMT)/nanojpeg
 VS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
 FS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
 ICON := icon.ico

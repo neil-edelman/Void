@@ -14,6 +14,15 @@ humans
 TypeOfObject
 asteroid
 Asteroid.png
+TypeOfObject
+Mercury
+Mercury.png
+TypeOfObject
+Venus
+Venus.png
+TypeOfObject
+Pluto
+Pluto.png
 # ObjectsInSpace name, TypeOfObject, x, y
 ObjectsInSpace
 Sex Rock
@@ -25,6 +34,21 @@ Mining Rock
 asteroid
 0
 50
+ObjectsInSpace
+Mercury
+Mercury
+0
+0
+ObjectsInSpace
+Venus
+Venus
+600
+500
+ObjectsInSpace
+Pluto
+Pluto
+200
+-400
 # ShipClass name, image, shield, recharge
 ShipClass
 Nautilus
@@ -36,10 +60,4 @@ Scorpion
 Scorpion.png
 40
 1024
-# whatever
-ObjectsInSpace
-Sex Rock
-asteroid
--100
-100
 ~

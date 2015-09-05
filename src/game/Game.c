@@ -22,10 +22,12 @@
 #include "../../bin/Lore.h"
 extern struct Image images[];
 extern const int max_images;
-extern struct TypeOfObject type_of_object[];
+extern const struct TypeOfObject type_of_object[];
 extern const int max_type_of_object;
+extern const struct ObjectsInSpace objects_in_space[];
+extern const int max_objects_in_space;
 
-#ifndef M_PI
+#ifndef M_PI /* M_PI not defined in MSVC */
 #define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
 #endif
 
@@ -62,8 +64,8 @@ int Game(void) {
 	struct Background *bg;
 	int i;
 	/* defined in Lore.h (hopefully!) */
-	struct TypeOfObject *type;
-	const struct Image *image;
+	const struct TypeOfObject *type;
+	const struct ObjectsInSpace *ois;
 
 	struct ShipClass *nautilus, *scorpion;
 
@@ -85,7 +87,7 @@ int Game(void) {
 	};
 
 	/* some asteroids */
-	for(i = 0; i < 1000/* fixme: ~1024 is the limit . . . don't know why */; i++) {
+	for(i = 0; i < 1000/* fixme: ~1024 is the limit . . . don't know why; did I set that? */; i++) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
 		/*printf("Game: new Asteroid, checking:\n");*/
 		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
@@ -99,7 +101,16 @@ int Game(void) {
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
 
-	/* sprinkle some ships */
+	/* set up Objects in Space */
+	for(i = 0; i < max_objects_in_space; i++) {
+		ois = &objects_in_space[i];
+		bg  = Background(ois->type->image->texture, ois->type->image->width);
+		/* fixme: Background constructor. */
+		BackgroundSetOrientation(bg, ois->x, ois->x, 0.0f /* fixme: diurnal variation */);
+		fprintf(stderr, "Set up Object in Space: %s.\n", ois->name);
+	}
+
+	/* sprinkle some ships (fixme: resource set) */
 
 	game.player = Ship(&game.player, nautilus->image->texture, nautilus->image->width, B_HUMAN);
 	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
@@ -114,19 +125,6 @@ int Game(void) {
 	ShipSetOrientation(bad, 300.0f, 600.0f, 0.0f);
 	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
 	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
-
-#if 0 /* fixme! */
-	/* planets */
-	img = MapGet(imgs, "Mercury_bmp");
-	bg  = Background(ImageGetTexture(img), ImageGetWidth(img));
-	/*BackgroundSetOrientation(bg, -300.0f, 500.0f, 0.0f);*/
-	img = MapGet(imgs, "Venus_bmp");
-	bg  = Background(ImageGetTexture(img), ImageGetWidth(img));
-	BackgroundSetOrientation(bg, 600.0f, 500.0f, 0.0f);
-	img = MapGet(imgs, "Pluto_bmp");
-	bg  = Background(ImageGetTexture(img), ImageGetWidth(img));
-	BackgroundSetOrientation(bg, 200.0f, -400.0f, 0.0f);
-#endif
 
 #if 0 /* fixme: have settable */
 	img = MapGet(imgs, "Dorado_bmp");

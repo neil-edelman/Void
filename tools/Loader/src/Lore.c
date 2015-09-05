@@ -164,8 +164,10 @@ void LoreOutput(void) {
 		name = RecordGetName(record);
 		printf("const struct %s %s[];\n", name, camel_to_snake_case(name));
 	}
+	printf("\n");
+
 	/* print all lores */
-	printf("\n/* loaded %u lores */\n\n", no_lores);
+	printf("/* loaded %u lores */\n\n", no_lores);
 	for(i = 0; i < no_lores; i++) {
 		lore = &lores[i];
 		if(i) is_new_type = RecordCompare(lores[i - 1].record, lore->record);

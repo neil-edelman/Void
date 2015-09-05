@@ -181,6 +181,16 @@ int Game(void) {
 	DrawSetDesktop(img);
 #endif
 
+	{
+		struct TypeOfObject *ast = TypeOfObjectSearch("asteroid");
+		struct ObjectsInSpace *obj = ObjectsInSpaceSearch(1);
+		struct ObjectsInSpace *obj2 = ObjectsInSpaceSearch(0);
+		fprintf(stderr, "TypeOfObjectSearch(\"asteroid\") = #%p\n", ast);
+		fprintf(stderr, "'%s'\n", ast->name);
+		fprintf(stderr, "ObjectsInSpaceSearch(1) = #%p\n", obj);
+		fprintf(stderr, "'%s'\n", obj->name);
+		fprintf(stderr, "ObjectsInSpaceSearch(0) = #%p\n", obj2);
+	}
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;
 

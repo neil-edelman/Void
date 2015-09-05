@@ -145,8 +145,10 @@ int main(int argc, char **argv) {
 	       lores_dir, lores_dir[strlen(argv[2]) - 1] != '/' ? "/" : "",
 	       programme, versionMajor, versionMinor, year);
 
-	printf("#include <stdio.h> /* fprintf */\n");
-	printf("#include \"Lore.h\"; /* or whatever you ./Loader dir/ > Lore.h */\n\n");
+	printf("#include <stdlib.h> /* bsearch */\n");
+	printf("#include <stdio.h>  /* fprintf */\n");
+	printf("#include <string.h> /* strcmp */\n");
+	printf("#include \"Lore.h\";  /* or whatever you ./Loader dir/ > Lore.h */\n\n");
 
 	/* debug! */
 	printf("struct Image;\n\n");
@@ -174,74 +176,12 @@ int main(int argc, char **argv) {
 
 	/* finally, the data */
 	LoreOutput();
+	printf("\n");
 
-#if 0 /* fixme: later, when it's perfected */
-	/* oh, let's put this here, too? */
-	printf("#include <stdio.h> /* fprintf */\n\n");
-	printf("/** creates a new raw RBG[A] decompressed image which you can pass to OpenGl,\n");
-	printf(" or returns zero. Free with {@code free()}. */");
-	printf("unsigned char *decode(const struct Image *image) {\n");
-	printf("\tsw");
-	switch(image->format) {
-		case IF_PNG:
-			{
-				unsigned error;
-				if((error = lodepng_decode32(&data, &width, &height, image->data, sizeof image->data))) {
-					fprintf(stderr, "lodepng error %u: %s\n", error, lodepng_error_text(error));
-					return 0;
-				}
-			}
-			break;
-		case IF_JPEG:
-			enum { E_NO_ERR = 0, E_PERROR, E_READ, E_DECODE } err = E_NO_ERR;
-			FILE          *fp = 0;
-			size_t        size;
-			unsigned char *buffer = 0;
-			do { /* try */
-				/* nanojpeg doesn't do io */
-				if(!(fp = fopen(pn, "r"))) { err = E_PERROR; break; }
-				fseek(fp, 0, SEEK_END);
-				size = ftell(fp);
-				fseek(fp, 0, SEEK_SET);
-				rewind(fp);
-				if(!(buffer = malloc(size))) { err = E_PERROR; break; }
-				if(fread(buffer, sizeof(char), size, fp) != size)
-				{ err = E_READ; break; }
-				/* decode */
-				if(njDecode(buffer, size) || !njIsColor())
-				{ err = E_DECODE; break; }
-				width  = njGetWidth();
-				height = njGetHeight();
-				depth  = 3; /* colour always, but no alpha */
-			} while(0); { /* finally */
-				njDone();
-				free(buffer);
-				fclose(fp);
-			} if(err) { /* catch */
-				if(err == E_PERROR) perror(pn);
-				else fprintf(stderr, "%s: decoding failed.\n", pn);
-				return 0;
-			}
-		case IF_BMP:
-			struct Bitmap *bmp;
-			if(!(bmp = BitmapFile(pn))) return 0;
-			width  = BitmapGetWidth(bmp);
-			height = BitmapGetHeight(bmp);
-			depth  = BitmapGetDepth(bmp);
-			Bitmap_(&bmp);
-		case IF_UNKNOWN:
-		default:
-			fprintf(stderr, "Unknown image format.\n");
-			return 0;
-	}
-	
-	printf("\t{ \"%s\", %s, %s, %u, %u, %u, 0 }%s", fn, type, to_name(fn), width, height, depth, i != no_image_names - 1 ? ",\n" : "\n");
-
-	
-	
-	printf("}\n");
-	printf("/* fixme: fix vertical chirality */\n");
-#endif
+	/* oh, and search f'ns; fixme: O(log n), should be O(1), but does it matter
+	 really? fixme: if any record has zero entries, this makes a reference to a
+	 variable that doesn't exist */
+	RecordPrintSearches();
 
 	main_();
 	return EXIT_SUCCESS;

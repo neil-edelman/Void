@@ -47,18 +47,25 @@ extern const char *delimiters;
 static const struct Type {
 	char          *name;
 	char          *type_name;
+	char          *comparator_name;
 	int           (*loader)(char **, struct Reader *const);
 	int           (*printer)(const char *const *const);
 	int           (*comparator)(const void *, const void *);
 } types[] = {
-	{ "-",       "const void *",         0,               &print_zero,   0 },
-	{ "autoincrement", "const int ",     0,               &print_ai,     0 },
-	{ "float",   "const float ",         &load_word,      &print_float,  &cmp_float },
-	/*{ "foreign",       "void *",         &load_word,      &print_fk },*/
-	{ "image",   "const struct Image *", &load_string,    &print_image,  0 },
-	{ "int",     "const int ",           &load_word,      &print_int,    &cmp_int },
-	{ "string",  "const char *const ",   &load_string,    &print_string, (int (*)(const void *, const void *))&strcmp },
-	{ "text",    "const char *const ",   &load_paragraph, &print_string, (int (*)(const void *, const void *))&strcmp }
+	{ "-",             "const void *",         0,
+		0,               &print_zero,   0 },
+	{ "autoincrement", "const int ",           "cmp_int",
+		0,               &print_ai,     0 },
+	{ "float",         "const float ",         "cmp_float",
+		&load_word,      &print_float,  &cmp_float },
+	{ "image",         "const struct Image *", 0,
+		&load_string,    &print_image,  0 },
+	{ "int",           "const int ",           "cmp_int",
+		&load_word,      &print_int,    &cmp_int },
+	{ "string",        "const char *const ",   "strcmp",
+		&load_string,    &print_string, (int (*)(const void *, const void *))&strcmp },
+	{ "text",          "const char *const ",   "strcmp",
+		&load_paragraph, &print_string, (int (*)(const void *, const void *))&strcmp }
 };
 static const int max_types = sizeof(types) / sizeof(struct Type);
 /*static const struct Type *type_foreign = types[3];*/
@@ -73,6 +80,11 @@ char *TypeGetName(const struct Type *const type) {
 char *TypeGetTypeName(const struct Type *const type) {
 	if(!type) return "void *"; /* maybe? shouldn't really happen */
 	return type->type_name;
+}
+
+char *TypeGetComparatorName(const struct Type *const type) {
+	if(!type) return 0;
+	return type->comparator_name;
 }
 
 /** @return		Wheater the type has a loader. Foriegn keys have loaders, but

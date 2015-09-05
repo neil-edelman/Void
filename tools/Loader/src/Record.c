@@ -8,6 +8,7 @@
 #define TRIM
 #define GROW
 #define STRCOPY
+#define CAMEL_TO_SNAKE_CASE
 #include "Functions.h"
 
 #include "Error.h"
@@ -99,6 +100,8 @@ int RecordCompare(const struct Record *r1, const struct Record *r2) {
 /** Convert it to .h struct. */
 void RecordOutput(void) {
 	struct Record *record;
+	struct Type *type;
+	char *name;
 	int i, j;
 
 	if(!is_sorted) sort();
@@ -115,6 +118,15 @@ void RecordOutput(void) {
 			printf("\t%s%s;\n", field_to_name(&record->fields[j]), record->fields[j].name);
 		}
 		printf("};\n\n"/*, camel_to_snake_case(record->name)*/);
+	}
+
+	/* search prototypes */
+	printf("/* search protocols */\n");
+	for(i = 0; i < no_records; i++) {
+		record = &records[i];
+		name = record->name;
+		type = record->key.type; /* RecordGetKeyType(record) */
+		printf("struct %s *%sSearch(%s%s);\n", name, name, TypeGetTypeName(type), camel_to_snake_case(name));
 	}
 }
 
@@ -188,6 +200,53 @@ struct Record *RecordSearch(const char *str) {
 	if(!is_sorted) sort();
 	return bsearch(&str, records, no_records, sizeof(struct Record),
 	               (int (*)(const void *, const void *))&string_record_comp);
+}
+
+/** For every record, writes search f'ns; c file. Call {@see TypePrintCompares}
+ first, since this is referencing them.
+ <p>
+ This will crash if you set records to have foriegn keys; only basic types for
+ keys please.
+ <p>
+ The definition of the things that {@see RecordOutput} prints out. */
+void RecordPrintSearches(void) {
+	struct Record *record;
+	struct Type *key_type;
+	int i;
+	char *name, *snake, *key, *key_type_name;
+
+	if(!is_sorted) sort();
+
+	/* stdlib.h is included at the top in Loader.c */
+	printf("/* f'ns that we (might) need to compare basic types */\n\n");
+	/* fixme: only do it if it's actually used */
+	printf("static int cmp_float(const float f1, const float f2) {\n");
+	printf("\tconst float comp = f1 - f2;\n");
+	printf("\tif(comp < 0.0f) return -1;\n");
+	printf("\tif(comp > 0.0f) return 1;\n");
+	printf("\treturn 0;\n");
+	printf("}\n\n");
+	printf("static int cmp_int(const int i1, const int i2) {\n");
+	printf("\treturn i1 - i2;\n");
+	printf("}\n\n");
+	printf("/* comparison f'ns and public *Search() for compound Types; *Search can return\nzero if it didn't find it */\n\n");
+	for(i = 0; i < no_records; i++) {
+		record = &records[i];
+		name          = record->name;
+		snake         = camel_to_snake_case(name);
+		key           = record->key.name;
+		key_type      = record->key.type;
+		key_type_name = TypeGetTypeName(record->key.type);
+		printf("int %s_comp(%s*key_ptr, const struct %s *elem) {\n", snake, key_type_name, name);
+		printf("\t%sk = *key_ptr;\n", key_type_name);
+		printf("\t%se = elem->%s;\n\n", key_type_name, key);
+		printf("\treturn %s(k, e);\n", TypeGetComparatorName(key_type));
+		/*printf("\treturn 0;\n");*/
+		printf("}\n\n");
+		printf("struct %s *%sSearch(%skey) {\n", name, name, TypeGetTypeName(key_type));
+		printf("\treturn bsearch(&key, %s, max_%s, sizeof(struct %s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);
+		printf("}\n\n");
+	}
 }
 
 /* private */

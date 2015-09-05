@@ -29,3 +29,4 @@ void RecordEraseInstance(const struct Record *const record, char *data[MAX_FIELD
 void RecordPrintInstance(const struct Record *record, const char *const data[MAX_FIELDS]);
 /*int RecordNextField(struct Record *r, struct Field **field_ptr);*/
 struct Record *RecordSearch(const char *str);
+void RecordPrintSearches(void);

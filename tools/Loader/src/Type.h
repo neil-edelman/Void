@@ -3,6 +3,7 @@ struct Reader;
 
 char *TypeGetName(const struct Type *const type);
 char *TypeGetTypeName(const struct Type *const type);
+char *TypeGetComparatorName(const struct Type *const type);
 int TypeIsLoaded(const struct Type *const type);
 int TypeLoader(const struct Type *const type, char **datum_ptr, struct Reader *r);
 int TypeComparator(const struct Type *const type, const void *s1, const void *s2);

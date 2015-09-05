@@ -320,7 +320,7 @@ void DrawGetCamera(float *x_ptr, float *y_ptr) {
 
 /** Sets background to the image with key key. Fixme: allows you to set not
  GT_BACKGROUND textures, which probably don't work, maybe? */
-void DrawSetDesktop(const char *const str) {
+void DrawSetBackground(const char *const str) {
 	struct Image *image;
 	if(!(image = ImageSearch(str))) {
 		fprintf(stderr, "Draw::setDesktop: image \"%s\" not found.\n", str);

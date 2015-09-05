@@ -125,7 +125,7 @@ int Game(void) {
 	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
 
 	/* set background */
-	DrawSetDesktop("Dorado.jpeg");
+	DrawSetBackground("Dorado.jpeg");
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;

@@ -241,7 +241,6 @@ void RecordPrintSearches(void) {
 		printf("\t%sk = *key_ptr;\n", key_type_name);
 		printf("\t%se = elem->%s;\n\n", key_type_name, key);
 		printf("\treturn %s(k, e);\n", TypeGetComparatorName(key_type));
-		/*printf("\treturn 0;\n");*/
 		printf("}\n\n");
 		printf("struct %s *%sSearch(%skey) {\n", name, name, TypeGetTypeName(key_type));
 		printf("\treturn bsearch(&key, %s, max_%s, sizeof(struct %s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);

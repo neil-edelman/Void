@@ -132,7 +132,7 @@ int Game(void) {
 	fprintf(stderr, "Game: background Tex%u.\n", ImageGetTexture(img));
 	DrawSetDesktop(img);
 #endif
-	/* DrawSetDesktop("Dorido.jpeg"); <- */
+	DrawSetDesktop("Dorado.jpeg");/* <- ? */
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;

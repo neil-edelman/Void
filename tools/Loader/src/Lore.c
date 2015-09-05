@@ -34,16 +34,16 @@ static int lore_comp(const struct Lore *key, const struct Lore *elem);
 static void sort(void);
 /*static char *camel_to_snake_case(const char *const str);*/
 
-union Data {
+/*union Data {
 	char *string;
 	int  integer;
-};
+};*/
 
 /* one datum and it's type; potentally many Lores per file */
 static struct Lore {
 	struct Record *record;
 	char          *data[MAX_FIELDS]; /* will have to be freed */
-	/*union Data    reference;*/
+	/*union Data    reference; <- record has that in it */
 } *lores;
 static const int max_lore_data = sizeof((struct Lore *)0)->data / sizeof(char);
 static int no_lores, lores_capacity;

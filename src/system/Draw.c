@@ -138,13 +138,7 @@ static float   camera_x, camera_y;
 /** Gets all the graphics stuff started.
  @return		All good to draw? */
 int Draw(void) {
-	/*struct Map *imgs = ResourcesGetImages();
-	 struct Image *img;*/
 	int i;
-	struct Image *image;
-
-	/*char *name;*/
-	int tex;
 
 	if(is_started) return -1;
 
@@ -182,48 +176,7 @@ int Draw(void) {
 	glActiveTexture(GT_LIGHT);
 	light_tex = light_compute_texture();
 	/* textures stored in imgs */
-	/*while(MapIterate(imgs, (const void **)&name, (void **)&img)) {*/
-#if 1
 	for(i = 0; i < max_images; i++) texture(&images[i]);
-#else
-	image = &images[i];
-		switch(/*ImageGetDepth(img)*/image->depth) {
-			case 3:
-				glActiveTexture(GT_BACKGROUND);
-				/*if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;*/
-				if(!(tex = texture(/*name,*/ image->width, image->height, image->depth, decode(image)))) break; /* fixme: uncompress */
-				/*ImageSetTexture(img, tex);*/ image->texture = tex;
-				glBindTexture(GL_TEXTURE_2D, tex);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				break;
-			case 4:
-				glActiveTexture(GT_SPRITES);
-				/*if(!(tex = texture(name, ImageGetWidth(img), ImageGetHeight(img), ImageGetDepth(img), ImageGetData(img)))) break;*/
-				if(!(tex = texture(/*name,*/ image->width, image->height, image->depth, decode(image)))) break; /* fixme: uncompress */
-				/*ImageSetTexture(img, tex);*/
-				image->texture = tex;
-				break;
-			default:
-				/*fprintf(stderr, "Draw: image \"%s\" has a depth, %u, that's not supported.\n", name, ImageGetDepth(img));*/
-				fprintf(stderr, "Draw: image has a depth, %u, that's not supported.\n", image->depth);
-		}
-		/* fixme: delete the img! it's not used */
-	}
-#endif
-	/* hard-code textures (fixme: I don't know what this is doing, probably
-	 simplify a lot) -- this doesn't do anything except set the size */
-	/* fixme: DrawSetBackground() */
-#if 0
-	/*img = MapGet(imgs, "Ngc4038_4039_bmp");*/
-	img = MapGet(imgs, "Dorado_bmp");
-	if(!(bg_tex = ImageGetImageUnit(img))) fprintf(stderr, "Draw: background?\n");
-#else /********************************* fixme!!!!!!!!! ***********/
-	image = &images[1];
-	if(!(bg_tex = image->texture)) fprintf(stderr, "Draw: background?\n");
-#endif
 
 	/* shaders: simple texture */
 	if(!(tex_map_shader = link_shader(Texture_vs, Texture_fs, &tex_map_attrib))) { Draw_(); return 0; }
@@ -284,17 +237,6 @@ int Draw(void) {
 	glUseProgram(0);
 
 	WindowIsGlError("Draw");
-
-	glActiveTexture(GT_BACKGROUND);
-	glBindTexture(GL_TEXTURE_2D, bg_tex);
-	printf("*********set bg_tex to %u.\n", bg_tex);
-	/*glActiveTexture(GT_SPRITES);*/
-
-	/* FIXME */
-	/*glActiveTexture(GT_BACKGROUND);
-	glBindTexture(GL_TEXTURE_2D, ImageGetImageUnit(MapGet(imgs, "Dorado_bmp")));
-	glActiveTexture(GT_SPRITES);
-	 /\ this creates poping, for some reason? */
 
 	is_started = -1;
 	return -1;
@@ -376,19 +318,19 @@ void DrawGetCamera(float *x_ptr, float *y_ptr) {
 	*width_ptr = 
 }*/
 
-/** Sets background. Fixme: only GT_BACKGROUND textures will work? */
-void DrawSetDesktop(const struct Image *const img) {
-	bg_tex = /*ImageGetTexture(img)*/img->texture;
+/** Sets background to the image with key key. Fixme: allows you to set not
+ GT_BACKGROUND textures, which probably don't work, maybe? */
+void DrawSetDesktop(const char *const str) {
+	struct Image *image;
+	if(!(image = ImageSearch(str))) {
+		fprintf(stderr, "Draw::setDesktop: image \"%s\" not found.\n", str);
+		return;
+	}
+	/* bg_tex is a global; the witdh/height of the image can be found with bg_tex */
+	bg_tex = image->texture;
 	glActiveTexture(GT_BACKGROUND);
 	glBindTexture(GL_TEXTURE_2D, bg_tex);
-	/*update_background_size();*/
-	glActiveTexture(GT_SPRITES); /* fixme: this has to be here, and shouldn't; also covers up poping; fuck you so much . . . wtf is it doing? */
-	/*GLuint boundTexture = 0;
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, (GLint*) &boundTexture);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexParameteri(GL_TEXTURE_2D, pname, param);
-    glBindTexture(GL_TEXTURE_2D, boundTexture);*/
-	fprintf(stderr, "Tex%u set as desktop.\n", /*ImageGetTexture(img)*/img->texture);
+	fprintf(stderr, "Image \"%s,\" (Tex%u,) set as desktop.\n", image->name, bg_tex);
 }
 
 /** Compiles, links and verifies a shader.

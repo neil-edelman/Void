@@ -287,8 +287,8 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 	/* go to the first spot in the window */
 	if(is_reset/*!window_iterator*/) {
 		/* fixme: -50 is for debugging! take it out */
-		int w = (screen_width  >> 1) + 1 - 50;
-		int	h = (screen_height >> 1) + 1 - 50;
+		int w = (screen_width  >> 1) + 1 /*- 50*/;
+		int	h = (screen_height >> 1) + 1 /*- 50*/;
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
 		x_min_window = camera_x - w;

@@ -23,9 +23,6 @@ VS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
 FS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
 ICON := icon.ico
 
-# files in mdir
-# holy cow, we'll just backup all; the Loader takes care of it
-
 # files in bdir
 RSRC  := icon.rsrc
 INST  := $(PROJ)-$(VA)_$(VB)
@@ -67,6 +64,7 @@ JPEG   := $(wildcard $(MDIR)/*.jpeg)
 JPEG_H := $(patsubst $(MDIR)/%.jpeg,$(BDIR)/%_jpeg.h,$(JPEG))
 BMP    := $(wildcard $(MDIR)/*.bmp)
 BMP_H  := $(patsubst $(MDIR)/%.bmp,$(BDIR)/%_bmp.h,$(BMP))
+TEXT   := $(wildcard $(MDIR)/*.txt)
 
 CC   := gcc
 CF   := -Wall -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi #-std=c99 # ansi doesn't have fmath fn's # UNIX/PC: -DGLEW
@@ -90,10 +88,10 @@ endif
 default: $(BDIR)/$(PROJ)
 	# . . . setting icon on a Mac.
 	cp $(SDIR)/$(ICON) $(BDIR)/$(ICON)
-	sips --addIcon $(BDIR)/$(ICON)
-	DeRez -only icns $(BDIR)/$(ICON) > $(BDIR)/$(RSRC)
-	Rez -append $(BDIR)/$(RSRC) -o $(BDIR)/$(PROJ)
-	SetFile -a C $(BDIR)/$(PROJ)
+	-sips --addIcon $(BDIR)/$(ICON)
+	-DeRez -only icns $(BDIR)/$(ICON) > $(BDIR)/$(RSRC)
+	-Rez -append $(BDIR)/$(RSRC) -o $(BDIR)/$(PROJ)
+	-SetFile -a C $(BDIR)/$(PROJ)
 	# . . . success; executable is in $(BDIR)/$(PROJ)
 
 # linking
@@ -185,7 +183,7 @@ $(BDIR)/cd: $(SDIR)/test/Collision.c
 ######
 # phoney targets
 
-.PHONY: clean backup setup
+.PHONY: clean backup source setup
 
 clean:
 	-make --directory $(TEXT2H_DIR) clean
@@ -195,7 +193,13 @@ clean:
 
 backup:
 	@mkdir -p $(BACK)
-	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) #$(MDIR)/*.*
+	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP)
+
+# this backs up everything including the media files for publication
+source:
+	@mkdir -p $(BDIR)
+	zip $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(PNG) $(JPEG) $(BMP) $(TEXT)
+
 
 setup: default
 	@mkdir -p $(BDIR)/$(INST)

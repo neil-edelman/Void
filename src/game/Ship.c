@@ -32,12 +32,8 @@
 
 static const float epsilon = 0.001f;
 
-/* ships */
-
-/* fixme: this should be calculated based on the turn rate */
-const static float friction_rate  = 3.0f;   /* rad / s^2 */
-
-const static float shot_recharge_ms = 500.0f;
+/* fixme */
+const static float shot_recharge_ms = 300.0f;
 
 /* ai */
 
@@ -60,9 +56,10 @@ struct Ship {
 	float                  acceleration;
 	float                  turn;
 	float                  turn_limit;
+	float                  friction_rate;
 	enum Behaviour         behaviour;
 	struct Ship            **notify; /* this is NOT sprite notify, further up the tree */
-} ships[64];
+} ships[512];
 static const int ships_capacity = sizeof(ships) / sizeof(struct Ship);
 static int       ships_size;
 
@@ -99,7 +96,8 @@ struct Ship *Ship(struct Ship **notify, const struct ShipClass *ship_class, cons
 	ship->max_speed2 = ship_class->speed2;
 	ship->acceleration = ship_class->acceleration;
 	ship->turn       = ship_class->turn;
-	ship->turn_limit = ship_class->turn_limit;
+	ship->turn_limit = ship_class->turn * 500.0f; /* derived */
+	ship->friction_rate = ship_class->turn * 1000.0f; /* derived */
 	ship->behaviour  = behaviour;
 	ship->notify     = notify;
 	ships_size++;
@@ -192,7 +190,7 @@ void ShipSetVelocities(struct Ship *ship, const int turning, const int accelerat
 			ship->omega = ship->turn_limit;
 		}
 	} else {
-		float damping = friction_rate * dt_s;
+		float damping = ship->friction_rate * dt_s;
 		if(ship->omega > damping) {
 			ship->omega -= damping;
 		} else if(ship->omega < -damping) {

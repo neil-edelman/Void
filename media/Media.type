@@ -19,7 +19,6 @@ int ms_recharge
 float speed2
 float acceleration
 float turn
-float turn_limit
 ~
 Alignment
 string name

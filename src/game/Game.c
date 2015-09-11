@@ -45,8 +45,8 @@ struct Game {
 const static float asteroid_max_speed = 0.03f;
 
 /* positions larger then this value will be looped around */
-/*const float de_sitter = 8192.0f;*/
-const float de_sitter = 4098.0f;
+const float de_sitter = 8192.0f;
+/*const float de_sitter = 4098.0f;*/
 
 /* private */
 float rnd(const float limit);
@@ -55,32 +55,18 @@ float rnd(const float limit);
 
 /** constructor */
 int Game(void) {
-/*	struct TypeOfObject *too;
-	struct ObjectsInSpace *ois;
-	struct Image *bitmap, *bmp[3];
-	struct Game   *game;*/
-	/*struct Map    *imgs;*/
-	/*struct Image  *img;*/
 	struct Debris *asteroid;
 	struct Ship   *bad;
-	struct Far *bg;
+	struct Far    *bg;
 	int i;
 	/* defined in Lore.h (hopefully!) */
 	const struct TypeOfObject *type;
 	const struct ObjectsInSpace *ois;
-
-	struct ShipClass *nautilus, *scorpion;
+	const struct ShipClass *nautilus, *scorpion;
 
 	if(is_started) return -1;
 
-	/* initilise */
-	game.t_s /*= game.dt_s*/ = 0;
-
-	/* initial conditions */
-	/*game.star_light = Light(32.0f, 1.0f, 1.0f, 1.0f);
-	game.cool_light = Light(16.0f, 0.0f, 0.0f, 1.0f);
-	LightSetPosition(game.cool_light, -100.0f, -10.0f);*/
-
+	/* game elements */
 	if(!(type = TypeOfObjectSearch("asteroid"))
 	   || !(nautilus = ShipClassSearch("Nautilus"))
 	   || !(scorpion = ShipClassSearch("Scorpion"))) {
@@ -88,8 +74,8 @@ int Game(void) {
 		return 0;
 	};
 
-	/* some asteroids */
-	for(i = 0; i < 1000/* fixme: ~1024 is the limit . . . don't know why; did I set that? */; i++) {
+	/* some asteroids; fixme: debris limit 4096; sometimes it crashes when reaching */
+	for(i = 0; i < 3500; i++) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
 		/*printf("Game: new Asteroid, checking:\n");*/
 		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
@@ -103,33 +89,19 @@ int Game(void) {
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
 
-	/* set up Objects in Space */
+	/* set up ALL Objects in Space */
 	for(i = 0; i < max_objects_in_space; i++) {
 		ois = &objects_in_space[i];
 		bg  = Far(ois);
 		fprintf(stderr, "Set up Object in Space: %s.\n", ois->name);
 	}
 
-	/* sprinkle some ships (fixme: resource set) */
-
+	/* sprinkle some ships */
 	game.player = Ship(&game.player, nautilus, B_HUMAN);
 	for(i = 0; i < 100; i++) {
 		bad = Ship(0, scorpion, B_STUPID);
 		ShipSetOrientation(bad, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
-	/*
-	bad = Ship(0, scorpion, B_STUPID);
-	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
-	bad = Ship(0, scorpion, B_STUPID);
-	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
-	bad = Ship(0, scorpion, B_STUPID);
-	ShipSetOrientation(bad, -300.0f, -100.0f, 1.0f);
-	bad = Ship(0, scorpion, B_STUPID);
-	ShipSetOrientation(bad, 100.0f, -600.0f, 0.0f);
-	bad = Ship(0, scorpion, B_STUPID);
-	ShipSetOrientation(bad, 300.0f, 600.0f, 0.0f);
-	bad = Ship(0, scorpion, B_STUPID);
-	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);*/
 
 	/* set background */
 	DrawSetBackground("Dorado.jpeg");

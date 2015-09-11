@@ -74,8 +74,10 @@ int Game(void) {
 		return 0;
 	};
 
-	/* some asteroids; fixme: debris limit 4096; sometimes it crashes when reaching */
-	for(i = 0; i < 3500; i++) {
+	/* some asteroids; fixme: debris limit 4096; sometimes it crashes when
+	 reaching; gets incresingly slow after 1500, but don't need debris when
+	 it's really far (cpu!) */
+	for(i = 0; i < 1648; i++) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
 		/*printf("Game: new Asteroid, checking:\n");*/
 		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {

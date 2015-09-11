@@ -20,12 +20,14 @@
 
 /* auto-generated */
 #include "../../bin/Lore.h"
-extern struct Image images[];
+/*extern struct Image images[];
 extern const int max_images;
 extern const struct TypeOfObject type_of_object[];
-extern const int max_type_of_object;
+extern const int max_type_of_object;*/
 extern const struct ObjectsInSpace objects_in_space[];
 extern const int max_objects_in_space;
+/*extern const struct ShipClass ship_class[];
+extern const int max_ship_class;*/
 
 #ifndef M_PI /* M_PI not defined in MSVC */
 #define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
@@ -110,19 +112,24 @@ int Game(void) {
 
 	/* sprinkle some ships (fixme: resource set) */
 
-	game.player = Ship(&game.player, nautilus->image->texture, nautilus->image->width, B_HUMAN);
-	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
+	game.player = Ship(&game.player, nautilus, B_HUMAN);
+	for(i = 0; i < 100; i++) {
+		bad = Ship(0, scorpion, B_STUPID);
+		ShipSetOrientation(bad, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
+	}
+	/*
+	bad = Ship(0, scorpion, B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
-	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
+	bad = Ship(0, scorpion, B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 100.0f, -2.0f);
-	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
+	bad = Ship(0, scorpion, B_STUPID);
 	ShipSetOrientation(bad, -300.0f, -100.0f, 1.0f);
-	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
+	bad = Ship(0, scorpion, B_STUPID);
 	ShipSetOrientation(bad, 100.0f, -600.0f, 0.0f);
-	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
+	bad = Ship(0, scorpion, B_STUPID);
 	ShipSetOrientation(bad, 300.0f, 600.0f, 0.0f);
-	bad = Ship(0, scorpion->image->texture, scorpion->image->width, B_STUPID);
-	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);
+	bad = Ship(0, scorpion, B_STUPID);
+	ShipSetOrientation(bad, -300.0f, 500.0f, 0.0f);*/
 
 	/* set background */
 	DrawSetBackground("Dorado.jpeg");
@@ -171,6 +178,7 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 		fprintf(stderr, "Escape key pressed.\n");
 		exit(EXIT_SUCCESS); /* meh */
 	}
+	if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress(k_f1)) WindowToggleFullScreen();
 	if(KeyPress('a'))  SpritePrint("Game::update");

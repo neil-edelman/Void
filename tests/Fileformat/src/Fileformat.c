@@ -2,8 +2,8 @@
 #include <stdio.h>  /* fprintf */
 #include "Asteroid_png.h"
 #include "Pluto_jpeg.h"
-#include "../../../fileformat/lodepng.h"
-#include "../../../fileformat/nanojpeg.h"
+#include "../../../src/format/lodepng.h"
+#include "../../../src/format/nanojpeg.h"
 
 void pimage(unsigned char const*const img, const unsigned width, const unsigned height, const unsigned depth);
 

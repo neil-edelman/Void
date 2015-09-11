@@ -64,7 +64,7 @@ struct Sprite {
 	float         vx1, vy1;      /* temp; the velocity after colliding */
 
 	struct Sprite *prev_x, *next_x, *prev_y, *next_y; /* sort by axes */
-} sprites[1024];
+} sprites[4096];
 static const int sprites_capacity = sizeof(sprites) / sizeof(struct Sprite);
 static int       sprites_size;
 

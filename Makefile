@@ -28,7 +28,7 @@ RSRC  := icon.rsrc
 INST  := $(PROJ)-$(VA)_$(VB)
 
 # extra stuff we should back up
-EXTRA := $(SDIR)/icon.rc todo.txt msvc2010.txt unix.txt performance.txt $(SDIR)/test/SortingTest.c $(SDIR)/test/Collision.c $(SDIR)/test/Fileformat/Makefile $(SDIR)/test/Fileformat/src/Asteroid_png.h $(SDIR)/test/Fileformat/src/Pluto_jpeg.h $(SDIR)/test/Fileformat/src/Fileformat.c
+EXTRA := $(SDIR)/icon.rc todo.txt msvc2010.txt unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c
 
 OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES))
 SRCS  := $(patsubst %,$(SDIR)/%.c,$(FILES))

@@ -10,7 +10,7 @@ BDIR  := bin
 BACK  := backup
 
 # files in sdir
-FILES := Fileformat ../../../fileformat/lodepng ../../../fileformat/nanojpeg
+FILES := Fileformat ../../../src/format/lodepng ../../../src/format/nanojpeg
 
 # files in bdir
 INST  := $(PROJ)-$(VA)_$(VB)

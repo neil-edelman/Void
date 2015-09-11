@@ -49,15 +49,25 @@ Pluto
 Pluto
 200
 -400
-# ShipClass name, image, shield, recharge
+# ShipClass name, image, shield, recharge, speed2, acceleration, turn_rate, rotation_limit
 ShipClass
 Nautilus
 Nautilus.png
-320
-1024
+50
+520
+16
+4000
+0.15
+0.005
+2.5
 ShipClass
 Scorpion
 Scorpion.png
+20
 40
 1024
+2800
+0.05
+0.003
+1.5
 ~

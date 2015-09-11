@@ -14,6 +14,9 @@
 #include "../System/Timer.h"
 #include "../System/Key.h"
 
+/* auto-generated from media dir; hope it's right */
+#include "../../bin/Lore.h"
+
 #define M_2PI 6.28318530717958647692528676655900576839433879875021164194988918461563281257241799725606965068423413596429617302656461329
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
@@ -31,14 +34,7 @@ static const float epsilon = 0.001f;
 
 /* ships */
 
-const static int max_shields      = 320;    /* joule (tesla?) */
-const static int ms_recharge      = 1024;   /* s */
-
-const static float speed_limit2   = 2800.0f; /* (pixel / s)^2 */
-const static float accel_rate     = 0.05f;   /* pixel / ms^2 */
-
-const static float turn_rate      = 0.003f; /* rad / ms */
-const static float rotation_limit = 1.5f;   /* rad / s */
+/* fixme: this should be calculated based on the turn rate */
 const static float friction_rate  = 3.0f;   /* rad / s^2 */
 
 const static float shot_recharge_ms = 500.0f;
@@ -53,13 +49,19 @@ const static float ai_turn_sloppy = 0.4f;     /* rad */
 const static float ai_turn_constant = 10.0f;
 
 struct Ship {
-	struct Sprite *sprite;
-	float         omega; /* radians/s */
-	float         mass;  /* t (Mg) */
-	float         recharge_wmd;  /* ms */
-	int           hit;   /* J */
-	enum Behaviour behaviour;
-	struct Ship   **notify; /* this is NOT sprite notify, further up the tree */
+	struct Sprite          *sprite;
+	const struct ShipClass *class;
+	float                  mass;    /* t (Mg) */
+	float                  omega;   /* radians/s */
+	float                  ms_recharge_wmd; /* ms -- the time when the weapon will be recharged (fixme) */
+	int                    ms_recharge_hit, ms_max_recharge_hit; /* ms \alpha 1/W */
+	int                    hit, max_hit; /* J */
+	float                  max_speed2;
+	float                  acceleration;
+	float                  turn;
+	float                  turn_limit;
+	enum Behaviour         behaviour;
+	struct Ship            **notify; /* this is NOT sprite notify, further up the tree */
 } ships[64];
 static const int ships_capacity = sizeof(ships) / sizeof(struct Ship);
 static int       ships_size;
@@ -71,22 +73,33 @@ void do_ai(struct Ship *const ai, const float dt_s);
 /* public */
 
 /** Get a new ships from the pool of unused.
+ @param notify		Notifies on changing the ship pointer.
+ @param ship_class	Make a copy of this ship class.
+ @param behaviour	What should it do for input?
  @return		A ship or null. */
-struct Ship *Ship(struct Ship **notify, const int texture, const int size, const enum Behaviour behaviour) {
+struct Ship *Ship(struct Ship **notify, const struct ShipClass *ship_class, const enum Behaviour behaviour) {
 	struct Ship *ship;
 
+	if(!ship_class) return 0;
 	if(ships_size >= ships_capacity) {
 		fprintf(stderr, "Ship: couldn't be created; reached maximum of %u.\n", ships_capacity);
 		return 0;
 	}
 	ship = &ships[ships_size];
 	/* superclass */
-	if(!(ship->sprite = Sprite(S_SHIP, texture, size))) return 0;
+	if(!(ship->sprite = Sprite(S_SHIP, ship_class->image->texture, ship_class->image->width))) return 0;
 	SpriteSetContainer(ship, &ship->sprite);
+	ship->class      = ship_class;
+	ship->mass       = ship_class->mass;
 	ship->omega      = 0.0f;
-	ship->mass       = 30.0f;
-	ship->recharge_wmd = 0;
-	ship->hit        = 300;
+	ship->ms_recharge_wmd = 0;
+	ship->ms_recharge_hit = 0;
+	ship->ms_max_recharge_hit = ship_class->ms_recharge;
+	ship->max_hit = ship->hit = ship_class->shield;
+	ship->max_speed2 = ship_class->speed2;
+	ship->acceleration = ship_class->acceleration;
+	ship->turn       = ship_class->turn;
+	ship->turn_limit = ship_class->turn_limit;
 	ship->behaviour  = behaviour;
 	ship->notify     = notify;
 	ships_size++;
@@ -154,29 +167,29 @@ int ShipGetOrientation(const struct Ship *ship, float *x_ptr, float *y_ptr, floa
 void ShipSetVelocities(struct Ship *ship, const int turning, const int acceleration, const float dt_s) {
 	float x, y, theta, vx, vy;
 
-	if(!ship || !ship->sprite) return;
+	if(!ship) return;
 	SpriteGetOrientation(ship->sprite, &x, &y, &theta); /* fixme: don't need x, y */
 	if(acceleration != 0) {
-		float a = accel_rate * acceleration, speed2;
+		float a = ship->acceleration * acceleration, speed2;
 		SpriteGetVelocity(ship->sprite, &vx, &vy);
 		vx += cosf(theta) * a;
 		vy += sinf(theta) * a;
 		/*ship->vx    += cosf(theta) * a;
 		ship->vy    += sinf(theta) * a;
 		speed2 = ship->vx * ship->vx + ship->vy * ship->vy;*/
-		if((speed2 = vx * vx + vy * vy) > speed_limit2) {
-			float correction = speed_limit2 / speed2; /* fixme: is it the sqrt? */
+		if((speed2 = vx * vx + vy * vy) > ship->max_speed2) {
+			float correction = ship->max_speed2 / speed2; /* fixme: is it the sqrt? */
 			vx *= correction;
 			vy *= correction;
 		}
 		SpriteSetVelocity(ship->sprite, vx, vy);
 	}
 	if(turning) {
-		ship->omega += turn_rate * turning;
-		if(ship->omega < -rotation_limit) {
-			ship->omega = -rotation_limit;
-		} else if(ship->omega > rotation_limit) {
-			ship->omega = rotation_limit;
+		ship->omega += ship->turn * turning;
+		if(ship->omega < -ship->turn_limit) {
+			ship->omega = -ship->turn_limit;
+		} else if(ship->omega > ship->turn_limit) {
+			ship->omega = ship->turn_limit;
 		}
 	} else {
 		float damping = friction_rate * dt_s;
@@ -211,6 +224,16 @@ float ShipGetMass(const struct Ship *ship) {
 struct Sprite *ShipGetSprite(const struct Ship *ship) {
 	if(!ship) return 0;
 	return ship->sprite;
+}
+
+int ShipGetHit(const struct Ship *const ship) {
+	if(!ship) return 0;
+	return ship->hit;
+}
+
+int ShipGetMaxHit(const struct Ship *const ship) {
+	if(!ship) return 0;
+	return ship->max_hit;
 }
 
 int ShipIsDestroyed(const struct Ship *s) {
@@ -249,9 +272,9 @@ void ShipUpdate(const float dt_s) {
 /** Called from {@code Game::update}. */
 void ShipShoot(struct Ship *ship, const int colour) {
 	const int time_ms = TimerLastTime();
-	if(!ship || time_ms < ship->recharge_wmd) return;
+	if(!ship || time_ms < ship->ms_recharge_wmd) return;
 	Wmd(ship->sprite, colour);
-	ship->recharge_wmd = time_ms + shot_recharge_ms;
+	ship->ms_recharge_wmd = time_ms + shot_recharge_ms;
 }
 
 /** Called from {@code Sprite::update} via shp_wmd.
@@ -272,9 +295,9 @@ void ShipHit(struct Ship *ship, const int damage) {
 /** Called from {@code Ship::update} (viz, not; nonsense bug.) */
 static void fire(struct Ship *ship, const int colour) { /* get s */
 	const int time_ms = TimerLastTime();
-	if(!ship || time_ms < ship->recharge_wmd) return;
+	if(!ship || time_ms < ship->ms_recharge_wmd) return;
 	Wmd(ship->sprite, colour);
-	ship->recharge_wmd = time_ms + shot_recharge_ms;
+	ship->ms_recharge_wmd = time_ms + shot_recharge_ms;
 }
 
 void do_ai(struct Ship *const ai, const float dt_s) {

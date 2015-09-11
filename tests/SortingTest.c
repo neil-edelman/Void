@@ -1,7 +1,7 @@
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
 #include <time.h>
-#include "../general/Sorting.h"
+#include "../src/general/Sorting.h"
 
 struct Widget {
 	int garbage;

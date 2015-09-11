@@ -13,8 +13,13 @@ int y
 ShipClass
 string name
 image image
-int shild
-int ms_rechage
+int mass
+int shield
+int ms_recharge
+float speed2
+float acceleration
+float turn
+float turn_limit
 ~
 Alignment
 string name

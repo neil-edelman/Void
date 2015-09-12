@@ -10,7 +10,8 @@ BDIR  := bin
 BACK  := backup
 
 # files in sdir
-FILES := Reader Error Type Record Lore Loader ../../../src/format/Bitmap ../../../src/format/lodepng ../../../src/format/nanojpeg
+FILES := Reader Error Type Record Lore Loader
+FORMAT := Bitmap lodepng nanojpeg
 
 # extra stuff we should back up
 EXTRA := $(SDIR)/Functions.h
@@ -18,8 +19,11 @@ EXTRA := $(SDIR)/Functions.h
 INST  := $(PROJ)-$(VA)_$(VB)
 
 OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES))
+FMTOBJS := $(patsubst %,$(BDIR)/%.o,$(FORMAT))
 SRCS  := $(patsubst %,$(SDIR)/%.c,$(FILES))
+FMTSRCS := $(patsubst %,../../src/%.c,$(FORMAT))
 H     := $(patsubst %,$(SDIR)/%.h,$(FILES))
+FMTH  := $(patsubst %,../../src/format/%.h,$(FORMAT))
 
 CC   := gcc
 CF   := -Wall -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi
@@ -43,10 +47,14 @@ endif
 default: $(BDIR)/$(PROJ)
 
 # linking
-$(BDIR)/$(PROJ): $(OBJS)
-	$(CC) $(CF) $(OF) $(OBJS) -o $@
+$(BDIR)/$(PROJ): $(OBJS) $(FMTOBJS)
+	$(CC) $(CF) $(OF) $(OBJS) $(FMTOBJS) -o $@
 
 # compiling
+$(FMTOBJS): $(BDIR)/%.o: ../../src/format/%.c $(FMTH)
+	@mkdir -p $(BDIR)
+	$(CC) $(CF) -c ../../src/format/$*.c -o $@
+
 $(OBJS): $(BDIR)/%.o: $(SDIR)/%.c $(H)
 	@mkdir -p $(BDIR)
 	$(CC) $(CF) -c $(SDIR)/$*.c -o $@

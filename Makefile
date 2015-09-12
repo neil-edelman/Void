@@ -19,8 +19,8 @@ FMT := format
 
 # files in sdir
 FILES := ../bin/Lore EntryPosix $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Far $(GME)/Debris $(GME)/Ship $(GME)/Wmd $(FMT)/Bitmap $(FMT)/lodepng $(FMT)/nanojpeg
-VS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
-FS   := $(SDR)/Texture $(SDR)/Lighting $(SDR)/Background
+VS   := Background Texture Far Lighting
+FS   := Background Texture Far Lighting
 ICON := icon.ico
 
 # files in bdir
@@ -33,10 +33,10 @@ EXTRA := $(SDIR)/icon.rc todo.txt msvc2010.txt unix.txt performance.txt tests/So
 OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES))
 SRCS  := $(patsubst %,$(SDIR)/%.c,$(FILES))
 H     := $(patsubst %,$(SDIR)/%.h,$(FILES))
-VS_VS := $(patsubst %,$(SDIR)/%.vs,$(VS))
-FS_FS := $(patsubst %,$(SDIR)/%.fs,$(FS))
-VS_H  := $(patsubst %,$(BDIR)/%_vs.h,$(VS))
-FS_H  := $(patsubst %,$(BDIR)/%_fs.h,$(FS))
+VS_VS := $(patsubst %,$(SDIR)/$(SDR)/%.vs,$(VS))
+FS_FS := $(patsubst %,$(SDIR)/$(SDR)/%.fs,$(FS))
+VS_H  := $(patsubst %,$(BDIR)/$(SDR)/%_vs.h,$(VS))
+FS_H  := $(patsubst %,$(BDIR)/$(SDR)/%_fs.h,$(FS))
 TSV_TSV:=$(patsubst %,$(MDIR)/%.tsv,$(TSV))
 TSV_H :=$(patsubst %,$(BDIR)/%_tsv.h,$(TSV))
 
@@ -107,13 +107,13 @@ $(OBJS): $(BDIR)/%.o: $(SDIR)/%.c $(VS_VS) $(FS_FS) $(H)
 	@mkdir -p $(BDIR)/$(FMT)
 	$(CC) $(CF) -c $(SDIR)/$*.c -o $@
 
-$(BDIR)/%_vs.h: $(SDIR)/%.vs $(TEXT2H)
+$(BDIR)/$(SDR)/%_vs.h: $(SDIR)/$(SDR)/%.vs $(TEXT2H)
 	# . . . vertex shaders into headers.
 	@mkdir -p $(BDIR)
 	@mkdir -p $(BDIR)/$(SDR)
 	$(TEXT2H) $< > $@
 
-$(BDIR)/%_fs.h: $(SDIR)/%.fs $(TEXT2H)
+$(BDIR)/$(SDR)/%_fs.h: $(SDIR)/$(SDR)/%.fs $(TEXT2H)
 	# . . . fragment shaders into headers.
 	@mkdir -p $(BDIR)
 	@mkdir -p $(BDIR)/$(SDR)

@@ -6,13 +6,16 @@
 #include <math.h>   /* cis */
 #include "Glew.h"
 #include "../general/Map.h"
-/*#include "../general/Image.h"*/
 #include "../game/Sprite.h"
 #include "../game/Far.h"
 #include "../game/Light.h"
 #include "Draw.h"
 #include "Window.h"
-#include "../EntryPosix.h" /* hmm */
+/*#include "../EntryPosix.h"*/ /* hmm */
+/* include file formats for uncompressing */
+#include "../format/lodepng.h"
+#include "../format/nanojpeg.h"
+#include "../format/Bitmap.h"
 
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
@@ -27,10 +30,12 @@
  tools/ where you can compile utilities that can make these files; run "make"
  and this should be automated; ignore errors about ISO C90 string length 509  */
 #include "../../bin/Lore.h"
-#include "../../bin/shaders/Texture_vs.h"
-#include "../../bin/shaders/Texture_fs.h"
 #include "../../bin/shaders/Background_vs.h"
 #include "../../bin/shaders/Background_fs.h"
+#include "../../bin/shaders/Texture_vs.h"
+#include "../../bin/shaders/Texture_fs.h"
+#include "../../bin/shaders/Far_vs.h"
+#include "../../bin/shaders/Far_fs.h"
 #include "../../bin/shaders/Lighting_vs.h"
 #include "../../bin/shaders/Lighting_fs.h"
 
@@ -123,11 +128,14 @@ static void resize(int width, int height);
 /* so many globals! */
 /* used as extern in Sprite, Background */
 /*static*/ int     screen_width = 300, screen_height = 200;
-static GLuint  vbo_geom, /*spot_geom,*/ light_tex, /* *texture_ids, astr_tex,*/ bg_tex, tex_map_shader, back_shader, light_shader;
+static GLuint  vbo_geom, /*spot_geom,*/ light_tex, /* *texture_ids, astr_tex,*/ background_tex, background_shader, tex_map_shader, far_shader, light_shader;
+
+static GLint   background_matrix_location, background_texture_location;
+
 static GLint   tex_map_matrix_location, tex_map_texture_location;
 
-static GLint   back_size_location, back_angle_location, back_position_location, back_camera_location, /*back_texture_location,*/ back_two_screen_location;
-static GLint   back_dirang_location, back_dirclr_location;
+static GLint   far_size_location, far_angle_location, far_position_location, far_camera_location, /*far_texture_location,*/ far_two_screen_location;
+static GLint   far_dirang_location, far_dirclr_location;
 
 static GLint   light_size_location, light_angle_location, light_position_location, light_camera_location, /*light_texture_location,*/ light_two_screen_location;
 static GLint   light_lights_location, light_lightpos_location, light_lightclr_location;
@@ -178,25 +186,30 @@ int Draw(void) {
 	/* textures stored in imgs */
 	for(i = 0; i < max_images; i++) texture(&images[i]);
 
-	/* shaders: simple texture */
+	/* shaders: simple texture for hud elements and stuff */
+	if(!(background_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(); return 0; }
+	background_matrix_location  = glGetUniformLocation(background_shader, "matrix");
+	background_texture_location = glGetUniformLocation(background_shader, "sampler");
+
+	/* shaders: simple texture for hud elements and stuff */
 	if(!(tex_map_shader = link_shader(Texture_vs, Texture_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	tex_map_matrix_location  = glGetUniformLocation(tex_map_shader, "matrix");
 	tex_map_texture_location = glGetUniformLocation(tex_map_shader, "sampler");
 
-	/* background: lit, but not dynamically */
-	if(!(back_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(); return 0; }
+	/* shader: objects that are far; lit, but not dynamically */
+	if(!(far_shader = link_shader(Far_vs, Far_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	/* vs */
-	back_angle_location     = glGetUniformLocation(back_shader, "angle");
-	back_size_location      = glGetUniformLocation(back_shader, "size");
-	back_position_location  = glGetUniformLocation(back_shader, "position");
-	back_camera_location    = glGetUniformLocation(back_shader, "camera");
-	back_two_screen_location= glGetUniformLocation(back_shader, "two_screen");
+	far_angle_location     = glGetUniformLocation(far_shader, "angle");
+	far_size_location      = glGetUniformLocation(far_shader, "size");
+	far_position_location  = glGetUniformLocation(far_shader, "position");
+	far_camera_location    = glGetUniformLocation(far_shader, "camera");
+	far_two_screen_location= glGetUniformLocation(far_shader, "two_screen");
 	/* fs */
-	/*const->back_texture_location = glGetUniformLocation(back_shader, "sampler");*/
-	glUniform1i(glGetUniformLocation(back_shader, "sampler"),       T_SPRITES);
-	glUniform1i(glGetUniformLocation(back_shader, "sampler_light"), T_LIGHT);
-	back_dirang_location  = glGetUniformLocation(back_shader, "directional_angle");
-	back_dirclr_location  = glGetUniformLocation(back_shader, "directional_colour");
+	/*const->far_texture_location = glGetUniformLocation(far_shader, "sampler");*/
+	glUniform1i(glGetUniformLocation(far_shader, "sampler"),       T_SPRITES);
+	glUniform1i(glGetUniformLocation(far_shader, "sampler_light"), T_LIGHT);
+	far_dirang_location  = glGetUniformLocation(far_shader, "directional_angle");
+	far_dirclr_location  = glGetUniformLocation(far_shader, "directional_colour");
 	/* this is the one that's doing the work */
 	if(!(light_shader = link_shader(Lighting_vs, Lighting_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	/* vs */
@@ -217,12 +230,12 @@ int Draw(void) {
 
 	/* sunshine; fixme: have it change in different regions */
 	{
-		/* scientificly inaccurate
+		/* scientificly inaccurate:
 		float sunshine[] = { 1.0f * 3.0f, 0.97f * 3.0f, 0.46f * 3.0f }; */
 		float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
-		glUseProgram(back_shader);
-		glUniform1f(back_dirang_location, -2.0);
-		glUniform3fv(back_dirclr_location, 1, sunshine);
+		glUseProgram(far_shader);
+		glUniform1f(far_dirang_location, -2.0);
+		glUniform3fv(far_dirclr_location, 1, sunshine);
 		glUseProgram(light_shader);
 		glUniform1f(light_dirang_location, -2.0);
 		glUniform3fv(light_dirclr_location, 1, sunshine);
@@ -259,10 +272,10 @@ void Draw_(void) {
 		glDeleteProgram(light_shader);
 		light_shader = 0;
 	}
-	if(back_shader) {
-		fprintf(stderr, "~Draw: erase Sdr%u.\n", back_shader);
-		glDeleteProgram(back_shader);
-		back_shader = 0;
+	if(far_shader) {
+		fprintf(stderr, "~Draw: erase Sdr%u.\n", far_shader);
+		glDeleteProgram(far_shader);
+		far_shader = 0;
 	}
 	if(tex_map_shader) {
 		fprintf(stderr, "~Draw: erase Sdr%u.\n", tex_map_shader);
@@ -319,18 +332,18 @@ void DrawGetCamera(float *x_ptr, float *y_ptr) {
 }*/
 
 /** Sets background to the image with key key. Fixme: allows you to set not
- GT_BACKGROUND textures, which probably don't work, maybe? */
+ GT_BACKGROUND textures, which probably don't work, maybe? (oh, they do) */
 void DrawSetBackground(const char *const str) {
 	struct Image *image;
 	if(!(image = ImageSearch(str))) {
 		fprintf(stderr, "Draw::setDesktop: image \"%s\" not found.\n", str);
 		return;
 	}
-	/* bg_tex is a global; the witdh/height of the image can be found with bg_tex */
-	bg_tex = image->texture;
+	/* background_tex is a global; the witdh/height of the image can be found with background_tex */
+	background_tex = image->texture;
 	glActiveTexture(GT_BACKGROUND);
-	glBindTexture(GL_TEXTURE_2D, bg_tex);
-	fprintf(stderr, "Image \"%s,\" (Tex%u,) set as desktop.\n", image->name, bg_tex);
+	glBindTexture(GL_TEXTURE_2D, background_tex);
+	fprintf(stderr, "Image \"%s,\" (Tex%u,) set as desktop.\n", image->name, background_tex);
 }
 
 /** Compiles, links and verifies a shader.
@@ -444,61 +457,9 @@ static void tex_map_attrib(const GLuint shader) {
 	glBindAttribLocation(shader, G_TEXTURE,  "vbo_texture");
 }
 
-#if 0
-/** Creates a texture from a bitmap in memory.
- @param width
- @param height
- @param depth
- @param img		The bitmap; must be the product of the last three long.
- @return		The name (int) of the newly created texture or 0 on error. */
-static int texture(/*const char *name,*/ const int width, const int height, const int depth, const unsigned char *img) {
-	int format = 0, internal = 0;
-	int id;
-
-	if(width <= 0 || height <= 0 || !img) return 0;
-	if(depth == 1) {
-		/* we use exclusively for shaders, so I don't think this matters */
-		internal = GL_RGB;
-		/* GL_LUMINANCE; <- "core context depriciated," I was using that */
-		format   = GL_RED;
-	} else if(depth == 3) {
-		internal = GL_RGB8;
-		format   = GL_RGB;
-	} else if(depth == 4) {
-		internal = GL_RGBA8;
-		format   = GL_RGBA;
-	} else {
-		fprintf(stderr, "Draw::texture: not a recognised depth, %d.\n", depth);
-		return 0;
-	}
-	glGenTextures(1, (unsigned *)&id);
-	glBindTexture(GL_TEXTURE_2D, id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0); /* no mipmap */
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-	/* void glTexImage2D(target, level, internalFormat, width, height,
-	 border, format, type, *data); */
-	glTexImage2D(GL_TEXTURE_2D, 0, internal, width, height,
-				 0, format, GL_UNSIGNED_BYTE, img);
-	/*fprintf(stderr, "Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);*/
-	fprintf(stderr, "Draw::texture: created %dx%dx%d texture, Tex%u.\n", width, height, depth, id);
-
-	WindowIsGlError("texture");
-
-	return id;
-}
-#else
-
-#include "../format/lodepng.h"
-#include "../format/nanojpeg.h"
-#include "../format/Bitmap.h"
-
 /** Creates a texture from an image; sets the image texture unit.
- @param image
- @return	Success. */
+ @param image	The Image as seen in Lores.h.
+ @return		Success. */
 static int texture(struct Image *image) {
 	struct Bitmap *bmp;
 	unsigned width, height, depth, error;
@@ -592,7 +553,7 @@ static int texture(struct Image *image) {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		}
-#if 1
+#if 1 /* debug */
 		if(image->width <= 80) image_print(image, pic);
 		else fprintf(stderr, "...too big to show.\n");
 		printf("Tex: %u.\n", image->texture);
@@ -619,15 +580,9 @@ static int texture(struct Image *image) {
 	return tex ? -1 : 0;
 }
 
-#endif
-/** creates a new raw RBG[A] decompressed image which you can pass to OpenGl,
- or returns zero. Free with {@code free()}. */
-/*unsigned char *decode(const struct Image *image) {
-}*/
-
 /* Creates a hardcoded lighting texture with the Red the radius and Green the
  angle.
- @return	The texture (you will have to delete it.) */
+ @return	The texture or zero. */
 static int light_compute_texture(void) {
 	int   i, j;
 	float x, y;
@@ -673,13 +628,21 @@ static void display(void) {
 	float x, y, t;
 	int old_texture = 0, texture, size;
 
-	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); <- use this instead. "The buffers should always be cleared. On much older hardware, there was a technique to get away without clearing the scene, but on even semi-recent hardware, this will actually make things slower. So always do the clear." */
+	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	 <- "The buffers should always be cleared. On much older hardware, there was
+	 a technique to get away without clearing the scene, but on even semi-recent
+	 hardware, this will actually make things slower. So always do the clear."
+	 I'm not using those features, though! and the screen cover is complete, I
+	 don't see how doing extra work for nothing is going to make it faster.
+	 "A technique," haha, it was pretty ubiquitous; only newbies cleared the
+	 screen. */
 
-	/* use sprites */
+	/* use sprites; triangle strips, two to form a square, vertex buffer,
+	 [-0.5, 0.5 : -0.5, 0.5] */
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_geom);
 
-	/* use simple tex_map_shader */
-	glUseProgram(tex_map_shader);
+	/* use background shader */
+	glUseProgram(background_shader);
 	/* fixme: more complex; take out that hack mirrored_repeat and have a size
 	 that updates on resize */
 
@@ -691,37 +654,40 @@ static void display(void) {
 	 update glUniform1i(GLint location, GLint v0)
 	 update glUniformMatrix4fv(location, count, transpose, *value)
 	 glDrawArrays(type flag, offset, no) */
-	if(bg_tex) {
+	if(background_tex) {
 		glDisable(GL_BLEND);
 
 		/* why?? */
 		glActiveTexture(GT_BACKGROUND);
 
-		glUniform1i(tex_map_texture_location, T_BACKGROUND);
+		/* fixme: of course it's a background, set once */
+		glUniform1i(background_texture_location, T_BACKGROUND);
 		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
 	}
 	glEnable(GL_BLEND);
 
+	/* use simple tex_map_shader */
+	glUseProgram(tex_map_shader);
 	/* why? the glsl entirely specifies this */
 	glActiveTexture(GT_SPRITES);
 
 	/* turn on background lighting (sprites) */
-	glUseProgram(back_shader);
+	glUseProgram(far_shader);
 	/*glUseProgram(light_shader);
 	glUniform1i(light_lights_location, 0);*/
 
 	/* background sprites */
-	/*const->glUniform1i(back_texture_location, T_SPRITES); */
-	glUniform2f(back_camera_location, camera_x, camera_y);
+	/*const->glUniform1i(far_texture_location, T_SPRITES); */
+	glUniform2f(far_camera_location, camera_x, camera_y);
 	while(FarIterate(&x, &y, &t, &texture, &size)) {
 		if(old_texture != texture) {
 			glBindTexture(GL_TEXTURE_2D, texture);
 			old_texture = texture;
 		}
-		glUniform1f(back_size_location, (float)size);
-		glUniform1f(back_angle_location, t);
-		glUniform2f(back_position_location, x, y);
+		glUniform1f(far_size_location, (float)size);
+		glUniform1f(far_angle_location, t);
+		glUniform2f(far_position_location, x, y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	}
 	old_texture = 0;
@@ -787,16 +753,15 @@ static void resize(int width, int height) {
 	glViewport(0, 0, width, height);
 	screen_width  = width;
 	screen_height = height;
-	/*SpriteSetViewport(width, height);*/ /* update the Sprite */
+	/*SpriteSetViewport(width, height);*/ /* update the Sprite; now shared mem */
 
 	/* update the inverse screen on the card */
 	two_width  = 2.0f / width;
 	two_height = 2.0f / height;
 
 	/* resize the background */
-	/*update_background_size();*/
-	/* glActiveTexture(T_BACKGROUND); this does nothing */
-	glBindTexture(GL_TEXTURE_2D, bg_tex); /* this is everything, but the wrong texture */
+	/* glActiveTexture(T_BACKGROUND); this does nothing? */
+	glBindTexture(GL_TEXTURE_2D, background_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);
 	/*fprintf(stderr, "w %d h %d\n", w_tex, h_tex);*/
@@ -812,8 +777,8 @@ static void resize(int width, int height) {
 					vbo_bg_count * sizeof(struct Vertex), vbo + vbo_bg_first);
 	
 	/* the shaders need to know as well */
-	glUseProgram(back_shader);
-	glUniform2f(back_two_screen_location, two_width, two_height);
+	glUseProgram(far_shader);
+	glUniform2f(far_two_screen_location, two_width, two_height);
 	glUseProgram(light_shader);
 	glUniform2f(light_two_screen_location, two_width, two_height);
 }

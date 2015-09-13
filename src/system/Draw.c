@@ -129,7 +129,7 @@ static void resize(int width, int height); /* callback  */
 /*static*/ int     screen_width = 300, screen_height = 200;
 static GLuint  vbo_geom, /*spot_geom,*/ light_tex, /* *texture_ids, astr_tex,*/ background_tex, background_shader, tex_map_shader, far_shader, light_shader;
 
-static GLint   background_matrix_location, background_texture_location, background_scale_location;
+static GLint   background_scale_location;
 
 static GLint   tex_map_matrix_location, tex_map_texture_location;
 
@@ -187,8 +187,7 @@ int Draw(void) {
 
 	/* shaders: simple texture for hud elements and stuff */
 	if(!(background_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(); return 0; }
-	background_matrix_location  = glGetUniformLocation(background_shader, "matrix");
-	background_texture_location = glGetUniformLocation(background_shader, "sampler");
+	glUniform1i(glGetUniformLocation(background_shader, "sampler"), T_BACKGROUND); /* it's always the background */
 	background_scale_location   = glGetUniformLocation(background_shader, "scale");
 
 	/* shaders: simple texture for hud elements and stuff */
@@ -638,11 +637,6 @@ static void display(void) {
 	 [-0.5, 0.5 : -0.5, 0.5] */
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_geom);
 
-	/* use background shader */
-	glUseProgram(background_shader);
-	/* fixme: more complex; take out that hack mirrored_repeat and have a size
-	 that updates on resize */
-
 	/* fixme: don't use painters' algorithm; stencil test! */
 
 	/* background (desktop):
@@ -652,20 +646,24 @@ static void display(void) {
 	 update glUniformMatrix4fv(location, count, transpose, *value)
 	 glDrawArrays(type flag, offset, no) */
 	if(background_tex) {
+		/* use background shader */
+		glUseProgram(background_shader);
+
+		/* turn transperency off */
 		glDisable(GL_BLEND);
 
 		/* why?? */
 		glActiveTexture(GT_BACKGROUND);
 
 		/* fixme: of course it's a background, set once */
-		glUniform1i(background_texture_location, T_BACKGROUND);
+		/*glUniform1i(background_sampler_location, T_BACKGROUND);*/
 		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
 	}
 	glEnable(GL_BLEND);
 
 	/* use simple tex_map_shader */
-	glUseProgram(tex_map_shader);
+	/*glUseProgram(tex_map_shader);*/
 	/* why? the glsl entirely specifies this */
 	glActiveTexture(GT_SPRITES);
 
@@ -748,9 +746,8 @@ static void resize(int width, int height) {
 	fprintf(stderr, "Draw::resize: %dx%d.\n", width, height);
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
-	screen_width  = width;
+	screen_width  = width; /* global shared with drawing */
 	screen_height = height;
-	/*SpriteSetViewport(width, height);*/ /* update the Sprite; now shared mem */
 
 	/* update the inverse screen on the card */
 	two_width  = 2.0f / width;
@@ -762,8 +759,8 @@ static void resize(int width, int height) {
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);
 	/*fprintf(stderr, "w %d h %d\n", w_tex, h_tex);*/
-	w_w_tex = (float)screen_width  / w_tex;
-	h_h_tex = (float)screen_height / h_tex;
+	w_w_tex = (float)width  / w_tex;
+	h_h_tex = (float)height / h_tex;
 
 	/* update the background texture vbo on the card with global data in here */
 	vbo[0].s = vbo[1].s =  w_w_tex;
@@ -781,18 +778,15 @@ static void resize(int width, int height) {
 	if(w_w_tex > 1.0f || h_h_tex > 1.0f) {
 		const float scale = 1.0f / ((w_w_tex > h_h_tex) ? w_w_tex : h_h_tex);
 		glUniform1f(background_scale_location, scale);
-		printf("wwtex %f hhtex %f\n", w_w_tex, h_h_tex);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);*/
 	} else {
 		glUniform1f(background_scale_location, 1.0f);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}
 
-	/* the shaders need to know as well */
+	/* far shader and light shader also need updates of 2/[width|height] */
 	glUseProgram(far_shader);
 	glUniform2f(far_two_screen_location, two_width, two_height);
 	glUseProgram(light_shader);

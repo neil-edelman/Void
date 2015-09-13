@@ -67,8 +67,8 @@ BMP_H  := $(patsubst $(MDIR)/%.bmp,$(BDIR)/%_bmp.h,$(BMP))
 TEXT   := $(wildcard $(MDIR)/*.txt)
 
 CC   := gcc
-CF   := -Wall -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi #-std=c99 # ansi doesn't have fmath fn's # UNIX/PC: -DGLEW
-OF   := -framework OpenGL -framework GLUT # UNIX: -lglut -lGLEW PC: depends
+CF   := -Wall -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi # UNIX/PC: -DGLEW #-std=c99 # ansi doesn't have fmath fn's
+OF   := -framework OpenGL -framework GLUT # UNIX: -lglut -lGLEW; PC: depends
 
 # props Jakob Borg and Eldar Abusalimov
 EMPTY :=

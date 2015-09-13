@@ -17,7 +17,7 @@ Usage: Void
 
 To win, blow up everything.
 
-Player controls: left, right, up, down, space, F1 (fullscreen.)
+Player controls: left, right, up, space, F1 (fullscreen.)
 
 If you downloaded the source code and want to build, you need a C
 compiler, OpenGL 1.1, and GLUT. If you have a Mac, xCode should do

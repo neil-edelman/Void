@@ -106,11 +106,13 @@ void WindowToggleFullScreen(void) {
 		x_pos  = glutGet(GLUT_WINDOW_X);
 		y_pos  = glutGet(GLUT_WINDOW_Y);
 		glutFullScreen();
+		glutSetCursor(GLUT_CURSOR_NONE);
 	} else {
 		fprintf(stderr, "Exiting fullscreen.\n");
 		full = 0;
 		glutReshapeWindow(x_size, y_size);
 		glutPositionWindow(x_pos, y_pos);
+		glutSetCursor(GLUT_CURSOR_INHERIT);
 	}
 
 	WindowIsGlError("Window::toggleFullScreen");

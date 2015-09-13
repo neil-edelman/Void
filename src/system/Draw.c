@@ -551,9 +551,9 @@ static int texture(struct Image *image) {
 					 GL_UNSIGNED_BYTE, pic);
 		image->texture = tex;
 #if 1 /* debug */
+		printf("Tex: %u.\n", image->texture);
 		if(image->width <= 80) image_print(image, pic);
 		else fprintf(stderr, "...too big to show.\n");
-		printf("Tex: %u.\n", image->texture);
 #endif
 		/*fprintf(stderr, "Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);*/
 	}

@@ -32,8 +32,8 @@
 #include "../../bin/Lore.h"
 #include "../../bin/shaders/Background_vs.h"
 #include "../../bin/shaders/Background_fs.h"
-#include "../../bin/shaders/Texture_vs.h"
-#include "../../bin/shaders/Texture_fs.h"
+#include "../../bin/shaders/Hud_vs.h"
+#include "../../bin/shaders/Hud_fs.h"
 #include "../../bin/shaders/Far_vs.h"
 #include "../../bin/shaders/Far_fs.h"
 #include "../../bin/shaders/Lighting_vs.h"
@@ -127,15 +127,19 @@ static void resize(int width, int height); /* callback  */
 /* so many globals! */
 /* used as extern in Sprite, Background */
 /*static*/ int     screen_width = 300, screen_height = 200;
-static GLuint  vbo_geom, /*spot_geom,*/ light_tex, /* *texture_ids, astr_tex,*/ background_tex, background_shader, tex_map_shader, far_shader, light_shader;
+static GLuint  vbo_geom, /*spot_geom,*/ light_tex, background_tex;
 
+static GLuint  background_shader;
 static GLint   background_scale_location;
 
-static GLint   tex_map_matrix_location, tex_map_texture_location;
+static GLuint  hud_shader;
+static GLint   hud_size_location, hud_position_location, hud_camera_location, hud_two_screen_location;
 
+static GLuint  far_shader;
 static GLint   far_size_location, far_angle_location, far_position_location, far_camera_location, /*far_texture_location,*/ far_two_screen_location;
 static GLint   far_dirang_location, far_dirclr_location;
 
+static GLuint  light_shader;
 static GLint   light_size_location, light_angle_location, light_position_location, light_camera_location, /*light_texture_location,*/ light_two_screen_location;
 static GLint   light_lights_location, light_lightpos_location, light_lightclr_location;
 static GLint   light_dirang_location, light_dirclr_location;
@@ -191,9 +195,12 @@ int Draw(void) {
 	background_scale_location   = glGetUniformLocation(background_shader, "scale");
 
 	/* shaders: simple texture for hud elements and stuff */
-	if(!(tex_map_shader = link_shader(Texture_vs, Texture_fs, &tex_map_attrib))) { Draw_(); return 0; }
-	tex_map_matrix_location  = glGetUniformLocation(tex_map_shader, "matrix");
-	tex_map_texture_location = glGetUniformLocation(tex_map_shader, "sampler");
+	if(!(hud_shader = link_shader(Hud_vs, Hud_fs, &tex_map_attrib))) { Draw_(); return 0; }
+	hud_size_location      = glGetUniformLocation(hud_shader, "size");
+	hud_position_location  = glGetUniformLocation(hud_shader, "position");
+	hud_camera_location    = glGetUniformLocation(hud_shader, "camera");
+	hud_two_screen_location= glGetUniformLocation(hud_shader, "two_screen");
+	glUniform1i(glGetUniformLocation(hud_shader, "sampler"), T_SPRITES);
 
 	/* shader: objects that are far; lit, but not dynamically */
 	if(!(far_shader = link_shader(Far_vs, Far_fs, &tex_map_attrib))) { Draw_(); return 0; }
@@ -276,10 +283,10 @@ void Draw_(void) {
 		glDeleteProgram(far_shader);
 		far_shader = 0;
 	}
-	if(tex_map_shader) {
-		fprintf(stderr, "~Draw: erase Sdr%u.\n", tex_map_shader);
-		glDeleteProgram(tex_map_shader);
-		tex_map_shader = 0;
+	if(hud_shader) {
+		fprintf(stderr, "~Draw: erase Sdr%u.\n", hud_shader);
+		glDeleteProgram(hud_shader);
+		hud_shader = 0;
 	}
 	/* erase the textures */
 	/*if(imgs) {
@@ -728,6 +735,26 @@ static void display(void) {
 	glDisableVertexAttribArray(S_POSITION);
 	glDisableVertexAttribArray(S_COLOUR);*/
 
+#if 0
+	/* overlay hud; fixme: just doesn't do anything */
+	glUseProgram(hud_shader);
+	glBindTexture(GL_TEXTURE_2D, light_tex);
+	glUniform2f(hud_camera_location, camera_x, camera_y);
+	glUniform1f(hud_size_location, 200.0f);
+	glUniform2f(hud_position_location, 0.0f, 0.0f);
+	glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
+	/* lol, neither does this */{
+		const float width = 300.0f, height = 100.0f;
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glBegin(GL_QUADS);
+		glVertex2f(0, 0);
+		glVertex2f(width, 0);
+		glVertex2f(width, height);
+		glVertex2f(0, height);
+		glEnd();
+	}
+#endif
+
 	/* disable, swap */
 	glUseProgram(0);
 	glutSwapBuffers();
@@ -786,7 +813,10 @@ static void resize(int width, int height) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}
 
-	/* far shader and light shader also need updates of 2/[width|height] */
+	/* far shader and light shader also need updates of 2/[width|height];
+	 meh, we can probably do them in sw? */
+	glUseProgram(hud_shader);
+	glUniform2f(hud_two_screen_location, two_width, two_height);
 	glUseProgram(far_shader);
 	glUniform2f(far_two_screen_location, two_width, two_height);
 	glUseProgram(light_shader);

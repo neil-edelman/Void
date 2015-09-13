@@ -12,7 +12,7 @@
 #include "Draw.h"
 #include "Window.h"
 /*#include "../EntryPosix.h"*/ /* hmm */
-/* include file formats for uncompressing */
+/* include file formats for uncompressing in texture() */
 #include "../format/lodepng.h"
 #include "../format/nanojpeg.h"
 #include "../format/Bitmap.h"
@@ -117,20 +117,19 @@ static const int  spot_colour_size    = 3;*/
 };*/
 
 /* private prototypes */
-static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attrib)(const GLuint));
-static void tex_map_attrib(const GLuint shader);
-/*static int texture(const int width, const int height, const int depth, const unsigned char *img);*/
-static int texture(struct Image *image);
-static int light_compute_texture(void);
-static void display(void);
-static void resize(int width, int height);
+static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attrib)(const GLuint)); /* repeated */
+static void tex_map_attrib(const GLuint shader); /* callback for internal */
+static int texture(struct Image *image); /* decompresses */
+static int light_compute_texture(void); /* creates image */
+static void display(void); /* callback for odisplay */
+static void resize(int width, int height); /* callback  */
 
 /* so many globals! */
 /* used as extern in Sprite, Background */
 /*static*/ int     screen_width = 300, screen_height = 200;
 static GLuint  vbo_geom, /*spot_geom,*/ light_tex, /* *texture_ids, astr_tex,*/ background_tex, background_shader, tex_map_shader, far_shader, light_shader;
 
-static GLint   background_matrix_location, background_texture_location;
+static GLint   background_matrix_location, background_texture_location, background_scale_location;
 
 static GLint   tex_map_matrix_location, tex_map_texture_location;
 
@@ -190,6 +189,7 @@ int Draw(void) {
 	if(!(background_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	background_matrix_location  = glGetUniformLocation(background_shader, "matrix");
 	background_texture_location = glGetUniformLocation(background_shader, "sampler");
+	background_scale_location   = glGetUniformLocation(background_shader, "scale");
 
 	/* shaders: simple texture for hud elements and stuff */
 	if(!(tex_map_shader = link_shader(Texture_vs, Texture_fs, &tex_map_attrib))) { Draw_(); return 0; }
@@ -538,21 +538,18 @@ static int texture(struct Image *image) {
 		glBindTexture(GL_TEXTURE_2D, tex);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		/* linear because fractional positioning; may be changed with
+		 backgrounds in resize */
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0); /* no mipmap */
+		/* no mipmap */
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 		/* void glTexImage2D(target, level, internalFormat, width, height,
 		 border, format, type, *data); */
 		glTexImage2D(GL_TEXTURE_2D, 0, internal, width, height, 0, format,
 					 GL_UNSIGNED_BYTE, pic);
 		image->texture = tex;
-		if(image->depth == 3) {
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		}
 #if 1 /* debug */
 		if(image->width <= 80) image_print(image, pic);
 		else fprintf(stderr, "...too big to show.\n");
@@ -768,14 +765,33 @@ static void resize(int width, int height) {
 	w_w_tex = (float)screen_width  / w_tex;
 	h_h_tex = (float)screen_height / h_tex;
 
-	/* update the background texture vbo on the card */
+	/* update the background texture vbo on the card with global data in here */
 	vbo[0].s = vbo[1].s =  w_w_tex;
 	vbo[2].s = vbo[3].s = -w_w_tex;
 	vbo[0].t = vbo[2].t =  h_h_tex;
 	vbo[1].t = vbo[3].t = -h_h_tex;
 	glBufferSubData(GL_ARRAY_BUFFER, vbo_bg_first,
 					vbo_bg_count * sizeof(struct Vertex), vbo + vbo_bg_first);
-	
+
+	/* the image may not cover the whole drawing area, so we may need a constant
+	 scaling; if it is so, the image will have to be linearly interpolated for
+	 quality */
+	glUseProgram(background_shader);
+	glBindTexture(GL_TEXTURE_2D, background_tex);
+	if(w_w_tex > 1.0f || h_h_tex > 1.0f) {
+		const float scale = 1.0f / ((w_w_tex > h_h_tex) ? w_w_tex : h_h_tex);
+		glUniform1f(background_scale_location, scale);
+		printf("wwtex %f hhtex %f\n", w_w_tex, h_h_tex);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);*/
+	} else {
+		glUniform1f(background_scale_location, 1.0f);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+
 	/* the shaders need to know as well */
 	glUseProgram(far_shader);
 	glUniform2f(far_two_screen_location, two_width, two_height);

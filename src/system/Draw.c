@@ -745,7 +745,7 @@ static void display(void) {
 	glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	/* lol, neither does this */{
 		const float width = 300.0f, height = 100.0f;
-		glColor3f(1.0f, 1.0f, 1.0f);
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		glBegin(GL_QUADS);
 		glVertex2f(0, 0);
 		glVertex2f(width, 0);

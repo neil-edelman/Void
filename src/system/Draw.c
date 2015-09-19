@@ -323,10 +323,9 @@ void DrawSetCamera(const float x, const float y) {
 	camera_y = y;
 }
 
-/** Gets the camera position and stores it in (*x_ptr, *y_ptr) if it is
- started. */
+/** Gets the camera position and stores it in (*x_ptr, *y_ptr). */
 void DrawGetCamera(float *x_ptr, float *y_ptr) {
-	if(!is_started) return;
+	/* just set it to last \/ if(!is_started) return;*/
 	*x_ptr = camera_x;
 	*y_ptr = camera_y;
 }

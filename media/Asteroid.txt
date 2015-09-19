@@ -1,4 +1,10 @@
-English: NASA's Dawn obtained this image with its framing camera on July 9, 2011. It was taken from a distance of about 26,000 miles (41,000 kilometers) away from the protoplanet Vesta. Each pixel in the image corresponds to roughly 2.4 miles (3.8 kilometers).
-Date	9 July 2011
-Source	http://dawn.jpl.nasa.gov/multimedia/dawn_vesta_image_070911.asp
-Author	NASA/JPL-Caltech/UCLA/MPS/DLR/IDA
+English: NASA's Dawn obtained this image with its framing camera
+on July 9, 2011. It was taken from a distance of about 26,000 miles
+(41,000 kilometers) away from the protoplanet Vesta. Each pixel in
+the image corresponds to roughly 2.4 miles (3.8 kilometers).
+
+Date    9 July 2011
+
+Source  http://dawn.jpl.nasa.gov/multimedia/dawn_vesta_image_070911.asp
+
+Author  NASA/JPL-Caltech/UCLA/MPS/DLR/IDA

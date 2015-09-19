@@ -65,7 +65,6 @@ struct Sprite {
 	float         vx1, vy1;      /* temp; the velocity after colliding */
 
 	struct Sprite *prev_x, *next_x, *prev_y, *next_y; /* sort by axes */
-	struct Sprite *delete; /* delete list */
 } sprites[4096];
 static const int sprites_capacity = sizeof(sprites) / sizeof(struct Sprite);
 static int       sprites_size;
@@ -73,7 +72,6 @@ static int       sprites_size;
 static struct Sprite *first_x, *first_y; /* the projected axis sorting thing */
 
 static struct Sprite *first_x_window, *first_y_window, *window_iterator;
-static struct Sprite *first_delete;
 static struct Sprite *iterator = sprites; /* for drawing and stuff */
 
 /* keep track of the dimensions of the window; it doesn't matter what the
@@ -160,8 +158,6 @@ struct Sprite *Sprite(const enum Sprites type, const int texture, const int size
 	if(first_x) first_x->prev_x = sprite;
 	if(first_y) first_y->prev_y = sprite;
 	first_x = first_y = sprite;
-
-	sprite->delete    = 0;
 
 	/* sort it (a waste of time; we will immediately call another function to
 	 change it's location; just in the interest of being pedantic) */

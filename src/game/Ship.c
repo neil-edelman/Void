@@ -5,6 +5,7 @@
 #include <stdio.h>  /* fprintf */
 #include <math.h>   /* sinf, cosf */
 #include <string.h> /* memcpy */
+#include "../EntryPosix.h" /* Debug, Pedantic */
 #include "Ship.h"
 #include "Sprite.h"
 #include "Wmd.h"
@@ -101,7 +102,7 @@ struct Ship *Ship(struct Ship **notify, const struct ShipClass *ship_class, cons
 	ship->behaviour  = behaviour;
 	ship->notify     = notify;
 	ships_size++;
-	fprintf(stderr, "Ship: created from pool, Shp%u->Spr%u.\n", ShipGetId(ship), SpriteGetId(ship->sprite));
+	if(Pedantic()) fprintf(stderr, "Ship: created from pool, Shp%u->Spr%u.\n", ShipGetId(ship), SpriteGetId(ship->sprite));
 
 	if(notify && *notify) fprintf(stderr, "Ship: warning, new notify is not void.\n");
 	if(notify) *notify = ship;
@@ -120,7 +121,7 @@ void Ship_(struct Ship **ship_ptr) {
 		fprintf(stderr, "~Ship: Shp%u not in range %u.\n", ShipGetId(ship), ships_size);
 		return;
 	}
-	fprintf(stderr, "~Ship: returning to pool, Shp%u->Spr%u.\n", ShipGetId(ship), SpriteGetId(ship->sprite));
+	if(Pedantic()) fprintf(stderr, "~Ship: returning to pool, Shp%u->Spr%u.\n", ShipGetId(ship), SpriteGetId(ship->sprite));
 
 	/* superclass Sprite */
 	Sprite_(&ship->sprite);
@@ -132,7 +133,7 @@ void Ship_(struct Ship **ship_ptr) {
 		memcpy(ship, &ships[ships_size], sizeof(struct Ship));
 		SpriteSetContainer(ship, &ship->sprite);
 		if(ship->notify) *ship->notify = ship;
-		fprintf(stderr, "~Ship: Shp%u has become Shp%u.\n", ships_size + 1, ShipGetId(ship));
+		if(Pedantic()) fprintf(stderr, "~Ship: Shp%u has become Shp%u.\n", ships_size + 1, ShipGetId(ship));
 	}
 
 	*ship_ptr = ship = 0;
@@ -281,7 +282,7 @@ void ShipHit(struct Ship *ship, const int damage) {
 	if(!ship) return;
 	if(ship->hit > damage) {
 		ship->hit -= damage;
-		fprintf(stderr, "Shit::hit: Shp%u hit %d, now %d.\n", ShipGetId(ship), damage, ship->hit);
+		if(Debug()) fprintf(stderr, "Shit::hit: Shp%u hit %d, now %d.\n", ShipGetId(ship), damage, ship->hit);
 	} else {
 		ship->hit = 0;
 		fprintf(stderr, "Ship::hit: Shp%u destroyed.\n", ShipGetId(ship));

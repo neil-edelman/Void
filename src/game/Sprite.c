@@ -5,6 +5,7 @@
 #include <stdio.h>  /* fprintf */
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
+#include "../EntryPosix.h" /* Debug, Pedantic */
 #include "Sprite.h"
 #include "../general/Sorting.h"
 #include "../system/Timer.h" /* hmmm, Wmd should go in Wmd */
@@ -64,6 +65,7 @@ struct Sprite {
 	float         vx1, vy1;      /* temp; the velocity after colliding */
 
 	struct Sprite *prev_x, *next_x, *prev_y, *next_y; /* sort by axes */
+	struct Sprite *delete; /* delete list */
 } sprites[4096];
 static const int sprites_capacity = sizeof(sprites) / sizeof(struct Sprite);
 static int       sprites_size;
@@ -71,6 +73,7 @@ static int       sprites_size;
 static struct Sprite *first_x, *first_y; /* the projected axis sorting thing */
 
 static struct Sprite *first_x_window, *first_y_window, *window_iterator;
+static struct Sprite *first_delete;
 static struct Sprite *iterator = sprites; /* for drawing and stuff */
 
 /* keep track of the dimensions of the window; it doesn't matter what the
@@ -158,11 +161,13 @@ struct Sprite *Sprite(const enum Sprites type, const int texture, const int size
 	if(first_y) first_y->prev_y = sprite;
 	first_x = first_y = sprite;
 
+	sprite->delete    = 0;
+
 	/* sort it (a waste of time; we will immediately call another function to
 	 change it's location; just in the interest of being pedantic) */
 	sort_notify(sprite);
 
-	fprintf(stderr, "Sprite: created from pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), texture);
+	if(Pedantic()) fprintf(stderr, "Sprite: created from pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), texture);
 
 	return sprite;
 }
@@ -179,7 +184,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		fprintf(stderr, "~Sprite: Spr%u not in range Spr%u.\n", index + 1, sprites_size);
 		return;
 	}
-	fprintf(stderr, "~Sprite: returning to pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), sprite->texture);
+	if(Pedantic()) fprintf(stderr, "~Sprite: returning to pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), sprite->texture);
 
 	/* deal with deleting it while iterating; fixme: have more complex? */
 	if(sprite <= iterator) iterator--; /* <? */
@@ -217,7 +222,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		/* update child */
 		if(sprite->notify) *sprite->notify = sprite;
 
-		fprintf(stderr, "~Sprite: Spr%u has become Spr%u.\n", SpriteGetId(replace), SpriteGetId(sprite));
+		if(Pedantic()) fprintf(stderr, "~Sprite: Spr%u has become Spr%u.\n", SpriteGetId(replace), SpriteGetId(sprite));
 	}
 
 	*sprite_ptr = sprite = 0;
@@ -515,7 +520,7 @@ void SpriteUpdate(const float dt) {
 	 FIXME: unstable on interpenetration --fixed */
 	while((s = iterate())) {
 
-		/* this sets is_collision and (possibly) v[xy]1 */
+		/* this sets no_collision and (possibly) v[xy]1 */
 		collide(s);
 
 		if(!s->no_collisions) {
@@ -546,10 +551,13 @@ void SpriteUpdate(const float dt) {
 
 		/* keep it sorted */
 		sort_notify(s);
+	}
 
+	/* react to game events */
+	while((s = iterate())) {
 		/* static; each element does what it wants after the commotion */
 		switch(SpriteGetType(s)) {
-				/* fixme: have more drama then just deleting */
+			/* fixme: have more drama then just deleting */
 			case S_DEBRIS:
 				if(DebrisIsDestroyed(debris = s->container)) {
 					DebrisExplode(debris);

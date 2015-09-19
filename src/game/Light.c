@@ -3,6 +3,7 @@
 
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* memcpy */
+#include "../EntryPosix.h" /* Debug, Pedantic */
 #include "Light.h"
 
 struct Vec2f { float x, y; };
@@ -68,7 +69,7 @@ int Light(const float i, const float r, const float g, const float b) {
 	colour[no_lights].g   = i * g;
 	colour[no_lights].b   = i * b;
 	notify[no_lights]     = 0;
-	fprintf(stderr, "Light: created from pool, colour (%f,%f,%f), Lgt%u.\n", colour[no_lights].r, colour[no_lights].g, colour[no_lights].b, no_lights + 1);
+	if(Pedantic()) fprintf(stderr, "Light: created from pool, colour (%f,%f,%f), Lgt%u.\n", colour[no_lights].r, colour[no_lights].g, colour[no_lights].b, no_lights + 1);
 	/*hash[no_lights]       = h;
 	hash_table_p1[h]      = no_lights + 1;
 	fprintf(stderr, "Light: new, colour (%f,%f,%f) at (%f,%f), light %u, #%u.\n", colour[no_lights].r, colour[no_lights].g, colour[no_lights].b, 0.0f, 0.0f, no_lights, h + 1);
@@ -96,7 +97,7 @@ void Light_(const int h_p1) {
 		fprintf(stderr, "~Light: Lgt%u, out-of-bounds (index %u.)\n", h_p1, no);
 		return;
 	}
-	fprintf(stderr, "~Light: erase, turning off light (index %u,) Lgt%u.\n", no, h_p1);
+	if(Pedantic()) fprintf(stderr, "~Light: erase, turning off light (index %u,) Lgt%u.\n", no, h_p1);
 
 	/* place the no_lights item into this one, decrese #; nobody will know */
 	if(no < --no_lights) {
@@ -110,7 +111,7 @@ void Light_(const int h_p1) {
 		if(notify[no]) *notify[no] = no + 1;
 		/*replace_hash   = hash[no_lights];
 		hash_table_p1[replace_hash] = no + 1;*/
-		fprintf(stderr, "~Light: Lgt%u is now Lgt%u.\n", no_lights + 1, no + 1);
+		if(Pedantic()) fprintf(stderr, "~Light: Lgt%u is now Lgt%u.\n", no_lights + 1, no + 1);
 	}
 }
 

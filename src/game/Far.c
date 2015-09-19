@@ -18,9 +18,6 @@
  @version	3.2, 2015-07
  @since		3.2, 2015-07 */
 
-/* from Draw */
-extern int screen_width, screen_height;
-
 /* the backgrounds can be larger than the sprites, 1024x1024? */
 static const int half_max_size    = 512;
 /* changed? update shader Far.vs! should be 0.00007:14285.714; space is
@@ -183,9 +180,10 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 
 	/* go to the first spot in the window */
 	if(is_reset) {
-		/* fixme: -50 is for debugging! take it out */
-		int w = (screen_width  >> 1) + 1;
-		int	h = (screen_height >> 1) + 1;
+		int w, h, screen_width, screen_height;
+		DrawGetScreen(&screen_width, &screen_height);
+		w = (screen_width  >> 1) + (screen_width & 1);
+		h = (screen_height >> 1) + (screen_height & 1);
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
 		camera_x *= foreshortening;

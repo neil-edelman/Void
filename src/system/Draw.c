@@ -125,8 +125,7 @@ static void display(void); /* callback for odisplay */
 static void resize(int width, int height); /* callback  */
 
 /* so many globals! */
-/* used as extern in Sprite, Background */
-/*static*/ int     screen_width = 300, screen_height = 200;
+static int     screen_width = 300, screen_height = 200;
 static GLuint  vbo_geom, /*spot_geom,*/ light_tex, background_tex;
 
 static GLuint  background_shader;
@@ -330,11 +329,12 @@ void DrawGetCamera(float *x_ptr, float *y_ptr) {
 	*y_ptr = camera_y;
 }
 
-/** Gets the width and height. Use extern screen_* */
-/*void DrawGetScreen(int *width_ptr, int *height_ptr) {
-	if(!is_started) return;
-	*width_ptr = 
-}*/
+/** Gets the width and height. */
+void DrawGetScreen(int *width_ptr, int *height_ptr) {
+	/*if(!is_started) return; no, easier to guarantee valid */
+	if(width_ptr)  *width_ptr  = screen_width;
+	if(height_ptr) *height_ptr = screen_height;
+}
 
 /** Sets background to the image with key key. Fixme: allows you to set not
  GT_BACKGROUND textures, which probably don't work, maybe? (oh, they do) */

@@ -33,9 +33,6 @@
  @version	3.2, 2015-06
  @since		3.2, 2015-06 */
 
-/* from Draw */
-extern int screen_width, screen_height;
-
 /* hmm, 256 is a lot of pixel space for the front layer, should be enough?
  the larger you set this, the farther it has to go to determine whether there's
  a collision, for every sprite! however, this means that the maximum value for
@@ -287,9 +284,10 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 
 	/* go to the first spot in the window */
 	if(is_reset/*!window_iterator*/) {
-		/* fixme: -50 is for debugging! take it out */
-		int w = (screen_width  >> 1) + 1 /*- 50*/;
-		int	h = (screen_height >> 1) + 1 /*- 50*/;
+		int w, h, screen_width, screen_height;
+		DrawGetScreen(&screen_width, &screen_height);
+		w = (screen_width  >> 1) + (screen_width & 1);
+		h = (screen_height >> 1) + (screen_height & 1);
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
 		x_min_window = camera_x - w;

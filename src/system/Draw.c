@@ -9,9 +9,13 @@
 #include "../game/Sprite.h"
 #include "../game/Far.h"
 #include "../game/Light.h"
+/* needed for shield display */
+#include "../game/Game.h"
+#include "../game/Ship.h"
+/*******/
 #include "Draw.h"
 #include "Window.h"
-/*#include "../EntryPosix.h"*/ /* hmm */
+#include "../EntryPosix.h"*/ /* hmm */
 /* include file formats for uncompressing in texture() */
 #include "../format/lodepng.h"
 #include "../format/nanojpeg.h"
@@ -126,13 +130,13 @@ static void resize(int width, int height); /* callback  */
 
 /* so many globals! */
 static int     screen_width = 300, screen_height = 200;
-static GLuint  vbo_geom, /*spot_geom,*/ light_tex, background_tex;
+static GLuint  vbo_geom, /*spot_geom,*/ light_tex, background_tex, shield_tex;
 
 static GLuint  background_shader;
 static GLint   background_scale_location;
 
 static GLuint  hud_shader;
-static GLint   hud_size_location, hud_position_location, hud_camera_location, hud_two_screen_location;
+static GLint   hud_size_location, hud_shield_location, hud_position_location, hud_camera_location, hud_two_screen_location;
 
 static GLuint  far_shader;
 static GLint   far_size_location, far_angle_location, far_position_location, far_camera_location, /*far_texture_location,*/ far_two_screen_location;
@@ -196,6 +200,7 @@ int Draw(void) {
 	/* shaders: simple texture for hud elements and stuff */
 	if(!(hud_shader = link_shader(Hud_vs, Hud_fs, &tex_map_attrib))) { Draw_(); return 0; }
 	hud_size_location      = glGetUniformLocation(hud_shader, "size");
+	hud_shield_location    = glGetUniformLocation(hud_shader, "shield");
 	hud_position_location  = glGetUniformLocation(hud_shader, "position");
 	hud_camera_location    = glGetUniformLocation(hud_shader, "camera");
 	hud_two_screen_location= glGetUniformLocation(hud_shader, "two_screen");
@@ -264,8 +269,9 @@ int Draw(void) {
 void Draw_(void) {
 	/*struct Map *imgs = ResourcesGetImages();
 	struct Image *img;
-	char *name;
-	int tex;*/
+	char *name;*/
+	unsigned tex;
+	int i;
 
 	/*if(glIsBuffer(spot_geom)) {
 		glDeleteBuffers(1, &spot_geom);
@@ -296,6 +302,14 @@ void Draw_(void) {
 			ImageSetTexture(img, 0);
 		}
 	} <- static now! */
+	/* textures stored in imgs */
+	for(i = max_images - 1; i; i--) {
+		if((tex = images[i].texture)) {
+			fprintf(stderr, "~Draw: erase texture, Tex%u.\n", tex);
+			glDeleteTextures(1, &tex);
+			images[i].texture = 0;
+		}
+	}
 	if(light_tex) {
 		fprintf(stderr, "~Draw: erase lighting texture, Tex%u.\n", light_tex);
 		glDeleteTextures(1, &light_tex);
@@ -306,7 +320,6 @@ void Draw_(void) {
 		glDeleteBuffers(1, &vbo_geom);
 		vbo_geom = 0;
 	}
-
 	/* get all the errors that we didn't catch */
 	WindowIsGlError("~Draw");
 
@@ -349,6 +362,18 @@ void DrawSetBackground(const char *const str) {
 	glActiveTexture(GT_BACKGROUND);
 	glBindTexture(GL_TEXTURE_2D, background_tex);
 	fprintf(stderr, "Image \"%s,\" (Tex%u,) set as desktop.\n", image->name, background_tex);
+}
+
+void DrawSetShield(const char *const str) {
+	struct Image *image;
+	if(!(image = ImageSearch(str))) {
+		fprintf(stderr, "Draw::setShield: image \"%s\" not found.\n", str);
+		return;
+	}
+	shield_tex = image->texture;
+	glActiveTexture(GT_SPRITES);
+	glBindTexture(GL_TEXTURE_2D, shield_tex);
+	fprintf(stderr, "Image \"%s,\" (Tex%u,) set as shield.\n", image->name, shield_tex);
 }
 
 /** Compiles, links and verifies a shader.
@@ -457,8 +482,7 @@ static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attri
  @param shader	The unlinked shader. */
 static void tex_map_attrib(const GLuint shader) {
 	/* programme, index attrib, name */
-	/* fixme: calculated from vbo_texture now; gives almost no speedup :[ */
-	/*glBindAttribLocation(shader, G_POSITION, "vbo_position"); <- pos! */
+	glBindAttribLocation(shader, G_POSITION, "vbo_position");
 	glBindAttribLocation(shader, G_TEXTURE,  "vbo_texture");
 }
 
@@ -625,6 +649,7 @@ static int light_compute_texture(void) {
 
 /** Callback for glutDisplayFunc; this is where all of the drawing happens. */
 static void display(void) {
+	struct Ship *player;
 	int lights;
 	/* for SpriteIterate */
 	float x, y, t;
@@ -734,23 +759,18 @@ static void display(void) {
 	glDisableVertexAttribArray(S_POSITION);
 	glDisableVertexAttribArray(S_COLOUR);*/
 
-#if 0
-	/* overlay hud; fixme: just doesn't do anything */
-	glUseProgram(hud_shader);
-	glBindTexture(GL_TEXTURE_2D, light_tex);
-	glUniform2f(hud_camera_location, camera_x, camera_y);
-	glUniform1f(hud_size_location, 200.0f);
-	glUniform2f(hud_position_location, 0.0f, 0.0f);
-	glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
-	/* lol, neither does this */{
-		const float width = 300.0f, height = 100.0f;
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-		glBegin(GL_QUADS);
-		glVertex2f(0, 0);
-		glVertex2f(width, 0);
-		glVertex2f(width, height);
-		glVertex2f(0, height);
-		glEnd();
+#if 1
+	/* overlay hud */
+	if(shield_tex && (player = GameGetPlayer())) {
+		ShipGetOrientation(player, &x, &y, &t);
+		t = ShipGetBounding(player);
+		glUseProgram(hud_shader);
+		glBindTexture(GL_TEXTURE_2D, shield_tex);
+		glUniform2f(hud_camera_location, camera_x, camera_y);
+		glUniform2f(hud_size_location, 256.0f, 8.0f);
+		glUniform2f(hud_position_location, x, y - t * 2.0f);
+		glUniform2i(hud_shield_location, ShipGetHit(player), ShipGetMaxHit(player));
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	}
 #endif
 

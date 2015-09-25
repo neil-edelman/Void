@@ -1,9 +1,13 @@
 Copyright (C) 2000, 2013 Neil Edelman
 
 The following files are exempt; they are covered by their own
-copyright:
+copyright; I am not the author of these files:
 
-fileformat/lodepng: Copyright (c) 2005-2015 Lode Vandevenne
+src/fileformat/lodepng: Copyright (c) 2005-2015 Lode Vandevenne
+http://lodev.org/lodepng/
+
+src/fileformat/nanojpeg: by Martin J. Fiedler <martin.fiedler@gmx.net>
+http://keyj.emphy.de/nanojpeg/
 
 Void is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

@@ -422,6 +422,12 @@ void *SpriteGetContainer(const struct Sprite *sprite) {
 	return sprite->container;
 }
 
+/** @return		The bounding radius. */
+float SpriteGetBounding(const struct Sprite *sprite) {
+	if(!sprite) return 1.0f;
+	return sprite->bounding;
+}
+
 /** @return		The first sprite it sees in the circle. Not really useful now
 				that it's negatively stable, but, whatever. */
 struct Sprite *SpriteGetCircle(const float x, const float y, const float r) {

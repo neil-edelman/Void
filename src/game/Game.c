@@ -105,8 +105,9 @@ int Game(void) {
 		ShipSetOrientation(bad, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
 
-	/* set background */
+	/* set drawing elements */
 	DrawSetBackground("Dorado.jpeg");
+	DrawSetShield("Bar.png");
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;

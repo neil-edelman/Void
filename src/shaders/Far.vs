@@ -1,7 +1,7 @@
 #define SQRT1_2 0.7071067811865475244008443621048490392848359376884740
 #define FORESHORTENING 0.2
 
-//attribute vec2 vbo_position; <- calculated from vbo_texture, gives almost no speedup :[
+attribute vec2 vbo_position;
 attribute vec2 vbo_texture;
 varying vec2 tex, tex_light;
 varying vec2 var_position;
@@ -17,10 +17,6 @@ void main() {
 	float qc = SQRT1_2 * c, qs = SQRT1_2 * s;
 	float w = two_screen.x, h = two_screen.y;
 
-	// now it's calculated in the shader instead of passing
-	vec2 vbo_position;
-	vbo_position.x = vbo_texture.x - 0.5;
-	vbo_position.y = vbo_texture.y - 0.5;
 	// adjust for the camera (not numerically stable!)
 	vec2 p = position - camera * FORESHORTENING;
 

@@ -150,8 +150,9 @@ void ShipSetOrientation(struct Ship *ship, const float x, const float y, const f
 	SpriteSetOrientation(ship->sprite, x, y, theta);
 }
 
-/** If you need to get a position. */
-int ShipGetOrientation(const struct Ship *ship, float *x_ptr, float *y_ptr, float *theta_ptr) {
+/** If you need to get a position. Note: this will crash if you do not provide
+ valid pointers. */
+int ShipGetOrientation(const struct Ship *ship, float *const x_ptr, float *const y_ptr, float *const theta_ptr) {
 	if(!ship || !ship->sprite) return 0;
 	SpriteGetOrientation(ship->sprite, x_ptr, y_ptr, theta_ptr);
 	return -1;
@@ -218,6 +219,11 @@ void ShipGetVelocity(const struct Ship *ship, float *vx_ptr, float *vy_ptr) {
 float ShipGetMass(const struct Ship *ship) {
 	if(!ship) return 1.0f;
 	return ship->mass;
+}
+
+float ShipGetBounding(const struct Ship *ship) {
+	if(!ship) return 1.0;
+	return SpriteGetBounding(ship->sprite);
 }
 
 struct Sprite *ShipGetSprite(const struct Ship *ship) {

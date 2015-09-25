@@ -34,8 +34,7 @@ make it without the Makefile in some other environment, you need
 to first compile the helper programmes in tools. These convert all
 the bitmaps, shaders, and info into a .h C file format so it can
 be compiled statically into the programme (see the Makefile for
-dependencies.) Void itself is pretty flexible, conforming to ANSI
-where possible, POSIX where possible.
+dependencies.)
 
 Void Copyright 2000, 2012 Neil Edelman This program comes with
 ABSOLUTELY NO WARRANTY.  This is free software, and you are welcome

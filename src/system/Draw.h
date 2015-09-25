@@ -7,3 +7,4 @@ void DrawSetCamera(const float x, const float y);
 void DrawGetCamera(float *x_ptr, float *y_ptr);
 void DrawGetScreen(int *width_ptr, int *height_ptr);
 void DrawSetBackground(const char *const str);
+void DrawSetShield(const char *const str);

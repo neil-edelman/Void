@@ -14,6 +14,7 @@ void SpriteGetVelocity(const struct Sprite *sprite, float *vx_ptr, float *vy_ptr
 void SpriteSetTheta(struct Sprite *sprite, const float theta);
 enum Sprites SpriteGetType(const struct Sprite *sprite);
 void *SpriteGetContainer(const struct Sprite *sprite);
+float SpriteGetBounding(const struct Sprite *sprite);
 struct Sprite *SpriteGetCircle(const float x, const float y, const float r);
 void SpriteUpdate(const float s);
 /*void SpriteSetViewport(const int width, const int height);*/

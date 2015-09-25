@@ -19,9 +19,12 @@ void main() {
 	float look = clamp((data - frac + 0.156862745098039) * 3.1875, 0.0, 1.0);
 	/* apply [simulated] palette */
 	vec3 indexed;
-	indexed.r = mix(0.941176470588235, 0.313725490196078, look);
+	/*indexed.r = mix(0.941176470588235, 0.313725490196078, look);
 	indexed.g = mix(0.000000000000000, 0.627450980392157, look);
-	indexed.b = mix(0.196078431372549, 0.752941176470588, look);
+	indexed.b = mix(0.196078431372549, 0.752941176470588, look);*/
+	indexed.r = mix(0.313725490196078, 0.941176470588235, look);
+	indexed.g = mix(0.627450980392157, 0.000000000000000, look);
+	indexed.b = mix(0.752941176470588, 0.196078431372549, look);
 
 	gl_FragColor = vec4(indexed, 0.5);
 }

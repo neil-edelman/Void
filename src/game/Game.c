@@ -155,10 +155,9 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 		exit(EXIT_SUCCESS); /* meh */
 	}
 	if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
-	if(KeyPress('f'))  printf("Foo!\n");
+	if(KeyPress('f'))  printf("Framerate: %.1fHz.\n", 1000.0 / TimerMean());
 	if(KeyPress(k_f1)) WindowToggleFullScreen();
 	if(KeyPress('a'))  SpritePrint("Game::update");
-	if(KeyPress('f'))  printf("Framerate: %.1fHz.\n", 1000.0 / TimerMean());
 
 	/* in-game */
 	game.turning      = KeyTime(k_left) - KeyTime(k_right);

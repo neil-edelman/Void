@@ -157,6 +157,10 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress(k_f1)) WindowToggleFullScreen();
 	if(KeyPress('a'))  SpritePrint("Game::update");
+	if(KeyPress('t')) {
+		int t = TimerMean();
+		printf("Moving-average time: %dms; framerate: %.1fHz.\n", t, 1000.0 / t);
+	}
 
 	/* in-game */
 	game.turning      = KeyTime(k_left) - KeyTime(k_right);

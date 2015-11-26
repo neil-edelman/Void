@@ -1,4 +1,19 @@
-fog
-fill in space between planets and foreground, etc
-build up asteroids from smaller chunks; hit them and calculate new chunks
-instead of having the same code for collision detection and display, have a nearest sector for display instead of is_selected; should be O(Sqrt[n]) -> O(n)
+look up how to get outlines (I think you just add a little bit to the size and then render it in one colour)
+
+text engine (display lists? wrapping?) -- communication
+
+pause/resume; allows conversations b/t ships (might be hard to network, rt then?) and landing (have landing spot (x,y))
+
+select icon, target display (ships, planets, stations, links)
+
+fog & astroids different distances (using jpeg compression?) fill in space between planets and foreground and space after planets
+
+build up asteroids from smaller chunks; hit them and calculate new chunks; the same for ships!
+
+instead of having the same code for collision detection and display, have a nearest sector for display instead of is_selected; should be O(Sqrt[n]) -> O(1) (screen size)
+
+missions
+
+max wattage (increased with add-ons) 65GW(start) 317GW(all full of the important) 453GW(2 bars) 824GW(almost full)
+
+Mercury is too blurry near the edges

@@ -146,15 +146,9 @@ $(BDIR)/%_bmp.h: $(MDIR)/%.bmp $(FILE2H)
 
 # additional dependancies
 
-$(BDIR)/Open.o: $(VS_H) $(FS_H) $(SDIR)/Open.c
-	# . . . compiling Void (OpenGL)
-	@mkdir -p $(BDIR)
-	$(CC) $(CF) -c $(SDIR)/Open.c -o $@
+$(BDIR)/Open.o: $(VS_H) $(FS_H)
 
-$(BDIR)/Game.o: $(TSV_H) $(SDIR)/Game.c
-	# . . . compiling Void (Game)
-	@mkdir -p $(BDIR)
-	$(CC) $(CF) -c $(SDIR)/Game.c -o $@	
+$(BDIR)/Game.o: $(TSV_H)
 
 ######
 # helper programmes
@@ -196,10 +190,9 @@ backup:
 	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP)
 
 # this backs up everything including the media files for publication
-source:
+source: #$(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(PNG_H) $(JPEG_H) $(BMP_H)
 	@mkdir -p $(BDIR)
-	zip $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(PNG) $(JPEG) $(BMP) $(TEXT)
-
+	zip $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(PNG) $(JPEG) $(BMP) $(TEXT) #$(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(PNG_H) $(JPEG_H) $(BMP_H) too big
 
 setup: default
 	@mkdir -p $(BDIR)/$(INST)

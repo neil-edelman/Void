@@ -3,6 +3,14 @@
 
 #include <stdlib.h> /* bsearch */
 #include <stdio.h>  /* fprintf */
+/* fixme: strsep, strdup, not included */
+/* char *mystrdup(const char *str)
+ {
+ size_t len = strlen(str);
+ char *result = malloc(len + 1);
+ memcpy(result, str, len + 1);
+ return result;
+ }*/
 #include <string.h> /* strcmp strchr ... */
 #include <ctype.h>  /* toupper */
 #define TRIM

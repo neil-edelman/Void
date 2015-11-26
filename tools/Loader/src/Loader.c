@@ -1,6 +1,8 @@
 /* Copyright 2015 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
+/* snpritf undefined */
+
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* strncpy, strrchr */

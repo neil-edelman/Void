@@ -25,8 +25,6 @@ static const char *year        = "2015";
 static const int versionMajor  = 3;
 static const int versionMinor  = 2;
 
-static const int framelenght_ms = 20; /* 50 fps -- fixme: variable */
-
 struct Entry {
 	int i;
 } entry;
@@ -46,6 +44,7 @@ int Pedantic(void) { return 0; }
  @return     either EXIT_SUCCESS or EXIT_FAILURE */
 int main(int argc, char **argv) {
 	/*struct Bitmap *bmp;*/
+	const int framelenght_ms = TimerGetFramelength();
 
 	/* fixme: more options! (ie, load game, etc) */
 	if(argc > 1) {

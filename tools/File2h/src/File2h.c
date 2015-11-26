@@ -10,6 +10,8 @@
  @version	1.0, 2015-08
  @since		1.0, 2015-08 */
 
+/* strdup undefined */
+
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* strrchr */
@@ -93,7 +95,7 @@ int main(int argc, char **argv) {
 
 	if(fclose(fp)) perror(argv[1]);
 
-	return EXIT_SUCCESS;
+	return ret;
 }
 
 /* private */

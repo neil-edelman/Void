@@ -49,7 +49,7 @@ int Window(const char *title, int argc, char **argv) {
 	/*glutMouseFunc(&mouse);
 	 glutIdleFunc(0); */
 
-	/* load OpenGl2+ (AFTER THE WINDOW!) */
+	/* load OpenGl2+ (AFTER THE WINDOW!) for those that need it */
 	if(!Glew()) return 0;
 
 	is_started = -1;

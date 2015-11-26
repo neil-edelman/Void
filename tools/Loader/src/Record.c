@@ -16,6 +16,8 @@
 #include "Type.h"
 #include "Record.h"
 
+/* asprintf, index, strsep, snprintf undefined */
+
 /* .type files contain Records.
 
  @author	Neil
@@ -132,7 +134,8 @@ void RecordOutput(void) {
 
 /** Allocates and reads a record. */
 int RecordLoadInstance(const struct Record *const record, char *data[MAX_FIELDS], struct Reader *read) {
-	char **datum_ptr, *szrecord, *szvalue, *str;
+	char **datum_ptr, *szvalue, *str;
+	const char *szrecord;
 	int i;
 
 	if(!record || !data || !read) return 0;
@@ -151,6 +154,7 @@ int RecordLoadInstance(const struct Record *const record, char *data[MAX_FIELDS]
 			szrecord = record->fields[i].type_name;
 			szvalue  = *datum_ptr; /* replace... */
 			asprintf(datum_ptr, "%s %s", szrecord, szvalue); /* \0 screws up */
+			/* wtf is index(const char *, size_t)? write! */
 			*(str = index(*datum_ptr, ' ')) = '\0'; /* so we need this */
 			free(szvalue); /* replaced it */
 			/* print */

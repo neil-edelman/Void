@@ -10,6 +10,7 @@
 #include "system/Draw.h"
 #include "system/Timer.h"
 #include "system/Key.h"
+#include "game/Sprite.h" /* for getCapacity() */
 #include "game/Game.h"
 
 /** Entry point for command-line, unix-like operating systems (ie, all of them.)
@@ -45,12 +46,14 @@ int Pedantic(void) { return 0; }
 int main(int argc, char **argv) {
 	/*struct Bitmap *bmp;*/
 	const int framelenght_ms = TimerGetFramelength();
+	int number_of_objects = 1648;
 
 	/* fixme: more options! (ie, load game, etc) */
-	if(argc > 1) {
+	if(argc > 1 && ((number_of_objects = atoi(argv[1])) <= 0 || number_of_objects > SpriteGetCapacity())) {
 		usage();
 		return EXIT_SUCCESS;
 	}
+	fprintf(stderr, "main: base number of objects: %d.\n", number_of_objects);
 
 	/* we generally don't have return because glutMainLoop() never does */
 	if(atexit(&main_)) perror("atexit");
@@ -59,7 +62,7 @@ int main(int argc, char **argv) {
 	if(!Window(programme, argc, argv)
 		|| !Key()
 		|| !Draw()
-	    || !Game()
+	    || !Game(number_of_objects)
 		|| !Timer(framelenght_ms)) return EXIT_FAILURE;
 	/* entropy increase */
 	srand((unsigned)clock());

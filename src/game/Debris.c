@@ -27,7 +27,7 @@ struct Debris {
 	float         omega, mass; /* Mg (t) */
 	int           hit;
 	/*void          (*on_kill)(void); minerals? */
-} debris[4096];
+} debris[8192/*4096*/];
 static const int debris_capacity = sizeof(debris) / sizeof(struct Debris);
 static int       debris_size;
 

@@ -46,8 +46,9 @@ struct Game {
 const static float asteroid_max_speed = 0.03f;
 
 /* positions larger then this value will be looped around */
-const float de_sitter = 8192.0f;
-/*const float de_sitter = 4098.0f;*/
+/*const float de_sitter = 8192.0f;*/
+/* reduce for tests */
+const float de_sitter = 4096.0f;
 
 /* private */
 float rnd(const float limit);
@@ -55,7 +56,7 @@ float rnd(const float limit);
 /* public */
 
 /** constructor */
-int Game(void) {
+int Game(const int load) {
 	struct Debris *asteroid;
 	struct Ship   *bad;
 	struct Far    *bg;
@@ -75,23 +76,6 @@ int Game(void) {
 		return 0;
 	};
 
-	/* some asteroids; fixme: debris limit 4096; sometimes it crashes when
-	 reaching; gets incresingly slow after 1500, but don't need debris when
-	 it's really far (cpu!) */
-	for(i = 0; i < 1648; i++) {
-		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
-		/*printf("Game: new Asteroid, checking:\n");*/
-		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
-			fprintf(stderr, "Game: would cause collision with sprite; waiving asteroid.\n");
-			continue;
-		}*/
-		asteroid = Debris(type->image->texture, type->image->width, 10.0f);
-		DebrisSetOrientation(asteroid,
-							 x, y, t, /* (x,y):t */
-							 vx, vy, o); /* (vx,vy):o */
-		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
-	}
-
 	/* set up ALL Objects in Space */
 	for(i = 0; i < max_objects_in_space; i++) {
 		ois = &objects_in_space[i];
@@ -101,7 +85,7 @@ int Game(void) {
 
 	/* sprinkle some ships */
 	game.player = Ship(&game.player, nautilus, B_HUMAN);
-	for(i = 0; i < 100; i++) {
+	for(i = 0; i < (load * 0.05); i++) {
 		bad = Ship(0, scorpion, B_STUPID);
 		ShipSetOrientation(bad, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
@@ -109,6 +93,23 @@ int Game(void) {
 	/* set drawing elements */
 	DrawSetBackground("Dorado.jpeg");
 	DrawSetShield("Bar.png");
+
+	/* some asteroids; fixme: debris limit 4096; sometimes it crashes when
+	 reaching; gets incresingly slow after 1500, but don't need debris when
+	 it's really far (cpu!) */
+	for(i = 0; i < (load * 0.95); i++) {
+		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
+		/*printf("Game: new Asteroid, checking:\n");*/
+		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
+		 fprintf(stderr, "Game: would cause collision with sprite; waiving asteroid.\n");
+		 continue;
+		 }*/
+		asteroid = Debris(type->image->texture, type->image->width, 10.0f);
+		DebrisSetOrientation(asteroid,
+							 x, y, t, /* (x,y):t */
+							 vx, vy, o); /* (vx,vy):o */
+		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
+	}
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;

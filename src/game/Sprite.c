@@ -62,7 +62,7 @@ struct Sprite {
 	float         vx1, vy1;      /* temp; the velocity after colliding */
 
 	struct Sprite *prev_x, *next_x, *prev_y, *next_y; /* sort by axes */
-} sprites[4096];
+} sprites[8192/*4096*/]; /* lots and lots for performance measuring */
 static const int sprites_capacity = sizeof(sprites) / sizeof(struct Sprite);
 static int       sprites_size;
 
@@ -219,6 +219,12 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	}
 
 	*sprite_ptr = sprite = 0;
+}
+
+/** Accessor for const.
+ @return	sprites_capacity */
+int SpriteGetCapacity(void) {
+	return sprites_capacity;
 }
 
 /** Subclass informs us of new name (viz, location) on rename or create.

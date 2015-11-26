@@ -16,6 +16,7 @@
 #include "../system/Key.h"
 #include "../system/Window.h"
 #include "../system/Draw.h"
+#include "../system/Timer.h" /* only for reporting framerate */
 #include "../EntryPosix.h"
 
 /* auto-generated */

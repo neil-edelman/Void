@@ -41,6 +41,7 @@ struct Game {
 	float t_s/*, dt_s*/;
 	struct Ship *player; /* camera moves with this */
 	int turning, acceleration, shoot; /* input per frame, ms */
+	int load;
 } game;
 
 const static float asteroid_max_speed = 0.03f;
@@ -67,6 +68,7 @@ int Game(const int load) {
 	const struct ShipClass *nautilus, *scorpion;
 
 	if(is_started) return -1;
+	game.load = load;
 
 	/* game elements */
 	if(!(type = TypeOfObjectSearch("asteroid"))
@@ -156,7 +158,12 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 		exit(EXIT_SUCCESS); /* meh */
 	}
 	if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
-	if(KeyPress('f'))  printf("Framerate: %.1fHz.\n", 1000.0 / TimerMean());
+	if(KeyPress('f')) {
+		int w, h;
+		DrawGetScreen(&w, &h);
+		printf("load\tresolution\tframerate (Hz)\tsprites considered\tsprites on-screen\n");
+		printf("%d\t%dx%d\t%.1f\t%d\t%d\n", game.load, w, h, 1000.0 / TimerMean(), SpriteGetConsidered(), SpriteGetOnscreen());
+	}
 	if(KeyPress(k_f1)) WindowToggleFullScreen();
 	if(KeyPress('a'))  SpritePrint("Game::update");
 

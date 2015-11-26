@@ -71,6 +71,8 @@ static struct Sprite *first_x, *first_y; /* the projected axis sorting thing */
 static struct Sprite *first_x_window, *first_y_window, *window_iterator;
 static struct Sprite *iterator = sprites; /* for drawing and stuff */
 
+static int sprites_considered, sprites_onscreen;
+
 /* keep track of the dimensions of the window; it doesn't matter what the
  initial values are, they will be erased by {@code SpriteSetViewport} */
 /* static int viewport_width  = 300;
@@ -221,6 +223,9 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	*sprite_ptr = sprite = 0;
 }
 
+int SpriteGetConsidered(void) { return sprites_considered; }
+int SpriteGetOnscreen(void)   { return sprites_onscreen; }
+
 /** Accessor for const.
  @return	sprites_capacity */
 int SpriteGetCapacity(void) {
@@ -336,10 +341,13 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 		 to mark more? */
 		window_iterator = first_y_window;
 		is_reset = 0;
+		sprites_considered = 0;
+		sprites_onscreen   = 0;
 	}
 
 	/* consider y */
 	while(window_iterator && window_iterator->y <= y_max) {
+		sprites_considered++;
 		if(window_iterator->is_selected) {
 			int extent = (window_iterator->size >> 1) + 1;
 			/* tighter bounds -- slow, but worth it; fixme: optimise for b-t */
@@ -347,6 +355,7 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 			   && window_iterator->x < x_max_window + extent
 			   && window_iterator->y > y_min_window - extent
 			   && window_iterator->y < y_max_window + extent) {
+				sprites_onscreen++;
 				/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
 				*x_ptr       = window_iterator->x;
 				*y_ptr       = window_iterator->y;

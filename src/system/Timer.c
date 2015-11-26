@@ -81,9 +81,10 @@ int TimerLastTime(void) {
 	return timer.time;
 }
 
-/** @returns	Moving average in milliseconds. */
+/** The value is a positive number.
+ @returns	Moving average in milliseconds. */
 int TimerMean(void) {
-	return timer.mean;
+	return timer.mean > 0 ? timer.mean : 1;
 }
 
 /** @returns	Framelength in milliseconds. */

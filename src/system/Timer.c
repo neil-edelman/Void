@@ -13,7 +13,7 @@
  @since		2.0, 2014 (<- what?)*/
 
 static const int framelength_ms = 20; /* 50 fps -- fixme: variable */
-static const int persistance    = 0.9 * 1024;
+static const int persistance    = 0.9 * 1024; /* fixed point :10 */
 
 static int is_started;
 

@@ -12,6 +12,7 @@
 #include "Debris.h"
 #include "Wmd.h"
 #include "Light.h"
+#include "Event.h"
 #include "../general/Map.h"
 #include "../system/Key.h"
 #include "../system/Window.h"
@@ -42,6 +43,7 @@ struct Game {
 	struct Ship *player; /* camera moves with this */
 	int turning, acceleration, shoot; /* input per frame, ms */
 	int load;
+	const struct TypeOfObject *asteroid;
 } game;
 
 const static float asteroid_max_speed = 0.03f;
@@ -53,6 +55,23 @@ const float de_sitter = 4096.0f;
 
 /* private */
 float rnd(const float limit);
+
+void add_asteroid(const int t_ms) {
+	struct Debris *asteroid;
+
+	float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
+	/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
+	 fprintf(stderr, "Game: would cause collision with sprite; waiving asteroid.\n");
+	 continue;
+	 }*/
+	asteroid = Debris(game.asteroid->image->texture, game.asteroid->image->width, 10.0f);
+	DebrisSetOrientation(asteroid,
+						 x, y, t, /* (x,y):t */
+						 vx, vy, o); /* (vx,vy):o */
+	/*Event(&add_asteroid);*/
+	/*printf("Game: new Asteroid!\n");*/
+	Event(t_ms + 3000, &add_asteroid);
+}
 
 /* public */
 
@@ -77,6 +96,7 @@ int Game(const int load) {
 		fprintf(stderr, "Game: couldn't find required game elements.\n");
 		return 0;
 	};
+	game.asteroid = type;
 
 	/* set up ALL Objects in Space */
 	for(i = 0; i < max_objects_in_space; i++) {
@@ -112,6 +132,8 @@ int Game(const int load) {
 							 vx, vy, o); /* (vx,vy):o */
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
+
+	Event(3000, &add_asteroid);
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;
@@ -152,7 +174,7 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 		wrap around and not do anthing crazy? because, if so 24.9 days) */
 	/*game.dt_s = dt_ms * 0.001f;*/
 
-	/* handle non-in-game related keypresses; fixme: have the keys be variable. */
+	/* handle non-in-game related keypresses; fixme: have the keys be variable. and O(n)->O(1) by swich, each thing is checked in sequence? */
 	if(KeyPress(27)) {
 		fprintf(stderr, "Escape key pressed.\n");
 		exit(EXIT_SUCCESS); /* meh */
@@ -188,6 +210,9 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 
 	/* O(n); call the ai and stuff */
 	ShipUpdate(dt_s);
+
+	/* check events */
+	EventDispatch(t_ms);
 }
 
 struct Ship *GameGetPlayer(void) {

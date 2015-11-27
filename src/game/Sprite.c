@@ -228,9 +228,10 @@ int SpriteGetOnscreen(void)   { return sprites_onscreen; }
 
 /** Accessor for const.
  @return	sprites_capacity */
-int SpriteGetCapacity(void) {
-	return sprites_capacity;
-}
+int SpriteGetCapacity(void) { return sprites_capacity; }
+
+/** @return	sprites_size */
+int SpriteNo(void)          { return sprites_size; }
 
 /** Subclass informs us of new name (viz, location) on rename or create.
  @param container	The new subclass.

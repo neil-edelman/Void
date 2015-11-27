@@ -10,7 +10,6 @@
 #include "system/Draw.h"
 #include "system/Timer.h"
 #include "system/Key.h"
-#include "game/Sprite.h" /* for getCapacity() */
 #include "game/Game.h"
 
 /** Entry point for command-line, unix-like operating systems (ie, all of them.)
@@ -49,7 +48,7 @@ int main(int argc, char **argv) {
 	int number_of_objects = 1648;
 
 	/* fixme: more options! (ie, load game, etc) */
-	if(argc > 1 && ((number_of_objects = atoi(argv[1])) <= 0 || number_of_objects > SpriteGetCapacity())) {
+	if(argc > 1) {
 		usage();
 		return EXIT_SUCCESS;
 	}
@@ -62,7 +61,7 @@ int main(int argc, char **argv) {
 	if(!Window(programme, argc, argv)
 		|| !Key()
 		|| !Draw()
-	    || !Game(number_of_objects)
+	    || !Game()
 		|| !Timer(framelenght_ms)) return EXIT_FAILURE;
 	/* entropy increase */
 	srand((unsigned)clock());

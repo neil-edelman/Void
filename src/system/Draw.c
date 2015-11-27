@@ -580,7 +580,7 @@ static int texture(struct Image *image) {
 					 GL_UNSIGNED_BYTE, pic);
 		image->texture = tex;
 #if 1 /* debug */
-		printf("Tex: %u.\n", image->texture);
+		fprintf(stderr, "Tex: %u.\n", image->texture);
 		if(image->width <= 80) image_print(image, pic);
 		else fprintf(stderr, "...too big to show.\n");
 #endif

@@ -7,6 +7,8 @@ void Sprite_(struct Sprite **spriteptr);
 int SpriteGetConsidered(void);
 int SpriteGetOnscreen(void);
 int SpriteGetCapacity(void);
+int SpriteNo(void);
+int SpriteGetCapacity(void);
 void SpriteSetContainer(void *const container, struct Sprite **const notify);
 int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr);
 /*void SpriteResetIterator(void);*/

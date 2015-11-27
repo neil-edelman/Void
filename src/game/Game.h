@@ -1,6 +1,6 @@
 struct Game;
 
-int Game(const int load);
+int Game(void);
 void Game_(void);
 void GameUpdate(const int t_ms, const int dt_ms);
 /*float GameGetDeltaTime(void);*/

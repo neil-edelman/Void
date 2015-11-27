@@ -25,14 +25,7 @@ struct Timer {
 	int step;  /* ms */
 	int time;
 	int mean;
-#ifdef KEEP_TRACK_OF_TIMES
-	int frame;
-	int frame_time[1 << TIMER_LOG_FRAMES];
-#endif
 } timer;
-#ifdef KEEP_TRACK_OF_TIMES
-const static int max_frame_time = sizeof(((struct Timer *)0)->frame_time) / sizeof(int);
-#endif
 
 static void update(int value);
 
@@ -43,9 +36,6 @@ static void update(int value);
  negative one."? Scetchy.
  @param step	The resolution of the timer. */
 int Timer(const int step) {
-#ifdef KEEP_TRACK_OF_TIMES
-	int i;
-#endif
 
 	timer.step  = step;
 	if(is_started) return -1;
@@ -57,10 +47,6 @@ int Timer(const int step) {
 
 	timer.time  = glutGet(GLUT_ELAPSED_TIME);
 	timer.mean  = framelength_ms;
-#ifdef KEEP_TRACK_OF_TIMES
-	timer.frame = 0;
-	for(i = 0; i < max_frame_time; i++) timer.frame_time[i] = timer.time;
-#endif
 	is_started = -1;
 	fprintf(stderr, "Timer: created timer with %ums.\n", timer.time);
 
@@ -102,12 +88,7 @@ static void update(int old_time) {
 	/* all times are in ms */
 	timer.time  = glutGet(GLUT_ELAPSED_TIME);
 	dt = timer.time - old_time;
-#ifdef KEEP_TRACK_OF_TIMES
-	timer.frame = (timer.frame + 1) & (max_frame_time - 1);
-	timer.frame_time[timer.frame] = dt;
-#else
 	timer.mean = (timer.mean*persistance + dt*(1024-persistance)) >> 10;
-#endif
 	glutTimerFunc(timer.step, &update, timer.time);
 	GameUpdate(timer.time, dt);
 	/* now void -> if(!GameUpdate(timer.time, dt)) printf("Should really be shutting down.\n");*/

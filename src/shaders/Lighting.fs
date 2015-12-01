@@ -19,15 +19,16 @@ uniform vec3      directional_colour;
 varying vec2 tex, tex_light;
 varying vec2 var_position;
 
+float light_i(int i, float in_sprite, vec4 light);
+
 void main() {
-	vec2 relative;
-	float dist, to_light, in_sprite, delta;
+	float to_light, delta;
 	vec4 texel = texture2D(sampler,       tex);
 	vec4 light = texture2D(sampler_light, tex_light);
+	float in_sprite = light.g * M_2PI;
 	vec3 shade = vec3(AMBIENT);
 
 	// one directional light
-	in_sprite = light.g * M_2PI;
 	to_light  = directional_angle;
 	delta     = abs(mod(in_sprite - to_light + M_PI, M_2PI) - M_PI);
 	delta     = M_1_PI * (M_PI - delta * 2.0);
@@ -37,18 +38,19 @@ void main() {
 		if(i >= lights) {
 			break;
 		} else {
-			vec2 relative = light_position[i] - var_position;
-			dist = length(relative) + EPSILON;
-			// the angle to the light, in the sprite, and the difference
-			in_sprite = light.g * M_2PI;
-			// atan on every pixel!!! crazy! altough, fast? but if we had to . . . testing: this makes NO DIFFERENCE?
-			to_light  = atan(relative.y, relative.x);
-			delta     = abs(mod(in_sprite - to_light + M_PI, M_2PI) - M_PI);
-			//float anglar = M_1_PI * (M_PI - delta); <- to fancy
-			// the final contrubution from light i
-			shade += light_colour[i] * mix(1.0, M_PI - delta, light.r) / dist;
+			shade += light_colour[i] * light_i(i, in_sprite, light);
 		}
 	}
 	// final colour
 	gl_FragColor = vec4(shade, 1.0) * texel;
+}
+
+float light_i(int i, float in_sprite, vec4 light) {
+	vec2 relative  = light_position[i] - var_position;
+	float dist     = length(relative) + EPSILON;
+	// the angle to the light, in the sprite, and the difference
+	float to_light = atan(relative.y, relative.x);
+	float delta    = abs(mod(in_sprite - to_light + M_PI, M_2PI) - M_PI);
+	// the final contrubution from light i
+	return(mix(1.0, M_PI - delta, light.r) / dist);
 }

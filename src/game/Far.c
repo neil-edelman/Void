@@ -8,7 +8,7 @@
 #include "../general/Sorting.h"
 #include "../system/Draw.h"
 
-/* auto-generated from media dir; hope it's right */
+/* auto-generated from media dir; hope it's right; used in constructor */
 #include "../../bin/Lore.h"
 
 /** Sprites in the background have a (world) position, a rotation, and a bitmap.

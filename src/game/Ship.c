@@ -15,7 +15,7 @@
 #include "../system/Timer.h"
 #include "../system/Key.h"
 
-/* auto-generated from media dir; hope it's right */
+/* auto-generated from media dir; hope it's right; used in constructor */
 #include "../../bin/Lore.h"
 
 #define M_2PI 6.28318530717958647692528676655900576839433879875021164194988918461563281257241799725606965068423413596429617302656461329

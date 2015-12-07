@@ -15,7 +15,7 @@
 /*******/
 #include "Draw.h"
 #include "Window.h"
-#include "../EntryPosix.h"*/ /* hmm */
+/*#include "../EntryPosix.h"*/ /* hmm */
 /* include file formats for uncompressing in texture() */
 #include "../format/lodepng.h"
 #include "../format/nanojpeg.h"
@@ -25,9 +25,6 @@
 #define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
 #ifndef M_SQRT1_2 /* for MSVC */
 #define M_SQRT1_2 0.70710678118654752440084436210484903928483593768847403658833986899536623923105351942519376716382078636750692311545614851
-#endif
-#ifdef C89_FMINF /* for MSVC2010 */
-#define fminf(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
 /* auto-generated, hard coded resouce files; there should be the directory

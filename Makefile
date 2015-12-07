@@ -18,27 +18,27 @@ GME := game
 FMT := format
 
 # files in sdir
-FILES := ../bin/Lore EntryPosix $(GEN)/ArrayList $(GEN)/Map $(GEN)/Sorting $(SYS)/Draw $(SYS)/Glew $(SYS)/Timer $(SYS)/Key $(SYS)/Window $(GME)/Light $(GME)/Game $(GME)/Sprite $(GME)/Far $(GME)/Debris $(GME)/Ship $(GME)/Wmd $(GME)/Event $(FMT)/Bitmap $(FMT)/lodepng $(FMT)/nanojpeg
-VS   := Background Hud Far Lighting
-FS   := Background Hud Far Lighting
 ICON := icon.ico
 
-# files in bdir
+# files in bdir (RSRC is Windows icon, made programmatically)
 RSRC  := icon.rsrc
 INST  := $(PROJ)-$(VA)_$(VB)
 
 # extra stuff we should back up
 EXTRA := $(SDIR)/icon.rc todo.txt build/msvc2010.txt unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c
 
-OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES))
-SRCS  := $(patsubst %,$(SDIR)/%.c,$(FILES))
-H     := $(patsubst %,$(SDIR)/%.h,$(FILES))
-VS_VS := $(patsubst %,$(SDIR)/$(SDR)/%.vs,$(VS))
-FS_FS := $(patsubst %,$(SDIR)/$(SDR)/%.fs,$(FS))
-VS_H  := $(patsubst %,$(BDIR)/$(SDR)/%_vs.h,$(VS))
-FS_H  := $(patsubst %,$(BDIR)/$(SDR)/%_fs.h,$(FS))
-TSV_TSV:=$(patsubst %,$(MDIR)/%.tsv,$(TSV))
-TSV_H :=$(patsubst %,$(BDIR)/%_tsv.h,$(TSV))
+# John Graham-Cumming:
+# rwildcard is a recursive wildcard
+rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
+
+# select all the things in the src/; the Lore is generated automatically by a tool
+SRCS  := $(call rwildcard, $(SDIR), *.c) $(SDIR)/../$(BDIR)/Lore.c
+H     := $(call rwildcard, $(SDIR), *.h) $(SDIR)/../$(BDIR)/Lore.h
+OBJS  := $(patsubst $(SDIR)/%.c, $(BDIR)/%.o, $(SRCS))
+VS    := $(call rwildcard, $(SDIR)/$(SDR), *.vs)
+FS    := $(call rwildcard, $(SDIR)/$(SDR), *.fs)
+VS_H  := $(patsubst $(SDIR)/$(SDR)/%.vs, $(BDIR)/$(SDR)/%_vs.h, $(VS))
+FS_H  := $(patsubst $(SDIR)/$(SDR)/%.fs, $(BDIR)/$(SDR)/%_fs.h, $(FS))
 
 FILE2H_DIR := tools/File2h
 FILE2H_DEP := tools/File2h/src/File2h.c tools/File2h/Makefile
@@ -53,7 +53,7 @@ LOADER_DIR   := tools/Loader
 LOADER_DEP   := $(LOADER_DIR)/Makefile $(patsubst %,$(LOADER_DIR)/$(SDIR)/%.c,$(LOADER_FILES)) $(patsubst %,$(LOADER_DIR)/$(SDIR)/%.h,$(LOADER_FILES)) $(LOADER_DIR)/$(SDIR)/Functions.h
 LOADER       := tools/Loader/bin/Loader
 
-# Loader recouces
+# Loader resources
 TYPE   := $(wildcard $(MDIR)/*.type)
 LORE_H := $(BDIR)/Lore.h
 LORE   := $(wildcard $(MDIR)/*.lore)
@@ -67,12 +67,12 @@ BMP_H  := $(patsubst $(MDIR)/%.bmp,$(BDIR)/%_bmp.h,$(BMP))
 TEXT   := $(wildcard $(MDIR)/*.txt)
 
 CC   := gcc
-CF   := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi # UNIX/PC: -DGLEW #-std=c99 # ansi doesn't have fmath fn's
+CF   := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic --std=c99 # UNIX/PC: -DGLEW
 OF   := -framework OpenGL -framework GLUT # UNIX: -lglut -lGLEW; PC: depends
 
-# props Jakob Borg and Eldar Abusalimov
-EMPTY :=
-SPACE := $(EMPTY) $(EMPTY)
+# Jakob Borg and Eldar Abusalimov:
+# $(ARGS) is all the extra arguments
+# $(BRGS) is_all_the_extra_arguments
 ifeq (backup, $(firstword $(MAKECMDGOALS)))
   ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
   BRGS := $(subst $(SPACE),_,$(ARGS))
@@ -183,7 +183,8 @@ clean:
 	-make --directory $(TEXT2H_DIR) clean
 	-make --directory $(FILE2H_DIR) clean
 	-make --directory $(LOADER_DIR) clean
-	-rm -fd $(OBJS) $(BDIR)/$(ICON) $(BDIR)/$(RSRC) $(VS_H) $(FS_H) $(TEXT2H) $(FILE2H) $(LOADER) $(BDIR)/sort $(BDIR)/cd $(BDIR)/$(SYS) $(BDIR)/$(GEN) $(BDIR)/$(GME) $(BDIR)/$(SDR) $(BDIR)/$(FMT) $(LORE_H) $(LORE_C) $(PNG_H) $(JPEG_H) $(BMP_H)
+	-rm -f $(OBJS) $(BDIR)/$(ICON) $(BDIR)/$(RSRC) $(VS_H) $(FS_H) $(TEXT2H) $(FILE2H) $(LOADER) $(BDIR)/sort $(BDIR)/cd $(LORE_H) $(LORE_C) $(PNG_H) $(JPEG_H) $(BMP_H)
+	-rm -rf $(BDIR)/$(SYS) $(BDIR)/$(GEN) $(BDIR)/$(GME) $(BDIR)/$(SDR) $(BDIR)/$(FMT)
 
 backup:
 	@mkdir -p $(BACK)

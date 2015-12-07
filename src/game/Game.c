@@ -26,7 +26,7 @@
 #include "../system/Timer.h" /* only for reporting framerate */
 #include "../EntryPosix.h"
 
-/* auto-generated */
+/* auto-generated; used in constructor */
 #include "../../bin/Lore.h"
 /*extern struct Image images[];
 extern const int max_images;

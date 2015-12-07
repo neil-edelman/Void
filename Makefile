@@ -86,12 +86,6 @@ endif
 # compiles the programme by default
 
 default: $(BDIR)/$(PROJ)
-	# . . . setting icon on a Mac.
-	cp $(SDIR)/$(ICON) $(BDIR)/$(ICON)
-	-sips --addIcon $(BDIR)/$(ICON)
-	-DeRez -only icns $(BDIR)/$(ICON) > $(BDIR)/$(RSRC)
-	-Rez -append $(BDIR)/$(RSRC) -o $(BDIR)/$(PROJ)
-	-SetFile -a C $(BDIR)/$(PROJ)
 	# . . . success; executable is in $(BDIR)/$(PROJ)
 
 # linking
@@ -177,7 +171,7 @@ $(BDIR)/cd: $(SDIR)/test/Collision.c
 ######
 # phoney targets
 
-.PHONY: clean backup source setup
+.PHONY: clean backup source setup icon
 
 clean:
 	-make --directory $(TEXT2H_DIR) clean
@@ -190,12 +184,21 @@ backup:
 	@mkdir -p $(BACK)
 	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP)
 
-# this backs up everything including the media files for publication
+# this backs up everything including the media files for publication (excuding)
 source: #$(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(PNG_H) $(JPEG_H) $(BMP_H)
 	@mkdir -p $(BDIR)
 	zip $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(PNG) $(JPEG) $(BMP) $(TEXT) #$(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(PNG_H) $(JPEG_H) $(BMP_H) too big
 
-setup: default
+icon: default
+	# . . . setting icon on a Mac.
+	cp $(SDIR)/$(ICON) $(BDIR)/$(ICON)
+	-sips --addIcon $(BDIR)/$(ICON)
+	-DeRez -only icns $(BDIR)/$(ICON) > $(BDIR)/$(RSRC)
+	-Rez -append $(BDIR)/$(RSRC) -o $(BDIR)/$(PROJ)
+	-SetFile -a C $(BDIR)/$(PROJ)
+
+setup: default icon
+	# . . . setup on a Mac.
 	@mkdir -p $(BDIR)/$(INST)
 	cp $(BDIR)/$(PROJ) readme.txt gpl.txt copying.txt $(BDIR)/$(INST)
 	rm -f $(BDIR)/$(INST)-MacOSX.dmg

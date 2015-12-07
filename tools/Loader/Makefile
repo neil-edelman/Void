@@ -26,7 +26,7 @@ H     := $(patsubst %,$(SDIR)/%.h,$(FILES))
 FMTH  := $(patsubst %,../../src/format/%.h,$(FORMAT))
 
 CC   := gcc
-CF   := -Wall -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi
+CF   := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -std=c99 # snprintf
 OF   :=
 
 # props Jakob Borg and Eldar Abusalimov

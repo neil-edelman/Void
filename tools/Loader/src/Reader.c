@@ -32,7 +32,7 @@ struct Reader {
 	FILE     *fp;
 	unsigned number;
 };
-const static int max_fn = sizeof((struct Reader *)0)->fn / sizeof(char);
+static const int max_fn = sizeof((struct Reader *)0)->fn / sizeof(char);
 
 static char read[1024];
 

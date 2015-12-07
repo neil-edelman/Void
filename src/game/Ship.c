@@ -10,10 +10,10 @@
 #include "Sprite.h"
 #include "Wmd.h"
 #include "Game.h"
-#include "../General/Map.h"
-#include "../System/Draw.h"
-#include "../System/Timer.h"
-#include "../System/Key.h"
+#include "../general/Map.h"
+#include "../system/Draw.h"
+#include "../system/Timer.h"
+#include "../system/Key.h"
 
 /* auto-generated from media dir; hope it's right */
 #include "../../bin/Lore.h"
@@ -38,12 +38,12 @@ const static float shot_recharge_ms = 300.0f;
 
 /* ai */
 
-const static float ai_turn        = 0.2f;     /* rad/ms */
-const static float ai_too_close   = 3200.0f;  /* pixel^(1/2) */
-const static float ai_too_far     = 32000.0f; /* pixel^(1/2) */
-const static int   ai_speed       = 15;       /* pixel^2 / ms */
-const static float ai_turn_sloppy = 0.4f;     /* rad */
-const static float ai_turn_constant = 10.0f;
+static const float ai_turn        = 0.2f;     /* rad/ms */
+static const float ai_too_close   = 3200.0f;  /* pixel^(1/2) */
+static const float ai_too_far     = 32000.0f; /* pixel^(1/2) */
+static const int   ai_speed       = 15;       /* pixel^2 / ms */
+static const float ai_turn_sloppy = 0.4f;     /* rad */
+static const float ai_turn_constant = 10.0f;
 
 struct Ship {
 	struct Sprite          *sprite;

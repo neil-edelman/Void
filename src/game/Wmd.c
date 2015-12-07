@@ -19,10 +19,10 @@
 
 static const float shot_speed    = 300.0f/*2600.0f*/;/* pixel / s */
 static const float shot_distance = 16.0f + 4.0f + 1.0f; /* pixel; (5.0 :] 3.0 :[) so it won't hit the ship; fixme: this is such a hack) */ /* fixme: have size/2+1 */
-const static int   shot_range    = 768;  /* ms */
-const static int   shot_damage   = 32;   /* joule */
-const static int   shot_rechage  = 256;  /* ms */
-const static float shot_impact   = 6.0f; /* tonne pixels / s */
+static const int   shot_range    = 768;  /* ms */
+static const int   shot_damage   = 32;   /* joule */
+static const int   shot_rechage  = 256;  /* ms */
+static const float shot_impact   = 6.0f; /* tonne pixels / s */
 
 struct Wmd {
 	struct Sprite *sprite;

@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
 	printf("#include <stdlib.h> /* bsearch */\n");
 	printf("#include <stdio.h>  /* fprintf */\n");
 	printf("#include <string.h> /* strcmp */\n");
-	printf("#include \"Lore.h\";  /* or whatever you ./Loader dir/ > Lore.h */\n\n");
+	printf("#include \"Lore.h\"   /* or whatever you ./Loader dir/ > Lore.h */\n\n");
 
 	/* debug! */
 	printf("struct Image;\n\n");
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
 	printf(" @param img\t\tThe image.\n");
 	printf(" @param fp\t\tFile pointer where you want the image to go; eg, stdout. */\n");
 	printf("void image_print(const struct Image *image, const unsigned char *data) {\n");
-	printf("\tint x, y;\n\n");
+	printf("\tunsigned x, y;\n\n");
 	printf("\tif(!image || !data) { fprintf(stderr, \"0\\n\"); return; }\n");
 	printf("\tfor(y = 0; y < image->height; y++) {\n");
 	printf("\t\tfor(x = 0; x < image->width; x++) {\n");
@@ -338,7 +338,7 @@ static int print_images(const char *const directory) {
 			/* get file size */
 			if(!(fp = fopen(pn, "r"))
 			   || fseek(fp, 0, SEEK_END)
-			   || (size = ftell(fp)) == -1
+			   || (int)(size = ftell(fp)) == -1
 			   || fclose(fp)) { perror(fn); fclose(fp); return 0; }
 			/* re-open it in lodepng to get the other info */
 			if((error = lodepng_decode32_file(&data, &width, &height, pn))) {
@@ -384,7 +384,7 @@ static int print_images(const char *const directory) {
 			/* get file size */
 			if(!(fp = fopen(pn, "r"))
 			   || fseek(fp, 0, SEEK_END)
-			   || (size = ftell(fp)) == -1
+			   || (int)(size = ftell(fp)) == -1
 			   || fclose(fp)) { perror(fn); fclose(fp); return 0; }
 			/* re-open */
 			if(!(bmp = BitmapFile(pn))) return 0;

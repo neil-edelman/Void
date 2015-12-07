@@ -519,7 +519,7 @@ static int texture(struct Image *image) {
 			depth  = 3;
 			break;
 		case IF_BMP:
-			if(!(bmp = Bitmap())) break;
+			if(!(bmp = Bitmap(image->data, image->data_size))) break;
 			is_alloc = -1;
 			width    = BitmapGetWidth(bmp);
 			height   = BitmapGetHeight(bmp);

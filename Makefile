@@ -28,7 +28,7 @@ RSRC  := icon.rsrc
 INST  := $(PROJ)-$(VA)_$(VB)
 
 # extra stuff we should back up
-EXTRA := $(SDIR)/icon.rc todo.txt msvc2010.txt unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c
+EXTRA := $(SDIR)/icon.rc todo.txt build/msvc2010.txt unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c
 
 OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES))
 SRCS  := $(patsubst %,$(SDIR)/%.c,$(FILES))
@@ -67,7 +67,7 @@ BMP_H  := $(patsubst $(MDIR)/%.bmp,$(BDIR)/%_bmp.h,$(BMP))
 TEXT   := $(wildcard $(MDIR)/*.txt)
 
 CC   := gcc
-CF   := -Wall -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi # UNIX/PC: -DGLEW #-std=c99 # ansi doesn't have fmath fn's
+CF   := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi # UNIX/PC: -DGLEW #-std=c99 # ansi doesn't have fmath fn's
 OF   := -framework OpenGL -framework GLUT # UNIX: -lglut -lGLEW; PC: depends
 
 # props Jakob Borg and Eldar Abusalimov

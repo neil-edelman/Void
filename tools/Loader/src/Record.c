@@ -53,7 +53,7 @@ static struct Record {
 	struct Field fields[MAX_FIELDS];
 } *records;
 static const int max_record_name = sizeof((struct Record *)0)->name / sizeof(char);
-static const int max_record_fields = sizeof((struct Record *)0)->fields / sizeof(struct Field);
+static const unsigned max_record_fields = sizeof((struct Record *)0)->fields / sizeof(struct Field);
 static int no_records, records_capacity;
 
 const        char *delimiters = " \t\n\r";
@@ -104,7 +104,8 @@ void RecordOutput(void) {
 	struct Record *record;
 	struct Type *type;
 	char *name;
-	int i, j;
+	int i;
+	unsigned j;
 
 	if(!is_sorted) sort();
 
@@ -136,7 +137,7 @@ void RecordOutput(void) {
 int RecordLoadInstance(const struct Record *const record, char *data[MAX_FIELDS], struct Reader *read) {
 	char **datum_ptr, *szvalue, *str;
 	const char *szrecord;
-	int i;
+	unsigned i;
 
 	if(!record || !data || !read) return 0;
 
@@ -167,7 +168,7 @@ int RecordLoadInstance(const struct Record *const record, char *data[MAX_FIELDS]
 }
 
 void RecordEraseInstance(const struct Record *const record, char *data[MAX_FIELDS]) {
-	int i;
+	unsigned i;
 
 	if(!record || !data) return;
 
@@ -184,7 +185,7 @@ void RecordEraseInstance(const struct Record *const record, char *data[MAX_FIELD
 }
 
 void RecordPrintInstance(const struct Record *record, const char *const data[MAX_FIELDS]) {
-	int i;
+	unsigned i;
 
 	if(!record || !data) return;
 

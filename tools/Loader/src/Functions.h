@@ -89,7 +89,7 @@ static char *camel_to_snake_case(const char *const str) {
 	char *c, *b = &buffer[0];
 
 	for(c = (char *)str; c; c++) {
-		if(!*c || b - buffer >= sizeof(buffer) / sizeof(char) - 1 - 2) break;
+		if(!*c || (char *)(b - buffer) >= (char *)(sizeof(buffer) / sizeof(char)) - 1 - 2) break;
 		if(islower(*c)) {
 			*(b++) = *c;
 		} else if(isupper(*c)) {

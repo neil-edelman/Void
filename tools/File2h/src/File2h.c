@@ -14,7 +14,7 @@
 
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
-#include <string.h> /* strrchr */
+#include <string.h> /* strrchr, strdup (not std :[ ) */
 
 /* constants */
 static const char *programme   = "File2h";
@@ -31,7 +31,7 @@ static void usage(const char *argvz);
 int main(int argc, char **argv) {
 	FILE *fp;
 	unsigned char read[1024], *byte;
-	char *name, *a;
+	char *argvname, *name, *a;
 	size_t read_size = sizeof(read) / sizeof(unsigned char), no;
 	int ret = EXIT_SUCCESS;
 	int no_line = 0;
@@ -44,15 +44,16 @@ int main(int argc, char **argv) {
 	}
 
 	/* get c name from file name */
-	if((name = strrchr(argv[1], '/'))) {
-		name++;
+	if((argvname = strrchr(argv[1], '/'))) {
+		argvname++;
 	} else {
-		name = argv[1];
+		argvname = argv[1];
 	}
-	if(!(name = strdup(name))) {
+	if(!(name = malloc(strlen(argvname) + 1))) {
 		perror(argv[1]);
 		return EXIT_FAILURE;
 	};
+	strcpy(name, argvname);
 	for(a = name; *a; a++) {
 		if((*a < 'A' || *a > 'Z')
 		   && (*a < 'a' || *a > 'z')

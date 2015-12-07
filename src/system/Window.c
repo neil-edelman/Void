@@ -75,6 +75,8 @@ int WindowIsGlError(const char *function) {
 	static int no_errs;
 	GLenum err;
 	int ohoh = 0;
+
+	if(!is_started) return 0;
 	while((err = glGetError()) != GL_NO_ERROR) {
 		time_t now;
 		time(&now);

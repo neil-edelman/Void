@@ -24,8 +24,10 @@ ICON := icon.ico
 RSRC  := icon.rsrc
 INST  := $(PROJ)-$(VA)_$(VB)
 
+MSVC := build/msvc2013
+
 # extra stuff we should back up
-EXTRA := $(SDIR)/icon.rc todo.txt build/msvc2010.txt unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c
+EXTRA := $(SDIR)/icon.rc todo.txt build/msvc2010.txt unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c $(MSVC)/Void.sdf $(MSVC)/Void.sln $(MSVC)/Void.v12.suo $(MSVC)/Void.vcxproj $(MSVC)/Void.vcxproj.filters $(MSVC)/Void.vcxproj.user build/Makefile-Redhat
 
 # John Graham-Cumming:
 # rwildcard is a recursive wildcard
@@ -182,12 +184,12 @@ clean:
 
 backup:
 	@mkdir -p $(BACK)
-	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP)
+	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS) $(FS) $(RES_F) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP)
 
 # this backs up everything including the media files for publication (excuding)
 source: #$(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(PNG_H) $(JPEG_H) $(BMP_H)
 	@mkdir -p $(BDIR)
-	zip $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(PNG) $(JPEG) $(BMP) $(TEXT) #$(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(PNG_H) $(JPEG_H) $(BMP_H) too big
+	zip $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(PNG) $(JPEG) $(BMP) $(TEXT) $(VS) $(FS) #$(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(PNG_H) $(JPEG_H) $(BMP_H) #too big
 
 icon: default
 	# . . . setting icon on a Mac.

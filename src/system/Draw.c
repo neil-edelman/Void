@@ -151,6 +151,8 @@ static float   camera_x, camera_y;
 int Draw(void) {
 	int i;
 
+	/* fixme: this crashes on Windows? */
+
 	if(is_started) return -1;
 
 	if(!WindowStarted()) {
@@ -318,6 +320,8 @@ void Draw_(void) {
 		vbo_geom = 0;
 	}
 	/* get all the errors that we didn't catch */
+	/* fixme: window destroy on Windows destroys the queue and it says
+	 'invalid operation' */
 	WindowIsGlError("~Draw");
 
 	is_started = 0;
@@ -619,6 +623,8 @@ static int light_compute_texture(void) {
 		for(i = 0; i < buffer_xsize; i++) {
 			x = (float)i - 0.5f*buffer_xsize + 0.5f;
 			y = (float)j - 0.5f*buffer_ysize + 0.5f;
+			
+			/* THESE NEXT TWO LINES CRASH WINDOWS */
 			buffer[j][i][0] = fminf(sqrtf(x*x + y*y) * buffer_norm, 1.0f);
 			/* NOTE: opengl clips [0, 1), even if it says different;
 			 maybe it's GL_LINEAR? */

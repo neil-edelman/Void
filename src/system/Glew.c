@@ -34,10 +34,10 @@ int Glew(void) {
 		return 0;
 	}
 	if(!glewIsSupported("GL_VERSION_2_0") /* !GLEW_VERSION_2_0 ? */) {
-		printf("Glew: OpenGL 2.0+ shaders are not supported. :[\n");
+		fprintf(stderr, "Glew: OpenGL 2.0+ shaders are not supported. :[\n");
 		return 0;
 	}
-	fprintf(stdout, "Glew: GLEW %s extension loading library ready for OpenGL 2.0+.\n", glewGetString(GLEW_VERSION));
+	fprintf(stderr, "Glew: GLEW %s extension loading library ready for OpenGL 2.0+.\n", glewGetString(GLEW_VERSION));
 #endif
 
 	is_started = -1;

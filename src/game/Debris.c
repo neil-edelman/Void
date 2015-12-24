@@ -48,7 +48,7 @@ struct Debris *Debris(const int texture, const int size, const float mass) {
 	SpriteSetContainer(deb, &deb->sprite);
 	deb->omega      = 0.0f;
 	deb->mass       = mass;
-	deb->hit        = mass * hit_per_mass;
+	deb->hit        = (int)(mass * hit_per_mass);
 	/*deb->on_kill    = 0;*/
 	debris_size++;
 	if(Pedantic()) fprintf(stderr, "Debris: created from pool, Deb%u->Spr%u.\n", DebrisGetId(deb), SpriteGetId(deb->sprite));
@@ -186,7 +186,7 @@ void DebrisExplode(struct Debris *deb) {
 	vy *= explosion_elasticity;
 
 	/* new debris */
-	sub = Debris(2, 16.0f, 5.0f);
+	sub = Debris(2, 16, 5.0f);
 	SpriteSetOrientation(sub->sprite, x, y, theta);
 	/*SpriteSetOrientation(sub->sprite, 100.0f, 100.0f, theta);*/
 	SpriteGetOrientation(sub->sprite, &x, &y, &theta);

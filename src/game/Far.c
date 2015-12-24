@@ -73,8 +73,8 @@ struct Far *Far(const struct ObjectsInSpace *ois) {
 	}
 	far = &backgrounds[backgrounds_size++];
 
-	far->x       = ois->x;
-	far->y       = ois->y;
+	far->x       = (float)ois->x;
+	far->y       = (float)ois->y;
 	far->theta   = 0.0f;
 	far->size    = ois->type->image->width;
 	far->texture = ois->type->image->texture;
@@ -188,10 +188,10 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 		DrawGetCamera(&camera_x, &camera_y);
 		camera_x *= foreshortening;
 		camera_y *= foreshortening;
-		x_min_window = camera_x - w;
-		x_max_window = camera_x + w;
-		y_min_window = camera_y - h;
-		y_max_window = camera_y + h;
+		x_min_window = (int)camera_x - w;
+		x_max_window = (int)camera_x + w;
+		y_min_window = (int)camera_y - h;
+		y_max_window = (int)camera_y + h;
 		x_min = x_min_window - half_max_size;
 		x_max = x_max_window + half_max_size;
 		y_min = y_min_window - half_max_size;
@@ -232,7 +232,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 	/* consider y */
 	while(window_iterator && window_iterator->y <= y_max) {
 		if(window_iterator->is_selected) {
-			int extent = ((window_iterator->size >> 1) + 1) * one_foreshortening;
+			int extent = (int)((window_iterator->size >> 1) + 1) * one_foreshortening;
 			/* tighter bounds -- slow, but worth it; fixme: optimise for b-t */
 			if(   window_iterator->x > x_min_window - extent
 			   && window_iterator->x < x_max_window + extent

@@ -88,7 +88,7 @@ struct Ship *Ship(struct Ship **notify, const struct ShipClass *ship_class, cons
 	if(!(ship->sprite = Sprite(S_SHIP, ship_class->image->texture, ship_class->image->width))) return 0;
 	SpriteSetContainer(ship, &ship->sprite);
 	ship->class      = ship_class;
-	ship->mass       = ship_class->mass;
+	ship->mass       = (float)ship_class->mass; /* make int! */
 	ship->omega      = 0.0f;
 	ship->ms_recharge_wmd = 0;
 	ship->ms_recharge_hit = 0;

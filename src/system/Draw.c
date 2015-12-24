@@ -151,14 +151,13 @@ static float   camera_x, camera_y;
 int Draw(void) {
 	int i;
 
-	/* fixme: this crashes on Windows? */
-
 	if(is_started) return -1;
 
 	if(!WindowStarted()) {
 		fprintf(stderr, "Draw: window not started.\n");
 		return 0;
 	}
+
 	glutDisplayFunc(&display);
 	glutReshapeFunc(&resize);
 
@@ -187,7 +186,7 @@ int Draw(void) {
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
 	/* lighting */
 	glActiveTexture(GT_LIGHT);
-	light_tex = light_compute_texture();
+	if(!(light_tex = light_compute_texture())) fprintf(stderr, "Draw: failed computing light texture.\n");
 	/* textures stored in imgs */
 	for(i = 0; i < max_images; i++) texture(&images[i]);
 
@@ -320,8 +319,6 @@ void Draw_(void) {
 		vbo_geom = 0;
 	}
 	/* get all the errors that we didn't catch */
-	/* fixme: window destroy on Windows destroys the queue and it says
-	 'invalid operation' */
 	WindowIsGlError("~Draw");
 
 	is_started = 0;
@@ -613,22 +610,22 @@ static int texture(struct Image *image) {
 static int light_compute_texture(void) {
 	int   i, j;
 	float x, y;
-	float buffer[512][512][2];
-	const int buffer_ysize = sizeof(buffer)  / sizeof(*buffer);
-	const int buffer_xsize = sizeof(*buffer) / sizeof(**buffer);
-	const float buffer_norm = (float)M_SQRT1_2 * 4.0f / sqrtf((float)buffer_xsize * buffer_xsize + buffer_ysize * buffer_ysize);
+	float *buffer; /*[512][512][2]; MSVC does not have space on the stack*/
+	/*const int buffer_ysize = sizeof(buffer)  / sizeof(*buffer);
+	const int buffer_xsize = sizeof(*buffer) / sizeof(**buffer);*/
+	const int buffer_size = 512; /* width/height */
+	const float buffer_norm = (float)M_SQRT1_2 * 4.0f / sqrtf(2.0f * buffer_size * buffer_size);
 	int name;
 
-	for(j = 0; j < buffer_ysize; j++) {
-		for(i = 0; i < buffer_xsize; i++) {
-			x = (float)i - 0.5f*buffer_xsize + 0.5f;
-			y = (float)j - 0.5f*buffer_ysize + 0.5f;
-			
-			/* THESE NEXT TWO LINES CRASH WINDOWS */
-			buffer[j][i][0] = fminf(sqrtf(x*x + y*y) * buffer_norm, 1.0f);
+	if(!(buffer = malloc(sizeof(float) * buffer_size * buffer_size << 1))) return 0;
+	for(j = 0; j < buffer_size; j++) {
+		for(i = 0; i < buffer_size; i++) {
+			x = (float)i - 0.5f*buffer_size + 0.5f;
+			y = (float)j - 0.5f*buffer_size + 0.5f;
+			buffer[((j*buffer_size + i) << 1) + 0] = fminf(sqrtf(x*x + y*y) * buffer_norm, 1.0f);
 			/* NOTE: opengl clips [0, 1), even if it says different;
 			 maybe it's GL_LINEAR? */
-			buffer[j][i][1] = fmodf(atan2f(y, x) + (float)M_2PI, (float)M_2PI) * (float)M_1_2PI;
+			buffer[((j*buffer_size + i) << 1) + 1] = fmodf(atan2f(y, x) + (float)M_2PI, (float)M_2PI) * (float)M_1_2PI;
 		}
 	}
 	glGenTextures(1, (unsigned *)&name);
@@ -641,9 +638,10 @@ static int light_compute_texture(void) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	/* void glTexImage2D(target, level, internalFormat, width, height,
 	 border, format, type, *data); */
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, buffer_xsize, buffer_ysize, 0,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, buffer_size, buffer_size, 0,
 		GL_RG, GL_FLOAT, buffer);
-	fprintf(stderr, "Draw::texture: created %dx%dx%d hardcoded lighting texture, Tex%u.\n", buffer_xsize, buffer_ysize, 2, name);
+	free(buffer);
+	fprintf(stderr, "Draw::texture: created %dx%dx%d hardcoded lighting texture, Tex%u.\n", buffer_size, buffer_size, 2, name);
 
 	WindowIsGlError("light_compute_texture");
 

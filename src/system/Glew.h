@@ -1,5 +1,8 @@
-/* we need to go about using glew */
+/* we need to go about using glew? and then glew will include win.h which is
+ has a bajillon warnings */
 #ifdef GLEW
+#pragma warning(push, 0)
+
 #define GL_GLEXT_PROTOTYPES /* *duh* */
 #define GLEW_STATIC         /* (of course) */
 /* http://glew.sourceforge.net/
@@ -13,6 +16,7 @@
  add include directories eg ...\freeglut-2.8.1\include */
 #include <GL/glut.h>
 
+#pragma warning(pop)
 #else
 /* supports OpenGL 2.0 intrinsically (hopefully) */
 

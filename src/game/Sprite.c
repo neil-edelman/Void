@@ -302,10 +302,10 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 		h = (screen_height >> 1) + (screen_height & 1);
 		/* determine the window */
 		DrawGetCamera(&camera_x, &camera_y);
-		x_min_window = camera_x - w;
-		x_max_window = camera_x + w;
-		y_min_window = camera_y - h;
-		y_max_window = camera_y + h;
+		x_min_window = (int)camera_x - w;
+		x_max_window = (int)camera_x + w;
+		y_min_window = (int)camera_y - h;
+		y_max_window = (int)camera_y + h;
 		x_min = x_min_window - half_max_size;
 		x_max = x_max_window + half_max_size;
 		y_min = y_min_window - half_max_size;

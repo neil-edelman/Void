@@ -1,6 +1,7 @@
+struct Image;
 struct Debris;
 
-struct Debris *Debris(const int texture, const int size, const float mass);
+struct Debris *Debris(const struct Image *image, const float mass);
 void Debris_(struct Debris **deb_ptr);
 void DebrisSetOrientation(struct Debris *deb, const float x, const float y, const float theta, const float vx, const float vy, const float omega);
 void DebrisGetOrientation(struct Debris *deb, float *x_ptr, float *y_ptr, float *theta_ptr);

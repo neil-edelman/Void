@@ -11,7 +11,7 @@ http://lodev.org/lodepng/
 src/fileformat/nanojpeg: by Martin J. Fiedler <martin.fiedler@gmx.net>
 http://keyj.emphy.de/nanojpeg/
 
-Version 3.2.
+Version 3.3.
 
 Usage: Void
 

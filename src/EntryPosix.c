@@ -23,7 +23,7 @@
 static const char *programme   = "Void";
 static const char *year        = "2015";
 static const int versionMajor  = 3;
-static const int versionMinor  = 2;
+static const int versionMinor  = 3;
 
 struct Entry {
 	int i;
@@ -43,16 +43,13 @@ int Pedantic(void) { return 0; }
  @param argv the arguments
  @return     either EXIT_SUCCESS or EXIT_FAILURE */
 int main(int argc, char **argv) {
-	/*struct Bitmap *bmp;*/
 	const int framelenght_ms = TimerGetFramelength();
-	int number_of_objects = 1648;
 
 	/* fixme: more options! (ie, load game, etc) */
 	if(argc > 1) {
 		usage();
 		return EXIT_SUCCESS;
 	}
-	fprintf(stderr, "main: base number of objects: %d.\n", number_of_objects);
 
 	/* we generally don't have return because glutMainLoop() never does */
 	if(atexit(&main_)) perror("atexit");

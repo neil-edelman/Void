@@ -5,7 +5,8 @@
 #include <stdio.h>  /* fprintf */
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
-#include "../EntryPosix.h" /* Debug, Pedantic */
+#include "../EntryPosix.h"   /* Debug, Pedantic */
+#include "../../bin/Lore.h"  /* auto-generated; Image */
 #include "Sprite.h"
 #include "../general/Sorting.h"
 #include "../system/Timer.h" /* hmmm, Wmd should go in Wmd */
@@ -118,18 +119,17 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 /** Get a new sprite from the pool of unused. Should only be called from the
  consturctors of another class. You will most probably do an immediate
  {@code Sprite::setContainer} after to complete the "subclassing."
- @param type		Type of sprite.
- @param texture		On the GPU.
- @param size		Pixels.
- @return			True on success; the sprite will go in notify. */
-struct Sprite *Sprite(const enum Sprites type, const int texture, const int size) {
+ @param type	Type of sprite.
+ @param image	Image resource.
+ @return		True on success; the sprite will go in notify. */
+struct Sprite *Sprite(const enum Sprites type, const struct Image *image) {
 	struct Sprite *sprite;
 
 	if(sprites_size >= sprites_capacity) {
 		fprintf(stderr, "Sprite: couldn't be created; reached maximum of %u.\n", sprites_capacity);
 		return 0;
 	}
-	if(!texture || size <= 0) {
+	if(!image || image->width != image->height /* fixme */) {
 		fprintf(stderr, "Sprite: invalid.\n");
 		return 0;
 	}
@@ -138,9 +138,9 @@ struct Sprite *Sprite(const enum Sprites type, const int texture, const int size
 	sprite->x  = sprite->y  = 0.0f;
 	sprite->theta   = 0.0f;
 	sprite->vx = sprite->vy = 0.0f;
-	sprite->bounding= size * 0.5f; /* fixme! have a more sutble way */
-	sprite->size    = size;
-	sprite->texture = texture;
+	sprite->bounding= image->width * 0.5f; /* fixme! have a more sutble way */
+	sprite->size    = image->width;
+	sprite->texture = image->texture;
 
 	sprite->type      = type;
 	sprite->container = 0;
@@ -162,7 +162,7 @@ struct Sprite *Sprite(const enum Sprites type, const int texture, const int size
 	 change it's location; just in the interest of being pedantic) */
 	sort_notify(sprite);
 
-	if(Pedantic()) fprintf(stderr, "Sprite: created from pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), texture);
+	if(Pedantic()) fprintf(stderr, "Sprite: created from pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), image->texture);
 
 	return sprite;
 }
@@ -221,6 +221,11 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	}
 
 	*sprite_ptr = sprite = 0;
+}
+
+int SpriteGetSize(const struct Sprite *const s) {
+	if(!s) return 0;
+	return s->size;
 }
 
 int SpriteGetConsidered(void) { return sprites_considered; }

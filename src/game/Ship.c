@@ -34,7 +34,7 @@
 static const float epsilon = 0.001f;
 
 /* fixme */
-const static float shot_recharge_ms = 300.0f;
+static const float shot_recharge_ms = 300.0f;
 
 /* ai */
 
@@ -85,7 +85,7 @@ struct Ship *Ship(struct Ship **notify, const struct ShipClass *ship_class, cons
 	}
 	ship = &ships[ships_size];
 	/* superclass */
-	if(!(ship->sprite = Sprite(S_SHIP, ship_class->image->texture, ship_class->image->width))) return 0;
+	if(!(ship->sprite = Sprite(S_SHIP, ship_class->image))) return 0;
 	SpriteSetContainer(ship, &ship->sprite);
 	ship->class      = ship_class;
 	ship->mass       = (float)ship_class->mass; /* make int! */

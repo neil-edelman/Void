@@ -6,6 +6,7 @@
 #include <math.h>   /* sinf, cosf */
 #include <string.h> /* memcpy */
 #include "../EntryPosix.h" /* Debug, Pedantic */
+#include "../../bin/Lore.h" /* auto-generated; Image */
 #include "Sprite.h"
 #include "Wmd.h"
 #include "Light.h"
@@ -37,13 +38,19 @@ static int       wmds_size;
 /* public */
 
 /** Get a new wmds from the pool of unused.
- @param		Optional ship.
- @return	A Wmd or null. */
+ @param		from	Optional ship.
+ @param		colour	which of rgb? fixme!! have an actual colour
+ @return			A Wmd or null. */
 struct Wmd *Wmd(struct Sprite *const from, const int colour) {
+	struct Image *shot;
 	struct Wmd *wmd;
 	float x = 0.0f, y = 0.0f, theta = 0.0f;
 	float c, s, vx, vy;
 
+	if(!(shot = ImageSearch("shot.png"))) {
+		fprintf(stderr, "Wmd: couldn't find shot.png.\n");
+		return 0;
+	}
 	if(!from) {
 		fprintf(stderr, "Wmd: invalid.\n");
 		return 0;
@@ -53,7 +60,7 @@ struct Wmd *Wmd(struct Sprite *const from, const int colour) {
 		return 0;
 	}
 	wmd = &wmds[wmds_size];
-	if(!(wmd->sprite = Sprite(S_WMD, 5, 8))) return 0; /* FIXME */
+	if(!(wmd->sprite = Sprite(S_WMD, shot))) return 0; /* FIXME */
 	SpriteSetContainer(wmd, &wmd->sprite);
 	wmd->expires= TimerLastTime() + shot_range;
 	wmd->from   = from;

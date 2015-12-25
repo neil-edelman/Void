@@ -69,10 +69,8 @@ void poll_sprites(void);
 
 /** constructor */
 int Game(void) {
-#if 0
 	struct Debris *asteroid;
-	struct Ship   *bad;
-#endif
+	struct Ship   *alien;
 	struct Far    *bg;
 	const struct ObjectsInSpace *ois;
 	int i;
@@ -96,39 +94,31 @@ int Game(void) {
 
 	/* sprinkle some ships */
 	game.player = Ship(&game.player, game.nautilus, B_HUMAN);
-#if 0
-	for(i = 0; i < (load * 0.05); i++) {
-		bad = Ship(0, game.scorpion, B_STUPID);
-		ShipSetOrientation(bad, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
+	for(i = 0; i < 100; i++) {
+		alien = Ship(0, game.scorpion, B_STUPID);
+		ShipSetOrientation(alien, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
-#endif
 
 	/* set drawing elements */
 	DrawSetBackground("Dorado.jpeg");
 	DrawSetShield("Bar.png");
 
-#if 0
 	/* some asteroids; fixme: debris limit 4096; sometimes it crashes when
 	 reaching; gets incresingly slow after 1500, but don't need debris when
 	 it's really far (cpu!) */
-	for(i = 0; i < (load * 0.95); i++) {
+	for(i = 0; i < 1000; i++) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
 		/*printf("Game: new Asteroid, checking:\n");*/
 		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
 		 fprintf(stderr, "Game: would cause collision with sprite; waiving asteroid.\n");
 		 continue;
 		 }*/
-		asteroid = Debris(type->image->texture, type->image->width, 10.0f);
-		DebrisSetOrientation(game.asteroid,
+		asteroid = Debris(game.asteroid->image, 10.0f);
+		DebrisSetOrientation(asteroid,
 							 x, y, t, /* (x,y):t */
 							 vx, vy, o); /* (vx,vy):o */
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
-#endif
-
-	printf("# sprites\tsprites considered\tsprites on-screen\tframerate (Hz)\tx-size\ty-size\n");
-	Event(3000, &add_sprites);
-	Event(5000, &poll_sprites);
 
 	fprintf(stderr, "Game: on.\n");
 	is_started = -1;
@@ -241,7 +231,7 @@ void add_sprites(void) {
 	}
 	fprintf(stderr, "Game: adding more sprites.\n");
 	for(i = 0; i < rocks; i++) {
-		asteroid = Debris(game.asteroid->image->texture, game.asteroid->image->width, 10.0f);
+		asteroid = Debris(game.asteroid->image, 10.0f);
 		DebrisSetOrientation(asteroid, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), rnd(50.0f), rnd(50.0f), rnd(1.0f));
 	}
 	for(i = 0; i < aliens; i++) {

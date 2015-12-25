@@ -11,7 +11,7 @@
  it's delicate.
 
  @author	Neil
- @version	2.0, 2015-05
+ @version	3.3, 2015-12
  @since		1.0, 2005? */
 
 /* bitmap format: */

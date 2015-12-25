@@ -1,9 +1,12 @@
+struct Image;
+
 enum Sprites { S_NONE = 0, S_DEBRIS, S_SHIP, S_WMD };
 
 struct Sprite;
 
-struct Sprite *Sprite(const enum Sprites type, const int texture, const int size);
+struct Sprite *Sprite(const enum Sprites type, const struct Image *image);
 void Sprite_(struct Sprite **spriteptr);
+int SpriteGetSize(const struct Sprite *const s);
 int SpriteGetConsidered(void);
 int SpriteGetOnscreen(void);
 int SpriteGetCapacity(void);

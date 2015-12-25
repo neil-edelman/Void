@@ -7,6 +7,8 @@
 #include "../EntryPosix.h" /* Debug, Pedantic */
 #include "Debris.h"
 #include "Sprite.h"
+/* auto-generated; used in constructor */
+#include "../../bin/Lore.h"
 
 /* Debris is everything that doesn't have license, but moves around on a linear
  path, can be damaged, killed, and moved. Astroids and stuff. It would be nice
@@ -35,16 +37,17 @@ static int       debris_size;
 
 /** Get a new debris from the pool of unused.
  @return		A debris or null. */
-struct Debris *Debris(const int texture, const int size, const float mass) {
+struct Debris *Debris(const struct Image *image, const float mass) {
 	struct Debris *deb;
 
+	if(!image) return 0;
 	if(debris_size >= debris_capacity) {
 		fprintf(stderr, "Debris: couldn't be created; reached maximum of %u.\n", debris_capacity);
 		return 0;
 	}
 	deb = &debris[debris_size];
 	/* superclass */
-	if(!(deb->sprite = Sprite(S_DEBRIS, texture, size))) return 0;
+	if(!(deb->sprite = Sprite(S_DEBRIS, image))) return 0;
 	SpriteSetContainer(deb, &deb->sprite);
 	deb->omega      = 0.0f;
 	deb->mass       = mass;
@@ -169,6 +172,7 @@ void DebrisEnforce(struct Debris *deb) {
 
 /** Spawns smaller Debris. Leaves you to destroy the large one. */
 void DebrisExplode(struct Debris *deb) {
+	struct Image *small;
 	struct Debris *sub;
 	float x, y, theta, vx, vy;
 
@@ -180,13 +184,20 @@ void DebrisExplode(struct Debris *deb) {
 	SpriteGetVelocity(deb->sprite, &vx, &vy);
 	if(Debug()) fprintf(stderr, "Deb%u is exploding at (%.3f, %.3f).\n", DebrisGetId(deb), x, y);
 
+	/* too small -- just vaporise */
+	if(!(small = ImageSearch("AsteroidSmall.png")) ||
+	   SpriteGetSize(deb->sprite) <= small->width) {
+		return;
+		/*Debris_(&deb);*/
+	}
+
 	/* how to break up */
 	/*mass_div = */
 	vx *= explosion_elasticity;
 	vy *= explosion_elasticity;
 
-	/* new debris */
-	sub = Debris(2, 16, 5.0f);
+	/* break into pieces -- new debris */
+	sub = Debris(small, 5.0f);
 	SpriteSetOrientation(sub->sprite, x, y, theta);
 	/*SpriteSetOrientation(sub->sprite, 100.0f, 100.0f, theta);*/
 	SpriteGetOrientation(sub->sprite, &x, &y, &theta);

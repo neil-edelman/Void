@@ -11,7 +11,7 @@ BACK  := backup
 
 # files in sdir
 FILES := Reader Error Type Record Lore Loader
-FORMAT := Bitmap lodepng nanojpeg
+FORMAT := lodepng nanojpeg #Bitmap <- took this out
 
 # extra stuff we should back up
 EXTRA := $(SDIR)/Functions.h

@@ -19,7 +19,6 @@
 /* include file formats for uncompressing in texture() */
 #include "../format/lodepng.h"
 #include "../format/nanojpeg.h"
-#include "../format/Bitmap.h"
 
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
@@ -488,7 +487,6 @@ static void tex_map_attrib(const GLuint shader) {
  @param image	The Image as seen in Lores.h.
  @return		Success. */
 static int texture(struct Image *image) {
-	struct Bitmap *bmp;
 	unsigned width, height, depth, error;
 	unsigned char *pic;
 	int is_alloc = 0, is_bad = 0;
@@ -516,6 +514,7 @@ static int texture(struct Image *image) {
 			height = njGetHeight();
 			depth  = 3;
 			break;
+		/* took this out -- why would you want it when you can now save as png?
 		case IF_BMP:
 			if(!(bmp = Bitmap(image->data, image->data_size))) break;
 			is_alloc = -1;
@@ -523,7 +522,7 @@ static int texture(struct Image *image) {
 			height   = BitmapGetHeight(bmp);
 			depth    = BitmapGetDepth(bmp);
 			pic      = BitmapGetData(bmp);
-			break;
+			break;*/
 		case IF_UNKNOWN:
 		default:
 			Debug("Unknown image format.\n");
@@ -592,8 +591,8 @@ static int texture(struct Image *image) {
 		case IF_JPEG:
 			njDone();
 			break;
-		case IF_BMP:
-			Bitmap_(&bmp);
+		/*case IF_BMP:
+			Bitmap_(&bmp);*/
 		default:
 			break;
 	}

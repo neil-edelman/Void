@@ -11,7 +11,7 @@
 #include <dirent.h> /* opendir readdir closedir */
 
 /* include code to load images for dimensions */
-#include "../../../src/format/Bitmap.h"
+/* #include "../../../src/format/Bitmap.h" took this out */
 #include "../../../src/format/lodepng.h"
 #include "../../../src/format/nanojpeg.h"
 
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
 			   types_dir, types_dir[strlen(argv[1]) - 1] != '/' ? "/" : "",
 			   programme, versionMajor, versionMinor, year);
 		printf("#include <stddef.h> /* size_t */\n\n");
-		printf("enum ImageFormat { IF_UNKNOWN, IF_PNG, IF_JPEG, IF_BMP };\n\n");
+		printf("enum ImageFormat { IF_UNKNOWN, IF_PNG, IF_JPEG };\n\n");
 		printf("/* image is a base datatype; it's not in c; we need this */\n");
 		printf("struct Image {\n");
 		printf("\tconst char *name;\n");
@@ -378,7 +378,10 @@ static int print_images(const char *const directory) {
 				else fprintf(stderr, "%s: decoding failed.\n", pn);
 				return 0;
 			}
-		} else if(!strcmp("IF_BMP", type)) {
+		}
+#if 0
+		/* took this out -- why would you want to use bmps? */
+		else if(!strcmp("IF_BMP", type)) {
 			FILE *fp;
 			struct Bitmap *bmp;
 			/* get file size */
@@ -392,7 +395,9 @@ static int print_images(const char *const directory) {
 			height = BitmapGetHeight(bmp);
 			depth  = BitmapGetDepth(bmp);
 			Bitmap_(&bmp);
-		} else {
+		}
+#endif
+		else {
 			fprintf(stderr, "%s: unrecognised image format.\n", pn);
 			return 0;
 		}

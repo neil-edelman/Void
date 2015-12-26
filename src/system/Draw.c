@@ -2,8 +2,8 @@
  General Public License, see copying.txt */
 
 #include <stdlib.h> /* malloc free */
-#include <stdio.h>  /* fprintf */
 #include <math.h>   /* cis */
+#include "../Print.h"
 #include "Glew.h"
 #include "../general/Map.h"
 #include "../game/Sprite.h"
@@ -154,7 +154,7 @@ int Draw(void) {
 	if(is_started) return -1;
 
 	if(!WindowStarted()) {
-		fprintf(stderr, "Draw: window not started.\n");
+		Debug("Draw: window not started.\n");
 		return 0;
 	}
 
@@ -180,13 +180,13 @@ int Draw(void) {
 	glVertexAttribPointer(G_POSITION, vertex_pos_size, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), vertex_pos_offset);
     glEnableVertexAttribArray(G_TEXTURE);
     glVertexAttribPointer(G_TEXTURE,  vertex_tex_size, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), vertex_tex_offset);
-	fprintf(stderr, "Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
+	Debug("Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
 
 	/* textures */
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
 	/* lighting */
 	glActiveTexture(GT_LIGHT);
-	if(!(light_tex = light_compute_texture())) fprintf(stderr, "Draw: failed computing light texture.\n");
+	if(!(light_tex = light_compute_texture())) Debug("Draw: failed computing light texture.\n");
 	/* textures stored in imgs */
 	for(i = 0; i < max_images; i++) texture(&images[i]);
 
@@ -253,7 +253,7 @@ int Draw(void) {
 	/*glGenBuffers(1, (GLuint *)&spot_geom);
 	glBindBuffer(GL_ARRAY_BUFFER, spot_geom);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(spots), spots, GL_STREAM_DRAW);
-	fprintf(stderr, "Draw: created spot particle buffer, Vbo%u.\n", spot_geom); */
+	Debug("Draw: created spot particle buffer, Vbo%u.\n", spot_geom); */
 
 	glUseProgram(0);
 
@@ -273,21 +273,21 @@ void Draw_(void) {
 
 	/*if(glIsBuffer(spot_geom)) {
 		glDeleteBuffers(1, &spot_geom);
-		fprintf(stderr, "~Draw: Deleted particle buffer.\n");
+		Debug("~Draw: Deleted particle buffer.\n");
 		spot_geom = 0;
 	}*/
 	if(light_shader) {
-		fprintf(stderr, "~Draw: erase Sdr%u.\n", light_shader);
+		Debug("~Draw: erase Sdr%u.\n", light_shader);
 		glDeleteProgram(light_shader);
 		light_shader = 0;
 	}
 	if(far_shader) {
-		fprintf(stderr, "~Draw: erase Sdr%u.\n", far_shader);
+		Debug("~Draw: erase Sdr%u.\n", far_shader);
 		glDeleteProgram(far_shader);
 		far_shader = 0;
 	}
 	if(hud_shader) {
-		fprintf(stderr, "~Draw: erase Sdr%u.\n", hud_shader);
+		Debug("~Draw: erase Sdr%u.\n", hud_shader);
 		glDeleteProgram(hud_shader);
 		hud_shader = 0;
 	}
@@ -295,7 +295,7 @@ void Draw_(void) {
 	/*if(imgs) {
 		while(MapIterate(imgs, (const void **)&name, (void **)&img)) {
 			if(!img || !(tex = ImageGetTexture(img))) continue;
-			fprintf(stderr, "~Draw: erase \"%s,\" Tex%u.\n", name, tex);
+			Debug("~Draw: erase \"%s,\" Tex%u.\n", name, tex);
 			glDeleteTextures(1, (unsigned *)&tex);
 			ImageSetTexture(img, 0);
 		}
@@ -303,18 +303,18 @@ void Draw_(void) {
 	/* textures stored in imgs */
 	for(i = max_images - 1; i; i--) {
 		if((tex = images[i].texture)) {
-			fprintf(stderr, "~Draw: erase texture, Tex%u.\n", tex);
+			Debug("~Draw: erase texture, Tex%u.\n", tex);
 			glDeleteTextures(1, &tex);
 			images[i].texture = 0;
 		}
 	}
 	if(light_tex) {
-		fprintf(stderr, "~Draw: erase lighting texture, Tex%u.\n", light_tex);
+		Debug("~Draw: erase lighting texture, Tex%u.\n", light_tex);
 		glDeleteTextures(1, &light_tex);
 		light_tex = 0;
 	}
 	if(vbo_geom && glIsBuffer(vbo_geom)) {
-		fprintf(stderr, "~Draw: erase Vbo%u.\n", vbo_geom);
+		Debug("~Draw: erase Vbo%u.\n", vbo_geom);
 		glDeleteBuffers(1, &vbo_geom);
 		vbo_geom = 0;
 	}
@@ -352,26 +352,26 @@ void DrawGetScreen(int *width_ptr, int *height_ptr) {
 void DrawSetBackground(const char *const str) {
 	struct Image *image;
 	if(!(image = ImageSearch(str))) {
-		fprintf(stderr, "Draw::setDesktop: image \"%s\" not found.\n", str);
+		Debug("Draw::setDesktop: image \"%s\" not found.\n", str);
 		return;
 	}
 	/* background_tex is a global; the witdh/height of the image can be found with background_tex */
 	background_tex = image->texture;
 	glActiveTexture(GT_BACKGROUND);
 	glBindTexture(GL_TEXTURE_2D, background_tex);
-	fprintf(stderr, "Image \"%s,\" (Tex%u,) set as desktop.\n", image->name, background_tex);
+	Debug("Image \"%s,\" (Tex%u,) set as desktop.\n", image->name, background_tex);
 }
 
 void DrawSetShield(const char *const str) {
 	struct Image *image;
 	if(!(image = ImageSearch(str))) {
-		fprintf(stderr, "Draw::setShield: image \"%s\" not found.\n", str);
+		Debug("Draw::setShield: image \"%s\" not found.\n", str);
 		return;
 	}
 	shield_tex = image->texture;
 	glActiveTexture(GT_SPRITES);
 	glBindTexture(GL_TEXTURE_2D, shield_tex);
-	fprintf(stderr, "Image \"%s,\" (Tex%u,) set as shield.\n", image->name, shield_tex);
+	Debug("Image \"%s,\" (Tex%u,) set as shield.\n", image->name, shield_tex);
 }
 
 /** Compiles, links and verifies a shader.
@@ -395,7 +395,7 @@ static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attri
 		glCompileShader(vs);
 		glGetShaderiv(vs, GL_COMPILE_STATUS, &status);
 		if(!status) { error = S_VERT; break; }
-		fprintf(stderr, "Draw::link_shader: compiled vertex shader, Sdr%u.\n", vs);
+		Debug("Draw::link_shader: compiled vertex shader, Sdr%u.\n", vs);
 
 		/* compile fs */
 		fs = glCreateShader(GL_FRAGMENT_SHADER);
@@ -403,7 +403,7 @@ static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attri
 		glCompileShader(fs);
 		glGetShaderiv(fs, GL_COMPILE_STATUS, &status);
 		if(!status) { error = S_FRAG; break; }
-		fprintf(stderr, "Draw::link_shader: compiled fragment shader, Sdr%u.\n", fs);
+		Debug("Draw::link_shader: compiled fragment shader, Sdr%u.\n", fs);
 
 		/* link */
 		shader = glCreateProgram();
@@ -414,13 +414,13 @@ static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attri
 		glLinkProgram(shader);
 		glGetProgramiv(shader, GL_LINK_STATUS, &status);
 		if(!status) { error = S_LINK; break; }
-		fprintf(stderr, "Draw::link_shader: linked shader programme, Sdr%u.\n", shader);
+		Debug("Draw::link_shader: linked shader programme, Sdr%u.\n", shader);
 
 		/* validate */
 		glValidateProgram(shader);
 		glGetProgramiv(shader, GL_VALIDATE_STATUS, &status);
 		if(!status) { error = S_VALIDATE; break; }
-		fprintf(stderr, "Draw::link_shader: validated shader programme, Sdr%u.\n", shader);
+		Debug("Draw::link_shader: validated shader programme, Sdr%u.\n", shader);
 
 	} while(0);
 
@@ -430,19 +430,19 @@ static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attri
 			break;
 		case S_VERT:
 			glGetShaderInfoLog(vs, sizeof(info), 0, info);
-			fprintf(stderr, "Draw::link_shader: Sdr%u failed vertex shader compilation; OpenGL: %s", vs, info);
+			Debug("Draw::link_shader: Sdr%u failed vertex shader compilation; OpenGL: %s", vs, info);
 			break;
 		case S_FRAG:
 			glGetShaderInfoLog(fs, sizeof(info), 0, info);
-			fprintf(stderr, "Draw::link_shader: Sdr%u failed fragment shader compilation; OpenGL: %s", fs, info);
+			Debug("Draw::link_shader: Sdr%u failed fragment shader compilation; OpenGL: %s", fs, info);
 			break;
 		case S_LINK:
 			glGetProgramInfoLog(shader, sizeof(info), 0, info);
-			fprintf(stderr, "Draw::link_shader: Sdr%u failed shader linking; OpenGL: %s", shader, info);
+			Debug("Draw::link_shader: Sdr%u failed shader linking; OpenGL: %s", shader, info);
 			break;
 		case S_VALIDATE: /* fixme: untested! */
 			glGetProgramInfoLog(shader, sizeof(info), 0, info);
-			fprintf(stderr, "Draw::link_shader: Sdr%u failed shader validation; OpenGL: %s", shader, info);
+			Debug("Draw::link_shader: Sdr%u failed shader validation; OpenGL: %s", shader, info);
 			break;
 	}
 
@@ -450,19 +450,19 @@ static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attri
 	if(fs) {
 		glDeleteShader(fs);
 		if(shader) glDetachShader(shader, fs);
-		fprintf(stderr, "Draw::link_shader: erasing fragment shader, Sdr%u.\n", fs);
+		Debug("Draw::link_shader: erasing fragment shader, Sdr%u.\n", fs);
 	}
 	if(vs) {
 		glDeleteShader(vs);
 		if(shader) glDetachShader(shader, vs);
-		fprintf(stderr, "Draw::link_shader: erasing vertex shader, Sdr%u.\n", vs);
+		Debug("Draw::link_shader: erasing vertex shader, Sdr%u.\n", vs);
 	}
 
 	/* resume catching */
 	if(error) {
 		if(shader) {
 			glDeleteProgram(shader);
-			fprintf(stderr, "Draw::link_shader: deleted shader programme, Sdr%u.\n", shader);
+			Debug("Draw::link_shader: deleted shader programme, Sdr%u.\n", shader);
 		}
 		return 0;
 	}
@@ -501,7 +501,7 @@ static int texture(struct Image *image) {
 	switch(image->data_format) {
 		case IF_PNG:
 			if((error = lodepng_decode32(&pic, &width, &height, image->data, image->data_size))) {
-				fprintf(stderr, "lodepng error %u: %s\n", error, lodepng_error_text(error));
+				Debug("lodepng error %u: %s\n", error, lodepng_error_text(error));
 				break;
 			}
 			is_alloc = -1;
@@ -526,14 +526,14 @@ static int texture(struct Image *image) {
 			break;
 		case IF_UNKNOWN:
 		default:
-			fprintf(stderr, "Unknown image format.\n");
+			Debug("Unknown image format.\n");
 	}
 	if(!is_alloc) {
-		fprintf(stderr, "texture: allocation failed.\n");
+		Debug("texture: allocation failed.\n");
 		return 0;
 	}
 	if(width != image->width || height != image->height || depth != image->depth) {
-		fprintf(stderr, "texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n", image->width, image->height, image->depth, width, height, depth);
+		Debug("texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n", image->width, image->height, image->depth, width, height, depth);
 		is_bad = -1;
 	}
 	/* select image format */
@@ -554,7 +554,7 @@ static int texture(struct Image *image) {
 			format   = GL_RGBA;
 			break;
 		default:
-			fprintf(stderr, "texture: not a recognised depth, %d.\n", depth);
+			Debug("texture: not a recognised depth, %d.\n", depth);
 			is_bad = -1;
 	}
 	/* fixme: invert as necessary */
@@ -578,11 +578,11 @@ static int texture(struct Image *image) {
 					 GL_UNSIGNED_BYTE, pic);
 		image->texture = tex;
 #if 1 /* debug */
-		fprintf(stderr, "Tex: %u.\n", image->texture);
+		Debug("Tex: %u.\n", image->texture);
 		if(image->width <= 80) image_print(image, pic);
-		else fprintf(stderr, "...too big to show.\n");
+		else Debug("...too big to show.\n");
 #endif
-		/*fprintf(stderr, "Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);*/
+		/*Debug("Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);*/
 	}
 	/* free the pic */
 	switch(image->data_format) {
@@ -597,7 +597,7 @@ static int texture(struct Image *image) {
 		default:
 			break;
 	}
-	fprintf(stderr, "texture: created %dx%dx%d texture, Tex%u.\n", width, height, depth, tex);
+	Debug("texture: created %dx%dx%d texture, Tex%u.\n", width, height, depth, tex);
 
 	WindowIsGlError("texture");
 
@@ -641,7 +641,7 @@ static int light_compute_texture(void) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, buffer_size, buffer_size, 0,
 		GL_RG, GL_FLOAT, buffer);
 	free(buffer);
-	fprintf(stderr, "Draw::texture: created %dx%dx%d hardcoded lighting texture, Tex%u.\n", buffer_size, buffer_size, 2, name);
+	Debug("Draw::texture: created %dx%dx%d hardcoded lighting texture, Tex%u.\n", buffer_size, buffer_size, 2, name);
 
 	WindowIsGlError("light_compute_texture");
 
@@ -790,7 +790,7 @@ static void resize(int width, int height) {
 	int w_tex, h_tex;
 	float w_w_tex, h_h_tex;
 
-	fprintf(stderr, "Draw::resize: %dx%d.\n", width, height);
+	Debug("Draw::resize: %dx%d.\n", width, height);
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
 	screen_width  = width; /* global shared with drawing */
@@ -805,7 +805,7 @@ static void resize(int width, int height) {
 	glBindTexture(GL_TEXTURE_2D, background_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);
-	/*fprintf(stderr, "w %d h %d\n", w_tex, h_tex);*/
+	/*Debug("w %d h %d\n", w_tex, h_tex);*/
 	w_w_tex = (float)width  / w_tex;
 	h_h_tex = (float)height / h_tex;
 

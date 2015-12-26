@@ -1,7 +1,6 @@
 /* Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
  Public License, see copying.txt */
 
-#include <stdio.h>  /* fprintf */
 #include <string.h> /* memset */
 #include "../Print.h"
 #include "Far.h"
@@ -64,11 +63,11 @@ struct Far *Far(const struct ObjectsInSpace *ois) {
 	/* fixme: diurnal variation */
 
 	if(backgrounds_size >= backgrounds_capacity) {
-		fprintf(stderr, "Far: couldn't be created; reached maximum of %u.\n", backgrounds_capacity);
+		Debug("Far: couldn't be created; reached maximum of %u.\n", backgrounds_capacity);
 		return 0;
 	}
 	if(!ois) {
-		fprintf(stderr, "Far: invalid.\n");
+		Debug("Far: invalid.\n");
 		return 0;
 	}
 	far = &backgrounds[backgrounds_size++];
@@ -102,7 +101,7 @@ void Far_(struct Far **far_ptr) {
 	if(!far_ptr || !(far = *far_ptr)) return;
 	index = far - backgrounds;
 	if(index < 0 || index >= backgrounds_size) {
-		fprintf(stderr, "~Far: Far%u not in range Far%u.\n", index + 1, backgrounds_size);
+		Debug("~Far: Far%u not in range Far%u.\n", index + 1, backgrounds_size);
 		return;
 	}
 	Pedantic("~Far: returning to pool, Far%u->Tex%u.\n", FarGetId(far), far->texture);
@@ -207,7 +206,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 			while((feeler = first_x_window->prev_x)
 				  && (x_min <= feeler->x)) first_x_window = feeler;
 		}
-		/*fprintf(stderr, "first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
+		/*Debug("first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
 		/* mark x; O(n) :[ */
 		for(b = first_x_window; b && b->x <= x_max; b = b->next_x)
 			b->is_selected = -1;
@@ -238,7 +237,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 			   && window_iterator->x < x_max_window + extent
 			   && window_iterator->y > y_min_window - extent
 			   && window_iterator->y < y_max_window + extent) {
-				/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
+				/*Debug("Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
 				*x_ptr       = window_iterator->x;
 				*y_ptr       = window_iterator->y;
 				*theta_ptr   = window_iterator->theta;
@@ -247,7 +246,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 				window_iterator = window_iterator->next_y;
 				return -1;
 			}/* else {
-			  fprintf(stderr, "Tighter bounds rejected Spr%u(%f,%f)\n", SpriteGetId(window_iterator), window_iterator->x, window_iterator->y);
+			  Debug("Tighter bounds rejected Spr%u(%f,%f)\n", SpriteGetId(window_iterator), window_iterator->x, window_iterator->y);
 			  }*/
 		}
 		window_iterator = window_iterator->next_y;

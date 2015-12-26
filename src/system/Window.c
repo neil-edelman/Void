@@ -1,7 +1,7 @@
 /* Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
  General Public License, see copying.txt */
 
-#include <stdio.h>  /* fprintf */
+#include "../Print.h"
 #include <time.h>   /* for errors: can't rely on external libraries */
 #include <stdlib.h> /* exit */
 #include "Glew.h"
@@ -39,13 +39,12 @@ int Window(const char *title, int argc, char **argv) {
 	glutInitWindowSize(600, 400);
 	glutCreateWindow(title ? title : "Untitled");
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex);
-	fprintf(stderr,
-			"Window: started; GLSL stats: vendor %s; version %s; renderer %s; shading language version %s; combined texture image units %d; maximum texture size %d.\n",
+	Debug("Window: started; GLSL stats: vendor %s; version %s; renderer %s; shading language version %s; combined texture image units %d; maximum texture size %d.\n",
 			glGetString(GL_VENDOR), glGetString(GL_VERSION),
 			glGetString(GL_RENDERER), glGetString(GL_SHADING_LANGUAGE_VERSION),
 			GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, max_tex);
 	if(max_tex < warn_texture_size)
-		fprintf(stderr, "Window: maximum texture size is too small, %d/%d; warning! bad! (supposed to be 8 or larger.)\n", max_tex, warn_texture_size);
+		Debug("Window: maximum texture size is too small, %d/%d; warning! bad! (supposed to be 8 or larger.)\n", max_tex, warn_texture_size);
 	/*glutMouseFunc(&mouse);
 	 glutIdleFunc(0); */
 
@@ -85,9 +84,9 @@ int WindowIsGlError(const char *function) {
 			no_errs = 0;
 			time(&last_error);
 		}
-		fprintf(stderr, "Window::isGLError(caught in %s:) OpenGL error: %s.\n", function, gluErrorString(err));
+		Debug("Window::isGLError(caught in %s:) OpenGL error: %s.\n", function, gluErrorString(err));
 		if(++no_errs > no_fails) {
-			fprintf(stderr, "Window::isGLError: too many errors! :[\n");
+			Debug("Window::isGLError: too many errors! :[\n");
 			exit(EXIT_FAILURE);
 		}
 		ohoh = -1;
@@ -101,7 +100,7 @@ void WindowToggleFullScreen(void) {
 	static int full = 0;
 
 	if(!full) {
-		fprintf(stderr, "Entering fullscreen.\n");
+		Debug("Entering fullscreen.\n");
 		full = -1;
 		x_size = glutGet(GLUT_WINDOW_WIDTH);
 		y_size = glutGet(GLUT_WINDOW_HEIGHT);
@@ -110,7 +109,7 @@ void WindowToggleFullScreen(void) {
 		glutFullScreen();
 		glutSetCursor(GLUT_CURSOR_NONE);
 	} else {
-		fprintf(stderr, "Exiting fullscreen.\n");
+		Debug("Exiting fullscreen.\n");
 		full = 0;
 		glutReshapeWindow(x_size, y_size);
 		glutPositionWindow(x_pos, y_pos);

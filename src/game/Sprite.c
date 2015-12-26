@@ -2,7 +2,6 @@
  Public License, see copying.txt */
 
 #include <stdlib.h> /* malloc free */
-#include <stdio.h>  /* fprintf */
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
 #include "../Print.h"
@@ -48,7 +47,7 @@ struct Sprite {
 	float theta;
 	float vx, vy;
 	float bounding; /* bounding circle radius */
-	int   size;     /* the (x, y) size; they are the same */
+	unsigned size;  /* the (x, y) size; they are the same */
 	int   texture;  /* in the gpu */
 
 	enum Sprites  type;       /* polymorphism */
@@ -126,11 +125,11 @@ struct Sprite *Sprite(const enum Sprites type, const struct Image *image) {
 	struct Sprite *sprite;
 
 	if(sprites_size >= sprites_capacity) {
-		fprintf(stderr, "Sprite: couldn't be created; reached maximum of %u.\n", sprites_capacity);
+		Debug("Sprite: couldn't be created; reached maximum of %u.\n", sprites_capacity);
 		return 0;
 	}
 	if(!image || image->width != image->height /* fixme */) {
-		fprintf(stderr, "Sprite: invalid.\n");
+		Debug("Sprite: invalid.\n");
 		return 0;
 	}
 	sprite = &sprites[sprites_size++];
@@ -176,7 +175,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	if(!sprite_ptr || !(sprite = *sprite_ptr)) return;
 	index = sprite - sprites;
 	if(index < 0 || index >= sprites_size) {
-		fprintf(stderr, "~Sprite: Spr%u not in range Spr%u.\n", index + 1, sprites_size);
+		Debug("~Sprite: Spr%u not in range Spr%u.\n", index + 1, sprites_size);
 		return;
 	}
 	Pedantic("~Sprite: returning to pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), sprite->texture);
@@ -223,7 +222,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	*sprite_ptr = sprite = 0;
 }
 
-int SpriteGetSize(const struct Sprite *const s) {
+unsigned SpriteGetSize(const struct Sprite *const s) {
 	if(!s) return 0;
 	return s->size;
 }
@@ -315,7 +314,7 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 		x_max = x_max_window + half_max_size;
 		y_min = y_min_window - half_max_size;
 		y_max = y_max_window + half_max_size;
-		/*fprintf(stderr, "window(%d:%d,%d,%d)\n", x_min, x_max, y_min, y_max);*/
+		/*Debug("window(%d:%d,%d,%d)\n", x_min, x_max, y_min, y_max);*/
 		/* no sprite anywhere? */
 		if(!first_x_window && !(first_x_window = first_x)) return 0;
 		/* place the first_x_window on the first x in the window */
@@ -327,7 +326,7 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 			while((feeler = first_x_window->prev_x)
 				  && (x_min <= feeler->x)) first_x_window = feeler;
 		}
-		/*fprintf(stderr, "first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
+		/*Debug("first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
 		/* mark x; O(n) :[ */
 		for(s = first_x_window; s && s->x <= x_max; s = s->next_x)
 			s->is_selected = -1;
@@ -362,7 +361,7 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 			   && window_iterator->y > y_min_window - extent
 			   && window_iterator->y < y_max_window + extent) {
 				sprites_onscreen++;
-				/*fprintf(stderr, "Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
+				/*Debug("Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
 				*x_ptr       = window_iterator->x;
 				*y_ptr       = window_iterator->y;
 				*theta_ptr   = window_iterator->theta;
@@ -371,7 +370,7 @@ int SpriteIterate/*Window*/(float *x_ptr, float *y_ptr, float *theta_ptr, int *t
 				window_iterator = window_iterator->next_y;
 				return -1;
 			}/* else {
-				fprintf(stderr, "Tighter bounds rejected Spr%u(%f,%f)\n", SpriteGetId(window_iterator), window_iterator->x, window_iterator->y);
+				Debug("Tighter bounds rejected Spr%u(%f,%f)\n", SpriteGetId(window_iterator), window_iterator->x, window_iterator->y);
 			}*/
 		}
 		window_iterator = window_iterator->next_y;
@@ -597,7 +596,7 @@ void SpriteUpdate(const float dt) {
 				break;
 			case S_NONE:
 			default:
-				fprintf(stderr, "Sprite::update: unknown type.\n");
+				Debug("Sprite::update: unknown type.\n");
 		}
 		/* if we were going to continue, we would check if s is valid (somehow) */
 		/* Debris::hit: Deb80 destroyed.
@@ -634,7 +633,7 @@ void SpritePrint(const char *location) {
 	int i = 0;
 	int q = 0;
 	char *s;
-	fprintf(stderr, "%s: x-list, l-r: {\n", location);
+	Debug("%s: x-list, l-r: {\n", location);
 	while(sprite && i++ < 200) {
 		switch(sprite->type) {
 			case S_DEBRIS: s="Deb"; q = DebrisGetId(sprite->container); break;
@@ -642,10 +641,10 @@ void SpritePrint(const char *location) {
 			case S_WMD:  s = "Wmd"; q = WmdGetId(sprite->container); break;
 			default:     s = "???"; q = 0; break;
 		}
-		fprintf(stderr, " Spr%d (%.1f, %.1f) is %s%u,\n", (int)(sprite - sprites) + 1, sprite->x, sprite->y, s, q);
+		Debug(" Spr%d (%.1f, %.1f) is %s%u,\n", (int)(sprite - sprites) + 1, sprite->x, sprite->y, s, q);
 		sprite = sprite->next_x;
 	}
-	fprintf(stderr, "}\n%s: y-list, b-t: {\n", location);
+	Debug("}\n%s: y-list, b-t: {\n", location);
 	i = 0;
 	sprite = first_y;
 	while(sprite && i++ < 200) {
@@ -655,10 +654,10 @@ void SpritePrint(const char *location) {
 			case S_WMD:  s = "Wmd"; q = WmdGetId(sprite->container); break;
 			default:     s = "???"; q = 0; break;
 		}
-		fprintf(stderr, " Spr%d (%.1f, %.1f) is %s%u,\n", (int)(sprite - sprites) + 1, sprite->x, sprite->y, s, q);
+		Debug(" Spr%d (%.1f, %.1f) is %s%u,\n", (int)(sprite - sprites) + 1, sprite->x, sprite->y, s, q);
 		sprite = sprite->next_y;
 	}
-	fprintf(stderr, "}\n");
+	Debug("}\n");
 }
 
 /* private */
@@ -888,7 +887,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 	/* check for sanity */
 	const float bounding = a->bounding + b->bounding;
 
-	/*fprintf(stderr, "elasitic_bounce: colision between Spr%u-%u %f; sum_r %f\n",
+	/*Debug("elasitic_bounce: colision between Spr%u-%u %f; sum_r %f\n",
 			SpriteGetId(a), SpriteGetId(b), sqrtf(n_d2), bounding);*/
 
 	/* interpenetation; happens about half the time because of IEEE754 numerics,
@@ -897,7 +896,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 	 objects to get stuck orbiting each other */
 	if(n_d2 < bounding * bounding) {
 		const float push = (bounding - sqrtf(n_d2)) * 0.5f;
-		/*fprintf(stderr, " \\pushing sprites %f distance apart\n", push);*/
+		/*Debug(" \\pushing sprites %f distance apart\n", push);*/
 		a->x -= n_x * push;
 		a->y -= n_y * push;
 		b->x += n_x * push;
@@ -917,7 +916,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 		a->vx1           += a_vx;
 		a->vy1           += a_vy;
 		a->no_collisions++;
-		/*fprintf(stderr, " \\%u collisions Spr%u (Spr%u.)\n", a->no_collisions, SpriteGetId(a), SpriteGetId(b));*/
+		/*Debug(" \\%u collisions Spr%u (Spr%u.)\n", a->no_collisions, SpriteGetId(a), SpriteGetId(b));*/
 	}
 	if(!b->no_collisions) {
 		/* first collision */
@@ -931,7 +930,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 		b->vx1           += b_vx;
 		b->vy1           += b_vy;
 		b->no_collisions++;
-		/*fprintf(stderr, " \\%u collisions Spr%u (Spr%u.)\n", b->no_collisions, SpriteGetId(b), SpriteGetId(a));*/
+		/*Debug(" \\%u collisions Spr%u (Spr%u.)\n", b->no_collisions, SpriteGetId(b), SpriteGetId(a));*/
 	}
 
 }

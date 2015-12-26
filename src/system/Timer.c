@@ -1,7 +1,7 @@
 /* Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
  General Public License, see copying.txt */
 
-#include <stdio.h>  /* fprintf */
+#include "../Print.h"
 #include "Glew.h"
 #include "Timer.h"
 #include "Window.h"
@@ -41,14 +41,14 @@ int Timer(const int step) {
 	if(is_started) return -1;
 
 	if(!WindowStarted()) {
-		fprintf(stderr, "Timer: window not started.\n");
+		Debug("Timer: window not started.\n");
 		return 0;
 	}
 
 	timer.time  = glutGet(GLUT_ELAPSED_TIME);
 	timer.mean  = framelength_ms;
 	is_started = -1;
-	fprintf(stderr, "Timer: created timer with %ums.\n", timer.time);
+	Debug("Timer: created timer with %ums.\n", timer.time);
 
 	glutTimerFunc(timer.step, &update, timer.time);
 
@@ -59,7 +59,7 @@ int Timer(const int step) {
 void Timer_(void) {
 	if(!is_started) return;
 	is_started = 0;
-	fprintf(stderr, "~Timer: erased timer.\n");
+	Debug("~Timer: erased timer.\n");
 }
 
 /** Last time an update was called. */
@@ -92,6 +92,6 @@ static void update(int old_time) {
 	glutTimerFunc(timer.step, &update, timer.time);
 	GameUpdate(timer.time, dt);
 	/* now void -> if(!GameUpdate(timer.time, dt)) printf("Should really be shutting down.\n");*/
-	/*fprintf(stderr, "Timer::update: %ums %ums.\n", timer.time, dt);*/
+	/*Debug("Timer::update: %ums %ums.\n", timer.time, dt);*/
 	glutPostRedisplay();
 }

@@ -1,7 +1,7 @@
 /* Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
  General Public License, see copying.txt */
 
-#include <stdio.h>  /* fprintf */
+#include "../Print.h"
 #include "Glew.h"
 #include "Key.h"
 #include "Window.h"
@@ -33,7 +33,7 @@ static const int key_delay = 300; /* ms */
 int Key(void) {
 
 	if(!WindowStarted()) {
-		fprintf(stderr, "Draw: window not started.\n");
+		Debug("Draw: window not started.\n");
 		return 0;
 	}
 
@@ -41,7 +41,7 @@ int Key(void) {
 	glutKeyboardUpFunc(&key_up);
 	glutSpecialFunc(&key_down_special);
 	glutSpecialUpFunc(&key_up_special); 
-	fprintf(stderr, "Key: static keys attached to Window.\n");
+	Debug("Key: static keys attached to Window.\n");
 
 	return -1;
 
@@ -123,7 +123,7 @@ static void key_down(unsigned char k, int x, int y) {
 	if(key->state) return;
 	key->state  = -1;
 	key->down = glutGet(GLUT_ELAPSED_TIME);
-	/* fprintf(stderr, "Open::key_down: key %d hit at %d ms.\n", k, key->down); */
+	/* Debug("Open::key_down: key %d hit at %d ms.\n", k, key->down); */
 }
 
 /** callback for glutKeyboardUpFunc */
@@ -132,7 +132,7 @@ static void key_up(unsigned char k, int x, int y) {
 	if(!key->state) return;
 	key->state = 0;
 	key->integral += glutGet(GLUT_ELAPSED_TIME) - key->down;
-	/* fprintf(stderr, "Open::key_up: key %d pressed %d ms at end of frame.\n", k, key->integral); */
+	/* Debug("Open::key_up: key %d pressed %d ms at end of frame.\n", k, key->integral); */
 }
 
 /** callback for glutSpecialFunc */
@@ -141,7 +141,7 @@ static void key_down_special(int k, int x, int y) {
 	if(key->state) return;
 	key->state  = -1;
 	key->down = glutGet(GLUT_ELAPSED_TIME);
-	/* fprintf(stderr, "Open::key_down_special: key %d hit at %d ms.\n", k, key->down); */
+	/* Debug("Open::key_down_special: key %d hit at %d ms.\n", k, key->down); */
 }
 
 /** callback for glutSpecialUpFunc */
@@ -150,5 +150,5 @@ static void key_up_special(int k, int x, int y) {
 	if(!key->state) return;
 	key->state = 0;
 	key->integral += glutGet(GLUT_ELAPSED_TIME) - key->down;
-	/* fprintf(stderr, "Open::key_up_special: key %d pressed %d ms at end of frame.\n", k, key->integral); */
+	/* Debug("Open::key_up_special: key %d pressed %d ms at end of frame.\n", k, key->integral); */
 }

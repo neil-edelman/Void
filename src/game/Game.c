@@ -1,16 +1,11 @@
 /* Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
-/*#define DELAY 10*/
-
 #include <stdlib.h> /* malloc free */
-#include <stdio.h>  /* fprintf */
 #include <math.h>   /* M_PI */
 #include <string.h> /* strcmp for bsearch */
-#ifdef DELAY
-#include <time.h>
-#include <sys/resource.h>
-#endif
+#include <stdio.h>  /* printf */
+#include "../Print.h"
 #include "Ship.h"
 #include "Game.h"
 #include "Sprite.h"
@@ -24,7 +19,6 @@
 #include "../system/Window.h"
 #include "../system/Draw.h"
 #include "../system/Timer.h" /* only for reporting framerate */
-#include "../EntryPosix.h"
 
 /* auto-generated; used in constructor */
 #include "../../bin/Lore.h"
@@ -81,7 +75,7 @@ int Game(void) {
 	if(!(game.asteroid = TypeOfObjectSearch("asteroid"))
 	   || !(game.nautilus = ShipClassSearch("Nautilus"))
 	   || !(game.scorpion = ShipClassSearch("Scorpion"))) {
-		fprintf(stderr, "Game: couldn't find required game elements.\n");
+		Debug("Game: couldn't find required game elements.\n");
 		return 0;
 	};
 
@@ -89,7 +83,7 @@ int Game(void) {
 	for(i = 0; i < max_objects_in_space; i++) {
 		ois = &objects_in_space[i];
 		bg  = Far(ois);
-		fprintf(stderr, "Set up Object in Space: %s.\n", ois->name);
+		Debug("Set up Object in Space: %s.\n", ois->name);
 	}
 
 	/* sprinkle some ships */
@@ -110,7 +104,7 @@ int Game(void) {
 		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
 		/*printf("Game: new Asteroid, checking:\n");*/
 		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
-		 fprintf(stderr, "Game: would cause collision with sprite; waiving asteroid.\n");
+		 Debug("Game: would cause collision with sprite; waiving asteroid.\n");
 		 continue;
 		 }*/
 		asteroid = Debris(game.asteroid->image, 10.0f);
@@ -120,7 +114,7 @@ int Game(void) {
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
 
-	fprintf(stderr, "Game: on.\n");
+	Debug("Game: on.\n");
 	is_started = -1;
 
 	return -1;
@@ -140,10 +134,10 @@ void Game_(void) {
 	}
 	Pilot_(&game->pilot);
 	Resources_(&game->resources);
-	fprintf(stderr, "~Game: deleting #%p.\n", (void *)game);
+	Debug("~Game: deleting #%p.\n", (void *)game);
 	free(game);
 	*gptr = game = 0;*/
-	fprintf(stderr, "~Game: over.\n");
+	Debug("~Game: over.\n");
 	is_started = 0;
 }
 
@@ -171,7 +165,7 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 
 	/* handle non-in-game related keypresses; fixme: have the keys be variable. and O(n)->O(1) by swich, each thing is checked in sequence? */
 	if(KeyPress(27)) {
-		fprintf(stderr, "Escape key pressed.\n");
+		Debug("Escape key pressed.\n");
 		exit(EXIT_SUCCESS); /* meh */
 	}
 	if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
@@ -226,10 +220,10 @@ void add_sprites(void) {
 	int i;
 	
 	if(no + rocks + aliens >= cap) {
-		fprintf(stderr, "Game: reached the limit.\n");
+		Debug("Game: reached the limit.\n");
 		return;
 	}
-	fprintf(stderr, "Game: adding more sprites.\n");
+	Debug("Game: adding more sprites.\n");
 	for(i = 0; i < rocks; i++) {
 		asteroid = Debris(game.asteroid->image, 10.0f);
 		DebrisSetOrientation(asteroid, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), rnd(50.0f), rnd(50.0f), rnd(1.0f));

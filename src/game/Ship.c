@@ -2,7 +2,6 @@
  Public License, see copying.txt */
 
 #include <stdlib.h> /* malloc free */
-#include <stdio.h>  /* fprintf */
 #include <math.h>   /* sinf, cosf */
 #include <string.h> /* memcpy */
 #include "../Print.h"
@@ -80,7 +79,7 @@ struct Ship *Ship(struct Ship **notify, const struct ShipClass *ship_class, cons
 
 	if(!ship_class) return 0;
 	if(ships_size >= ships_capacity) {
-		fprintf(stderr, "Ship: couldn't be created; reached maximum of %u.\n", ships_capacity);
+		Debug("Ship: couldn't be created; reached maximum of %u.\n", ships_capacity);
 		return 0;
 	}
 	ship = &ships[ships_size];
@@ -104,7 +103,7 @@ struct Ship *Ship(struct Ship **notify, const struct ShipClass *ship_class, cons
 	ships_size++;
 	Pedantic("Ship: created from pool, Shp%u->Spr%u.\n", ShipGetId(ship), SpriteGetId(ship->sprite));
 
-	if(notify && *notify) fprintf(stderr, "Ship: warning, new notify is not void.\n");
+	if(notify && *notify) Debug("Ship: warning, new notify is not void.\n");
 	if(notify) *notify = ship;
 	return ship;
 }
@@ -118,7 +117,7 @@ void Ship_(struct Ship **ship_ptr) {
 	if(!ship_ptr || !(ship = *ship_ptr)) return;
 	index = ship - ships;
 	if(index < 0 || index >= ships_size) {
-		fprintf(stderr, "~Ship: Shp%u not in range %u.\n", ShipGetId(ship), ships_size);
+		Debug("~Ship: Shp%u not in range %u.\n", ShipGetId(ship), ships_size);
 		return;
 	}
 	Pedantic("~Ship: returning to pool, Shp%u->Spr%u.\n", ShipGetId(ship), SpriteGetId(ship->sprite));
@@ -291,7 +290,7 @@ void ShipHit(struct Ship *ship, const int damage) {
 		Debug("Shit::hit: Shp%u hit %d, now %d.\n", ShipGetId(ship), damage, ship->hit);
 	} else {
 		ship->hit = 0;
-		fprintf(stderr, "Ship::hit: Shp%u destroyed.\n", ShipGetId(ship));
+		Debug("Ship::hit: Shp%u destroyed.\n", ShipGetId(ship));
 	}
 }
 

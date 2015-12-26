@@ -55,11 +55,11 @@ int Light(const float i, const float r, const float g, const float b) {
 	/*int h;*/
 
 	if(r < 0.0f || g < 0.0f || b < 0.0f || r > 1.0f || g > 1.0f || b > 1.0f) {
-		fprintf(stderr, "Light: invalid colour, [%f, %f, %f].\n", r, g, b);
+		Debug("Light: invalid colour, [%f, %f, %f].\n", r, g, b);
 		return 0;
 	}
 	if(no_lights >= MAX_LIGHTS) {
-		fprintf(stderr, "Light: reached limit of %d/%d lights.\n", no_lights, MAX_LIGHTS);
+		Debug("Light: reached limit of %d/%d lights.\n", no_lights, MAX_LIGHTS);
 		return 0;
 	}
 	/*h = find_new_hash();*/
@@ -72,7 +72,7 @@ int Light(const float i, const float r, const float g, const float b) {
 	Pedantic("Light: created from pool, colour (%f,%f,%f), Lgt%u.\n", colour[no_lights].r, colour[no_lights].g, colour[no_lights].b, no_lights + 1);
 	/*hash[no_lights]       = h;
 	hash_table_p1[h]      = no_lights + 1;
-	fprintf(stderr, "Light: new, colour (%f,%f,%f) at (%f,%f), light %u, #%u.\n", colour[no_lights].r, colour[no_lights].g, colour[no_lights].b, 0.0f, 0.0f, no_lights, h + 1);
+	Debug("Light: new, colour (%f,%f,%f) at (%f,%f), light %u, #%u.\n", colour[no_lights].r, colour[no_lights].g, colour[no_lights].b, 0.0f, 0.0f, no_lights, h + 1);
 	no_lights++;
 
 	return h + 1;*/
@@ -87,14 +87,14 @@ void Light_(const int h_p1) {
 
 	if(h < 0 || h >= max_hash) return;
 	if((no = hash_table_p1[h] - 1) == -1) {
-		fprintf(stderr, "~Light: #%u is not a light.\n", h_p1);
+		Debug("~Light: #%u is not a light.\n", h_p1);
 		return;
 	}
 	hash_table_p1[h] = 0;*/
 	const int no = h_p1 - 1;
 	if(h_p1 == 0) return;
 	if(no < 0 || no >= no_lights) {
-		fprintf(stderr, "~Light: Lgt%u, out-of-bounds (index %u.)\n", h_p1, no);
+		Debug("~Light: Lgt%u, out-of-bounds (index %u.)\n", h_p1, no);
 		return;
 	}
 	Pedantic("~Light: erase, turning off light (index %u,) Lgt%u.\n", no, h_p1);
@@ -161,7 +161,7 @@ struct Colour3f *LightGetColours(void) {
 static int find_new_hash(void) {
 	/* assert: max_indeces must be >= MAX_LIGHTS and a power of two */
 	while(hash_table_p1[next_hash] != 0) {
-		fprintf(stderr, "Light::find_new_hash: collision.\n");
+		Debug("Light::find_new_hash: collision.\n");
 		next_hash = (next_hash + 1) & (max_hash - 1);
 	}
 	return next_hash++;

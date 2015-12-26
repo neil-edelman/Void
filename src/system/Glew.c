@@ -1,7 +1,7 @@
 /* Copyright 2013 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
-#include <stdio.h>  /* fprintf */
+#include "../Print.h"
 #include "Glew.h"
 
 /** OpenGL not-on-a-mac is a little harder since OpenGL > 1.0 functions have to
@@ -30,14 +30,14 @@ int Glew(void) {
 
 #ifdef GLEW
 	if((err = glewInit()) != GLEW_OK) {
-		fprintf(stderr, "Glew: %s\n", glewGetErrorString(err));
+		Debug("Glew: %s\n", glewGetErrorString(err));
 		return 0;
 	}
 	if(!glewIsSupported("GL_VERSION_2_0") /* !GLEW_VERSION_2_0 ? */) {
-		fprintf(stderr, "Glew: OpenGL 2.0+ shaders are not supported. :[\n");
+		Debug("Glew: OpenGL 2.0+ shaders are not supported. :[\n");
 		return 0;
 	}
-	fprintf(stderr, "Glew: GLEW %s extension loading library ready for OpenGL 2.0+.\n", glewGetString(GLEW_VERSION));
+	Debug("Glew: GLEW %s extension loading library ready for OpenGL 2.0+.\n", glewGetString(GLEW_VERSION));
 #endif
 
 	is_started = -1;

@@ -2,7 +2,7 @@
  GNU General Public License, see copying.txt */
 
 #include <stdlib.h> /* malloc free */
-#include <stdio.h>  /* fprintf */
+#include <stdio.h>  /* perror */
 #include "../Print.h"
 #include "../system/Timer.h"
 #include "Event.h"
@@ -29,7 +29,7 @@ int Event(const int delay_ms, void (*runnable)(void)) {
 	struct Event *event, *last, *next;
 
 	if(!runnable) {
-		fprintf(stderr, "Event: runnable not specified.\n");
+		Debug("Event: runnable not specified.\n");
 		return 0;
 	}
 	if(!(event = malloc(sizeof(struct Event)))) {

@@ -2,7 +2,6 @@
  Public License, see copying.txt */
 
 #include <stdlib.h> /* malloc free */
-#include <stdio.h>  /* fprintf */
 #include <math.h>   /* sinf, cosf */
 #include <string.h> /* memcpy */
 #include "../Print.h"
@@ -48,15 +47,15 @@ struct Wmd *Wmd(struct Sprite *const from, const int colour) {
 	float c, s, vx, vy;
 
 	if(!(shot = ImageSearch("shot.png"))) {
-		fprintf(stderr, "Wmd: couldn't find shot.png.\n");
+		Debug("Wmd: couldn't find shot.png.\n");
 		return 0;
 	}
 	if(!from) {
-		fprintf(stderr, "Wmd: invalid.\n");
+		Debug("Wmd: invalid.\n");
 		return 0;
 	}
 	if(wmds_size >= wmds_capacity || (unsigned)colour > 2) {
-		fprintf(stderr, "Wmd: couldn't be created; %u/%u.\n", wmds_size, wmds_capacity);
+		Debug("Wmd: couldn't be created; %u/%u.\n", wmds_size, wmds_capacity);
 		return 0;
 	}
 	wmd = &wmds[wmds_size];
@@ -79,7 +78,7 @@ struct Wmd *Wmd(struct Sprite *const from, const int colour) {
 
 	Pedantic("Wmd: created from pool, Wmd%u->Lgt%u,Spr%u.\n", WmdGetId(wmd), wmd->light, SpriteGetId(wmd->sprite));
 	/*SpriteGetOrientation(wmd->sprite, &x, &y, &theta);
-	fprintf(stderr, "Wmd: %f %f %f\n", x, y, theta);*/
+	Debug("Wmd: %f %f %f\n", x, y, theta);*/
 
 	return wmd;
 }
@@ -93,7 +92,7 @@ void Wmd_(struct Wmd **wmd_ptr) {
 	if(!wmd_ptr || !(wmd = *wmd_ptr)) return;
 	index = wmd - wmds;
 	if(index < 0 || index >= wmds_size) {
-		fprintf(stderr, "~Wmd: Wmd%u not in range Wmd%u.\n", index + 1, wmds_size);
+		Debug("~Wmd: Wmd%u not in range Wmd%u.\n", index + 1, wmds_size);
 		return;
 	}
 	Pedantic("~Wmd: returning to pool, Wmd%u->Lgt%u,Spr%u.\n", WmdGetId(wmd), wmd->light, SpriteGetId(wmd->sprite));

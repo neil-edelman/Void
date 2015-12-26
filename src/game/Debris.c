@@ -2,9 +2,7 @@
  Public License, see copying.txt */
 
 #include <stdlib.h> /* malloc free */
-#include <stdio.h>  /* fprintf */
 #include <string.h> /* memcpy */
-/*#include "../EntryPosix.h"*/ /* Debug, Pedantic */
 #include "../Print.h"
 #include "Debris.h"
 #include "Sprite.h"
@@ -43,7 +41,7 @@ struct Debris *Debris(const struct Image *image, const float mass) {
 
 	if(!image) return 0;
 	if(debris_size >= debris_capacity) {
-		fprintf(stderr, "Debris: couldn't be created; reached maximum of %u.\n", debris_capacity);
+		Debug("Debris: couldn't be created; reached maximum of %u.\n", debris_capacity);
 		return 0;
 	}
 	deb = &debris[debris_size];
@@ -69,7 +67,7 @@ void Debris_(struct Debris **deb_ptr) {
 	if(!deb_ptr || !(deb = *deb_ptr)) return;
 	index = deb - debris;
 	if(index < 0 || index >= debris_size) {
-		fprintf(stderr, "~Debris: Deb%u not in range Deb%u.\n", DebrisGetId(deb), debris_size);
+		Debug("~Debris: Deb%u not in range Deb%u.\n", DebrisGetId(deb), debris_size);
 		return;
 	}
 	Pedantic("~Debris: returning to pool, Deb%u->Spr%u.\n", DebrisGetId(deb), SpriteGetId(deb->sprite));

@@ -4,7 +4,8 @@
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* memcpy */
-#include "../EntryPosix.h" /* Debug, Pedantic */
+/*#include "../EntryPosix.h"*/ /* Debug, Pedantic */
+#include "../Print.h"
 #include "Debris.h"
 #include "Sprite.h"
 /* auto-generated; used in constructor */
@@ -54,7 +55,7 @@ struct Debris *Debris(const struct Image *image, const float mass) {
 	deb->hit        = (int)(mass * hit_per_mass);
 	/*deb->on_kill    = 0;*/
 	debris_size++;
-	if(Pedantic()) fprintf(stderr, "Debris: created from pool, Deb%u->Spr%u.\n", DebrisGetId(deb), SpriteGetId(deb->sprite));
+	Pedantic("Debris: created from pool, Deb%u->Spr%u.\n", DebrisGetId(deb), SpriteGetId(deb->sprite));
 
 	return deb;
 }
@@ -71,7 +72,7 @@ void Debris_(struct Debris **deb_ptr) {
 		fprintf(stderr, "~Debris: Deb%u not in range Deb%u.\n", DebrisGetId(deb), debris_size);
 		return;
 	}
-	if(Pedantic()) fprintf(stderr, "~Debris: returning to pool, Deb%u->Spr%u.\n", DebrisGetId(deb), SpriteGetId(deb->sprite));
+	Pedantic("~Debris: returning to pool, Deb%u->Spr%u.\n", DebrisGetId(deb), SpriteGetId(deb->sprite));
 
 	/* superclass */
 	Sprite_(&deb->sprite);
@@ -80,7 +81,7 @@ void Debris_(struct Debris **deb_ptr) {
 	if(index < --debris_size) {
 		memcpy(deb, &debris[debris_size], sizeof(struct Debris));
 		SpriteSetContainer(deb, &deb->sprite);
-		if(Pedantic()) fprintf(stderr, "~Debris: Deb%u has become Deb%u.\n", debris_size + 1, DebrisGetId(deb));
+		Pedantic("~Debris: Deb%u has become Deb%u.\n", debris_size + 1, DebrisGetId(deb));
 	}
 
 	*deb_ptr = deb = 0;
@@ -142,11 +143,11 @@ void DebrisHit(struct Debris *deb, const int hit) {
 	if(!deb) return;
 	if(deb->hit > hit) {
 		deb->hit -= hit;
-		if(Debug()) fprintf(stderr, "Debris::hit: Deb%u hit %d, now %d.\n", DebrisGetId(deb), hit, deb->hit);
+		Debug("Debris::hit: Deb%u hit %d, now %d.\n", DebrisGetId(deb), hit, deb->hit);
 	} else {
 		/*deb->hit = 0; should be carried forward to the next */
 		deb->hit -= hit;
-		if(Debug()) fprintf(stderr, "Debris::hit: Deb%u destroyed.\n", DebrisGetId(deb));
+		Debug("Debris::hit: Deb%u destroyed.\n", DebrisGetId(deb));
 	}
 }
 
@@ -165,7 +166,7 @@ void DebrisEnforce(struct Debris *deb) {
 
 	SpriteGetVelocity(deb->sprite, &vx, &vy);
 	if((speed_2 = vx * vx + vy * vy) > maximum_speed_2) {
-		if(Debug()) fprintf(stderr, "Debris::enforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
+		Debug("Debris::enforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
 		DebrisExplode(deb);
 	}
 }
@@ -182,7 +183,7 @@ void DebrisExplode(struct Debris *deb) {
 	/* destroy, keeping values */
 	SpriteGetOrientation(deb->sprite, &x, &y, &theta);
 	SpriteGetVelocity(deb->sprite, &vx, &vy);
-	if(Debug()) fprintf(stderr, "Deb%u is exploding at (%.3f, %.3f).\n", DebrisGetId(deb), x, y);
+	Debug("Deb%u is exploding at (%.3f, %.3f).\n", DebrisGetId(deb), x, y);
 
 	/* too small -- just vaporise */
 	if(!(small = ImageSearch("AsteroidSmall.png")) ||

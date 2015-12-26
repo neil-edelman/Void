@@ -3,7 +3,7 @@
 
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* memset */
-#include "../EntryPosix.h" /* Debug, Pedantic */
+#include "../Print.h"
 #include "Far.h"
 #include "../general/Sorting.h"
 #include "../system/Draw.h"
@@ -88,7 +88,7 @@ struct Far *Far(const struct ObjectsInSpace *ois) {
 	first_x = first_y = far;
 	sort_notify(far);
 
-	if(Pedantic()) fprintf(stderr, "Far: created from pool, Far%u->Tex%u.\n", FarGetId(far), far->texture);
+	Pedantic("Far: created from pool, Far%u->Tex%u.\n", FarGetId(far), far->texture);
 
 	return far;
 }
@@ -105,7 +105,7 @@ void Far_(struct Far **far_ptr) {
 		fprintf(stderr, "~Far: Far%u not in range Far%u.\n", index + 1, backgrounds_size);
 		return;
 	}
-	if(Pedantic()) fprintf(stderr, "~Far: returning to pool, Far%u->Tex%u.\n", FarGetId(far), far->texture);
+	Pedantic("~Far: returning to pool, Far%u->Tex%u.\n", FarGetId(far), far->texture);
 
 	/* take it out of the lists */
 	if(far->prev_x) far->prev_x->next_x = far->next_x;
@@ -134,7 +134,7 @@ void Far_(struct Far **far_ptr) {
 		else                             first_y          = far;
 		if((neighbor = replace->next_y)) neighbor->prev_y = far;
 
-		if(Pedantic()) fprintf(stderr, "~Far: Far%u has become Far%u.\n", FarGetId(replace), FarGetId(far));
+		Pedantic("~Far: Far%u has become Far%u.\n", FarGetId(replace), FarGetId(far));
 	}
 
 	*far_ptr = far = 0;

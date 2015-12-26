@@ -32,12 +32,6 @@ struct Entry {
 static void main_(void);
 static void usage(void);
 
-/** Debug level message. */
-int Debug(void) { return -1; }
-
-/** Dubug level pedantic. */
-int Pedantic(void) { return 0; }
-
 /** entry point
  @param argc the number of arguments starting with the programme name
  @param argv the arguments

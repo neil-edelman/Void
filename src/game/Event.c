@@ -3,9 +3,9 @@
 
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
-#include "Event.h"
+#include "../Print.h"
 #include "../system/Timer.h"
-#include "../EntryPosix.h"
+#include "Event.h"
 
 /* Events have a specific time to call a function.
 
@@ -40,7 +40,7 @@ int Event(const int delay_ms, void (*runnable)(void)) {
 	event->next     = 0;
 	event->t_ms     = TimerLastTime() + delay_ms;
 	event->runnable = runnable;
-	if(Pedantic()) fprintf(stderr, "Event: new at %dms, #%p.\n", event->t_ms, (void *)event);
+	Pedantic("Event: new at %dms, #%p.\n", event->t_ms, (void *)event);
 
 	/* FIXME: O(n) :[ */
 	for(last = 0, next = next_event;
@@ -62,7 +62,7 @@ void Event_(struct Event **event_ptr) {
 	struct Event *event;
 
 	if(!event_ptr || !(event = *event_ptr)) return;
-	if(Pedantic()) fprintf(stderr, "~Event: erase, #%p.\n", (void *)event);
+	Pedantic("~Event: erase, #%p.\n", (void *)event);
 	free(event);
 	*event_ptr = event = 0;
 }
@@ -71,7 +71,7 @@ void Event_(struct Event **event_ptr) {
 void EventDispatch(const int t_ms) {
 	struct Event *e;
 	while((e = next_event) && e->t_ms <= t_ms) {
-		if(Pedantic()) fprintf(stderr, "Event: event triggered at %dms.\n", e->t_ms);
+		Pedantic("Event: event triggered at %dms.\n", e->t_ms);
 		e->runnable();
 		next_event = e->next;
 		Event_(&e);

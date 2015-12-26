@@ -5,7 +5,7 @@
 #include <stdio.h>  /* fprintf */
 #include <math.h>   /* sinf, cosf */
 #include <string.h> /* memcpy */
-#include "../EntryPosix.h" /* Debug, Pedantic */
+#include "../Print.h"
 #include "../../bin/Lore.h" /* auto-generated; Image */
 #include "Sprite.h"
 #include "Wmd.h"
@@ -77,7 +77,7 @@ struct Wmd *Wmd(struct Sprite *const from, const int colour) {
 	SpriteGetVelocity(from, &vx, &vy);
 	SpriteSetVelocity(wmd->sprite, vx + c*shot_speed, vy + s*shot_speed);
 
-	if(Pedantic()) fprintf(stderr, "Wmd: created from pool, Wmd%u->Lgt%u,Spr%u.\n", WmdGetId(wmd), wmd->light, SpriteGetId(wmd->sprite));
+	Pedantic("Wmd: created from pool, Wmd%u->Lgt%u,Spr%u.\n", WmdGetId(wmd), wmd->light, SpriteGetId(wmd->sprite));
 	/*SpriteGetOrientation(wmd->sprite, &x, &y, &theta);
 	fprintf(stderr, "Wmd: %f %f %f\n", x, y, theta);*/
 
@@ -96,7 +96,7 @@ void Wmd_(struct Wmd **wmd_ptr) {
 		fprintf(stderr, "~Wmd: Wmd%u not in range Wmd%u.\n", index + 1, wmds_size);
 		return;
 	}
-	if(Pedantic()) fprintf(stderr, "~Wmd: returning to pool, Wmd%u->Lgt%u,Spr%u.\n", WmdGetId(wmd), wmd->light, SpriteGetId(wmd->sprite));
+	Pedantic("~Wmd: returning to pool, Wmd%u->Lgt%u,Spr%u.\n", WmdGetId(wmd), wmd->light, SpriteGetId(wmd->sprite));
 
 	/* superclasses */
 	Sprite_(&wmd->sprite);
@@ -107,7 +107,7 @@ void Wmd_(struct Wmd **wmd_ptr) {
 		memcpy(wmd, &wmds[wmds_size], sizeof(struct Wmd));
 		SpriteSetContainer(wmd, &wmd->sprite);
 		LightSetContainer(&wmd->light);
-		if(Pedantic()) fprintf(stderr, "~Wmd: Wmd%u has become Wmd%u.\n", wmds_size + 1, WmdGetId(wmd));
+		Pedantic("~Wmd: Wmd%u has become Wmd%u.\n", wmds_size + 1, WmdGetId(wmd));
 	}
 
 	*wmd_ptr = wmd = 0;

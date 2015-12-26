@@ -5,7 +5,7 @@
 #include <stdio.h>  /* fprintf */
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
-#include "../EntryPosix.h"   /* Debug, Pedantic */
+#include "../Print.h"
 #include "../../bin/Lore.h"  /* auto-generated; Image */
 #include "Sprite.h"
 #include "../general/Sorting.h"
@@ -162,7 +162,7 @@ struct Sprite *Sprite(const enum Sprites type, const struct Image *image) {
 	 change it's location; just in the interest of being pedantic) */
 	sort_notify(sprite);
 
-	if(Pedantic()) fprintf(stderr, "Sprite: created from pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), image->texture);
+	Pedantic("Sprite: created from pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), image->texture);
 
 	return sprite;
 }
@@ -179,7 +179,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		fprintf(stderr, "~Sprite: Spr%u not in range Spr%u.\n", index + 1, sprites_size);
 		return;
 	}
-	if(Pedantic()) fprintf(stderr, "~Sprite: returning to pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), sprite->texture);
+	Pedantic("~Sprite: returning to pool, Spr%u->Tex%u.\n", SpriteGetId(sprite), sprite->texture);
 
 	/* deal with deleting it while iterating; fixme: have more complex? */
 	if(sprite <= iterator) iterator--; /* <? */
@@ -217,7 +217,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		/* update child */
 		if(sprite->notify) *sprite->notify = sprite;
 
-		if(Pedantic()) fprintf(stderr, "~Sprite: Spr%u has become Spr%u.\n", SpriteGetId(replace), SpriteGetId(sprite));
+		Pedantic("~Sprite: Spr%u has become Spr%u.\n", SpriteGetId(replace), SpriteGetId(sprite));
 	}
 
 	*sprite_ptr = sprite = 0;

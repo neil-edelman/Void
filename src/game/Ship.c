@@ -287,7 +287,7 @@ void ShipHit(struct Ship *ship, const int damage) {
 	if(!ship) return;
 	if(ship->hit > damage) {
 		ship->hit -= damage;
-		Debug("Shit::hit: Shp%u hit %d, now %d.\n", ShipGetId(ship), damage, ship->hit);
+		Debug("Ship::hit: Shp%u hit %d, now %d.\n", ShipGetId(ship), damage, ship->hit);
 	} else {
 		ship->hit = 0;
 		Debug("Ship::hit: Shp%u destroyed.\n", ShipGetId(ship));

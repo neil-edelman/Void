@@ -55,9 +55,10 @@ static const float asteroid_max_speed = 0.03f;
 const float de_sitter = 4096.0f;
 
 /* private */
-float rnd(const float limit);
-void add_sprites(void);
-void poll_sprites(void);
+static float rnd(const float limit);
+static void add_sprites(void);
+static void poll_sprites(void);
+static void say_hello(void);
 
 /* public */
 
@@ -113,6 +114,8 @@ int Game(void) {
 							 vx, vy, o); /* (vx,vy):o */
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
+
+	Event(1000, E_RUNNABLE, &say_hello);
 
 	Debug("Game: on.\n");
 	is_started = -1;
@@ -209,14 +212,14 @@ struct Ship *GameGetPlayer(void) {
  @param limit
  @return		A uniformly distributed random variable in the range
 				[-limit, limit]. */
-float rnd(const float limit) {
+static float rnd(const float limit) {
 	return limit * (2.0f * rand() / RAND_MAX - 1.0f);
 }
 
-void add_sprites(void) {
+static void add_sprites(void) {
 	struct Debris *asteroid;
 	struct Ship *bad;
-	const int no = SpriteNo(), cap = SpriteGetCapacity(), rocks = 350, aliens = 10;
+	const int no = SpriteNo(), cap = SpriteGetCapacity() >> 5, rocks = 350, aliens = 10;
 	int i;
 	
 	if(no + rocks + aliens >= cap) {
@@ -232,12 +235,17 @@ void add_sprites(void) {
 		bad = Ship(0, game.scorpion, B_STUPID);
 		ShipSetOrientation(bad, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
-	Event(5000, &add_sprites);
+	Event(5000, E_RUNNABLE, &add_sprites);
 }
 
-void poll_sprites(void) {
+static void poll_sprites(void) {
 	int w, h;
 	DrawGetScreen(&w, &h);
 	printf("%d\t%d\t%d\t%.1f\t%d\t%d\n", SpriteNo(), SpriteGetConsidered(), SpriteGetOnscreen(), 1000.0 / TimerMean(), w, h);
-	Event(500, &poll_sprites);
+	Event(500, E_RUNNABLE, &poll_sprites);
+}
+
+static void say_hello(void) {
+	printf("hi!!!!\n");
+	Event(1000, E_RUNNABLE, &say_hello);
 }

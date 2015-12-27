@@ -21,8 +21,10 @@ void Debug(const char *format, ...) {
 
 /** Dubug level pedantic. */
 void Pedantic(const char *format, ...) {
+#ifndef NDEBUG
 	va_list args;
 	va_start(args, format);
 	vfprintf(stderr, format, args);
 	va_end(args);
+#endif
 }

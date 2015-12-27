@@ -55,13 +55,13 @@ int Event(const int delay_ms, enum FnType type, ...) {
 	/* do something different based on what the type is */
 	va_start(args, type);
 	switch(type) {
-		case E_RUNNABLE:
+		case FN_RUNNABLE:
 			event->fn.runnable.run = va_arg(args, void (*)(void));
 			break;
-		case E_CONSUMER:
+		case FN_CONSUMER:
 			event->fn.consumer.accept = va_arg(args, void (*)(char *));
 			event->fn.consumer.t      = va_arg(args, char *);
-		case E_BICONSURMER:
+		case FN_BICONSURMER:
 			event->fn.biconsumer.accept = va_arg(args, void (*)(char *, int));
 			event->fn.biconsumer.t      = va_arg(args, char *);
 			event->fn.biconsumer.u      = va_arg(args, int);
@@ -103,13 +103,13 @@ void EventDispatch(const int t_ms) {
 	while((e = next_event) && e->t_ms <= t_ms) {
 		Pedantic("Event: event triggered at %dms.\n", e->t_ms);
 		switch(e->type) {
-			case E_RUNNABLE:
+			case FN_RUNNABLE:
 				e->fn.runnable.run();
 				break;
-			case E_CONSUMER:
+			case FN_CONSUMER:
 				e->fn.consumer.accept(e->fn.consumer.t);
 				break;
-			case E_BICONSURMER:
+			case FN_BICONSURMER:
 				e->fn.biconsumer.accept(e->fn.biconsumer.t, e->fn.biconsumer.u);
 				break;
 		}

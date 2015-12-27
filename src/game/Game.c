@@ -115,7 +115,7 @@ int Game(void) {
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
 
-	Event(1000, E_RUNNABLE, &say_hello);
+	Event(1000, FN_RUNNABLE, &say_hello);
 
 	Debug("Game: on.\n");
 	is_started = -1;
@@ -235,17 +235,17 @@ static void add_sprites(void) {
 		bad = Ship(0, game.scorpion, B_STUPID);
 		ShipSetOrientation(bad, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
-	Event(5000, E_RUNNABLE, &add_sprites);
+	Event(5000, FN_RUNNABLE, &add_sprites);
 }
 
 static void poll_sprites(void) {
 	int w, h;
 	DrawGetScreen(&w, &h);
 	printf("%d\t%d\t%d\t%.1f\t%d\t%d\n", SpriteNo(), SpriteGetConsidered(), SpriteGetOnscreen(), 1000.0 / TimerMean(), w, h);
-	Event(500, E_RUNNABLE, &poll_sprites);
+	Event(500, FN_RUNNABLE, &poll_sprites);
 }
 
 static void say_hello(void) {
 	printf("hi!!!!\n");
-	Event(1000, E_RUNNABLE, &say_hello);
+	Event(1000, FN_RUNNABLE, &say_hello);
 }

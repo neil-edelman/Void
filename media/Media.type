@@ -25,3 +25,10 @@ string name
 Alignment likes
 Alignment hates
 ~
+Specimen
+string name
+Alignment align
+ShipClass ship1
+ShipClass ship2
+ShipClass ship3
+ShipClass ship4

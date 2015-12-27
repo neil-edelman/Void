@@ -38,7 +38,8 @@ void insert(struct Event *e);
 
 /* public */
 
-/** Constructor. (FIXME: have a pool of Events and draw from there.)
+/** Constructor. (FIXME: have a pool of Events and draw from there; this will
+ requre a second level of indirection.)
  @return	An object or a null pointer, if the object couldn't be created. */
 int Event(const int delay_ms, enum FnType type, ...) {
 	va_list args;

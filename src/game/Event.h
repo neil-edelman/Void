@@ -1,4 +1,4 @@
-enum FnType { FN_RUNNABLE, FN_CONSUMER, FN_BICONSURMER };
+enum FnType { FN_RUNNABLE, FN_CONSUMER, FN_BICONSUMER };
 
 struct Event;
 

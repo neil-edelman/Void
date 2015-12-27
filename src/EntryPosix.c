@@ -25,10 +25,6 @@ static const char *year        = "2015";
 static const int versionMajor  = 3;
 static const int versionMinor  = 3;
 
-struct Entry {
-	int i;
-} entry;
-
 static void main_(void);
 static void usage(void);
 
@@ -48,14 +44,15 @@ int main(int argc, char **argv) {
 	/* we generally don't have return because glutMainLoop() never does */
 	if(atexit(&main_)) perror("atexit");
 
+	/* entropy increase */
+	srand((unsigned)clock());
+
 	/* start up subsystems; window has to be first; timer ms */
 	if(!Window(programme, argc, argv)
 		|| !Key()
 		|| !Draw()
 	    || !Game()
 		|| !Timer(framelenght_ms)) return EXIT_FAILURE;
-	/* entropy increase */
-	srand((unsigned)clock());
 
 	/* hand over control to the grahics library */
 	WindowGo();

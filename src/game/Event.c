@@ -27,7 +27,7 @@ struct Event {
 			char *t;
 		} consumer;
 		struct {
-			void (*accept)(char *, int);
+			void (*accept)(char *, const int);
 			char *t;
 			int  u;
 		} biconsumer;
@@ -61,10 +61,10 @@ int Event(const int delay_ms, enum FnType type, ...) {
 		case FN_CONSUMER:
 			event->fn.consumer.accept = va_arg(args, void (*)(char *));
 			event->fn.consumer.t      = va_arg(args, char *);
-		case FN_BICONSURMER:
-			event->fn.biconsumer.accept = va_arg(args, void (*)(char *, int));
+		case FN_BICONSUMER:
+			event->fn.biconsumer.accept = va_arg(args, void (*)(char *, const int));
 			event->fn.biconsumer.t      = va_arg(args, char *);
-			event->fn.biconsumer.u      = va_arg(args, int);
+			event->fn.biconsumer.u      = va_arg(args, const int);
 	}
 	va_end(args);
 	Pedantic("Event: new at %dms, #%p.\n", event->t_ms, (void *)event);
@@ -103,13 +103,9 @@ void EventDispatch(const int t_ms) {
 	while((e = next_event) && e->t_ms <= t_ms) {
 		Pedantic("Event: event triggered at %dms.\n", e->t_ms);
 		switch(e->type) {
-			case FN_RUNNABLE:
-				e->fn.runnable.run();
-				break;
-			case FN_CONSUMER:
-				e->fn.consumer.accept(e->fn.consumer.t);
-				break;
-			case FN_BICONSURMER:
+			case FN_RUNNABLE:    e->fn.runnable.run(); break;
+			case FN_CONSUMER:    e->fn.consumer.accept(e->fn.consumer.t); break;
+			case FN_BICONSUMER:
 				e->fn.biconsumer.accept(e->fn.biconsumer.t, e->fn.biconsumer.u);
 				break;
 		}

@@ -59,6 +59,7 @@ static float rnd(const float limit);
 static void add_sprites(void);
 static void poll_sprites(void);
 static void say_hello(void);
+static void bi(char *, int);
 
 /* public */
 
@@ -115,7 +116,8 @@ int Game(void) {
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
 
-	Event(1000, FN_RUNNABLE, &say_hello);
+	/*Event(1000, FN_RUNNABLE, &say_hello);*/
+	Event(1000, FN_BICONSUMER, &bi, calloc(128, sizeof(char)), 1);
 
 	Debug("Game: on.\n");
 	is_started = -1;
@@ -248,4 +250,10 @@ static void poll_sprites(void) {
 static void say_hello(void) {
 	printf("hi!!!!\n");
 	Event(1000, FN_RUNNABLE, &say_hello);
+}
+
+static void bi(char *a, const int i) {
+	if(--a[0] < 'A') a[0] = 'z';
+	printf("!!!! %s %d\n", a, i);
+	Event(1000, FN_BICONSUMER, &bi, a, i + 1);
 }

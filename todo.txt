@@ -1,6 +1,6 @@
 gang, band, pack, horde, herd
 kind, character, ethos
-<specimen>, sample, instance, occurrence, manifestation, embodiment, epitome, representative
+<specimen>, sample, instance, occurrence, manifestation, embodiment, epitome, representative, aitype -- have different ais, of course; also, ai(align)
 
 have a sprite and normals, instead of all having a cone for normals
 

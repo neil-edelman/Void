@@ -157,16 +157,8 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 	game.t_s = t_ms * 0.001f; /* fixme: may cause overflow; wrap-around will cause crazyness if you run it for 49.8 days (I assume; it will just
 		wrap around and not do anthing crazy? because, if so 24.9 days) */
 	/*game.dt_s = dt_ms * 0.001f;*/
-	/* fixme: where is this even used? */
-
-#ifdef DELAY
-	/* determine whether it's cpu or gpu-bound
-	 http://blogs.msdn.com/b/shawnhar/archive/2008/04/07/how-to-tell-if-you-are-cpu-or-gpu-bound.aspx */
-	{
-		struct timespec ts = { 0, DELAY * 1000000 };
-		nanosleep(&ts, 0);
-	}
-#endif
+	/* fixme: where is this even used? it should be taken out; it's numerically
+	 unstable */
 
 	/* handle non-in-game related keypresses; fixme: have the keys be variable. and O(n)->O(1) by swich, each thing is checked in sequence? */
 	if(KeyPress(27)) {

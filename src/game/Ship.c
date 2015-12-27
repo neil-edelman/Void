@@ -251,7 +251,9 @@ int ShipGetId(const struct Ship *s) {
 }
 
 /** This is general, mostly-ai. This will be called from Game::update, so no
- need to have Sprites. */
+ need to have Sprites.
+ FIXME! instead of an enum, have a set of functions, colletively called AI,
+ that define the behavior, which can be null in the case of a player */
 void ShipUpdate(const float dt_s) {
 	struct Ship *ship;
 

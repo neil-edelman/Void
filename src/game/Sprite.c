@@ -99,6 +99,7 @@ static struct Sprite **address_prev_x(struct Sprite *const a);
 static struct Sprite **address_next_x(struct Sprite *const a);
 static struct Sprite **address_prev_y(struct Sprite *const a);
 static struct Sprite **address_next_y(struct Sprite *const a);
+static void shp_shp(struct Sprite *, struct Sprite *, const float);
 static void deb_deb(struct Sprite *, struct Sprite *, const float);
 static void shp_deb(struct Sprite *, struct Sprite *, const float);
 static void deb_shp(struct Sprite *, struct Sprite *, const float);
@@ -111,7 +112,7 @@ static void eth_shp(struct Sprite *, struct Sprite *, const float);
 	
 static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, const float) = {
 	{ &deb_deb, &shp_deb, &wmd_deb, 0 },
-	{ &deb_shp, 0,        &wmd_shp, &eth_shp },
+	{ &deb_shp, &shp_shp, &wmd_shp, &eth_shp },
 	{ &deb_wmd, &shp_wmd, 0,        0 },
 	{ 0,        &shp_eth, 0,        0 }
 };
@@ -993,6 +994,10 @@ static struct Sprite **address_next_y(struct Sprite *const a) {
 
 /* type collisions; can not modify list of Sprites as it is in the middle of
  x/ylist or delete! */
+
+static void shp_shp(struct Sprite *a, struct Sprite *b, const float d0) {
+	elastic_bounce(a, b, d0);
+}
 
 static void deb_deb(struct Sprite *a, struct Sprite *b, const float d0) {
 

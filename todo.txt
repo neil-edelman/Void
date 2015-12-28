@@ -6,6 +6,10 @@ kind, character, ethos
 
 
 
+Ships have a flag that stores the state of a Gate
+
+Earth.png credits
+
 increase lighting 512 to 1024 now that it's on the heap
 
 no types of the resource results in crashing

@@ -34,11 +34,6 @@ Gate
 Gate.png
 # ObjectsInSpace name, TypeOfObject, x, y
 ObjectInSpace
-Party Rock
-asteroid
--100
--250
-ObjectInSpace
 Mars
 Mars
 -390

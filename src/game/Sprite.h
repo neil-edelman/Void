@@ -1,6 +1,6 @@
 struct Image;
 
-enum Sprites { S_NONE = 0, S_DEBRIS, S_SHIP, S_WMD };
+enum Sprites { S_NONE = 0, S_DEBRIS, S_SHIP, S_WMD, S_ETHEREAL };
 
 struct Sprite;
 

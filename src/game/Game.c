@@ -12,6 +12,7 @@
 #include "Far.h"
 #include "Debris.h"
 #include "Wmd.h"
+#include "Ethereal.h"
 #include "Light.h"
 #include "Event.h"
 #include "../general/Map.h"
@@ -30,6 +31,8 @@ extern const struct ObjectsInSpace objects_in_space[];
 extern const int max_objects_in_space;
 /*extern const struct ShipClass ship_class[];
 extern const int max_ship_class;*/
+extern const struct Gate gate[];
+extern const int max_gate;
 
 #ifndef M_PI /* M_PI not defined in MSVC */
 #define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
@@ -50,9 +53,7 @@ struct Game {
 static const float asteroid_max_speed = 0.03f;
 
 /* positions larger then this value will be looped around */
-/*const float de_sitter = 8192.0f;*/
-/* reduce for tests */
-const float de_sitter = 4096.0f;
+const float de_sitter = 8192.0f;
 
 /* private */
 static float rnd(const float limit);
@@ -69,6 +70,7 @@ int Game(void) {
 	struct Ship   *alien;
 	struct Far    *bg;
 	const struct ObjectsInSpace *ois;
+	const struct Gate *gt;
 	int i;
 
 	if(is_started) return -1;
@@ -86,6 +88,13 @@ int Game(void) {
 		ois = &objects_in_space[i];
 		bg  = Far(ois);
 		Debug("Set up Object in Space: %s.\n", ois->name);
+	}
+
+	/* set up gates */
+	for(i = 0; i < max_gate; i++) {
+		gt = &gate[i];
+		EtherealGate(gt);
+		Debug("Set up Gate: %d.\n", gt->id);
 	}
 
 	/* sprinkle some ships */

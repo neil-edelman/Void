@@ -11,7 +11,23 @@
  @version	3.3, 2015-12
  @since		3.3, 2015-12 */
 
-/** Debug level message. */
+/** For warnings/errors that should always be printed to stderr. */
+void Warn(const char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
+}
+
+/** For info that should always be printed to stdout. */
+void Info(const char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	vfprintf(stdout, format, args);
+	va_end(args);
+}
+
+/** Debug level message to stderr. */
 void Debug(const char *format, ...) {
 	va_list args;
 	va_start(args, format);
@@ -19,7 +35,7 @@ void Debug(const char *format, ...) {
 	va_end(args);
 }
 
-/** Dubug level pedantic. */
+/** Dubug level pedantic to stderr. */
 void Pedantic(const char *format, ...) {
 #ifndef NDEBUG
 	va_list args;

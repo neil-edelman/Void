@@ -241,10 +241,10 @@ int Draw(void) {
 		float sunshine[] = { 1.0f * 3.0f, 0.97f * 3.0f, 0.46f * 3.0f }; */
 		float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
 		glUseProgram(far_shader);
-		glUniform1f(far_dirang_location, 0.0f/*-2.0*/);
+		glUniform1f(far_dirang_location, /*0.0f*/-2.0);
 		glUniform3fv(far_dirclr_location, 1, sunshine);
 		glUseProgram(light_shader);
-		glUniform1f(light_dirang_location, 0.0f/*-2.0*/);
+		glUniform1f(light_dirang_location, /*0.0f*/-2.0);
 		glUniform3fv(light_dirclr_location, 1, sunshine);
 	}
 
@@ -499,7 +499,7 @@ static int texture(struct Image *image) {
 	switch(image->data_format) {
 		case IF_PNG:
 			if((error = lodepng_decode32(&pic, &width, &height, image->data, image->data_size))) {
-				Debug("lodepng error %u: %s\n", error, lodepng_error_text(error));
+				Debug("Draw::texture: lodepng error %u: %s\n", error, lodepng_error_text(error));
 				break;
 			}
 			is_alloc = -1;
@@ -525,14 +525,14 @@ static int texture(struct Image *image) {
 			break;*/
 		case IF_UNKNOWN:
 		default:
-			Debug("Unknown image format.\n");
+			Debug("Draw::texture: Unknown image format.\n");
 	}
 	if(!is_alloc) {
-		Debug("texture: allocation failed.\n");
+		Debug("Draw::texture: allocation failed.\n");
 		return 0;
 	}
 	if(width != image->width || height != image->height || depth != image->depth) {
-		Debug("texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n", image->width, image->height, image->depth, width, height, depth);
+		Debug("Draw::texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n", image->width, image->height, image->depth, width, height, depth);
 		is_bad = -1;
 	}
 	/* select image format */
@@ -553,7 +553,7 @@ static int texture(struct Image *image) {
 			format   = GL_RGBA;
 			break;
 		default:
-			Debug("texture: not a recognised depth, %d.\n", depth);
+			Debug("Draw::texture: not a recognised depth, %d.\n", depth);
 			is_bad = -1;
 	}
 	/* invert to go with OpenGL's strict adherence to standards and image files
@@ -611,7 +611,7 @@ static int texture(struct Image *image) {
 		default:
 			break;
 	}
-	Debug("texture: created %dx%dx%d texture, Tex%u.\n", width, height, depth, tex);
+	Debug("Draw::texture: created %dx%dx%d texture, Tex%u.\n", width, height, depth, tex);
 
 	WindowIsGlError("texture");
 

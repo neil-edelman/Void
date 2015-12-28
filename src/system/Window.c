@@ -21,7 +21,7 @@ static int    is_started;
 static time_t last_error;
 
 /** Gets the window started.
- @param title	The title of the window.
+ @param title	The title of the window (can be null.)
  @param argc
  @param argv	main() program arguments; passed to glutInit().
  @return		Whether the graphics library is ready. */
@@ -34,17 +34,19 @@ int Window(const char *title, int argc, char **argv) {
 	time(&last_error);
 
 	/* glut */
+	Debug("Window: GLUT initialising.\n");
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE);
 	glutInitWindowSize(600, 400);
+	Debug("Window: starting window.\n");
 	glutCreateWindow(title ? title : "Untitled");
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex);
-	Debug("Window: started; GLSL stats: vendor %s; version %s; renderer %s; shading language version %s; combined texture image units %d; maximum texture size %d.\n",
+	Info("GLSL stats: vendor %s; version %s; renderer %s; shading language version %s; combined texture image units %d; maximum texture size %d.\n",
 			glGetString(GL_VENDOR), glGetString(GL_VERSION),
 			glGetString(GL_RENDERER), glGetString(GL_SHADING_LANGUAGE_VERSION),
 			GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, max_tex);
 	if(max_tex < warn_texture_size)
-		Debug("Window: maximum texture size is too small, %d/%d; warning! bad! (supposed to be 8 or larger.)\n", max_tex, warn_texture_size);
+		Warn("Window: maximum texture size is too small, %d/%d; warning! bad! (supposed to be 8 or larger.)\n", max_tex, warn_texture_size);
 	/*glutMouseFunc(&mouse);
 	 glutIdleFunc(0); */
 
@@ -84,9 +86,9 @@ int WindowIsGlError(const char *function) {
 			no_errs = 0;
 			time(&last_error);
 		}
-		Debug("Window::isGLError(caught in %s:) OpenGL error: %s.\n", function, gluErrorString(err));
+		Warn("Window::isGLError(caught in %s:) OpenGL error: %s.\n", function, gluErrorString(err));
 		if(++no_errs > no_fails) {
-			Debug("Window::isGLError: too many errors! :[\n");
+			Warn("Window::isGLError: too many errors! :[\n");
 			exit(EXIT_FAILURE);
 		}
 		ohoh = -1;
@@ -139,7 +141,7 @@ void OpenPrint(const char *fmt, ...) {
 	va_start(ap, fmt);
 	vsnprintf(open->console.buffer, console_buffer_size, fmt, ap);
 	va_end(ap);
-	printf("Open::Console: \"%s\" (%d.)\n", open->console.buffer, console_buffer_size);
+	Debug("Open::Console: \"%s\" (%d.)\n", open->console.buffer, console_buffer_size);
 }
 
 /** called by display every frame */

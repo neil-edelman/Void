@@ -14,6 +14,7 @@
 #include "Debris.h"
 #include "Ship.h"
 #include "Wmd.h"
+#include "Ethereal.h"
 
 /** Sprites have a (world) position, a rotation, and a bitmap. They are sorted
  by bitmap and drawn by the gpu in ../system/Draw based on the lighting. These
@@ -105,11 +106,14 @@ static void wmd_deb(struct Sprite *, struct Sprite *, const float);
 static void deb_wmd(struct Sprite *, struct Sprite *, const float);
 static void wmd_shp(struct Sprite *, struct Sprite *, const float);
 static void shp_wmd(struct Sprite *, struct Sprite *, const float);
-
-static void (*const collision_matrix[3][3])(struct Sprite *, struct Sprite *, const float) = {
-	{ &deb_deb, &shp_deb, &wmd_deb },
-	{ &deb_shp, 0,        &wmd_shp },
-	{ &deb_wmd, &shp_wmd, 0 }
+static void shp_eth(struct Sprite *, struct Sprite *, const float);
+static void eth_shp(struct Sprite *, struct Sprite *, const float);
+	
+static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, const float) = {
+	{ &deb_deb, &shp_deb, &wmd_deb, 0 },
+	{ &deb_shp, 0,        &wmd_shp, &eth_shp },
+	{ &deb_wmd, &shp_wmd, 0,        0 },
+	{ 0,        0/*&shp_eth*/, 0,        0 }
 };
 static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(void *);
 
@@ -513,6 +517,7 @@ void SpriteUpdate(const float dt) {
 	struct Debris *debris;
 	struct Ship *ship;
 	struct Wmd *wmd;
+	struct Ethereal *ethereal;
 	/*float omega;*/
 	int t_ms = TimerLastTime();
 
@@ -593,6 +598,11 @@ void SpriteUpdate(const float dt) {
 				if(t_ms >= WmdGetExpires(wmd)) { Wmd_(&wmd); break; }
 				/* update light */
 				WmdUpdateLight(wmd);
+				break;
+			case S_ETHEREAL:
+				if(EtherealIsDestroyed(ethereal = s->container)) {
+					Ethereal_(&ethereal);
+				}
 				break;
 			case S_NONE:
 			default:
@@ -1063,4 +1073,15 @@ static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
 
 static void shp_wmd(struct Sprite *s, struct Sprite *w, const float d0) {
 	wmd_shp(w, s, d0);
+}
+
+static void shp_eth(struct Sprite *s, struct Sprite *e, const float d0) {
+	struct Ship *ship = SpriteGetContainer(s);
+	struct Ethereal *eth = SpriteGetContainer(e);
+
+	Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));
+}
+
+static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
+	shp_eth(s, e, d0);
 }

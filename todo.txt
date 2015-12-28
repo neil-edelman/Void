@@ -2,6 +2,10 @@ gang, band, pack, horde, herd
 kind, character, ethos
 <specimen>, sample, instance, occurrence, manifestation, embodiment, epitome, representative, aitype -- have different ais, of course; also, ai(align)
 
+
+
+StaticDoublyLinkedList, fix over-limit crash bug
+
 have a sprite and normals, instead of all having a cone for normals
 
 look up how to get outlines (I think you just add a little bit to the size and then render it in one colour)
@@ -14,7 +18,7 @@ select icon, target display (ships, planets, stations, links)
 
 fog & astroids different distances (using jpeg compression?) fill in space between planets and foreground and space after planets
 
-build up asteroids from smaller chunks; hit them and calculate new chunks; the same for ships! when you break apart, goodies fall out
+build up asteroids from smaller chunks; hit them and calculate new chunks with procedural generation; the same for ships! when you break apart, goodies fall out
 
 instead of having the same code for collision detection and display, have a nearest sector for display instead of is_selected; should be O(Sqrt[n]) -> O(1) (screen size)
 

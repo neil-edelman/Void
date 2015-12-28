@@ -10,6 +10,12 @@ TypeOfObject type
 int x
 int y
 ~
+Gate
+autoincrement id
+int x
+int y
+float theta
+~
 ShipClass
 string name
 image image

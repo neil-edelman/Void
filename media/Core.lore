@@ -29,6 +29,9 @@ Mars.png
 TypeOfObject
 Earth
 Earth.png
+TypeOfObject
+Gate
+Gate.png
 # ObjectsInSpace name, TypeOfObject, x, y
 ObjectsInSpace
 Party Rock
@@ -43,8 +46,8 @@ Mars
 ObjectsInSpace
 Mercury
 Mercury
-0
-0
+150
+-100
 ObjectsInSpace
 Venus
 Venus
@@ -60,6 +63,11 @@ Earth
 Earth
 -500
 -600
+# Gate name, TypeOfObject, x, y
+Gate
+-150
+-100
+1.0
 # ShipClass name, image, shield, recharge, speed2, acceleration, turn_rate, rotation_limit
 ShipClass
 Nautilus

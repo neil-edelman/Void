@@ -6,7 +6,9 @@
 #include "Print.h"
 
 /** This is to save typing; pedantic and debug map are equivalent to fprintf,
- but they can be turned off right here instead of grepping all files.
+ but they can be turned off right here instead of grepping all files. The
+ defualt is to print debug but not pedantic. You can control these by defining
+ PRINT_NDEBUG and PRINT_PEDANTIC.
  @author	Neil
  @version	3.3, 2015-12
  @since		3.3, 2015-12 */
@@ -27,6 +29,7 @@ void Info(const char *format, ...) {
 	va_end(args);
 }
 
+#ifdef PRINT_DEBUG
 /** Debug level message to stderr. */
 void Debug(const char *format, ...) {
 	va_list args;
@@ -34,13 +37,14 @@ void Debug(const char *format, ...) {
 	vfprintf(stderr, format, args);
 	va_end(args);
 }
+#endif
 
+#ifdef PRINT_PEDANTIC
 /** Dubug level pedantic to stderr. */
 void Pedantic(const char *format, ...) {
-#ifndef NDEBUG
 	va_list args;
 	va_start(args, format);
 	vfprintf(stderr, format, args);
 	va_end(args);
-#endif
 }
+#endif

@@ -30,10 +30,6 @@ struct Timer {
 static void update(int value);
 
 /** This starts the Timer or modifies the Timer.
- <p>
- Fixme: I don't know how this will repond when you've not called glutInit();
- don't do it. "Requesting state for an invalid GLUT state name returns
- negative one."? Scetchy.
  @param step	The resolution of the timer. */
 int Timer(const int step) {
 
@@ -73,7 +69,7 @@ int TimerMean(void) {
 	return timer.mean > 0 ? timer.mean : 1;
 }
 
-/** @returns	Framelength in milliseconds. */
+/** @returns	Default framelength in milliseconds (to pass to Timer.) */
 int TimerGetFramelength(void) {
 	return framelength_ms;
 }

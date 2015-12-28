@@ -241,10 +241,10 @@ int Draw(void) {
 		float sunshine[] = { 1.0f * 3.0f, 0.97f * 3.0f, 0.46f * 3.0f }; */
 		float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
 		glUseProgram(far_shader);
-		glUniform1f(far_dirang_location, -2.0);
+		glUniform1f(far_dirang_location, 0.0f/*-2.0*/);
 		glUniform3fv(far_dirclr_location, 1, sunshine);
 		glUseProgram(light_shader);
-		glUniform1f(light_dirang_location, -2.0);
+		glUniform1f(light_dirang_location, 0.0f/*-2.0*/);
 		glUniform3fv(light_dirclr_location, 1, sunshine);
 	}
 
@@ -556,7 +556,22 @@ static int texture(struct Image *image) {
 			Debug("texture: not a recognised depth, %d.\n", depth);
 			is_bad = -1;
 	}
-	/* fixme: invert as necessary */
+	/* invert to go with OpenGL's strict adherence to standards and image files
+	 not really */
+	{
+		unsigned bytes_line = width * depth;
+		unsigned top, bottom, i;
+		unsigned char *pb_t, *pb_b;
+		for(top = 0, bottom = height - 1; top < bottom; top++, bottom--) {
+			pb_t = pic + top    * bytes_line;
+			pb_b = pic + bottom * bytes_line;
+			for(i = 0; i < bytes_line; i++, pb_t++, pb_b++) {
+				*pb_t ^= *pb_b;
+				*pb_b ^= *pb_t;
+				*pb_t ^= *pb_b;
+			}
+		}
+	}
 	/* load the uncompressed image into a texture */
 	if(!is_bad) {
 		glGenTextures(1, (unsigned *)&tex);
@@ -576,7 +591,7 @@ static int texture(struct Image *image) {
 		glTexImage2D(GL_TEXTURE_2D, 0, internal, width, height, 0, format,
 					 GL_UNSIGNED_BYTE, pic);
 		image->texture = tex;
-#if 1 /* debug */
+#if 0 /* debug */
 		Debug("Tex: %u.\n", image->texture);
 		if(image->width <= 80) image_print(image, pic);
 		else Debug("...too big to show.\n");

@@ -26,6 +26,9 @@ Pluto.png
 TypeOfObject
 Mars
 Mars.png
+TypeOfObject
+Earth
+Earth.png
 # ObjectsInSpace name, TypeOfObject, x, y
 ObjectsInSpace
 Party Rock
@@ -52,6 +55,11 @@ Pluto
 Pluto
 200
 -400
+ObjectsInSpace
+Earth
+Earth
+-500
+-600
 # ShipClass name, image, shield, recharge, speed2, acceleration, turn_rate, rotation_limit
 ShipClass
 Nautilus

@@ -1,12 +1,47 @@
 gang, band, pack, horde, herd
 kind, character, ethos
 <specimen>, sample, instance, occurrence, manifestation, embodiment, epitome, representative, aitype -- have different ais, of course; also, ai(align)
+<zone>, sector, region
 
 
 
-StaticDoublyLinkedList, fix over-limit crash bug
 
-have a sprite and normals, instead of all having a cone for normals
+increase lighting 512 to 1024 now that it's on the heap
+
+no types of the resource results in crashing
+
+add supporting resource for resources times n, eg, (maybe opt it so it searches for repeat "strings")
+.type
+Foo
+string name
+Bar bars<>
+.lore
+Foo
+foo
+<
+bar1
+bar2
+>
+Bar
+bar1
+Bar
+bar2
+.c
+static Foo {
+	char *name;
+	unsigned bars_size;
+	struct Bar *bars_first;
+};
+static Bar foo_bars[2] = { &bar[0], &bar[1]; };
+static Foo foo[] = { { "foo", 2, &foo_bars[0] } }
+
+Starting and stopping the game, reset timer
+
+things that you can buy that allow different things to be picked up, eg mining (screen)
+
+StaticDoublyLinkedList, fix over-limit crash bug (also, enum SpriteType type; union { struct{}; struct{};etc } t; )
+
+have a sprite and normals, instead of all having a cone for normals -> automate making sprites, have different views instead of rotating -> create 3d models, create ray-tracer in tools
 
 look up how to get outlines (I think you just add a little bit to the size and then render it in one colour)
 

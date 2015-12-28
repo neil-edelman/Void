@@ -57,7 +57,7 @@ static struct Far **address_next_y(struct Far *const a);
  @param texture		On the GPU.
  @param size		Pixels.
  @return			The Far. */
-struct Far *Far(const struct ObjectsInSpace *ois) {
+struct Far *Far(const struct ObjectInSpace *ois) {
 	struct Far *far;
 
 	/* fixme: diurnal variation */

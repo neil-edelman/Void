@@ -33,32 +33,32 @@ TypeOfObject
 Gate
 Gate.png
 # ObjectsInSpace name, TypeOfObject, x, y
-ObjectsInSpace
+ObjectInSpace
 Party Rock
 asteroid
 -100
 -250
-ObjectsInSpace
+ObjectInSpace
 Mars
 Mars
 -390
 260
-ObjectsInSpace
+ObjectInSpace
 Mercury
 Mercury
 150
 -100
-ObjectsInSpace
+ObjectInSpace
 Venus
 Venus
 600
 500
-ObjectsInSpace
+ObjectInSpace
 Pluto
 Pluto
 200
 -400
-ObjectsInSpace
+ObjectInSpace
 Earth
 Earth
 -500
@@ -95,4 +95,10 @@ Scorpion
 Scorpion
 Scorpion
 Nautilus
+# Zone name, Alignment government, ObjectsInSpace spob, spob2
+Zone
+Earth
+humans
+Earth
+Mars
 ~

@@ -27,8 +27,8 @@
 extern const int max_images;
 extern const struct TypeOfObject type_of_object[];
 extern const int max_type_of_object;*/
-extern const struct ObjectsInSpace objects_in_space[];
-extern const int max_objects_in_space;
+extern const struct ObjectInSpace object_in_space[];
+extern const int max_object_in_space;
 /*extern const struct ShipClass ship_class[];
 extern const int max_ship_class;*/
 extern const struct Gate gate[];
@@ -69,7 +69,7 @@ int Game(void) {
 	struct Debris *asteroid;
 	struct Ship   *alien;
 	struct Far    *bg;
-	const struct ObjectsInSpace *ois;
+	const struct ObjectInSpace *ois;
 	const struct Gate *gt;
 	int i;
 
@@ -84,8 +84,8 @@ int Game(void) {
 	};
 
 	/* set up ALL Objects in Space */
-	for(i = 0; i < max_objects_in_space; i++) {
-		ois = &objects_in_space[i];
+	for(i = 0; i < max_object_in_space; i++) {
+		ois = &object_in_space[i];
 		bg  = Far(ois);
 		Debug("Set up Object in Space: %s.\n", ois->name);
 	}

@@ -75,6 +75,8 @@ OF   := -framework OpenGL -framework GLUT # UNIX: -lglut -lGLEW; PC: depends
 # Jakob Borg and Eldar Abusalimov:
 # $(ARGS) is all the extra arguments
 # $(BRGS) is_all_the_extra_arguments
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
 ifeq (backup, $(firstword $(MAKECMDGOALS)))
   ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
   BRGS := $(subst $(SPACE),_,$(ARGS))

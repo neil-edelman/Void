@@ -6,9 +6,9 @@ kind, character, ethos
 
 
 
-Ships have a flag that stores the state of a Gate
 
-Earth.png credits
+
+Ships have a flag that stores the state of a Gate
 
 increase lighting 512 to 1024 now that it's on the heap
 

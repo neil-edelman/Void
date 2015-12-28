@@ -627,7 +627,7 @@ static int light_compute_texture(void) {
 	float *buffer; /*[512][512][2]; MSVC does not have space on the stack*/
 	/*const int buffer_ysize = sizeof(buffer)  / sizeof(*buffer);
 	const int buffer_xsize = sizeof(*buffer) / sizeof(**buffer);*/
-	const int buffer_size = 512; /* width/height */
+	const int buffer_size = 1024/*512*/; /* width/height */
 	const float buffer_norm = (float)M_SQRT1_2 * 4.0f / sqrtf(2.0f * buffer_size * buffer_size);
 	int name;
 

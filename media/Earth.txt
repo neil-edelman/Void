@@ -1,1 +1,11 @@
-Earth bluemarbleeast.jpg
+Credit: NASA's Earth Observatory (NASA Goddard Space Flight Center.)
+
+NASA created these two images to exhibit high-resolution global composites of Moderate Resolution Imaging Spectroradiometer (MODIS) data. The land surface data were acquired from June through September of 2001. The clouds were acquired on two separate days--July 29, 2001, for the northern hemisphere and November 16, 2001 for the southern hemisphere.
+
+Justice C.O., 1 Townshend J.R.G., Vermote E. F., Masuoka E., Wolfe R.E., El Saleous N., Roy D.P. and Morisette. J.T. , 2002. An overview of MODIS Land data processing and product status. Remote Sensing of Environment, 83, 1-2, 3-15.
+
+Los, S.O., Collatz, G.J., Sellers, P.J., Malmström, C.M., Pollack, N.H., DeFries, R.S., Bounoua, L., Parris, M.T., Tucker, C.J., and Dazlich, D.A. (2000) A global 9-year biophysical land-surface data set from NOAA AVHRR data. J Hydrometeor., 1, 183-199.
+
+Sellers, P.J., Los, S.O., Tucker, C.J., Justice, C.O., Dazlich, D.A., Collatz, G.J., and Randall, D.A. (1996) A revised land surface parameterization (SiB-2) for atmospheric GCMs. Part 2: The generation of global fields of terrestrial biophysical parameters from satellite data. Journal of Climate, 9, 706-737.
+
+Stöckli, R, and Vidale, P.L. (2004) European plant phenology and climate as seen in a 20 year AVHRR land-surface parameter dataset. Internat. J. Remote Sens., 25 (17), 3303-3330.

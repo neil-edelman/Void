@@ -113,7 +113,7 @@ static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, co
 	{ &deb_deb, &shp_deb, &wmd_deb, 0 },
 	{ &deb_shp, 0,        &wmd_shp, &eth_shp },
 	{ &deb_wmd, &shp_wmd, 0,        0 },
-	{ 0,        0/*&shp_eth*/, 0,        0 }
+	{ 0,        &shp_eth, 0,        0 }
 };
 static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(void *);
 

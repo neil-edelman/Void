@@ -11,9 +11,7 @@ Random.c
 
 Ships have a flag that stores the state of a Gate
 
-increase lighting 512 to 1024 now that it's on the heap
-
-no types of the resource results in crashing
+no (0) types of the resource in a file, crashing results, in pre-processing
 
 add supporting resource for resources times n, eg, (maybe opt it so it searches for repeat "strings")
 .type
@@ -40,9 +38,7 @@ static Foo {
 static Bar foo_bars[2] = { &bar[0], &bar[1]; };
 static Foo foo[] = { { "foo", 2, &foo_bars[0] } }
 
-Starting and stopping the game, reset timer
-
-things that you can buy that allow different things to be picked up, eg mining (screen)
+things that you can buy that allow different things to be picked up, eg gold mining sieve
 
 StaticDoublyLinkedList, fix over-limit crash bug (also, enum SpriteType type; union { struct{}; struct{};etc } t; )
 
@@ -52,7 +48,7 @@ look up how to get outlines (I think you just add a little bit to the size and t
 
 text engine (display lists? wrapping?) -- communication
 
-pause/resume; allows conversations b/t ships (might be hard to network, rt then?) and landing (have landing spot (x,y))
+landing (have landing spot (x,y))
 
 select icon, target display (ships, planets, stations, links)
 

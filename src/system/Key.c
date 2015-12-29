@@ -26,7 +26,7 @@ static void key_up(unsigned char k, int x, int y);
 static void key_down_special(int k, int x, int y);
 static void key_up_special(int k, int x, int y);
 
-static const int key_delay = 300; /* ms */
+static const int key_delay = 300; /* ms; depreceated */
 
 /** Attach the static keys to the Window depending on whether the Timer is
  active (poll) or not (direct to functions.)
@@ -67,9 +67,10 @@ int KeyTime(const int key) {
 }
 
 /** Key press, with repeat rate (destructive.) You probably don't want this
- because it is polling. Use asynchronous @see{KeyRegister} if possible.
+ because it is polling.
  @param key		The key.
- @return		Boolean, whether it's pressed or not. */
+ @return		Boolean, whether it's pressed or not.
+ @depreceated	Use asynchronous @see{KeyRegister}. */
 int KeyPress(const int key) {
 	int time;
 	struct Key *k;
@@ -123,8 +124,8 @@ static enum Keys glut_to_keys(const int k) {
 static void key_down(unsigned char k, int x, int y) {
 	struct Key *key = &keys[k];
 	if(key->state) return;
-	key->state  = -1;
-	key->down = glutGet(GLUT_ELAPSED_TIME);
+	key->state = -1;
+	key->down  = glutGet(GLUT_ELAPSED_TIME);
 	if(key->handler) key->handler();
 	/* Debug("Open::key_down: key %d hit at %d ms.\n", k, key->down); */
 }

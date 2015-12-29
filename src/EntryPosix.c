@@ -33,7 +33,6 @@ static void usage(void);
  @param argv the arguments
  @return     either EXIT_SUCCESS or EXIT_FAILURE */
 int main(int argc, char **argv) {
-	const int framelenght_ms = TimerGetFramelength();
 
 	/* fixme: more options! (ie, load game, etc) */
 	if(argc > 1) {
@@ -52,7 +51,7 @@ int main(int argc, char **argv) {
 		|| !Key()
 		|| !Draw()
 	    || !Game()
-		|| !Timer(framelenght_ms)) return EXIT_FAILURE;
+		|| !Timer()) return EXIT_FAILURE;
 
 	/* hand over control to the grahics library */
 	WindowGo();

@@ -25,11 +25,10 @@ static struct Timer {
 
 static void update(int value);
 
-/** This starts the Timer or modifies the Timer.
- @param step	The resolution of the timer. */
-int Timer(const int step) {
+/** This starts the Timer or modifies the Timer. */
+int Timer(void) {
 
-	timer.step  = step;
+	timer.step  = framelength_ms;
 	if(is_started) return -1;
 
 	if(!WindowStarted()) {
@@ -61,13 +60,8 @@ int TimerLastTime(void) {
 
 /** The value is a positive number.
  @returns	Moving average in milliseconds. */
-int TimerMean(void) {
+int TimerGetMean(void) {
 	return timer.mean > 0 ? timer.mean : 1;
-}
-
-/** @return		Default framelength in milliseconds (to pass to Timer.) */
-int TimerGetFramelength(void) {
-	return framelength_ms;
 }
 
 /** @return		Boolean value. */

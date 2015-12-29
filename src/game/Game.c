@@ -58,6 +58,7 @@ const float de_sitter = 8192.0f;
 /* private */
 static void quit(void);
 static void pause(void);
+static void fps(void);
 static float rnd(const float limit);
 static void add_sprites(void);
 static void poll_sprites(void);
@@ -82,6 +83,7 @@ int Game(void) {
 	KeyRegister('p',  &pause);
 	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &WindowToggleFullScreen);
+	KeyRegister('g',  &fps);
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
@@ -221,8 +223,12 @@ static void pause(void) {
 	if(TimerIsRunning()) {
 		Timer_();
 	} else {
-		Timer(TimerGetFramelength()); /* fixme: no getFramelength */
+		Timer();
 	}
+}
+
+static void fps(void) {
+	Info("%d FPS\n", TimerGetMean());
 }
 
 /** "Random" -- used for initialising. FIXME: this will be used a lot! have

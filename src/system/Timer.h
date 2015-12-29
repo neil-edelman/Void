@@ -1,6 +1,5 @@
-int Timer(const int step);
+int Timer(void);
 void Timer_(void);
 int TimerLastTime(void);
-int TimerMean(void);
-int TimerGetFramelength(void);
+int TimerGetMean(void);
 int TimerIsRunning(void);

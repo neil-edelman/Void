@@ -1,5 +1,5 @@
-int Timer(void);
-void Timer_(void);
-int TimerLastTime(void);
-int TimerGetMean(void);
+void TimerRun(void);
+void TimerPause(void);
 int TimerIsRunning(void);
+unsigned TimerGetGameTime(void);
+unsigned TimerGetMean(void);

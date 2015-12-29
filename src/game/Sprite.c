@@ -520,7 +520,7 @@ void SpriteUpdate(const float dt) {
 	struct Wmd *wmd;
 	struct Ethereal *ethereal;
 	/*float omega;*/
-	int t_ms = TimerLastTime();
+	int t_ms = TimerGetGameTime();
 
 	/* sorts the sprites; they're (hopefully) almost sorted already from last
 	 frame, just freshens with insertion sort, O(n + m) where m is the

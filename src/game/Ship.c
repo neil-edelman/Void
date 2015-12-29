@@ -277,7 +277,7 @@ void ShipUpdate(const float dt_s) {
 
 /** Called from {@code Game::update}. */
 void ShipShoot(struct Ship *ship, const int colour) {
-	const int time_ms = TimerLastTime();
+	const int time_ms = TimerGetGameTime();
 	if(!ship || time_ms < ship->ms_recharge_wmd) return;
 	Wmd(ship->sprite, colour);
 	ship->ms_recharge_wmd = time_ms + shot_recharge_ms;
@@ -300,7 +300,7 @@ void ShipHit(struct Ship *ship, const int damage) {
 
 /** Called from {@code Ship::update} (viz, not; nonsense bug.) */
 static void fire(struct Ship *ship, const int colour) { /* get s */
-	const int time_ms = TimerLastTime();
+	const int time_ms = TimerGetGameTime();
 	if(!ship || time_ms < ship->ms_recharge_wmd) return;
 	Wmd(ship->sprite, colour);
 	ship->ms_recharge_wmd = time_ms + shot_recharge_ms;

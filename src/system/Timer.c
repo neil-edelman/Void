@@ -4,7 +4,6 @@
 #include "../Print.h"
 #include "Glew.h"
 #include "Timer.h"
-#include "Window.h"
 #include "../game/Game.h"
 
 /** This is an idempotent class dealing with the interface to OpenGL.
@@ -12,76 +11,69 @@
  @version	3.3, 2015-12
  @since		3.0, 2014 */
 
-static const int framelength_ms = 20; /* 50 fps -- fixme: variable */
-static const int persistance    = (int)(0.9 * 1024); /* fixed point :10 */
+static const int frametime_ms = 20; /* 50 fps -- fixme: variable */
+static const int persistance  = (int)(0.9 * 1024); /* fixed point :10 */
 
-static int is_started;
+static int is_running;
 
-static struct Timer {
-	int step;  /* ms */
-	int time;
-	int mean;
-} timer;
+static unsigned mean_frametime = 20;
+
+static unsigned last_time;
+static unsigned paused_time;
+
+/* private */
 
 static void update(int value);
 
-/** This starts the Timer or modifies the Timer. */
-int Timer(void) {
+/** This starts the Timer. */
+void TimerRun(void) {
+	const unsigned time = glutGet(GLUT_ELAPSED_TIME);
 
-	timer.step  = framelength_ms;
-	if(is_started) return -1;
+	if(is_running) return;
 
-	if(!WindowStarted()) {
-		Debug("Timer: window not started.\n");
-		return 0;
-	}
+	paused_time += time - last_time;
+	last_time   =  time;
+	is_running  =  -1;
+	Debug("Timer: starting timer with %ums paused, %ums programme, %ums game.\n", paused_time, last_time, TimerGetGameTime());
 
-	timer.time = glutGet(GLUT_ELAPSED_TIME);
-	timer.mean = framelength_ms;
-	is_started = -1;
-	Debug("Timer: created timer with %ums.\n", timer.time);
+	glutTimerFunc(frametime_ms, &update, 0);
 
-	glutTimerFunc(timer.step, &update, timer.time);
-
-	return -1;
 }
 
 /** This stops the Timer. */
-void Timer_(void) {
-	if(!is_started) return;
-	is_started = 0;
-	Debug("~Timer: erased timer.\n");
-}
-
-/** Last time an update was called. */
-int TimerLastTime(void) {
-	return timer.time;
-}
-
-/** The value is a positive number.
- @returns	Moving average in milliseconds. */
-int TimerGetMean(void) {
-	return timer.mean > 0 ? timer.mean : 1;
+void TimerPause(void) {
+	if(!is_running) return;
+	is_running = 0;
+	Debug("Timer: stopped timer with last %ums.\n", last_time);
 }
 
 /** @return		Boolean value. */
 int TimerIsRunning(void) {
-	return is_started;
+	return is_running;
+}
+
+/** Last time an update was called. */
+unsigned TimerGetGameTime(void) {
+	return last_time - paused_time;
+}
+
+/** The value is a positive number.
+ @returns	Moving average in milliseconds. */
+unsigned TimerGetMean(void) {
+	return mean_frametime > 0 ? mean_frametime : 1;
 }
 
 /** Callback for glutTimerFunc.
- @param old_time	The previous time. */
-static void update(int old_time) {
-	int dt;
+ @param zero	0 */
+static void update(int zero) {
+	const unsigned time = glutGet(GLUT_ELAPSED_TIME);
+	const unsigned dt   = time - last_time;
 
-	if(!is_started) return;
+	if(!is_running) return;
 
-	/* all times are in ms */
-	timer.time  = glutGet(GLUT_ELAPSED_TIME);
-	dt = timer.time - old_time;
-	/* smoothed function */
-	timer.mean = (timer.mean*persistance + dt*(1024-persistance)) >> 10;
-	glutTimerFunc(timer.step, &update, timer.time);
-	GameUpdate(timer.time, dt);
+	last_time = time;
+	mean_frametime = (mean_frametime*persistance + dt*(1024-persistance)) >> 10;
+	glutTimerFunc(frametime_ms, &update, 0);
+	GameUpdate(dt);
 	glutPostRedisplay();
 }

@@ -50,10 +50,10 @@ int main(int argc, char **argv) {
 	if(!Window(programme, argc, argv)
 		|| !Key()
 		|| !Draw()
-	    || !Game()
-		|| !Timer()) return EXIT_FAILURE;
+	    || !Game()) return EXIT_FAILURE;
 
 	/* hand over control to the grahics library */
+	TimerRun();
 	WindowGo();
 
 	/* never get here */
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
 
 /** Destructor (called with atexit().) */
 static void main_(void) {
-	Timer_();
+	TimerPause();
 	Game_();
 	Draw_();
 }

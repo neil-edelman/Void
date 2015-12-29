@@ -7,6 +7,8 @@
 #include "Window.h"
 
 /** This is an idempotent class dealing with the interface to OpenGL.
+ <p>
+ The keys are not affected by pause!
  @author	Neil
  @version	3.0, 05-2015
  @since		2.0, 2014 (<- what?) */

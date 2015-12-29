@@ -16,7 +16,7 @@
 
 struct Event {
 	struct Event *next;
-	int          t_ms;
+	unsigned     t_ms;
 	enum FnType  type;
 	union {
 		struct {
@@ -40,6 +40,7 @@ void insert(struct Event *e);
 
 /** Constructor. (FIXME: have a pool of Events and draw from there; this will
  requre a second level of indirection.)
+ fixme: this crashes on loop, more careful (TIMER!)
  @return	An object or a null pointer, if the object couldn't be created. */
 int Event(const int delay_ms, enum FnType type, ...) {
 	va_list args;
@@ -51,7 +52,7 @@ int Event(const int delay_ms, enum FnType type, ...) {
 		return 0;
 	}
 	event->next            = 0;
-	event->t_ms            = TimerLastTime() + delay_ms;
+	event->t_ms            = TimerGetGameTime() + delay_ms;
 	event->type            = type;
 	/* do something different based on what the type is */
 	va_start(args, type);
@@ -97,10 +98,12 @@ void Event_(struct Event **event_ptr) {
 	*event_ptr = event = 0;
 }
 
-/** Dispach all events up to t_ms.
+/** Dispach all events up to the present.
+ fixme: wrap-around, :[
  FIXME: Aught memory alloc */
-void EventDispatch(const int t_ms) {
+void EventDispatch(void) {
 	struct Event *e;
+	const unsigned t_ms = TimerGetGameTime();
 	while((e = next_event) && e->t_ms <= t_ms) {
 		Pedantic("Event: event triggered at %dms.\n", e->t_ms);
 		switch(e->type) {

@@ -61,7 +61,7 @@ struct Wmd *Wmd(struct Sprite *const from, const int colour) {
 	wmd = &wmds[wmds_size];
 	if(!(wmd->sprite = Sprite(S_WMD, shot))) return 0; /* FIXME */
 	SpriteSetContainer(wmd, &wmd->sprite);
-	wmd->expires= TimerLastTime() + shot_range;
+	wmd->expires= TimerGetGameTime() + shot_range;
 	wmd->from   = from;
 	/* don't really care if it fails */
 	wmd->light  = Light(64.0f, colour == 0 ? 1.0f : 0.0f, colour == 1 ? 1.0f : 0.0f, colour == 2 ? 1.0f : 0.0f);

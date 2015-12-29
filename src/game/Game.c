@@ -42,7 +42,6 @@ static int is_started;
 
 /* public struct */
 struct Game {
-	float t_s/*, dt_s*/;
 	struct Ship *player; /* camera moves with this */
 	int turning, acceleration, shoot; /* input per frame, ms */
 	/* defined in Lore.h (hopefully!) */
@@ -169,14 +168,14 @@ void Game_(void) {
 }
 
 /** updates the gameplay */
-void GameUpdate(const int t_ms, const int dt_ms) {
+void GameUpdate(const int dt_ms) {
 	struct Ship *player;
 	float dt_s = dt_ms * 0.001f;
 
 	if(!is_started) return;
 
 	/* update game time (fixme: time is accessed multiple ways, confusing) */
-	game.t_s = t_ms * 0.001f; /* fixme: may cause overflow; wrap-around will cause crazyness if you run it for 49.8 days (I assume; it will just
+	/*game.t_s = t_ms * 0.001f;*/ /* fixme: may cause overflow; wrap-around will cause crazyness if you run it for 49.8 days (I assume; it will just
 		wrap around and not do anthing crazy? because, if so 24.9 days) */
 	/*game.dt_s = dt_ms * 0.001f;*/
 	/* fixme: where is this even used? it should be taken out; it's numerically
@@ -205,7 +204,7 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 	ShipUpdate(dt_s);
 
 	/* check events */
-	EventDispatch(t_ms);
+	EventDispatch();
 }
 
 struct Ship *GameGetPlayer(void) {
@@ -221,15 +220,15 @@ static void quit(void) {
 
 static void pause(void) {
 	if(TimerIsRunning()) {
-		Timer_();
+		TimerPause();
 	} else {
-		Timer();
+		TimerRun();
 	}
 }
 
 static void fps(void) {
 	unsigned mean = TimerGetMean();
-	Info("%.1f FPS / %d ms average.\n", 1000.0 / mean, mean);
+	Info("%.1f fps, %ums average frame-time; %ums game-time.\n", 1000.0 / mean, mean, TimerGetGameTime());
 }
 
 /** "Random" -- used for initialising. FIXME: this will be used a lot! have

@@ -20,6 +20,7 @@ static unsigned mean_frametime = 20;
 
 static unsigned last_time;
 static unsigned paused_time;
+static unsigned game_time;
 
 /* private */
 
@@ -32,6 +33,7 @@ void TimerRun(void) {
 	if(is_running) return;
 
 	paused_time += time - last_time;
+	game_time   =  last_time;
 	last_time   =  time;
 	is_running  =  -1;
 	Debug("Timer: starting timer with %ums paused, %ums programme, %ums game.\n", paused_time, last_time, TimerGetGameTime());
@@ -54,7 +56,7 @@ int TimerIsRunning(void) {
 
 /** Last time an update was called. */
 unsigned TimerGetGameTime(void) {
-	return last_time - paused_time;
+	return game_time;
 }
 
 /** The value is a positive number.
@@ -72,6 +74,7 @@ static void update(int zero) {
 	if(!is_running) return;
 
 	last_time = time;
+	game_time = last_time - paused_time;
 	mean_frametime = (mean_frametime*persistance + dt*(1024-persistance)) >> 10;
 	glutTimerFunc(frametime_ms, &update, 0);
 	GameUpdate(dt);

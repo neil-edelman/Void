@@ -228,7 +228,8 @@ static void pause(void) {
 }
 
 static void fps(void) {
-	Info("%d FPS\n", TimerGetMean());
+	unsigned mean = TimerGetMean();
+	Info("%.1f FPS / %d ms average.\n", 1000.0 / mean, mean);
 }
 
 /** "Random" -- used for initialising. FIXME: this will be used a lot! have
@@ -265,7 +266,7 @@ static void add_sprites(void) {
 static void poll_sprites(void) {
 	int w, h;
 	DrawGetScreen(&w, &h);
-	printf("%d\t%d\t%d\t%.1f\t%d\t%d\n", SpriteNo(), SpriteGetConsidered(), SpriteGetOnscreen(), 1000.0 / TimerMean(), w, h);
+	printf("%d\t%d\t%d\t%.1f\t%d\t%d\n", SpriteNo(), SpriteGetConsidered(), SpriteGetOnscreen(), 1000.0 / TimerGetMean(), w, h);
 	Event(500, FN_RUNNABLE, &poll_sprites);
 }
 

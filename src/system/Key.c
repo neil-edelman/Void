@@ -5,7 +5,6 @@
 #include "Glew.h"
 #include "Key.h"
 #include "Window.h"
-/*#include "Timer.h"*/
 
 /** This is an idempotent class dealing with the interface to OpenGL.
  @author	Neil
@@ -17,6 +16,7 @@ static struct Key {
 	int down;
 	int integral;
 	int time;
+	void (*handler)(void);
 } keys[KEY_MAX];
 
 /* private prototypes */
@@ -28,26 +28,25 @@ static void key_up_special(int k, int x, int y);
 
 static const int key_delay = 300; /* ms */
 
-/** Attach the static keys to the Window.
+/** Attach the static keys to the Window depending on whether the Timer is
+ active (poll) or not (direct to functions.)
  @return	Success? */
 int Key(void) {
-
-	if(!WindowStarted()) {
-		Debug("Draw: window not started.\n");
-		return 0;
-	}
-
 	glutKeyboardFunc(&key_down);
 	glutKeyboardUpFunc(&key_up);
 	glutSpecialFunc(&key_down_special);
 	glutSpecialUpFunc(&key_up_special); 
-	Debug("Key: static keys attached to Window.\n");
-
+	Debug("Key: handlers set-up.\n");
 	return -1;
-
 }
 
-/** Check for how long the key has been pressed, without repeat rate (destructive.)
+/** Registers a function to call asynchronously on press. */
+void KeyRegister(const unsigned k, void (*const handler)(void)) {
+	if(k >= KEY_MAX) return;
+	keys[k].handler = handler;
+}
+
+/** Polls how long the key has been pressed, without repeat rate. Destructive.
  @param key		The key.
  @return		Number of ms. */
 int KeyTime(const int key) {
@@ -67,7 +66,8 @@ int KeyTime(const int key) {
 	return time;
 }
 
-/** Key press, with repeat rate (destructive.)
+/** Key press, with repeat rate (destructive.) You probably don't want this
+ because it is polling. Use asynchronous @see{KeyRegister} if possible.
  @param key		The key.
  @return		Boolean, whether it's pressed or not. */
 int KeyPress(const int key) {
@@ -117,12 +117,15 @@ static enum Keys glut_to_keys(const int k) {
 	}
 }
 
+/* fixme: have key_delay in between calling? */
+
 /** callback for glutKeyboardFunc */
 static void key_down(unsigned char k, int x, int y) {
 	struct Key *key = &keys[k];
 	if(key->state) return;
 	key->state  = -1;
 	key->down = glutGet(GLUT_ELAPSED_TIME);
+	if(key->handler) key->handler();
 	/* Debug("Open::key_down: key %d hit at %d ms.\n", k, key->down); */
 }
 
@@ -141,6 +144,7 @@ static void key_down_special(int k, int x, int y) {
 	if(key->state) return;
 	key->state  = -1;
 	key->down = glutGet(GLUT_ELAPSED_TIME);
+	if(key->handler) key->handler();
 	/* Debug("Open::key_down_special: key %d hit at %d ms.\n", k, key->down); */
 }
 

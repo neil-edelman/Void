@@ -56,6 +56,8 @@ static const float asteroid_max_speed = 0.03f;
 const float de_sitter = 8192.0f;
 
 /* private */
+static void quit(void);
+static void pause(void);
 static float rnd(const float limit);
 static void add_sprites(void);
 static void poll_sprites(void);
@@ -74,6 +76,15 @@ int Game(void) {
 	int i;
 
 	if(is_started) return -1;
+
+	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
+	KeyRegister(27,   &quit);
+	KeyRegister('p',  &pause);
+	KeyRegister(k_f1, &WindowToggleFullScreen);
+	KeyRegister('f',  &WindowToggleFullScreen);
+	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
+	if(KeyPress('f'))  printf("Foo!\n");
+	if(KeyPress('a'))  SpritePrint("Game::update");*/
 
 	/* game elements */
 	if(!(game.asteroid = TypeOfObjectSearch("asteroid"))
@@ -169,16 +180,6 @@ void GameUpdate(const int t_ms, const int dt_ms) {
 	/* fixme: where is this even used? it should be taken out; it's numerically
 	 unstable */
 
-	/* handle non-in-game related keypresses; fixme: have the keys be variable. and O(n)->O(1) by swich, each thing is checked in sequence? */
-	if(KeyPress(27)) {
-		Debug("Escape key pressed.\n");
-		exit(EXIT_SUCCESS); /* meh */
-	}
-	if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
-	if(KeyPress('f'))  printf("Foo!\n");
-	if(KeyPress(k_f1)) WindowToggleFullScreen();
-	if(KeyPress('a'))  SpritePrint("Game::update");
-
 	/* in-game */
 	game.turning      = KeyTime(k_left) - KeyTime(k_right);
 	game.acceleration = KeyTime(k_up)   - KeyTime(k_down);
@@ -211,7 +212,21 @@ struct Ship *GameGetPlayer(void) {
 
 /* private */
 
-/** "Random" -- used for initialising.
+static void quit(void) {
+	Debug("Quit key pressed.\n");
+	exit(EXIT_SUCCESS); /* meh */
+}
+
+static void pause(void) {
+	if(TimerIsRunning()) {
+		Timer_();
+	} else {
+		Timer(TimerGetFramelength()); /* fixme: no getFramelength */
+	}
+}
+
+/** "Random" -- used for initialising. FIXME: this will be used a lot! have
+ Rando.c include all sorts of random fuctions.
  @param limit
  @return		A uniformly distributed random variable in the range
 				[-limit, limit]. */

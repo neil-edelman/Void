@@ -30,5 +30,6 @@ enum Keys {
 };
 
 int Key(void);
+void KeyRegister(const unsigned k, void (*const handler)(void));
 int KeyTime(const int key);
 int KeyPress(const int key);

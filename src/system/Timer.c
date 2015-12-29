@@ -9,19 +9,15 @@
 
 /** This is an idempotent class dealing with the interface to OpenGL.
  @author	Neil
- @version	3.2, 2015-05
- @since		2.0, 2014 (<- what?)*/
+ @version	3.3, 2015-12
+ @since		3.0, 2014 */
 
 static const int framelength_ms = 20; /* 50 fps -- fixme: variable */
 static const int persistance    = (int)(0.9 * 1024); /* fixed point :10 */
 
 static int is_started;
 
-#ifdef KEEP_TRACK_OF_TIMES
-#define TIMER_LOG_FRAMES 2
-#endif
-
-struct Timer {
+static struct Timer {
 	int step;  /* ms */
 	int time;
 	int mean;
@@ -41,8 +37,8 @@ int Timer(const int step) {
 		return 0;
 	}
 
-	timer.time  = glutGet(GLUT_ELAPSED_TIME);
-	timer.mean  = framelength_ms;
+	timer.time = glutGet(GLUT_ELAPSED_TIME);
+	timer.mean = framelength_ms;
 	is_started = -1;
 	Debug("Timer: created timer with %ums.\n", timer.time);
 
@@ -69,9 +65,14 @@ int TimerMean(void) {
 	return timer.mean > 0 ? timer.mean : 1;
 }
 
-/** @returns	Default framelength in milliseconds (to pass to Timer.) */
+/** @return		Default framelength in milliseconds (to pass to Timer.) */
 int TimerGetFramelength(void) {
 	return framelength_ms;
+}
+
+/** @return		Boolean value. */
+int TimerIsRunning(void) {
+	return is_started;
 }
 
 /** Callback for glutTimerFunc.
@@ -84,10 +85,9 @@ static void update(int old_time) {
 	/* all times are in ms */
 	timer.time  = glutGet(GLUT_ELAPSED_TIME);
 	dt = timer.time - old_time;
+	/* smoothed function */
 	timer.mean = (timer.mean*persistance + dt*(1024-persistance)) >> 10;
 	glutTimerFunc(timer.step, &update, timer.time);
 	GameUpdate(timer.time, dt);
-	/* now void -> if(!GameUpdate(timer.time, dt)) printf("Should really be shutting down.\n");*/
-	/*Debug("Timer::update: %ums %ums.\n", timer.time, dt);*/
 	glutPostRedisplay();
 }

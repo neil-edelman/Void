@@ -69,7 +69,7 @@ BMP_H  := $(patsubst $(MDIR)/%.bmp,$(BDIR)/%_bmp.h,$(BMP))
 TEXT   := $(wildcard $(MDIR)/*.txt)
 
 CC   := gcc
-CF   := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic --std=c99# UNIX/PC: -DGLEW
+CF   := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic --std=c99# -DNDEBUG# UNIX/PC: -DGLEW
 OF   := -framework OpenGL -framework GLUT # UNIX: -lglut -lGLEW; PC: depends
 
 # Jakob Borg and Eldar Abusalimov:

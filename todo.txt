@@ -5,7 +5,10 @@ kind, character, ethos
 
 
 
+grep -rn "Something" src
+diff -p A.c B.c
 
+clear Events when going to a new Zone
 
 Random.c
 
@@ -41,6 +44,8 @@ static Foo foo[] = { { "foo", 2, &foo_bars[0] } }
 things that you can buy that allow different things to be picked up, eg gold mining sieve
 
 StaticDoublyLinkedList, fix over-limit crash bug (also, enum SpriteType type; union { struct{}; struct{};etc } t; )
+
+P[\mu_x,\mu_y,\sigma] = f(x|\mu,\sigma) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(x-\mu)^2}{2\sigma^2}} Gaussian distribution in space to find ships. Also, custom dist based on objects of interest
 
 have a sprite and normals, instead of all having a cone for normals -> automate making sprites, have different views instead of rotating -> create 3d models, create ray-tracer in tools
 

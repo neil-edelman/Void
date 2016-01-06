@@ -57,6 +57,7 @@ struct Ship {
 	float                  turn;
 	float                  turn_limit;
 	float                  friction_rate;
+	float                  horizon;
 	enum Behaviour         behaviour;
 	struct Ship            **notify; /* this is NOT sprite notify, further up the tree */
 } ships[512];
@@ -98,6 +99,7 @@ struct Ship *Ship(struct Ship **notify, const struct ShipClass *ship_class, cons
 	ship->turn       = ship_class->turn;
 	ship->turn_limit = ship_class->turn * 500.0f; /* derived */
 	ship->friction_rate = ship_class->turn * 1000.0f; /* derived */
+	ship->horizon    = 0;
 	ship->behaviour  = behaviour;
 	ship->notify     = notify;
 	ships_size++;
@@ -243,6 +245,16 @@ int ShipGetMaxHit(const struct Ship *const ship) {
 int ShipIsDestroyed(const struct Ship *s) {
 	if(!s) return -1;
 	return s->hit <= 0 ? -1 : 0;
+}
+
+float ShipGetHorizon(const struct Ship *s) {
+	if(!s) return 0;
+	return s->horizon;
+}
+
+void ShipSetHorizon(struct Ship *s, const float h) {
+	if(!s) return;
+	s->horizon = h;
 }
 
 int ShipGetId(const struct Ship *s) {

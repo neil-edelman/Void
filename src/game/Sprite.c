@@ -960,8 +960,6 @@ static float mass(const struct Sprite *s) {
 	switch(SpriteGetType(s)) {
 		case S_DEBRIS: return DebrisGetMass(SpriteGetContainer(s));
 		case S_SHIP:   return ShipGetMass(SpriteGetContainer(s));
-		case S_WMD:
-		case S_NONE:
 		default:       return 1.0f;
 	}
 }
@@ -1083,8 +1081,10 @@ static void shp_wmd(struct Sprite *s, struct Sprite *w, const float d0) {
 static void shp_eth(struct Sprite *s, struct Sprite *e, const float d0) {
 	struct Ship *ship = SpriteGetContainer(s);
 	struct Ethereal *eth = SpriteGetContainer(e);
+	void (*fn)(struct Ethereal *, struct Sprite *);
 
-	Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));
+	/*Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));*/
+	if((fn = EtherealGetCallback(eth))) fn(eth, s);
 }
 
 static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {

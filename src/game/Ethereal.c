@@ -3,9 +3,11 @@
 
 #include <stdlib.h> /* malloc free */
 #include <string.h> /* memcpy */
+#include <math.h>   /* ftrig */
 #include "../Print.h"
 #include "../../bin/Lore.h" /* auto-generated; used in constructor */
 #include "Sprite.h"
+#include "Ship.h"
 #include "Ethereal.h"
 
 /* They are in the forground but poll collision detection instead of
@@ -20,10 +22,13 @@ extern const struct Gate gate;
 
 struct Ethereal {
 	struct Sprite *sprite;
+	void (*callback)(struct Ethereal *, struct Sprite *);
 	int is_picked_up;
 } ethereals[512];
 static const int ethereals_capacity = sizeof ethereals / sizeof(struct Ethereal);
 static int       ethereals_size;
+
+void gate_travel(struct Ethereal *gate, struct Sprite *s);
 
 /* public */
 
@@ -41,6 +46,7 @@ struct Ethereal *Ethereal(const struct Image *image) {
 	/* superclass */
 	if(!(e->sprite = Sprite(S_ETHEREAL, image))) return 0;
 	SpriteSetContainer(e, &e->sprite);
+	e->callback     = 0;
 	e->is_picked_up = 0;
 	ethereals_size++;
 	Debug("Ethereal: created from pool, Eth%u->Spr%u.\n", EtherealGetId(e), SpriteGetId(e->sprite));
@@ -60,6 +66,7 @@ struct Ethereal *EtherealGate(const struct Gate *gate) {
 	}
 	if(!(e = Ethereal(img))) return 0;
 	SpriteSetOrientation(e->sprite, gate->x, gate->y, gate->theta);
+	e->callback = &gate_travel;
 	return e;
 }
 
@@ -90,6 +97,10 @@ void Ethereal_(struct Ethereal **e_ptr) {
 	*e_ptr = e = 0;
 }
 
+void (*EtherealGetCallback(struct Ethereal *e))(struct Ethereal *, struct Sprite *) {
+	return e->callback;
+}
+
 /*void EtherealSetVelocity(struct Ethereal *e, const float vx, const float vy) {
 	if(!e || !e->sprite) return;
 	SpriteSetVelocity(e->sprite, vx, vy);
@@ -108,4 +119,29 @@ int EtherealGetId(const struct Ethereal *e) {
 int EtherealIsDestroyed(const struct Ethereal *e) {
 	if(!e) return -1;
 	return e->is_picked_up ? -1 : 0;
+}
+
+void gate_travel(struct Ethereal *gate, struct Sprite *s) {
+	struct Ship *ship;
+	float gate_x, gate_y, gate_theta, gate_vx, gate_vy;
+	float ship_x, ship_y, ship_theta, ship_vx, ship_vy;
+	float x, y, vx, vy, gate_norm_x, gate_norm_y, proj, h;
+
+	if(SpriteGetType(s) != S_SHIP) return;
+	SpriteGetOrientation(gate->sprite, &gate_x, &gate_y, &gate_theta);
+	SpriteGetVelocity(gate->sprite, &gate_vx, &gate_vy);
+	SpriteGetOrientation(s, &ship_x, &ship_y, &ship_theta);
+	SpriteGetVelocity(s, &ship_vx, &ship_vy);
+	x = ship_x - gate_x;
+	y = ship_y - gate_y;
+	vx = ship_vx - gate_vx;
+	vy = ship_vy - gate_vy;
+	gate_norm_x = cosf(gate_theta);
+	gate_norm_y = sinf(gate_theta);
+	proj = x * gate_norm_x + y * gate_norm_y; /* proj is the new h */
+	ship = SpriteGetContainer(s);
+	h = ShipGetHorizon(ship);
+	if(h > 0 && proj <= 0) Info("Shp%u crossed into the event horizon of Eth%u.\n", ShipGetId(ship), EtherealGetId(gate));
+	ShipSetHorizon(ship, proj); /* fixme: two things could confuse it */
+	//Info("Yo ship at (%f, %f) gate (%f, %f) heading (%f, %f): %f.\n", ship_x, ship_y, gate_x, gate_y, gate_norm_x, gate_norm_y, proj);
 }

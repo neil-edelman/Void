@@ -27,7 +27,7 @@ INST  := $(PROJ)-$(VA)_$(VB)
 MSVC := build/msvc2013
 
 # extra stuff we should back up
-EXTRA := $(SDIR)/icon.rc todo.txt build/msvc2010.txt unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c $(MSVC)/Void.sln $(MSVC)/Void.v12.suo $(MSVC)/Void.vcxproj $(MSVC)/Void.vcxproj.filters $(MSVC)/Void.vcxproj.user build/Makefile-Redhat #$(MSVC)/Void.sdf
+EXTRA := $(SDIR)/icon.rc todo.txt build/msvc2010.txt build/unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c $(MSVC)/Void.sln $(MSVC)/Void.v12.suo $(MSVC)/Void.vcxproj $(MSVC)/Void.vcxproj.filters $(MSVC)/Void.vcxproj.user build/Makefile-Redhat #$(MSVC)/Void.sdf
 
 # John Graham-Cumming:
 # rwildcard is a recursive wildcard

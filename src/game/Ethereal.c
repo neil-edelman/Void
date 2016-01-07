@@ -127,6 +127,11 @@ void (*EtherealGetCallback(struct Ethereal *e))(struct Ethereal *, struct Sprite
 	SpriteSetVelocity(e->sprite, vx, vy);
 }*/
 
+struct Sprite *EtherealGetSprite(const struct Ethereal *e) {
+	if(!e) return 0;
+	return e->sprite;
+}
+
 int EtherealGetId(const struct Ethereal *e) {
 	if(!e) return 0;
 	return (int)(e - ethereals) + 1;

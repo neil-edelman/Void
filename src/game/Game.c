@@ -56,6 +56,7 @@ struct Game {
 	/* defined in Lore.h (hopefully!) */
 	const struct TypeOfObject *asteroid;
 	const struct ShipClass *nautilus, *scorpion;
+	const struct SpaceZone *start;
 } game;
 
 static const float asteroid_max_speed = 0.03f;
@@ -67,7 +68,7 @@ const float de_sitter = 8192.0f;
 static void quit(void);
 static void pause(void);
 static void fps(void);
-static float rnd(const float limit);
+/*static float rnd(const float limit);*/
 static void add_sprites(void);
 static void poll_sprites(void);
 static void position(void);
@@ -99,17 +100,22 @@ int Game(void) {
 	/* game elements */
 	if(!(game.asteroid = TypeOfObjectSearch("asteroid"))
 	   || !(game.nautilus = ShipClassSearch("Nautilus"))
-	   || !(game.scorpion = ShipClassSearch("Scorpion"))) {
+	   || !(game.scorpion = ShipClassSearch("Scorpion"))
+	   || !(game.start    = SpaceZoneSearch("Earth"))) {
 		Debug("Game: couldn't find required game elements.\n");
 		return 0;
 	};
 
+	/* set drawing elements */
+	DrawSetShield("Bar.png");
+
+#if 0
 	/* read Zones */
-	/*for(i = 0; i < max_space_zone; i++) {
+	for(i = 0; i < max_space_zone; i++) {
 		sz = &space_zone[i];
 		zone = Zone(sz);
 		Debug("Set up Zone: %s.\n", sz->name);
-	}*/
+	}
 
 	/* set up ALL Objects in Space */
 	for(i = 0; i < max_object_in_space; i++) {
@@ -132,10 +138,6 @@ int Game(void) {
 		ShipSetOrientation(alien, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
 
-	/* set drawing elements */
-	DrawSetBackground("Dorado.jpeg");
-	DrawSetShield("Bar.png");
-
 	/* some asteroids; fixme: debris limit 4096; sometimes it crashes when
 	 reaching; gets incresingly slow after 1500, but don't need debris when
 	 it's really far (cpu!) */
@@ -152,9 +154,13 @@ int Game(void) {
 							 vx, vy, o); /* (vx,vy):o */
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
+#endif
 
 	/*Event(1000, FN_RUNNABLE, &say_hello);*/
 	Event(1000, FN_BICONSUMER, &bi, calloc(128, sizeof(char)), 1);
+
+	Zone(game.start);
+	game.player = Ship(&game.player, game.nautilus, B_HUMAN);
 
 	Debug("Game: on.\n");
 	is_started = -1;
@@ -252,9 +258,9 @@ static void fps(void) {
  @param limit
  @return		A uniformly distributed random variable in the range
 				[-limit, limit]. */
-static float rnd(const float limit) {
+/*static float rnd(const float limit) {
 	return limit * (2.0f * rand() / RAND_MAX - 1.0f);
-}
+}*/
 
 static void add_sprites(void) {
 	struct Debris *asteroid;

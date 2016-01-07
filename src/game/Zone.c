@@ -73,7 +73,12 @@ void Zone(const struct SpaceZone *sz) {
 	DrawSetBackground("Dorado.jpeg");
 	/* fixme: set sunlight */
 
-	EtherealGate(sz->gate1);
+	{
+		struct Ethereal *gt = EtherealGate(sz->gate1);
+		float x, y, t;
+		SpriteGetOrientation(EtherealGetSprite(gt), &x, &y, &t);
+		Info("Zone: Eth%u (%f,%f:%f)\n", EtherealGetId(gt), x, y, t);
+	}
 	Far(sz->ois1);
 	Far(sz->ois2);
 	Far(sz->ois3);
@@ -81,9 +86,7 @@ void Zone(const struct SpaceZone *sz) {
 	Debug("Zone: popping player.\n");
 	ShipPopPlayer();
 
-#if 0
 	/* sprinkle some ships */
-	/*game.player = Ship(&game.player, game.nautilus, B_HUMAN);*/
 	for(i = 0; i < 100; i++) {
 		alien = Ship(0, scorpion_class, B_STUPID);
 		ShipSetOrientation(alien, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
@@ -105,7 +108,6 @@ void Zone(const struct SpaceZone *sz) {
 							 vx, vy, o); /* (vx,vy):o */
 		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
 	}
-#endif
 
 	/*Event(1000, FN_RUNNABLE, &say_hello);*/
 	/*Event(1000, FN_BICONSUMER, &bi, calloc(128, sizeof(char)), 1);*/

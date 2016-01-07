@@ -1,3 +1,6 @@
+grep -rn "Something" src
+diff -p A.c B.c
+
 gang, band, pack, horde, herd
 kind, character, ethos
 <specimen>, sample, instance, occurrence, manifestation, embodiment, epitome, representative, aitype -- have different ais, of course; also, ai(align)
@@ -5,14 +8,15 @@ kind, character, ethos
 
 
 
-grep -rn "Something" src
-diff -p A.c B.c
 
-clear Events when going to a new Zone
+
+
+
+Too complicated! do a union of Sprites, instead of hierarchal two-objects
+
+Random sucking things in to zero on new zone?
 
 Random.c
-
-Ships have a flag that stores the state of a Gate
 
 no (0) types of the resource in a file, crashing results, in pre-processing
 

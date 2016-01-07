@@ -4,14 +4,14 @@ string name
 image image
 ~
 ObjectInSpace
-autoincrement id
 string name
 TypeOfObject type
 int x
 int y
 ~
 Gate
-autoincrement id
+string name
+SpaceZone to
 int x
 int y
 float theta
@@ -39,8 +39,10 @@ ShipClass ship2
 ShipClass ship3
 ShipClass ship4
 ~
-Zone
+SpaceZone
 string name
 Alignment government
-ObjectInSpace spob1
-ObjectInSpace spob2
+Gate gate1
+ObjectInSpace ois1
+ObjectInSpace ois2
+ObjectInSpace ois3

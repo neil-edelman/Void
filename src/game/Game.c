@@ -1,7 +1,7 @@
 /* Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
-#include <stdlib.h> /* malloc free */
+#include <stdlib.h> /* malloc free rand (fixme) */
 #include <math.h>   /* M_PI */
 #include <string.h> /* strcmp for bsearch */
 #include <stdio.h>  /* printf */
@@ -15,6 +15,7 @@
 #include "Ethereal.h"
 #include "Light.h"
 #include "Event.h"
+#include "Zone.h"
 #include "../general/Map.h"
 #include "../system/Key.h"
 #include "../system/Window.h"
@@ -23,16 +24,24 @@
 
 /* auto-generated; used in constructor */
 #include "../../bin/Lore.h"
+
+/* Used to set up the Game and get it running.
+ 
+ @author	Neil
+ @version	3.3, 2015-12
+ @since		1.0, 1999 */
+
+/* from Lore */
 /*extern struct Image images[];
 extern const int max_images;
 extern const struct TypeOfObject type_of_object[];
 extern const int max_type_of_object;*/
 extern const struct ObjectInSpace object_in_space[];
 extern const int max_object_in_space;
-/*extern const struct ShipClass ship_class[];
-extern const int max_ship_class;*/
 extern const struct Gate gate[];
 extern const int max_gate;
+/*extern const struct SpaceZone space_zone[];
+extern const int max_space_zone;*/
 
 #ifndef M_PI /* M_PI not defined in MSVC */
 #define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
@@ -61,7 +70,7 @@ static void fps(void);
 static float rnd(const float limit);
 static void add_sprites(void);
 static void poll_sprites(void);
-static void say_hello(void);
+static void position(void);
 static void bi(char *, int);
 
 /* public */
@@ -81,8 +90,8 @@ int Game(void) {
 	KeyRegister(27,   &quit);
 	KeyRegister('p',  &pause);
 	KeyRegister(k_f1, &WindowToggleFullScreen);
-	KeyRegister('f',  &WindowToggleFullScreen);
-	KeyRegister('g',  &fps);
+	KeyRegister('f',  &fps);
+	KeyRegister('p',  &position);
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
@@ -95,6 +104,13 @@ int Game(void) {
 		return 0;
 	};
 
+	/* read Zones */
+	/*for(i = 0; i < max_space_zone; i++) {
+		sz = &space_zone[i];
+		zone = Zone(sz);
+		Debug("Set up Zone: %s.\n", sz->name);
+	}*/
+
 	/* set up ALL Objects in Space */
 	for(i = 0; i < max_object_in_space; i++) {
 		ois = &object_in_space[i];
@@ -106,7 +122,7 @@ int Game(void) {
 	for(i = 0; i < max_gate; i++) {
 		gt = &gate[i];
 		EtherealGate(gt);
-		Debug("Set up Gate: %d.\n", gt->id);
+		Debug("Set up Gate \"%s.\"\n", gt->name);
 	}
 
 	/* sprinkle some ships */
@@ -269,9 +285,14 @@ static void poll_sprites(void) {
 	Event(500, FN_RUNNABLE, &poll_sprites);
 }
 
-static void say_hello(void) {
-	printf("hi!!!!\n");
-	Event(1000, FN_RUNNABLE, &say_hello);
+static void position(void) {
+	float x, y, t;
+	if(!(game.player)) {
+		Info("You are dead.\n");
+		return;
+	}
+	ShipGetOrientation(game.player, &x, &y, &t);
+	Info("Position(%.1f,%.1f:%.1f)\n", x, y, t);
 }
 
 static void bi(char *a, const int i) {

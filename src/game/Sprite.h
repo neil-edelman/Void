@@ -6,6 +6,7 @@ struct Sprite;
 
 struct Sprite *Sprite(const enum Sprites type, const struct Image *image);
 void Sprite_(struct Sprite **spriteptr);
+void SpriteClear(void);
 unsigned SpriteGetSize(const struct Sprite *const s);
 int SpriteGetConsidered(void);
 int SpriteGetOnscreen(void);

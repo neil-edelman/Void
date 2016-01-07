@@ -5,6 +5,8 @@ struct ShipClass; /* from Lores */
 
 struct Ship *Ship(struct Ship **notify, const struct ShipClass *ship_class, const enum Behaviour behaviour);
 void Ship_(struct Ship **ship_ptr);
+void ShipClear(void);
+void ShipPopPlayer(void);
 void ShipSetOrientation(struct Ship *ship, const float x, const float y, const float theta);
 int ShipGetOrientation(const struct Ship *ship, float *const x_ptr, float *const y_ptr, float *const theta_ptr);
 void ShipSetVelocities(struct Ship *ship, const int turning, const int acceleration, const float dt_s);

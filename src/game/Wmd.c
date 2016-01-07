@@ -112,6 +112,12 @@ void Wmd_(struct Wmd **wmd_ptr) {
 	*wmd_ptr = wmd = 0;
 }
 
+/** Sets the size to zero; very fast, but should be protected: no one should
+ call this except @see{SpriteClear}. */
+void WmdClear(void) {
+	wmds_size = 0;
+}
+
 int WmdGetExpires(const struct Wmd *wmd) {
 	if(!wmd) return 0;
 	return wmd->expires;

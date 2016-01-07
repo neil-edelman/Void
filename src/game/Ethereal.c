@@ -6,6 +6,8 @@
 #include <math.h>   /* ftrig */
 #include "../Print.h"
 #include "../../bin/Lore.h" /* auto-generated; used in constructor */
+#include "Game.h"
+#include "Zone.h"
 #include "Sprite.h"
 #include "Ship.h"
 #include "Ethereal.h"
@@ -21,8 +23,10 @@
 extern const struct Gate gate;
 
 struct Ethereal {
+	const char *name;
 	struct Sprite *sprite;
 	void (*callback)(struct Ethereal *, struct Sprite *);
+	const struct SpaceZone *sz;
 	int is_picked_up;
 } ethereals[512];
 static const int ethereals_capacity = sizeof ethereals / sizeof(struct Ethereal);
@@ -43,13 +47,15 @@ struct Ethereal *Ethereal(const struct Image *image) {
 		return 0;
 	}
 	e = &ethereals[ethereals_size];
+	e->name = "Ethereal";
 	/* superclass */
 	if(!(e->sprite = Sprite(S_ETHEREAL, image))) return 0;
 	SpriteSetContainer(e, &e->sprite);
 	e->callback     = 0;
+	e->sz           = 0;
 	e->is_picked_up = 0;
 	ethereals_size++;
-	Debug("Ethereal: created from pool, Eth%u->Spr%u.\n", EtherealGetId(e), SpriteGetId(e->sprite));
+	Pedantic("Ethereal: created from pool, \"%s,\" Eth%u->Spr%u.\n", e->name, EtherealGetId(e), SpriteGetId(e->sprite));
 
 	return e;
 }
@@ -66,7 +72,16 @@ struct Ethereal *EtherealGate(const struct Gate *gate) {
 	}
 	if(!(e = Ethereal(img))) return 0;
 	SpriteSetOrientation(e->sprite, gate->x, gate->y, gate->theta);
+	e->name     = gate->name;
 	e->callback = &gate_travel;
+	e->sz       = gate->to;
+	Debug("Ethereal(Gate): created from Ethereal, \"%s,\" Eth%u->Spr%u.\n", e->name, EtherealGetId(e), SpriteGetId(e->sprite));
+	Debug("Ethereal(Gate): \"%s,\" Gate res: (%d,%d:%f).\n", e->name, gate->x, gate->y, gate->theta);
+	{
+		float x, y, t;
+		SpriteGetOrientation(e->sprite, &x, &y, &t);
+		Debug("Ethereal(Gate): \"%s,\" Actual: (%f,%f:%f).\n", e->name, x, y, t);
+	}
 	return e;
 }
 
@@ -82,7 +97,7 @@ void Ethereal_(struct Ethereal **e_ptr) {
 		Warn("~Ethereal: Eth%u not in range Eth%u.\n", EtherealGetId(e), ethereals_size);
 		return;
 	}
-	Debug("~Ethereal: returning to pool, Eth%u->Spr%u.\n", EtherealGetId(e), SpriteGetId(e->sprite));
+	Debug("~Ethereal: returning to pool, \"%s,\" Eth%u->Spr%u.\n", e->name, EtherealGetId(e), SpriteGetId(e->sprite));
 
 	/* superclass */
 	Sprite_(&e->sprite);
@@ -91,10 +106,16 @@ void Ethereal_(struct Ethereal **e_ptr) {
 	if(index < --ethereals_size) {
 		memcpy(e, &ethereals[ethereals_size], sizeof(struct Ethereal));
 		SpriteSetContainer(e, &e->sprite);
-		Pedantic("~Ethereal: Eth%u has become Eth%u.\n", ethereals_size + 1, EtherealGetId(e));
+		Pedantic("~Ethereal: \"%s,\" Eth%u has become Eth%u.\n", e->name, ethereals_size + 1, EtherealGetId(e));
 	}
 
 	*e_ptr = e = 0;
+}
+
+/** Sets the size to zero; very fast, but should be protected: no one should
+ call this except @see{SpriteClear}. */
+void EtherealClear(void) {
+	ethereals_size = 0;
 }
 
 void (*EtherealGetCallback(struct Ethereal *e))(struct Ethereal *, struct Sprite *) {
@@ -141,7 +162,18 @@ void gate_travel(struct Ethereal *gate, struct Sprite *s) {
 	proj = x * gate_norm_x + y * gate_norm_y; /* proj is the new h */
 	ship = SpriteGetContainer(s);
 	h = ShipGetHorizon(ship);
-	if(h > 0 && proj <= 0) Info("Shp%u crossed into the event horizon of Eth%u.\n", ShipGetId(ship), EtherealGetId(gate));
-	ShipSetHorizon(ship, proj); /* fixme: two things could confuse it */
-	//Info("Yo ship at (%f, %f) gate (%f, %f) heading (%f, %f): %f.\n", ship_x, ship_y, gate_x, gate_y, gate_norm_x, gate_norm_y, proj);
+	if(h > 0 && proj < 0) {
+		Debug("Shp%u crossed into the event horizon of Eth%u.\n", ShipGetId(ship), EtherealGetId(gate));
+		if(ship == GameGetPlayer()) {
+			/* trasport to zone */
+			Zone(gate->sz);
+		} else {
+			/* disappear */
+			Ship_(&ship);
+		}
+	} else {
+		/*Info("Foo h %f proj %f #%p\n", h, proj, ship);*/
+		ShipSetHorizon(ship, proj); /* fixme: two things could confuse it */
+		/*Info("Bar h is now %f\n", ShipGetHorizon(ship));*/
+	}
 }

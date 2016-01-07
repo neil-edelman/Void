@@ -4,4 +4,5 @@ struct Event;
 
 int Event(const int delay_ms, enum FnType type, ...);
 void Event_(struct Event **event_ptr);
+void EventClear(void);
 void EventDispatch(void);

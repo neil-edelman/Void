@@ -85,6 +85,12 @@ void Debris_(struct Debris **deb_ptr) {
 	*deb_ptr = deb = 0;
 }
 
+/** Sets the size to zero; very fast, but should be protected: no one should
+ call this except @see{SpriteClear}. */
+void DebrisClear(void) {
+	debris_size = 0;
+}
+
 /** Sets the orientation with respect to the screen, pixels and (0, 0) is at
  the centre.
  @param sprite	Which sprite to set.

@@ -44,7 +44,7 @@ static const int   ai_speed       = 15;       /* pixel^2 / ms */
 static const float ai_turn_sloppy = 0.4f;     /* rad */
 static const float ai_turn_constant = 10.0f;
 
-struct Ship {
+static struct Ship {
 	struct Sprite          *sprite;
 	const struct ShipClass *class;
 	float                  mass;    /* t (Mg) */
@@ -60,7 +60,7 @@ struct Ship {
 	float                  horizon;
 	enum Behaviour         behaviour;
 	struct Ship            **notify; /* this is NOT sprite notify, further up the tree */
-} ships[512];
+} ships[512], push_player;
 static const int ships_capacity = sizeof(ships) / sizeof(struct Ship);
 static int       ships_size;
 
@@ -138,6 +138,49 @@ void Ship_(struct Ship **ship_ptr) {
 	}
 
 	*ship_ptr = ship = 0;
+}
+
+/** Sets the size to zero except for persistant ships (ie, the player); very
+ fast, but should be protected: no one should call this except
+ @see{SpriteClear}. The player is pushed, and can be restored with a call to
+ @see{ShipPopPlayer}. */
+void ShipClear(void) {
+	struct Ship *player;
+
+	ships_size = 0;
+	/* save a copy of the player */
+	if(!(player = GameGetPlayer())) return;
+	if(player == &push_player) {
+		Warn("Ship::clear: already pushed player!\n");
+		return;
+	}
+	memcpy(&push_player, player, sizeof(struct Ship));
+	SpriteSetContainer(&push_player, &push_player.sprite);
+	if(push_player.notify) *push_player.notify = &push_player;
+	Debug("Ship::clear: pushed player.\n");
+}
+
+/** Restores a saved copy of the player when clearing ships (moving between
+ zones, landing, etc.) */
+void ShipPopPlayer(void) {
+	struct Ship *player, *move;
+
+	if(!(player = GameGetPlayer())) return;
+	if(player != &push_player) {
+		Debug("Ship::popPlayer: player (Shp%u) appears not to be pushed.\n", ShipGetId(player));
+		return;
+	}
+	if(ships_size >= ships_capacity) {
+		Debug("Ship::popPlayer: couldn't be created; reached maximum of %u.\n", ships_capacity);
+		return;
+	}
+	move = &ships[ships_size];
+	memcpy(move, player, sizeof(struct Ship));
+	move->sprite = Sprite(S_SHIP, ImageSearch("Nautilus.png")); /* hack */
+	SpriteSetContainer(move, &move->sprite);
+	if(move->notify) *move->notify = move;
+	ships_size++;
+	Debug("Ship::popPlayer: Shp%u, done. ships_size %u.\n", ShipGetId(move), ships_size);
 }
 
 /** Sets the orientation with respect to the screen, pixels and (0, 0) is at

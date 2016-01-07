@@ -115,9 +115,14 @@ void Light_(const int h_p1) {
 	}
 }
 
+/** Sets the size to zero, clearing all lights. Does not notify anything. */
+void LightClear(void) {
+	Debug("Light::clear: clearing Lights.\n");
+	no_lights = 0;
+}
+
 /** Lights can change number; this will notify a location of the new pointer.
- @param no_p1		The Sprite number.
- @param no_p1_ptr	Notify this. */
+ @param no_p1_ptr	Notify this (no + 1 pointer.) */
 void LightSetContainer(int *const no_p1_ptr) {
 	int no_p1, no;
 	if(!no_p1_ptr || !(no_p1 = *no_p1_ptr) || (no = no_p1 - 1) < 0 || no >= MAX_LIGHTS) return;

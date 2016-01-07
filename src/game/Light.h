@@ -5,6 +5,7 @@ struct Light;
 
 int Light(const float i, const float r, const float g, const float b);
 void Light_(const int no);
+void LightClear(void);
 void LightSetContainer(int *const no_p1_ptr);
 int LightGetNo(void);
 struct Vec2f *LightGetPositions(void);

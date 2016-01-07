@@ -227,6 +227,21 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	*sprite_ptr = sprite = 0;
 }
 
+/** Sets the size of Sprites and all subclasses to zero */
+void SpriteClear(void) {
+	Debug("Sprite::clear: clearing Sprites.\n");
+	sprites_size = 0;
+	first_x = first_y = first_x_window = first_y_window = 0;
+	Debug("Sprite::clear: clearing Debris.\n");
+	DebrisClear();
+	Debug("Sprite::clear: clearing Ships.\n");
+	ShipClear();
+	Debug("Sprite::clear: clearing Wmds.\n");
+	WmdClear();
+	Debug("Sprite::clear: clearing Ethereals.\n");
+	EtherealClear();
+}
+
 unsigned SpriteGetSize(const struct Sprite *const s) {
 	if(!s) return 0;
 	return s->size;

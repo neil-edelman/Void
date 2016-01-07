@@ -338,6 +338,7 @@ static int load_record(struct Reader *r) {
 
 			strcopy(field->name, word[1], max_field_name);
 		}
+		/*fprintf(stderr, "load_record: %s %s\n", record->name, word[1]);*/
 		no_content++;
 	}
 	if(!is_loaded) return 0;

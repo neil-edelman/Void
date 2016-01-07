@@ -25,6 +25,7 @@ static const int half_max_size    = 512;
 static const float foreshortening = 0.2f, one_foreshortening = 5.0f;
 
 struct Far {
+	const char *name;
 	float x, y;     /* orientation */
 	float theta;
 	int   size;     /* the (x, y) size; they are the same */
@@ -72,6 +73,7 @@ struct Far *Far(const struct ObjectInSpace *ois) {
 	}
 	far = &backgrounds[backgrounds_size++];
 
+	far->name    = ois->name;
 	far->x       = (float)ois->x;
 	far->y       = (float)ois->y;
 	far->theta   = 0.0f;
@@ -87,7 +89,7 @@ struct Far *Far(const struct ObjectInSpace *ois) {
 	first_x = first_y = far;
 	sort_notify(far);
 
-	Pedantic("Far: created from pool, Far%u->Tex%u.\n", FarGetId(far), far->texture);
+	Debug("Far: created from pool \"%s,\" Far%u->Tex%u.\n", far->name, FarGetId(far), far->texture);
 
 	return far;
 }
@@ -104,7 +106,7 @@ void Far_(struct Far **far_ptr) {
 		Debug("~Far: Far%u not in range Far%u.\n", index + 1, backgrounds_size);
 		return;
 	}
-	Pedantic("~Far: returning to pool, Far%u->Tex%u.\n", FarGetId(far), far->texture);
+	Debug("~Far: returning to pool \"%s,\" Far%u->Tex%u.\n", far->name, FarGetId(far), far->texture);
 
 	/* take it out of the lists */
 	if(far->prev_x) far->prev_x->next_x = far->next_x;
@@ -137,6 +139,13 @@ void Far_(struct Far **far_ptr) {
 	}
 
 	*far_ptr = far = 0;
+}
+
+/** Sets the size to zero; very fast. */
+void FarClear(void) {
+	Debug("Far::clear: clearing Fars.\n");
+	first_x = first_y = first_x_window = first_y_window = 0;
+	backgrounds_size = 0;
 }
 
 #if 0

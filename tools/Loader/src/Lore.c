@@ -211,9 +211,12 @@ int LoreSearch(const char *const multi, char **const type_ptr, int *const index_
 		*type_ptr  = 0;
 		*index_ptr = 0;
 	} else {
+		/*fprintf(stderr, "LoreSearch(%s, %s):\n", szrecord, szvalue);*/
 		if(!(lore = bsearch(multi, lores, no_lores, sizeof(struct Lore), (int (*)(const void *, const void *))&multi_comp))) return 0;
-		/* fixme! O(n), laughtable and pointless */
+		/*fprintf(stderr, " found %s, %s... at #%p\n", RecordGetName(lore->record), lore->data[0], lore);*/
+		/* the first lore of the type; fixme! O(n), laughtable and pointless */
 		for(first = lores; strcmp(szrecord, RecordGetName(first->record)); first++);
+		/*fprintf(stderr, " first %s at #%p: sub %d\n", szrecord, first, lore - first);*/
 		*type_ptr  = camel_to_snake_case(szrecord);
 		*index_ptr = lore - first;
 	}

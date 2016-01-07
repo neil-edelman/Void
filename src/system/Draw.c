@@ -350,6 +350,15 @@ void DrawGetScreen(int *width_ptr, int *height_ptr) {
  GT_BACKGROUND textures, which probably don't work, maybe? (oh, they do) */
 void DrawSetBackground(const char *const str) {
 	struct Image *image;
+	
+	/* clear the backgruoud; fixme: test, it isn't used at all */
+	if(!str) {
+		background_tex = 0;
+		glActiveTexture(GT_BACKGROUND);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		Debug("Image desktop cleared.\n");
+		return;
+	}
 	if(!(image = ImageSearch(str))) {
 		Debug("Draw::setDesktop: image \"%s\" not found.\n", str);
 		return;
@@ -556,8 +565,7 @@ static int texture(struct Image *image) {
 			Debug("Draw::texture: not a recognised depth, %d.\n", depth);
 			is_bad = -1;
 	}
-	/* invert to go with OpenGL's strict adherence to standards and image files
-	 not really */
+	/* invert to go with OpenGL's strict adherence to standards vs traditions */
 	{
 		unsigned bytes_line = width * depth;
 		unsigned top, bottom, i;
@@ -591,12 +599,12 @@ static int texture(struct Image *image) {
 		glTexImage2D(GL_TEXTURE_2D, 0, internal, width, height, 0, format,
 					 GL_UNSIGNED_BYTE, pic);
 		image->texture = tex;
-#if 0 /* debug */
-		Debug("Tex: %u.\n", image->texture);
+		/* debug */
+#ifdef PRINT_PEDANTIC
+		Pedantic("Tex: %u.\n", image->texture);
 		if(image->width <= 80) image_print(image, pic);
-		else Debug("...too big to show.\n");
+		else Pedantic("...too big to show.\n");
 #endif
-		/*Debug("Draw::texture: created %dx%dx%d texture out of \"%s,\" Tex%u.\n", width, height, depth, name, id);*/
 	}
 	/* free the pic */
 	switch(image->data_format) {
@@ -774,7 +782,6 @@ static void display(void) {
 	glDisableVertexAttribArray(S_POSITION);
 	glDisableVertexAttribArray(S_COLOUR);*/
 
-#if 1
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {
 		ShipGetOrientation(player, &x, &y, &t);
@@ -787,7 +794,6 @@ static void display(void) {
 		glUniform2i(hud_shield_location, ShipGetHit(player), ShipGetMaxHit(player));
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	}
-#endif
 
 	/* disable, swap */
 	glUseProgram(0);
@@ -798,6 +804,8 @@ static void display(void) {
 }
 
 /** Callback for glutReshapeFunc.
+ <p>
+ fixme: not gauranteed to have a background! this will crash.
  @param width
  @param height	The size of the client area. */
 static void resize(int width, int height) {

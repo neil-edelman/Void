@@ -98,6 +98,18 @@ void Event_(struct Event **event_ptr) {
 	*event_ptr = event = 0;
 }
 
+/** Flush the Events without Dispatch. */
+void EventClear(void) {
+	struct Event *erase;
+
+	Debug("Event::clear: clearing Events.\n");
+	while(next_event) {
+		erase = next_event;
+		next_event = next_event->next;
+		Event_(&erase);
+	}
+}
+
 /** Dispach all events up to the present.
  fixme: wrap-around, :[
  FIXME: Aught memory alloc */

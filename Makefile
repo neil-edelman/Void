@@ -137,16 +137,15 @@ $(BDIR)/%_jpeg.h: $(MDIR)/%.jpeg $(FILE2H)
 	@mkdir -p $(BDIR)
 	$(FILE2H) $< > $@
 
-$(BDIR)/%_bmp.h: $(MDIR)/%.bmp $(FILE2H)
+# took out bmp
+#$(BDIR)/%_bmp.h: $(MDIR)/%.bmp $(FILE2H)
 	# . . . File2h bmp
-	@mkdir -p $(BDIR)
-	$(FILE2H) $< > $@
+#	@mkdir -p $(BDIR)
+#	$(FILE2H) $< > $@
 
 # additional dependancies
 
 $(BDIR)/Open.o: $(VS_H) $(FS_H)
-
-$(BDIR)/Game.o: $(TSV_H)
 
 ######
 # helper programmes
@@ -184,14 +183,16 @@ clean:
 	-rm -f $(OBJS) $(BDIR)/$(ICON) $(BDIR)/$(RSRC) $(VS_H) $(FS_H) $(TEXT2H) $(FILE2H) $(LOADER) $(BDIR)/sort $(BDIR)/cd $(LORE_H) $(LORE_C) $(PNG_H) $(JPEG_H) $(BMP_H)
 	-rm -rf $(BDIR)/$(SYS) $(BDIR)/$(GEN) $(BDIR)/$(GME) $(BDIR)/$(SDR) $(BDIR)/$(FMT)
 
+BACKUP := readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS) $(FS) $(EXTRA) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(TEXT)
+
 backup:
 	@mkdir -p $(BACK)
-	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS) $(FS) $(RES_F) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP)
+	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip $(BACKUP)
 
-# this backs up everything including the media files for publication (excuding)
-source: #$(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(PNG_H) $(JPEG_H) $(BMP_H)
+# this backs up everything including the media files for publication
+source:
 	@mkdir -p $(BDIR)
-	zip $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS_VS) $(FS_FS) $(RES_F) $(TSV_TSV) $(EXTRA) $(BMP_TXT) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(PNG) $(JPEG) $(BMP) $(TEXT) $(VS) $(FS) #$(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(PNG_H) $(JPEG_H) $(BMP_H) #too big
+	zip $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip $(BACKUP) $(PNG) $(JPEG)
 
 icon: default
 	# . . . setting icon on a Mac.

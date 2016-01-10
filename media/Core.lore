@@ -61,8 +61,8 @@ Earth
 ObjectInSpace
 PartyRock
 asteroid
-0
-0
+50
+50
 # Gate name, TypeOfObject, x, y
 Gate
 Exploring
@@ -83,18 +83,20 @@ Nautilus.png
 50
 520
 16
-4000
-0.15
-0.005
+50
+0.0001
+90
+lazer
 ShipClass
 Scorpion
 Scorpion.png
 20
 40
 1024
-2800
-0.05
-0.003
+50
+10 #0.00001 # 0.05
+30
+acid
 # Specimen name, Alignment align, ShipClass ship1, ship2, ship3, ship4
 Specimen
 Crazy Aliens
@@ -118,4 +120,27 @@ Homebound
 Venus
 Pluto
 PartyRock
+#WmdType string name, int ms_range,ms_recharge,damage,impact, image, int r,g,b
+WmdType
+lazer
+shot.png
+768
+300
+256
+32
+6
+64
+10
+20
+WmdType
+acid
+shot.png
+768
+300
+256
+32
+6
+1
+64
+20
 ~

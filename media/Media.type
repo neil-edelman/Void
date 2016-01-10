@@ -19,12 +19,13 @@ float theta
 ShipClass
 string name
 image image
-int mass
-int shield
-int ms_recharge
-float speed2
+int mass			# t (ie Mg)
+int shield			# fixme: MJ?
+int ms_recharge		# ms
+int speed			# px/s \/ fixme: t/s^2
 float acceleration
-float turn
+int turn			# deg/s
+WmdType weapon
 ~
 Alignment
 string name
@@ -46,3 +47,15 @@ Gate gate1
 ObjectInSpace ois1
 ObjectInSpace ois2
 ObjectInSpace ois3
+~
+WmdType
+string name
+image image
+int ms_range
+int speed
+int ms_recharge
+int damage
+int impact
+int r
+int g
+int b

@@ -3,7 +3,7 @@ diff -p A.c B.c
 
 gang, band, pack, horde, herd
 kind, character, ethos
-<specimen>, sample, instance, occurrence, manifestation, embodiment, epitome, representative, aitype -- have different ais, of course; also, ai(align)
+<specimen>, sample, instance, occurrence, manifestation, embodiment, epitome, representative, aitype -- have different ais, of course; also, ai(align) -- specimen: aitype, alignment, ship*
 <zone>, sector, region
 
 
@@ -12,9 +12,13 @@ kind, character, ethos
 
 
 
-Too complicated! do a union of Sprites, instead of hierarchal two-objects
+Fix the craziness (undo the changes in magnitudes)
+
+Clear(Predicate)
 
 Random sucking things in to zero on new zone?
+
+put an Auto or Lore or something before each auto-generated thing
 
 Random.c
 

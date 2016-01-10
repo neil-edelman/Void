@@ -1,31 +1,39 @@
 struct Image;
-
-enum Sprites { S_NONE = 0, S_DEBRIS, S_SHIP, S_WMD, S_ETHEREAL };
-
 struct Sprite;
+struct Gate;
 
-struct Sprite *Sprite(const enum Sprites type, const struct Image *image);
-void Sprite_(struct Sprite **spriteptr);
-void SpriteClear(void);
-unsigned SpriteGetSize(const struct Sprite *const s);
+enum SpType { SP_DEBRIS, SP_SHIP, SP_WMD, SP_ETHEREAL };
+enum Behaviour { B_NONE, B_HUMAN, B_STUPID };
+
+struct Sprite *Sprite(const enum SpType sp_type, ...);
+struct Sprite *SpriteGate(const struct Gate *gate);
+void Sprite_(struct Sprite **sprite_ptr);
 int SpriteGetConsidered(void);
 int SpriteGetOnscreen(void);
-int SpriteGetCapacity(void);
-int SpriteNo(void);
-int SpriteGetCapacity(void);
-void SpriteSetContainer(void *const container, struct Sprite **const notify);
-int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr);
-/*void SpriteResetIterator(void);*/
-void SpriteSetOrientation(struct Sprite *sprite, const float x, const float y, const float theta);
-void SpriteSetVelocity(struct Sprite *sprite, const float vx, const float vy);
-void SpriteGetOrientation(const struct Sprite *sprite, float *x_ptr, float *y_ptr, float *theta_ptr);
-void SpriteGetVelocity(const struct Sprite *sprite, float *vx_ptr, float *vy_ptr);
+void SpriteGetPosition(const struct Sprite *sprite, float *const x_ptr, float *const y_ptr);
+void SpriteSetPosition(struct Sprite *sprite, const float x, const float y);
+float SpriteGetTheta(const struct Sprite *const sprite);
 void SpriteSetTheta(struct Sprite *sprite, const float theta);
-enum Sprites SpriteGetType(const struct Sprite *sprite);
-void *SpriteGetContainer(const struct Sprite *sprite);
-float SpriteGetBounding(const struct Sprite *sprite);
-struct Sprite *SpriteGetCircle(const float x, const float y, const float r);
-void SpriteUpdate(const float s);
-/*void SpriteSetViewport(const int width, const int height);*/
-int SpriteGetId(const struct Sprite *s);
-void SpritePrint(const char *location);
+void SpriteAddTheta(struct Sprite *sprite, const float theta);
+void SpriteGetVelocity(const struct Sprite *const sprite, float *vx_ptr, float *vy_ptr);
+void SpriteSetVelocity(struct Sprite *const sprite, const float vx, const float vy);
+float SpriteGetOmega(const struct Sprite *const sprite);
+void SpriteSetOmega(struct Sprite *const sprite, const float omega);
+float SpriteGetBounding(const struct Sprite *const sprite);
+unsigned SpriteGetMass(const struct Sprite *const s);
+unsigned SpriteGetSize(const struct Sprite *const s);
+enum SpType SpriteGetType(const struct Sprite *const sprite);
+int SpriteGetId(const struct Sprite *const s);
+/*void (*SpriteGetCallback(struct Sprite *s))(struct Sprite *const, struct Sprite *const);*/
+int SpriteGetDamage(const struct Sprite *const s);
+int SpriteGetHit(const struct Sprite *const s);
+void SpriteHit(struct Sprite *const s, const int hit);
+int SpriteGetMaxHit(const struct Sprite *const s);
+int SpriteIsDestroyed(const struct Sprite *const s);
+void SpriteDestroy(struct Sprite *const s);
+void SpriteDebris(const struct Sprite *const s);
+void SpriteInput(struct Sprite *s, const int turning, const int acceleration, const int dt_ms);
+void SpriteUpdate(const int dt_ms);
+void SpriteShoot(struct Sprite *const s);
+void SpriteRemoveIf(int (*const predicate)(const struct Sprite *const));
+int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr);

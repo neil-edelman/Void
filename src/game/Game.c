@@ -1,18 +1,21 @@
 /* Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
+/* Used to set up the Game and get it running.
+ 
+ @author	Neil
+ @version	3.3, 2015-12
+ @since		1.0, 1999 */
+
 #include <stdlib.h> /* malloc free rand (fixme) */
 #include <math.h>   /* M_PI */
 #include <string.h> /* strcmp for bsearch */
 #include <stdio.h>  /* printf */
 #include "../Print.h"
-#include "Ship.h"
-#include "Game.h"
+/* auto-generated; used in constructor */
+#include "../../bin/Lore.h"
 #include "Sprite.h"
 #include "Far.h"
-#include "Debris.h"
-#include "Wmd.h"
-#include "Ethereal.h"
 #include "Light.h"
 #include "Event.h"
 #include "Zone.h"
@@ -21,38 +24,20 @@
 #include "../system/Window.h"
 #include "../system/Draw.h"
 #include "../system/Timer.h" /* only for reporting framerate */
-
-/* auto-generated; used in constructor */
-#include "../../bin/Lore.h"
-
-/* Used to set up the Game and get it running.
- 
- @author	Neil
- @version	3.3, 2015-12
- @since		1.0, 1999 */
+#include "Game.h"
 
 /* from Lore */
-/*extern struct Image images[];
-extern const int max_images;
-extern const struct TypeOfObject type_of_object[];
-extern const int max_type_of_object;*/
 extern const struct ObjectInSpace object_in_space[];
 extern const int max_object_in_space;
 extern const struct Gate gate[];
 extern const int max_gate;
-/*extern const struct SpaceZone space_zone[];
-extern const int max_space_zone;*/
-
-#ifndef M_PI /* M_PI not defined in MSVC */
-#define M_PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664
-#endif
 
 static int is_started;
 
 /* public struct */
 struct Game {
-	struct Ship *player; /* camera moves with this */
-	int turning, acceleration, shoot; /* input per frame, ms */
+	struct Sprite *player; /* camera moves with this */
+	int ms_turning, ms_acceleration, ms_shoot; /* input per frame, ms */
 	/* defined in Lore.h (hopefully!) */
 	const struct TypeOfObject *asteroid;
 	const struct ShipClass *nautilus, *scorpion;
@@ -61,7 +46,8 @@ struct Game {
 
 static const float asteroid_max_speed = 0.03f;
 
-/* positions larger then this value will be looped around */
+/* positions larger then this value will be looped around;
+ used in Sprite and Zone */
 const float de_sitter = 8192.0f;
 
 /* private */
@@ -69,8 +55,8 @@ static void quit(void);
 static void pause(void);
 static void fps(void);
 /*static float rnd(const float limit);*/
-static void add_sprites(void);
-static void poll_sprites(void);
+/*static void add_sprites(void);*/
+/*static void poll_sprites(void);*/
 static void position(void);
 static void bi(char *, int);
 
@@ -78,12 +64,6 @@ static void bi(char *, int);
 
 /** constructor */
 int Game(void) {
-	struct Debris *asteroid;
-	struct Ship   *alien;
-	struct Far    *bg;
-	const struct ObjectInSpace *ois;
-	const struct Gate *gt;
-	int i;
 
 	if(is_started) return -1;
 
@@ -92,7 +72,7 @@ int Game(void) {
 	KeyRegister('p',  &pause);
 	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &fps);
-	KeyRegister('p',  &position);
+	KeyRegister('z',  &position);
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
@@ -109,58 +89,10 @@ int Game(void) {
 	/* set drawing elements */
 	DrawSetShield("Bar.png");
 
-#if 0
-	/* read Zones */
-	for(i = 0; i < max_space_zone; i++) {
-		sz = &space_zone[i];
-		zone = Zone(sz);
-		Debug("Set up Zone: %s.\n", sz->name);
-	}
-
-	/* set up ALL Objects in Space */
-	for(i = 0; i < max_object_in_space; i++) {
-		ois = &object_in_space[i];
-		bg  = Far(ois);
-		Debug("Set up Object in Space: %s.\n", ois->name);
-	}
-
-	/* set up gates */
-	for(i = 0; i < max_gate; i++) {
-		gt = &gate[i];
-		EtherealGate(gt);
-		Debug("Set up Gate \"%s.\"\n", gt->name);
-	}
-
-	/* sprinkle some ships */
-	game.player = Ship(&game.player, game.nautilus, B_HUMAN);
-	for(i = 0; i < 100; i++) {
-		alien = Ship(0, game.scorpion, B_STUPID);
-		ShipSetOrientation(alien, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
-	}
-
-	/* some asteroids; fixme: debris limit 4096; sometimes it crashes when
-	 reaching; gets incresingly slow after 1500, but don't need debris when
-	 it's really far (cpu!) */
-	for(i = 0; i < 1000; i++) {
-		float x = rnd(de_sitter), y = rnd(de_sitter), t = rnd((float)M_PI), vx = rnd(50.0f), vy = rnd(50.0f), o = rnd(1.0f);
-		/*printf("Game: new Asteroid, checking:\n");*/
-		/*if(SpriteGetCircle(x, y, 0.5f*ImageGetWidth(img))) {
-		 Debug("Game: would cause collision with sprite; waiving asteroid.\n");
-		 continue;
-		 }*/
-		asteroid = Debris(game.asteroid->image, 10.0f);
-		DebrisSetOrientation(asteroid,
-							 x, y, t, /* (x,y):t */
-							 vx, vy, o); /* (vx,vy):o */
-		/*printf("Game: Spr%u: (%f,%f):%f v(%f,%f):%f\n", SpriteGetId(DebrisGetSprite(asteroid)), x, y, t, vx, vy, o);*/
-	}
-#endif
-
-	/*Event(1000, FN_RUNNABLE, &say_hello);*/
 	Event(1000, FN_BICONSUMER, &bi, calloc(128, sizeof(char)), 1);
 
 	Zone(game.start);
-	game.player = Ship(&game.player, game.nautilus, B_HUMAN);
+	Sprite(SP_SHIP, 0.0f, 0.0f, 0.0f, game.nautilus, B_HUMAN, &game.player);
 
 	Debug("Game: on.\n");
 	is_started = -1;
@@ -191,8 +123,6 @@ void Game_(void) {
 
 /** updates the gameplay */
 void GameUpdate(const int dt_ms) {
-	struct Ship *player;
-	float dt_s = dt_ms * 0.001f;
 
 	if(!is_started) return;
 
@@ -204,32 +134,29 @@ void GameUpdate(const int dt_ms) {
 	 unstable */
 
 	/* in-game */
-	game.turning      = KeyTime(k_left) - KeyTime(k_right);
-	game.acceleration = KeyTime(k_up)   - KeyTime(k_down);
-	game.shoot        = KeyTime(32);
-	if(game.acceleration < 0) game.acceleration = 0;
+	game.ms_turning      = KeyTime(k_left) - KeyTime(k_right);
+	game.ms_acceleration = KeyTime(k_up)   - KeyTime(k_down);
+	game.ms_shoot        = KeyTime(32);
+	if(game.ms_acceleration < 0) game.ms_acceleration = 0;
 
 	/* apply to player */
-	if((player = game.player)) {
-		float x, y, theta;
+	if((game.player)) {
+		float x, y;
 
-		ShipSetVelocities(player, game.turning, game.acceleration, dt_s);
-		if(game.shoot) ShipShoot(player, 2);
-		ShipGetOrientation(player, &x, &y, &theta);
+		SpriteInput(game.player, game.ms_turning, game.ms_acceleration, dt_ms);
+		if(game.ms_shoot) SpriteShoot(game.player);
+		SpriteGetPosition(game.player, &x, &y);
 		DrawSetCamera(x, y);
 	}
 
 	/* O(n) + O(n + m); collision detect + move sprites; a lot of work */
-	SpriteUpdate(dt_s);
-
-	/* O(n); call the ai and stuff */
-	ShipUpdate(dt_s);
+	SpriteUpdate(dt_ms);
 
 	/* check events */
 	EventDispatch();
 }
 
-struct Ship *GameGetPlayer(void) {
+struct Sprite *GameGetPlayer(void) {
 	return game.player;
 }
 
@@ -262,7 +189,7 @@ static void fps(void) {
 	return limit * (2.0f * rand() / RAND_MAX - 1.0f);
 }*/
 
-static void add_sprites(void) {
+/*static void add_sprites(void) {
 	struct Debris *asteroid;
 	struct Ship *bad;
 	const int no = SpriteNo(), cap = SpriteGetCapacity() >> 5, rocks = 350, aliens = 10;
@@ -282,22 +209,23 @@ static void add_sprites(void) {
 		ShipSetOrientation(bad, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
 	Event(5000, FN_RUNNABLE, &add_sprites);
-}
+}*/
 
-static void poll_sprites(void) {
+/*static void poll_sprites(void) {
 	int w, h;
 	DrawGetScreen(&w, &h);
 	printf("%d\t%d\t%d\t%.1f\t%d\t%d\n", SpriteNo(), SpriteGetConsidered(), SpriteGetOnscreen(), 1000.0 / TimerGetMean(), w, h);
 	Event(500, FN_RUNNABLE, &poll_sprites);
-}
+}*/
 
 static void position(void) {
 	float x, y, t;
-	if(!(game.player)) {
+	if(!game.player) {
 		Info("You are dead.\n");
 		return;
 	}
-	ShipGetOrientation(game.player, &x, &y, &t);
+	SpriteGetPosition(game.player, &x, &y);
+	t = SpriteGetTheta(game.player);
 	Info("Position(%.1f,%.1f:%.1f)\n", x, y, t);
 }
 

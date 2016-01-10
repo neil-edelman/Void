@@ -9,22 +9,12 @@
 #include "../game/Sprite.h"
 #include "../game/Far.h"
 #include "../game/Light.h"
-/* needed for shield display */
-#include "../game/Game.h"
-#include "../game/Ship.h"
-/*******/
+#include "../game/Game.h" /* needed for shield display */
 #include "Draw.h"
 #include "Window.h"
-/*#include "../EntryPosix.h"*/ /* hmm */
 /* include file formats for uncompressing in texture() */
 #include "../format/lodepng.h"
 #include "../format/nanojpeg.h"
-
-#define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
-#define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
-#ifndef M_SQRT1_2 /* for MSVC */
-#define M_SQRT1_2 0.70710678118654752440084436210484903928483593768847403658833986899536623923105351942519376716382078636750692311545614851
-#endif
 
 /* auto-generated, hard coded resouce files; there should be the directory
  tools/ where you can compile utilities that can make these files; run "make"
@@ -38,6 +28,12 @@
 #include "../../bin/shaders/Far_fs.h"
 #include "../../bin/shaders/Lighting_vs.h"
 #include "../../bin/shaders/Lighting_fs.h"
+
+#define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
+#define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
+#ifndef M_SQRT1_2
+#define M_SQRT1_2 0.707106781186547524400844362104849039284835937688474036588339868995366239
+#endif
 
 /** This is an idempotent class dealing with the interface to OpenGL.
  @author	Neil
@@ -672,7 +668,7 @@ static int light_compute_texture(void) {
 
 /** Callback for glutDisplayFunc; this is where all of the drawing happens. */
 static void display(void) {
-	struct Ship *player;
+	struct Sprite *player;
 	int lights;
 	/* for SpriteIterate */
 	float x, y, t;
@@ -784,14 +780,14 @@ static void display(void) {
 
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {
-		ShipGetOrientation(player, &x, &y, &t);
-		t = ShipGetBounding(player);
+		SpriteGetPosition(player, &x, &y);
+		t = SpriteGetBounding(player);
 		glUseProgram(hud_shader);
 		glBindTexture(GL_TEXTURE_2D, shield_tex);
 		glUniform2f(hud_camera_location, camera_x, camera_y);
 		glUniform2f(hud_size_location, 256.0f, 8.0f);
 		glUniform2f(hud_position_location, x, y - t * 2.0f);
-		glUniform2i(hud_shield_location, ShipGetHit(player), ShipGetMaxHit(player));
+		glUniform2i(hud_shield_location, SpriteGetHit(player), SpriteGetMaxHit(player));
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	}
 

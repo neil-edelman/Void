@@ -17,7 +17,7 @@ GEN := general
 GME := game
 FMT := format
 
-# files in sdir
+# files in mdir
 ICON := icon.ico
 
 # files in bdir (RSRC is Windows icon, made programmatically)
@@ -27,7 +27,7 @@ INST  := $(PROJ)-$(VA)_$(VB)
 MSVC := build/msvc2013
 
 # extra stuff we should back up
-EXTRA := $(SDIR)/icon.rc todo.txt build/msvc2010.txt build/unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c $(MSVC)/Void.sln $(MSVC)/Void.v12.suo $(MSVC)/Void.vcxproj $(MSVC)/Void.vcxproj.filters $(MSVC)/Void.vcxproj.user build/Makefile-Redhat #$(MSVC)/Void.sdf
+EXTRA := $(MDIR)/icon.rc todo.txt build/msvc2010.txt build/unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c $(MSVC)/Void.sln $(MSVC)/Void.v12.suo $(MSVC)/Void.vcxproj $(MSVC)/Void.vcxproj.filters $(MSVC)/Void.vcxproj.user build/Makefile-Redhat #$(MSVC)/Void.sdf
 
 # John Graham-Cumming:
 # rwildcard is a recursive wildcard
@@ -180,10 +180,10 @@ clean:
 	-make --directory $(TEXT2H_DIR) clean
 	-make --directory $(FILE2H_DIR) clean
 	-make --directory $(LOADER_DIR) clean
-	-rm -f $(OBJS) $(BDIR)/$(ICON) $(BDIR)/$(RSRC) $(VS_H) $(FS_H) $(TEXT2H) $(FILE2H) $(LOADER) $(BDIR)/sort $(BDIR)/cd $(LORE_H) $(LORE_C) $(PNG_H) $(JPEG_H) $(BMP_H)
+	-rm -f $(OBJS) $(BDIR)/$(RSRC) $(VS_H) $(FS_H) $(TEXT2H) $(FILE2H) $(LOADER) $(BDIR)/sort $(BDIR)/cd $(LORE_H) $(LORE_C) $(PNG_H) $(JPEG_H) $(BMP_H)
 	-rm -rf $(BDIR)/$(SYS) $(BDIR)/$(GEN) $(BDIR)/$(GME) $(BDIR)/$(SDR) $(BDIR)/$(FMT)
 
-BACKUP := readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(VS) $(FS) $(EXTRA) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(TEXT)
+BACKUP := readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(MDIR)/$(ICON) $(VS) $(FS) $(EXTRA) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(TEXT)
 
 backup:
 	@mkdir -p $(BACK)
@@ -196,7 +196,7 @@ source:
 
 icon: default
 	# . . . setting icon on a Mac.
-	cp $(SDIR)/$(ICON) $(BDIR)/$(ICON)
+	cp $(MDIR)/$(ICON) $(BDIR)/$(ICON)
 	-sips --addIcon $(BDIR)/$(ICON)
 	-DeRez -only icns $(BDIR)/$(ICON) > $(BDIR)/$(RSRC)
 	-Rez -append $(BDIR)/$(RSRC) -o $(BDIR)/$(PROJ)

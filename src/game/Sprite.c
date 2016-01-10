@@ -43,9 +43,10 @@
  @since		3.3, 2015-12 */
 
 #include <stdarg.h> /* va_* */
-#include <stdlib.h> /* malloc free */
+//#include <stdlib.h> /* malloc free */
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
+#include <stdio.h>	/* snprintf */
 #include "../Print.h"
 #include "../../bin/Lore.h"  /* auto-generated; Image */
 #include "Light.h"
@@ -180,6 +181,8 @@ static void wmd_shp(struct Sprite *, struct Sprite *, const float);
 static void shp_wmd(struct Sprite *, struct Sprite *, const float);
 static void shp_eth(struct Sprite *, struct Sprite *, const float);
 static void eth_shp(struct Sprite *, struct Sprite *, const float);
+char *sprite_type(const struct Sprite *const s);
+char *decode_sprite_type(const enum SpType sptype);
 static void fire(struct Sprite *const s);
 void gate_travel(struct Sprite *const gate, struct Sprite *ship);
 void do_ai(struct Sprite *const s, const int dt_ms);
@@ -224,7 +227,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	float lenght, one_lenght, cs, sn;
 
 	if(sprites_size >= sprites_capacity) {
-		Warn("Sprite: couldn't be created; reached maximum of %u.\n", sprites_capacity);
+		Warn("Sprite: %s couldn't be created; reached maximum of %u.\n", decode_sprite_type(sp_type), sprites_capacity);
 		return 0;
 	}
 
@@ -243,15 +246,15 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	switch(sp_type) {
 		case SP_DEBRIS:
 			image            = va_arg(args, struct Image *const);
-			s->x = s->x1     = va_arg(args, const double);
-			s->y = s->y1     = va_arg(args, const double);
+			s->x = s->x1     = va_arg(args, const int);
+			s->y = s->y1     = va_arg(args, const int);
 			s->theta         = va_arg(args, const double);
 			s->mass          = va_arg(args, const int);
 			s->sp.debris.hit = (int)(s->mass * deb_hit_per_mass);
 			break;
 		case SP_SHIP:
-			s->x = s->x1     = va_arg(args, const double) * 0.001f;
-			s->y = s->y1     = va_arg(args, const double) * 0.001f;
+			s->x = s->x1     = va_arg(args, const int);
+			s->y = s->y1     = va_arg(args, const int);
 			s->theta         = va_arg(args, const double);
 			s->sp.ship.class = class = va_arg(args, struct ShipClass *const);
 			image                      = (struct Image *)class->image; /*fixme*/
@@ -297,8 +300,8 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			break;
 		case SP_ETHEREAL:
 			image             = va_arg(args, struct Image *);
-			s->x = s->x1      = va_arg(args, const double);
-			s->y = s->y1      = va_arg(args, const double);
+			s->x = s->x1      = va_arg(args, const int);
+			s->y = s->y1      = va_arg(args, const int);
 			s->theta          = va_arg(args, const double);
 			/* one has to set these up in a different fn */
 			s->sp.ethereal.callback      = 0;
@@ -311,14 +314,17 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			return 0;
 	}
 	va_end(args);
+
+	/* ensure that we're in the pricipal branch */
 	branch_cut_pi_pi(&s->theta);
-	/*if(x < -de_sitter || x > de_sitter || y < -de_sitter || y > de_sitter) {
-		Warn("Sprite: refusing to create Sprite beyond de Sitter universe.\n");
-		return 0;
-	}*/
+	if(s->x < -de_sitter || s->x > de_sitter
+	   || s->y < -de_sitter || s->y > de_sitter) {
+		Warn("Sprite: %s is beyond de Sitter universe, zeroed.\n", SpriteToString(s));
+		s->x = s->y = 0.0f;
+	}
 	/* could be null was passed, eg, Sprite(ImageSearch("not there")); check! */
 	if(!image) {
-		Warn("Sprite: couldn't create because image is null.\n");
+		Warn("Sprite: couldn't create %s because image is null.\n", SpriteToString(s));
 		sprites_size--;
 		return 0;
 	}
@@ -339,7 +345,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	first_x = first_y = s;
 	sort_notify(s);
 
-	Pedantic("Sprite: created from pool, Spr%u.\n", SpriteGetId(s));
+	Debug("Sprite: created from pool, %s.\n", SpriteToString(s));
 
 	return s;
 }
@@ -353,7 +359,7 @@ struct Sprite *SpriteGate(const struct Gate *gate) {
 	if(!(s = Sprite(SP_ETHEREAL, ImageSearch("Gate.png"), gate->x, gate->y, gate->theta))) return 0;
 	s->sp.ethereal.callback = &gate_travel;
 	s->sp.ethereal.sz       = gate->to;
-	Debug("Sprite(Gate): created from Sprite, Eth%u.\n", SpriteGetId(s));
+	Debug("Sprite(Gate): created from Sprite, %s.\n", SpriteToString(s));
 
 	return s;
 }
@@ -519,10 +525,17 @@ enum SpType SpriteGetType(const struct Sprite *const sprite) {
 	return sprite->sp_type;
 }
 
-/** The id is the position in the array + 1. */
-int SpriteGetId(const struct Sprite *const s) {
-	if(!s) return 0;
-	return (int)(s - sprites) + 1;
+/** The id is the position in the array + 1. Volatile! Use only once per
+ instruction. */
+char *SpriteToString(const struct Sprite *const s) {
+	static char buffer[64];
+
+	if(!s) {
+		snprintf(buffer, sizeof buffer, "%s", "null sprite");
+	} else {
+		snprintf(buffer, sizeof buffer, "%sSpr%u[%.1f,%.1f:%.1f]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta);
+	};
+	return buffer;
 }
 
 /*void (*SpriteGetCallback(struct Sprite *s))(struct Sprite *const, struct Sprite *const) {
@@ -622,7 +635,7 @@ void SpriteDebris(const struct Sprite *const s) {
 
 	if(!s || !(small = ImageSearch("AsteroidSmall.png")) || s->size <= small->width) return;
 
-	Debug("Deb%u is exploding at (%.3f, %.3f).\n", SpriteGetId(s), s->x, s->y);
+	Debug("Sprite::debris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
 
 	/* break into pieces -- new debris */
 	sub = Sprite(SP_DEBRIS, small, s->x, s->y, s->theta, 5.0);
@@ -1269,6 +1282,17 @@ static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
 	shp_eth(s, e, d0);
 }
 
+/** For debugging. */
+char *decode_sprite_type(const enum SpType sp_type) {
+	switch(sp_type) {
+		case SP_DEBRIS:		return "<Debris>";
+		case SP_SHIP:		return "<Ship>";
+		case SP_WMD:		return "<Wmd>";
+		case SP_ETHEREAL:	return "<Ethereal>";
+		default:			return "<not a sprite type>";
+	}
+}
+
 /** Only works on ships (because they have weapons.) */
 static void fire(struct Sprite *const s) {
 	const unsigned time_ms = TimerGetGameTime();
@@ -1293,7 +1317,7 @@ void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
 	gate_norm_y = sinf(gate->theta);
 	proj = x * gate_norm_x + y * gate_norm_y; /* proj is the new h */
 	if(ship->sp.ship.horizon > 0 && proj < 0) {
-		Debug("Shp%u crossed into the event horizon of Eth%u.\n", SpriteGetId(ship), SpriteGetId(gate));
+		Debug("gate_travel: %s crossed into the event horizon.\n", SpriteToString(ship));
 		if(ship == GameGetPlayer()) {
 			/* trasport to zone */
 			Zone(gate->sp.ethereal.sz);

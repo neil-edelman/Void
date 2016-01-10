@@ -23,7 +23,7 @@ float SpriteGetBounding(const struct Sprite *const sprite);
 unsigned SpriteGetMass(const struct Sprite *const s);
 unsigned SpriteGetSize(const struct Sprite *const s);
 enum SpType SpriteGetType(const struct Sprite *const sprite);
-int SpriteGetId(const struct Sprite *const s);
+char *SpriteToString(const struct Sprite *const s);
 /*void (*SpriteGetCallback(struct Sprite *s))(struct Sprite *const, struct Sprite *const);*/
 int SpriteGetDamage(const struct Sprite *const s);
 int SpriteGetHit(const struct Sprite *const s);

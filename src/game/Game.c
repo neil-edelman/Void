@@ -92,7 +92,7 @@ int Game(void) {
 	Event(1000, FN_BICONSUMER, &bi, calloc(128, sizeof(char)), 1);
 
 	Zone(game.start);
-	Sprite(SP_SHIP, 0.0f, 0.0f, 0.0f, game.nautilus, B_HUMAN, &game.player);
+	Sprite(SP_SHIP, 0, 0, 0.0f, game.nautilus, B_HUMAN, &game.player);
 
 	Debug("Game: on.\n");
 	is_started = -1;

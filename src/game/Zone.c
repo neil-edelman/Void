@@ -61,10 +61,7 @@ void Zone(const struct SpaceZone *sz) {
 
 	{
 		struct Sprite *gt = SpriteGate(sz->gate1);
-		float x, y, t;
-		SpriteGetPosition(gt, &x, &y);
-		t = SpriteGetTheta(gt);
-		Info("Zone: Eth%u (%f,%f:%f)\n", SpriteGetId(gt), x, y, t);
+		Info("Zone: (%d,%d,%f) %s\n", sz->gate1->x, sz->gate1->y, sz->gate1->theta, SpriteToString(gt));
 	}
 	Far(sz->ois1);
 	Far(sz->ois2);

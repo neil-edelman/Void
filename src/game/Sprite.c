@@ -688,21 +688,13 @@ void SpriteShoot(struct Sprite *const s) { fire(s); }
 void SpriteRemoveIf(int (*const predicate)(struct Sprite *const)) {
 	struct Sprite *s;
 
-	if(!predicate) {
-		Debug("Sprite::removeIf: clearing Sprites.\n");
-		sprites_size = 0;
-		first_x = first_y = first_x_window = first_y_window = 0;
-	} else {
-		/* we may be doing a double-iteration
-		 (ie SpriteUpdate->iterate->collide->shp_eth->callback->SpriteRemoveIf),
-		 so push the iterator */
-		/*no pushed_iterator = iterator;
-		iterator = sprites;*/
-		while((s = iterate())) {
-			Debug("Sprite::removeIf: consdering %s.\n", SpriteToString(s));
-			if(predicate(s)) Sprite_(&s);
-		}
-		/*iterator = pushed_iterator;*/
+	/* we may be doing a double-iteration
+	 (ie SpriteUpdate->iterate->collide->shp_eth->callback->SpriteRemoveIf),
+	 so push the iterator; fixed! pushed in the event queue with 0ms, don't
+	 need to wory about it anymore */
+	while((s = iterate())) {
+		Debug("Sprite::removeIf: consdering %s.\n", SpriteToString(s));
+		if(!predicate || predicate(s)) Sprite_(&s);
 	}
 }
 

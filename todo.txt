@@ -12,11 +12,7 @@ kind, character, ethos
 
 
 
-Fix the craziness (undo the changes in magnitudes)
-
-Clear(Predicate)
-
-Random sucking things in to zero on new zone?
+do something about the shaking?
 
 put an Auto or Lore or something before each auto-generated thing
 

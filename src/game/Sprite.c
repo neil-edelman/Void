@@ -6,41 +6,22 @@
  are static; they have sprites_capacity maximum sprites. Sprites detect
  collisions. Sprites can be part of ships, asteroids, all sorts of gameplay
  elements, but this doesn't know that. However, background stuff is not
- sprites; ie, not collision detected, not lit.
- 
- @author	Neil
- @version	3.3, 2016-01
- @since		3.2, 2015-06 */
-
-/* Debris is everything that doesn't have license, but moves around on a linear
- path, can be damaged, killed, and moved. Astroids and stuff. It would be nice
- if Debris could inherit from Sprite.
- 
- @author	Neil
- @version	3.2, 2015-06
- @since		3.2, 2015-06 */
-
-/* Ship has license and is controlled by a player or an ai. Would be nice if
- Ship could inherit from Sprite (or actually from Debris which inherits from
- Sprite.)
- 
- @author	Neil
- @version	3.2, 2015-06
- @since		3.2, 2015-06 */
-
-/* Wmd is cannons, bombs, and other cool stuff that has sprites and can hurt.
- 
- @author	Neil
- @version	3.2, 2015-06
- @since		3.2, 2015-06 */
-
-/* They are in the forground but poll collision detection instead of
+ sprites; ie, not collision detected, not lit. There are several types.
+ <p>
+ SP_DEBRIS: is everything that doesn't have license, but moves around on a
+ linear path, can be damaged, killed, and moved. Astroids and stuff.
+ <p>
+ SP_SHIP: has license and is controlled by a player or an ai.
+ <p>
+ SP_WMD: cannons, bombs, and other cool stuff that has sprites and can hurt.
+ <p>
+ SP_ETHEREAL: are in the forground but poll collision detection instead of
  interacting; they do something in the game. For example, gates are devices
  that can magically transport you faster than light, or powerups.
  
  @author	Neil
- @version	3.3, 2015-12
- @since		3.3, 2015-12 */
+ @version	3.3, 2016-01
+ @since		3.2, 2015-06 */
 
 #include <stdarg.h> /* va_* */
 //#include <stdlib.h> /* malloc free */
@@ -56,6 +37,8 @@
 #include "../general/Sorting.h"
 #include "../system/Timer.h" /* hmmm, Wmd should go in Wmd */
 #include "../system/Draw.h"
+
+#include "Event.h" /*?*/
 
 /* M_ are widely accepted gnu standard, not C99 */
 #ifndef M_PI
@@ -104,6 +87,9 @@ static struct Sprite {
 	unsigned mass;      /* t (ie Mg) */
 	unsigned size;		/* the (x, y) size; they are the same */
 	int      texture;	/* gpu texture */
+	/* if we store a Sprite, and the Sprite changes addresses, this will
+	 automatically change the pointer; it should be null */
+	struct Sprite **notify;
 
 	enum SpType  sp_type;
 	union {
@@ -122,7 +108,6 @@ static struct Sprite {
 			float          turn_acceleration;
 			float          horizon;
 			enum Behaviour behaviour;
-			struct Sprite  **notify;
 		} ship;
 		struct {
 			struct Sprite  *from;
@@ -186,6 +171,7 @@ char *decode_sprite_type(const enum SpType sptype);
 static void fire(struct Sprite *const s);
 void gate_travel(struct Sprite *const gate, struct Sprite *ship);
 void do_ai(struct Sprite *const s, const int dt_ms);
+static void sprite_poll(void);
 
 /* fixme: this assumes SP_DEBRIS = 0, ..., SP_ETHEREAL = 3 */
 static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, const float) = {
@@ -199,15 +185,15 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 /* public */
 
 /** Get a new sprite from the pool of unused.
- Sprite(SP_DEBRIS, const struct Image *image, const float x, y, theta,
+ Sprite(SP_DEBRIS, const struct Image *image, const int x, y, const float theta,
   const int mass);
- Sprite(SP_SHIP, const float x, y, theta, const struct ShipClass *const class,
+ Sprite(SP_SHIP, const int x, y, const float theta, const struct ShipClass *const class,
   const enum Behaviour behaviour, const struct Ship **notify);
  Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
- Sprite(SP_ETHEREAL, const struct Image *image, const float x, y, theta);
+ Sprite(SP_ETHEREAL, const struct Image *image, const int x, y, const float theta);
  @param sp_type		Type of sprite.
  @param image		(SP_DEBRIS|SP_ETHEREAL) (const struct Image *) Image.
- @param x, y, theta	(SP_DEBRIS|SP_SHIP|SP_ETHEREAL) (const float) Orientation.
+ @param x, y, theta	(SP_DEBRIS|SP_SHIP|SP_ETHEREAL) Orientation.
  @param mass		(SP_DEBRIS) (const int) Mass.
  @param class		(SP_SHIP) (const struct ShipClass *const)
  @param behaviour	(SP_SHIP) (const enum Behaviour)
@@ -235,10 +221,11 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 
 	s->x = s->x1 = 0.0f;
 	s->y = s->y1 = 0.0f;
-	s->theta = 0.0f;
-	s->omega = 0.0f;
+	s->theta  = 0.0f;
+	s->omega  = 0.0f;
 	s->vx = s->vy = s->vy1 = s->vy1 = 0.0f;
-	s->mass = 1;
+	s->mass   = 1;
+	s->notify = 0;
 
 	/* polymorphism */
 	s->sp_type = sp_type;
@@ -271,14 +258,6 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.ship.turn_acceleration = class->turn * deg_sec_to_rad_ms * 0.001f /*<-fixme*/;
 			s->sp.ship.horizon         = 0.0f;
 			s->sp.ship.behaviour       = va_arg(args, const enum Behaviour);
-			s->sp.ship.notify          = va_arg(args, struct Sprite **);
-			/* notify it immediately */
-			if(s->sp.ship.notify) {
-				if(*s->sp.ship.notify) {
-					Warn("Sprite: ship warning, new notify is not void; overriding Spr%u with Spr%u.\n", *s->sp.ship.notify, s);
-				}
-				if(s->sp.ship.notify) *s->sp.ship.notify = s;
-			}
 			break;
 		case SP_WMD:
 			/* fixme: this could change! not gauranteed to have a valid from */
@@ -346,6 +325,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	sort_notify(s);
 
 	Debug("Sprite: created from pool, %s.\n", SpriteToString(s));
+	KeyRegister('s',  &sprite_poll);
 
 	return s;
 }
@@ -359,7 +339,7 @@ struct Sprite *SpriteGate(const struct Gate *gate) {
 	if(!(s = Sprite(SP_ETHEREAL, ImageSearch("Gate.png"), gate->x, gate->y, gate->theta))) return 0;
 	s->sp.ethereal.callback = &gate_travel;
 	s->sp.ethereal.sz       = gate->to;
-	Debug("Sprite(Gate): created from Sprite, %s.\n", SpriteToString(s));
+	Pedantic("Sprite(Gate): created from Sprite, %s.\n", SpriteToString(s));
 
 	return s;
 }
@@ -373,19 +353,21 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	if(!sprite_ptr || !(sprite = *sprite_ptr)) return;
 	index = sprite - sprites;
 	if(index < 0 || index >= sprites_size) {
-		Debug("~Sprite: Spr%u not in range Spr%u.\n", index + 1, sprites_size);
+		Warn("~Sprite: Spr%u not in range Spr%u.\n", index + 1, sprites_size);
 		return;
 	}
-	Pedantic("~Sprite: returning to pool, Spr%u.\n", SpriteGetId(sprite));
+
+	/* the sprite is null in some other place */
+	if(sprite->notify) *sprite->notify = 0;
+
+	Debug("~Sprite: returning to pool, %s.\n", SpriteToString(sprite));
 
 	/* polymorphism */
 	switch(sprite->sp_type) {
-		case SP_SHIP:
-			if(sprite->sp.ship.notify) *sprite->sp.ship.notify = 0;
-			break;
 		case SP_WMD:
 			Light_(sprite->sp.wmd.light);
 			break;
+		case SP_SHIP:
 		case SP_DEBRIS:
 		case SP_ETHEREAL:
 			break;
@@ -424,7 +406,8 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		else                             first_y          = sprite;
 		if((neighbor = replace->next_y)) neighbor->prev_y = sprite;
 
-		Pedantic("~Sprite: Spr%u has become Spr%u.\n", SpriteGetId(replace), SpriteGetId(sprite));
+		if(sprite->notify) *sprite->notify = sprite;
+		Debug("~Sprite: %s has become %s.\n", SpriteToString(replace), SpriteToString(sprite));
 	}
 
 	*sprite_ptr = sprite = 0;
@@ -519,23 +502,34 @@ unsigned SpriteGetSize(const struct Sprite *const s) {
 	return s->size;
 }
 
+void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify) {
+	if(!s) return;
+	if(notify) {
+		if(*notify) Warn("Sprite::setNotify: overriding a previous notification on the external pointer.\n");
+		if(s->notify) Warn("Sprite::setNotify: overriding a previous notification on the Sprite.\n");
+	}
+	s->notify = notify;
+	if(notify) *s->notify = s;
+}
+
 /** Gets the Sprite type that was assigned at the beginning. */
 enum SpType SpriteGetType(const struct Sprite *const sprite) {
 	if(!sprite) return 0;
 	return sprite->sp_type;
 }
 
-/** The id is the position in the array + 1. Volatile! Use only once per
- instruction. */
+/** The id is the position in the array + 1. Volatile-ish. */
 char *SpriteToString(const struct Sprite *const s) {
-	static char buffer[64];
+	static int b;
+	static char buffer[4][64];
 
+	b &= 3;
 	if(!s) {
-		snprintf(buffer, sizeof buffer, "%s", "null sprite");
+		snprintf(buffer[b], sizeof buffer[b], "%s", "null sprite");
 	} else {
-		snprintf(buffer, sizeof buffer, "%sSpr%u[%.1f,%.1f:%.1f]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta);
+		snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%.1f,%.1f:%.1f]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta);
 	};
-	return buffer;
+	return buffer[b++];
 }
 
 /*void (*SpriteGetCallback(struct Sprite *s))(struct Sprite *const, struct Sprite *const) {
@@ -638,7 +632,7 @@ void SpriteDebris(const struct Sprite *const s) {
 	Debug("Sprite::debris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
 
 	/* break into pieces -- new debris */
-	sub = Sprite(SP_DEBRIS, small, s->x, s->y, s->theta, 5.0);
+	sub = Sprite(SP_DEBRIS, small, s->x, s->y, s->theta, 5);
 	SpriteSetVelocity(sub, deb_explosion_elasticity * s->vx, deb_explosion_elasticity * s->vy);
 }
 
@@ -687,14 +681,28 @@ void SpriteInput(struct Sprite *s, const int turning, const int acceleration, co
 void SpriteShoot(struct Sprite *const s) { fire(s); }
 
 /** Removes all of the Sprites for which predicate is true; if predicate is
- null, than it removes all sprites. */
-void SpriteRemoveIf(int (*const predicate)(const struct Sprite *const)) {
-	Debug("Sprite::clear: clearing Sprites.\n");
+ null, than it removes all sprites.
+ <p>
+ Fixme: Is really slow copying memory in large scenes where delete nearly all
+ sprite; viz, the thing you want to do. */
+void SpriteRemoveIf(int (*const predicate)(struct Sprite *const)) {
+	struct Sprite *s;
+
 	if(!predicate) {
+		Debug("Sprite::removeIf: clearing Sprites.\n");
 		sprites_size = 0;
 		first_x = first_y = first_x_window = first_y_window = 0;
 	} else {
-		/***fixme***/
+		/* we may be doing a double-iteration
+		 (ie SpriteUpdate->iterate->collide->shp_eth->callback->SpriteRemoveIf),
+		 so push the iterator */
+		/*no pushed_iterator = iterator;
+		iterator = sprites;*/
+		while((s = iterate())) {
+			Debug("Sprite::removeIf: consdering %s.\n", SpriteToString(s));
+			if(predicate(s)) Sprite_(&s);
+		}
+		/*iterator = pushed_iterator;*/
 	}
 }
 
@@ -862,7 +870,7 @@ void SpriteUpdate(const int dt_ms) {
 		if(s->y      < -de_sitter) s->y =  de_sitter - 20.0f;
 		else if(s->y >  de_sitter) s->y = -de_sitter + 20.0f;
 
-		/* keep it sorted */
+		/* keep it sorted (fixme: no?) */
 		sort_notify(s);
 	}
 
@@ -1275,6 +1283,7 @@ static void shp_eth(struct Sprite *s, struct Sprite *e, const float d0) {
 	/*void (*fn)(struct Sprite *const, struct Sprite *);*/
 	/*Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));*/
 	/*if((fn = EtherealGetCallback(eth))) fn(eth, s);*/
+	/* while in iterate! danger! */
 	if(e->sp.ethereal.callback) e->sp.ethereal.callback(e, s);
 }
 
@@ -1302,7 +1311,8 @@ static void fire(struct Sprite *const s) {
 	s->sp.ship.ms_recharge_wmd = time_ms + s->sp.ship.class->weapon->ms_recharge;
 }
 
-/** can be a callback for an Ethereal, whenever it collides with a Ship. */
+/** can be a callback for an Ethereal, whenever it collides with a Ship.
+ IT CAN'T MODIFY THE LIST */
 void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
 	float x, y, /*vx, vy,*/ gate_norm_x, gate_norm_y, proj/*, h*/;
 
@@ -1317,18 +1327,20 @@ void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
 	gate_norm_y = sinf(gate->theta);
 	proj = x * gate_norm_x + y * gate_norm_y; /* proj is the new h */
 	if(ship->sp.ship.horizon > 0 && proj < 0) {
-		Debug("gate_travel: %s crossed into the event horizon.\n", SpriteToString(ship));
+		Debug("gate_travel: %s crossed into the event horizon of %s.\n", SpriteToString(ship), SpriteToString(gate));
 		if(ship == GameGetPlayer()) {
 			/* trasport to zone */
-			Zone(gate->sp.ethereal.sz);
+			/* FIXME: doesn't work */
+			Event(100, FN_CONSUMER, &Zone, gate->sp.ethereal.sz);
+			/*Zone(gate->sp.ethereal.sz);*/
 		} else {
 			/* disappear */
-			Sprite_(&ship);
+			/* fixme: test! */
+			SpriteDestroy(ship);
 		}
-	} else {
-		/* fixme: unreliable */
-		ship->sp.ship.horizon = proj;
-	}
+	}/* else*/
+	/* fixme: unreliable */
+	ship->sp.ship.horizon = proj;
 }
 
 void do_ai(struct Sprite *const a, const int dt_ms) {
@@ -1374,4 +1386,13 @@ void do_ai(struct Sprite *const a, const int dt_ms) {
 		acceleration = shp_ai_speed;
 	}
 	SpriteInput(a, turning, acceleration, dt_ms);
+}
+
+static void sprite_poll(void) {
+	struct Sprite *s;
+
+	Info("Sprites:\n");
+	while((s = iterate())) {
+		Info("%s\n", SpriteToString(s));
+	}
 }

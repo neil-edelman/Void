@@ -54,16 +54,19 @@ const float de_sitter = 8192.0f;
 static void quit(void);
 static void pause(void);
 static void fps(void);
+static void gametime(void);
 /*static float rnd(const float limit);*/
 /*static void add_sprites(void);*/
 /*static void poll_sprites(void);*/
 static void position(void);
-static void bi(char *, int);
+static void con(const char *const a);
+static void bi(char *, char *);
 
 /* public */
 
 /** constructor */
 int Game(void) {
+	struct Sprite *s;
 
 	if(is_started) return -1;
 
@@ -73,6 +76,7 @@ int Game(void) {
 	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &fps);
 	KeyRegister('z',  &position);
+	KeyRegister('t',  &gametime);
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
@@ -89,10 +93,12 @@ int Game(void) {
 	/* set drawing elements */
 	DrawSetShield("Bar.png");
 
-	Event(1000, FN_BICONSUMER, &bi, calloc(128, sizeof(char)), 1);
-
 	Zone(game.start);
-	Sprite(SP_SHIP, 0, 0, 0.0f, game.nautilus, B_HUMAN, &game.player);
+	/*Event(1000, FN_BICONSUMER, &bi, calloc(4, sizeof(char)), "asdf");*/
+	Event(3000, FN_CONSUMER, &con, "cool");
+	Event(2000, FN_RUNNABLE, &position);
+	s = Sprite(SP_SHIP, 0, 0, 0.0f, game.nautilus, B_HUMAN);
+	SpriteSetNotify(s, &game.player);
 
 	Debug("Game: on.\n");
 	is_started = -1;
@@ -180,6 +186,10 @@ static void fps(void) {
 	Info("%.1f fps, %ums average frame-time; %ums game-time.\n", 1000.0 / mean, mean, TimerGetGameTime());
 }
 
+static void gametime(void) {
+	Info("%u ms game time.\n", TimerGetGameTime());
+}
+
 /** "Random" -- used for initialising. FIXME: this will be used a lot! have
  Rando.c include all sorts of random fuctions.
  @param limit
@@ -229,8 +239,12 @@ static void position(void) {
 	Info("Position(%.1f,%.1f:%.1f)\n", x, y, t);
 }
 
-static void bi(char *a, const int i) {
+static void con(const char *const a) {
+	Info("con: %s\n", a);
+}
+
+static void bi(char *a, char *b) {
 	if(--a[0] < 'A') a[0] = 'z';
-	printf("!!!! %s %d\n", a, i);
-	Event(1000, FN_BICONSUMER, &bi, a, i + 1);
+	printf("!!!! %s : %s\n", a, b);
+	Event(1000, FN_BICONSUMER, &bi, a, b);
 }

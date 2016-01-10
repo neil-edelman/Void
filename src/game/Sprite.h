@@ -22,6 +22,7 @@ void SpriteSetOmega(struct Sprite *const sprite, const float omega);
 float SpriteGetBounding(const struct Sprite *const sprite);
 unsigned SpriteGetMass(const struct Sprite *const s);
 unsigned SpriteGetSize(const struct Sprite *const s);
+void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify);
 enum SpType SpriteGetType(const struct Sprite *const sprite);
 char *SpriteToString(const struct Sprite *const s);
 /*void (*SpriteGetCallback(struct Sprite *s))(struct Sprite *const, struct Sprite *const);*/
@@ -35,5 +36,5 @@ void SpriteDebris(const struct Sprite *const s);
 void SpriteInput(struct Sprite *s, const int turning, const int acceleration, const int dt_ms);
 void SpriteUpdate(const int dt_ms);
 void SpriteShoot(struct Sprite *const s);
-void SpriteRemoveIf(int (*const predicate)(const struct Sprite *const));
+void SpriteRemoveIf(int (*const predicate)(struct Sprite *const));
 int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr);

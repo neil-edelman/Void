@@ -34,6 +34,7 @@ extern const float de_sitter;
 
 /* private prototypes */
 static float rnd(const float limit);
+static int remove_all_except_player(struct Sprite *const victim);
 
 /* public */
 
@@ -45,34 +46,31 @@ void Zone(const struct SpaceZone *sz) {
 	const struct ShipClass *scorpion_class = ShipClassSearch("Scorpion");
 	int i;
 
+	Debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name, sz->ois1->name, sz->ois2->name);
+
 	/* clear all objects */
+	SpriteRemoveIf(&remove_all_except_player);
 	LightClear();
 	EventClear();
 	FarClear();
-
-	Debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name, sz->ois1->name, sz->ois2->name);
-	/*zone.gate = sz->gate1;
-	zone.ois[0] = sz->ois1;
-	zone.ois[1] = sz->ois2;*/
 
 	/* set drawing elements */
 	DrawSetBackground("Dorado.jpeg");
 	/* fixme: set sunlight */
 
-	{
-		struct Sprite *gt = SpriteGate(sz->gate1);
-		Info("Zone: (%d,%d,%f) %s\n", sz->gate1->x, sz->gate1->y, sz->gate1->theta, SpriteToString(gt));
-	}
 	Far(sz->ois1);
 	Far(sz->ois2);
 	Far(sz->ois3);
 
-	//Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID, 0);
-	Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), -100.0f, -100.0f, 1.0f, 50.0f);
+	SpriteGate(sz->gate1);
+
+	//Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
+	Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), -100, -100, 1.0f, 50);
+
 #if 0
 	/* sprinkle some ships */
 	for(i = 0; i < 100; i++) {
-		Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID, 0);
+		Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
 #endif
 
@@ -81,7 +79,7 @@ void Zone(const struct SpaceZone *sz) {
 	 reaching; gets incresingly slow after 1500, but don't need debris when
 	 it's really far (cpu!) */
 	for(i = 0; i < 1000; i++) {
-		s = Sprite(SP_DEBRIS, asteroid_type->image, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), 10.0f);
+		s = Sprite(SP_DEBRIS, asteroid_type->image, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), 10);
 		SpriteSetVelocity(s, rnd(50.0f), rnd(50.0f));
 		SpriteSetOmega(s, rnd(1.0f));
 	}
@@ -91,6 +89,10 @@ void Zone(const struct SpaceZone *sz) {
 	/*Event(1000, FN_BICONSUMER, &bi, calloc(128, sizeof(char)), 1);*/
 }
 
+void ZoneFoo(void) {
+	Info("Z\n");
+}
+
 /** "Random" -- used for initialising. FIXME: this will be used a lot! have
  Rando.c include all sorts of random fuctions.
  @param limit
@@ -98,4 +100,15 @@ void Zone(const struct SpaceZone *sz) {
 				[-limit, limit]. */
 static float rnd(const float limit) {
 	return limit * (2.0f * rand() / RAND_MAX - 1.0f);
+}
+
+static int remove_all_except_player(struct Sprite *const victim) {
+	const struct Sprite *p = GameGetPlayer();
+	Info("remove_all_except_player: player %s; victim %s\n", SpriteToString(p), SpriteToString(victim));
+	if(p == victim) {
+		Debug("remove_all_except_player: spare %s\n", SpriteToString(victim));
+		return 0;
+	}
+	Debug("remove_all_except_player: remove %s\n", SpriteToString(victim));
+	return -1;
 }

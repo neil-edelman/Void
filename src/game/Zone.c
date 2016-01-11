@@ -103,7 +103,7 @@ void ZoneChange(const struct Sprite *const gate) {
 	float dg_x,     dg_y,     dg_theta,     dg_vx,     dg_vy;
 	float dg_cos, dg_sin;
 	float player_x, player_y, player_theta, player_vx, player_vy;
-	float dp_x,     dp_y,     dp_theta,     dp_vx,     dp_vy;
+	float dp_x,     dp_y,     /*dp_theta,*/ dp_vx,     dp_vy;
 
 	/* get old gate parametres */
 	SpriteGetPosition(gate, &oldg_x, &oldg_y);
@@ -148,7 +148,7 @@ void ZoneChange(const struct Sprite *const gate) {
 	/* difference between the player and the old gate */
 	dp_x     = player_x     - oldg_x;
 	dp_y     = player_y     - oldg_y;
-	//dp_theta = player_theta - oldg_theta;
+	/*dp_theta = player_theta - oldg_theta;*/
 	dp_vx    = player_vx    - oldg_vx;
 	dp_vy    = player_vy    - oldg_vy;
 

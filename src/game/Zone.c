@@ -44,7 +44,7 @@ static int remove_all_except_player(struct Sprite *const victim);
  @return		Success. */
 void Zone(const struct SpaceZone *const sz) {
 	struct Sprite *s;
-	const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");
+	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
 	const struct ShipClass *scorpion_class = ShipClassSearch("Scorpion");
 	int i;
 
@@ -70,28 +70,20 @@ void Zone(const struct SpaceZone *const sz) {
 	current_zone = sz;
 
 	//Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
-	Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), -100, -100, 1.0f, 50);
+	//Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), -100, -100, 1.0f, 50);
 
-#if 0
+	/* some asteroids */
+	for(i = 0; i < 1000; i++) {
+		s = Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), 10);
+		SpriteSetVelocity(s, rnd(0.02f), rnd(0.02f));
+		/*SpriteSetOmega(s, rnd(10.0f));*/
+	}
+
 	/* sprinkle some ships */
 	for(i = 0; i < 100; i++) {
-		Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
+		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
-#endif
 
-#if 0
-	/* some asteroids; fixme: debris limit 4096; sometimes it crashes when
-	 reaching; gets incresingly slow after 1500, but don't need debris when
-	 it's really far (cpu!) */
-	for(i = 0; i < 1000; i++) {
-		s = Sprite(SP_DEBRIS, asteroid_type->image, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), 10);
-		SpriteSetVelocity(s, rnd(50.0f), rnd(50.0f));
-		SpriteSetOmega(s, rnd(1.0f));
-	}
-#endif
-
-	/*Event(1000, FN_RUNNABLE, &say_hello);*/
-	/*Event(1000, FN_BICONSUMER, &bi, calloc(128, sizeof(char)), 1);*/
 }
 
 void ZoneChange(const struct Sprite *const gate) {

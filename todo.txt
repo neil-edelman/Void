@@ -12,9 +12,11 @@ kind, character, ethos
 
 
 
+Wmd is not working
+
 do something about the shaking?
 
-put an Auto or Lore or something before each auto-generated thing
+put an Auto<-Lore or something before each auto-generated thing
 
 Random.c
 

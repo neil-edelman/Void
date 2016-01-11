@@ -153,15 +153,15 @@ void ZoneChange(const struct Sprite *const gate) {
 	dp_vy    = player_vy    - oldg_vy;
 
 	/* calculate new player parametres */
-	player_x     =  newg_x + dp_x*dg_cos + dp_y*dg_sin;
-	player_y     =  newg_y - dp_x*dg_sin + dp_y*dg_cos;
+	player_x     =  newg_x - dp_x*dg_cos - dp_y*dg_sin;
+	player_y     =  newg_y + dp_x*dg_sin - dp_y*dg_cos;
 	player_theta += dg_theta;
-	player_vx    =  dp_vx*dg_cos + dp_vy*dg_sin;
-	player_vy    = -dp_vx*dg_sin + dp_vy*dg_cos;
+	player_vx    = -dp_vx*dg_cos - dp_vy*dg_sin;
+	player_vy    =  dp_vx*dg_sin - dp_vy*dg_cos;
 
 	SpriteSetPosition(player, player_x, player_y);
 	SpriteSetTheta(player, player_theta);
-	SpriteSetVelocity(player, -player_vx, -player_vy);
+	SpriteSetVelocity(player, player_vx, player_vy);
 }
 
 /** "Random" -- used for initialising. FIXME: this will be used a lot! have

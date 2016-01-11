@@ -161,7 +161,7 @@ void ZoneChange(const struct Sprite *const gate) {
 
 	SpriteSetPosition(player, player_x, player_y);
 	SpriteSetTheta(player, player_theta);
-	SpriteSetVelocity(player, player_vx, player_vy);
+	SpriteSetVelocity(player, -player_vx, -player_vy);
 }
 
 /** "Random" -- used for initialising. FIXME: this will be used a lot! have

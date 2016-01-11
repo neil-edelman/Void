@@ -69,13 +69,13 @@ Exploring
 Jupiter
 -150
 -100
-1.0
+0
 Gate
 Homebound
 Earth
 0
 -200
-1.0
+90
 # ShipClass name, image, shield, recharge, speed2, acceleration, turn_rate, rotation_limit
 ShipClass
 Nautilus

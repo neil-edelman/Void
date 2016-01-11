@@ -35,8 +35,9 @@
 #include "Zone.h"
 #include "Game.h"
 #include "../general/Sorting.h"
-#include "../system/Timer.h" /* hmmm, Wmd should go in Wmd */
+#include "../system/Timer.h"
 #include "../system/Draw.h"
+#include "../system/Key.h"
 
 #include "Event.h" /*?*/
 
@@ -65,8 +66,9 @@ static const float deb_maximum_speed_2      = 20.0f; /* 2000? */
 static const float deb_explosion_elasticity = 0.5f; /* < 1 */
 static const float deb_minimum_mass         = 1.0f;
 
-static const float deg_sec_to_rad_ms  = (float)(M_PI / (180 * 1000));
+static const float deg_sec_to_rad_ms  = (float)(M_PI / (180.0 * 1000.0));
 static const float px_s_to_px2_ms2    = 0.000001f;
+static const float deg_to_rad         = (float)(M_PI / 180.0);
 
 static const float shp_ai_turn        = 0.2f;     /* rad/ms */
 static const float shp_ai_too_close   = 3200.0f;  /* pixel^(1/2) */
@@ -117,7 +119,7 @@ static struct Sprite {
 		} wmd;
 		struct {
 			void       (*callback)(struct Sprite *const, struct Sprite *const);
-			const struct SpaceZone *sz;
+			const struct SpaceZone *to;
 			int        is_picked_up;
 		} ethereal;
 	} sp;
@@ -284,7 +286,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->theta          = va_arg(args, const double);
 			/* one has to set these up in a different fn */
 			s->sp.ethereal.callback      = 0;
-			s->sp.ethereal.sz            = 0;
+			s->sp.ethereal.to            = 0;
 			s->sp.ethereal.is_picked_up  = 0;
 			break;
 		default:
@@ -324,7 +326,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	first_x = first_y = s;
 	sort_notify(s);
 
-	Debug("Sprite: created from pool, %s.\n", SpriteToString(s));
+	Pedantic("Sprite: created from pool, %s.\n", SpriteToString(s));
 	KeyRegister('s',  &sprite_poll);
 
 	return s;
@@ -336,10 +338,10 @@ struct Sprite *SpriteGate(const struct Gate *gate) {
 
 	if(!gate) return 0;
 
-	if(!(s = Sprite(SP_ETHEREAL, ImageSearch("Gate.png"), gate->x, gate->y, gate->theta))) return 0;
+	if(!(s = Sprite(SP_ETHEREAL, ImageSearch("Gate.png"), gate->x, gate->y, gate->theta * deg_to_rad))) return 0;
 	s->sp.ethereal.callback = &gate_travel;
-	s->sp.ethereal.sz       = gate->to;
-	Pedantic("Sprite(Gate): created from Sprite, %s.\n", SpriteToString(s));
+	s->sp.ethereal.to       = gate->to;
+	Debug("Sprite(Gate): created from Sprite, %s.\n", SpriteToString(s));
 
 	return s;
 }
@@ -360,7 +362,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	/* the sprite is null in some other place */
 	if(sprite->notify) *sprite->notify = 0;
 
-	Debug("~Sprite: returning to pool, %s.\n", SpriteToString(sprite));
+	Pedantic("~Sprite: returning to pool, %s.\n", SpriteToString(sprite));
 
 	/* polymorphism */
 	switch(sprite->sp_type) {
@@ -407,7 +409,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if((neighbor = replace->next_y)) neighbor->prev_y = sprite;
 
 		if(sprite->notify) *sprite->notify = sprite;
-		Debug("~Sprite: %s has become %s.\n", SpriteToString(replace), SpriteToString(sprite));
+		Pedantic("~Sprite: %s has become %s.\n", SpriteToString(replace), SpriteToString(sprite));
 	}
 
 	*sprite_ptr = sprite = 0;
@@ -439,7 +441,7 @@ void SpriteGetPosition(const struct Sprite *const sprite, float *x_ptr, float *c
  @param sprite	Which sprite to set.
  @param x		x
  @param y		y */
-void SpriteSetPosition(struct Sprite *sprite, const float x, const float y) {
+void SpriteSetPosition(struct Sprite *const sprite, const float x, const float y) {
 	if(!sprite) return;
 	sprite->x     = x;
 	sprite->y     = y;
@@ -452,7 +454,7 @@ float SpriteGetTheta(const struct Sprite *const sprite) {
 	return sprite->theta;
 }
 
-void SpriteSetTheta(struct Sprite *sprite, const float theta) {
+void SpriteSetTheta(struct Sprite *const sprite, const float theta) {
 	if(!sprite) return;
 	sprite->theta = theta;
 	branch_cut_pi_pi(&sprite->theta);
@@ -536,6 +538,12 @@ char *SpriteToString(const struct Sprite *const s) {
 	if(!s || s->sp_type != SP_ETHEREAL) return 0;
 	return s->sp.ethereal.callback;
 }*/
+
+/** Gets a SpaceZone that it goes to, if it exists. */
+const struct SpaceZone *SpriteGetTo(const struct Sprite *const s) {
+	if(!s || s->sp_type != SP_ETHEREAL) return 0;
+	return s->sp.ethereal.to;
+}
 
 /** fixme: all these set an int to zero, do not use polymorphism */
 
@@ -680,6 +688,21 @@ void SpriteInput(struct Sprite *s, const int turning, const int acceleration, co
 
 void SpriteShoot(struct Sprite *const s) { fire(s); }
 
+/** Linear search for Sprites that are gates that go to to. */
+struct Sprite *SpriteOutgoingGate(const struct SpaceZone *to) {
+	struct Sprite *s;
+
+	/*Debug("Outgoing: SpaceZone to: #%p %s.\n", to, to->name);*/
+	while((s = iterate())) {
+		/*Debug("Outgoing: Sprite: #%p %s.\n", (void *)s, SpriteToString(s));
+		if(s->sp_type == SP_ETHEREAL) Debug("Outgoing: Ethreal to: #%p %s.\n", s->sp.ethereal.to, s->sp.ethereal.to->name);*/
+		if(s->sp_type != SP_ETHEREAL || s->sp.ethereal.to != to) continue;
+		iterator = sprites; /* reset */
+		break;
+	}
+	return s;
+}
+
 /** Removes all of the Sprites for which predicate is true; if predicate is
  null, than it removes all sprites.
  <p>
@@ -693,7 +716,7 @@ void SpriteRemoveIf(int (*const predicate)(struct Sprite *const)) {
 	 so push the iterator; fixed! pushed in the event queue with 0ms, don't
 	 need to wory about it anymore */
 	while((s = iterate())) {
-		Debug("Sprite::removeIf: consdering %s.\n", SpriteToString(s));
+		Pedantic("Sprite::removeIf: consdering %s.\n", SpriteToString(s));
 		if(!predicate || predicate(s)) Sprite_(&s);
 	}
 }
@@ -1322,9 +1345,8 @@ void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
 		Debug("gate_travel: %s crossed into the event horizon of %s.\n", SpriteToString(ship), SpriteToString(gate));
 		if(ship == GameGetPlayer()) {
 			/* trasport to zone */
-			/* FIXME: doesn't work */
-			Event(100, FN_CONSUMER, &Zone, gate->sp.ethereal.sz);
-			/*Zone(gate->sp.ethereal.sz);*/
+			/*Event(100, FN_CONSUMER, &Zone, gate->sp.ethereal.sz);*/
+			Event(0, FN_CONSUMER, &ZoneChange, gate);
 		} else {
 			/* disappear */
 			/* fixme: test! */

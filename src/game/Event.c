@@ -71,7 +71,7 @@ int Event(const int delay_ms, enum FnType type, ...) {
 			break;
 	}
 	va_end(args);
-	Debug("Event: new at %dms, #%p.\n", event->t_ms, (void *)event);
+	Pedantic("Event: new at %dms, #%p.\n", event->t_ms, (void *)event);
 
 	/* FIXME: O(n) :[? it depends, if an event has an time expected value near
 	 the beginning of the event queue, then this is actually good (probably the
@@ -123,7 +123,7 @@ void EventDispatch(void) {
 	struct Event *e;
 	const unsigned t_ms = TimerGetGameTime();
 	while((e = next_event) && e->t_ms <= t_ms) {
-		Debug("Event: event triggered at %ums.\n", e->t_ms);
+		Pedantic("Event: event triggered at %ums.\n", e->t_ms);
 		switch(e->type) {
 			case FN_RUNNABLE:    e->fn.runnable.run(); break;
 			case FN_CONSUMER:    e->fn.consumer.accept(e->fn.consumer.t); break;

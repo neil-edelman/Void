@@ -97,7 +97,7 @@ int Game(void) {
 	/*Event(1000, FN_BICONSUMER, &bi, calloc(4, sizeof(char)), "asdf");*/
 	Event(3000, FN_CONSUMER, &con, "cool");
 	Event(2000, FN_RUNNABLE, &position);
-	s = Sprite(SP_SHIP, 0, 0, 0.0f, game.nautilus, B_HUMAN);
+	s = Sprite(SP_SHIP, 0, 0, 0.0, game.nautilus, B_HUMAN);
 	SpriteSetNotify(s, &game.player);
 
 	Debug("Game: on.\n");

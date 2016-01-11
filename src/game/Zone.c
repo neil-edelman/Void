@@ -32,6 +32,8 @@ extern const float de_sitter;
 	struct ObjectInSpace ois[2];
 } zone;*/
 
+const struct SpaceZone *current_zone;
+
 /* private prototypes */
 static float rnd(const float limit);
 static int remove_all_except_player(struct Sprite *const victim);
@@ -40,7 +42,7 @@ static int remove_all_except_player(struct Sprite *const victim);
 
 /** Clears, then sets up a new zone.
  @return		Success. */
-void Zone(const struct SpaceZone *sz) {
+void Zone(const struct SpaceZone *const sz) {
 	struct Sprite *s;
 	const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");
 	const struct ShipClass *scorpion_class = ShipClassSearch("Scorpion");
@@ -63,6 +65,9 @@ void Zone(const struct SpaceZone *sz) {
 	Far(sz->ois3);
 
 	SpriteGate(sz->gate1);
+
+	/* update the current zone */
+	current_zone = sz;
 
 	//Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
 	Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), -100, -100, 1.0f, 50);
@@ -89,8 +94,74 @@ void Zone(const struct SpaceZone *sz) {
 	/*Event(1000, FN_BICONSUMER, &bi, calloc(128, sizeof(char)), 1);*/
 }
 
-void ZoneFoo(void) {
-	Info("Z\n");
+void ZoneChange(const struct Sprite *const gate) {
+	const struct SpaceZone *const new_zone = SpriteGetTo(gate), *old_zone = current_zone;
+	struct Sprite *new_gate;
+	struct Sprite *player;
+	float oldg_x,   oldg_y,   oldg_theta,   oldg_vx,   oldg_vy;
+	float newg_x,   newg_y,   newg_theta,   newg_vx,   newg_vy;
+	float dg_x,     dg_y,     dg_theta,     dg_vx,     dg_vy;
+	float dg_cos, dg_sin;
+	float player_x, player_y, player_theta, player_vx, player_vy;
+	float dp_x,     dp_y,     dp_theta,     dp_vx,     dp_vy;
+
+	/* get old gate parametres */
+	SpriteGetPosition(gate, &oldg_x, &oldg_y);
+	oldg_theta = SpriteGetTheta(gate);
+	SpriteGetVelocity(gate, &oldg_vx, &oldg_vy);
+
+	/* new zone */
+	if(!new_zone) {
+		Warn("Zone::change: %s does not have information about zone.\n", SpriteToString(gate));
+		return;
+	}
+	Zone(new_zone);
+
+	/* get new gate parametres; after the Zone changes! */
+	if(!(new_gate = SpriteOutgoingGate(old_zone))) {
+		Warn("Zone::change: there doesn't seem to be a gate back.\n");
+		return;
+	}
+	SpriteGetPosition(new_gate, &newg_x, &newg_y);
+	newg_theta = SpriteGetTheta(new_gate);
+	SpriteGetVelocity(new_gate, &newg_vx, &newg_vy);
+
+	/* difference between the gates */
+	dg_x     = newg_x     - oldg_x;
+	dg_y     = newg_y     - oldg_y;
+	dg_theta = newg_theta - oldg_theta;
+	dg_vx    = newg_vx    - oldg_vx;
+	dg_vy    = newg_vy    - oldg_vy;
+
+	dg_cos = cosf(dg_theta);
+	dg_sin = sinf(dg_theta);
+
+	/* get player parametres; after the Zone changes! */
+	if(!(player = GameGetPlayer())) {
+		Warn("Zone::change: there doesn't seem to be a player.\n");
+		return;
+	}
+	SpriteGetPosition(player, &player_x, &player_y);
+	player_theta = SpriteGetTheta(player);
+	SpriteGetVelocity(player, &player_vx, &player_vy);
+
+	/* difference between the player and the old gate */
+	dp_x     = player_x     - oldg_x;
+	dp_y     = player_y     - oldg_y;
+	//dp_theta = player_theta - oldg_theta;
+	dp_vx    = player_vx    - oldg_vx;
+	dp_vy    = player_vy    - oldg_vy;
+
+	/* calculate new player parametres */
+	player_x     =  newg_x + dp_x*dg_cos + dp_y*dg_sin;
+	player_y     =  newg_y - dp_x*dg_sin + dp_y*dg_cos;
+	player_theta += dg_theta;
+	player_vx    =  dp_vx*dg_cos + dp_vy*dg_sin;
+	player_vy    = -dp_vx*dg_sin + dp_vy*dg_cos;
+
+	SpriteSetPosition(player, player_x, player_y);
+	SpriteSetTheta(player, player_theta);
+	SpriteSetVelocity(player, player_vx, player_vy);
 }
 
 /** "Random" -- used for initialising. FIXME: this will be used a lot! have
@@ -103,12 +174,5 @@ static float rnd(const float limit) {
 }
 
 static int remove_all_except_player(struct Sprite *const victim) {
-	const struct Sprite *p = GameGetPlayer();
-	Info("remove_all_except_player: player %s; victim %s\n", SpriteToString(p), SpriteToString(victim));
-	if(p == victim) {
-		Debug("remove_all_except_player: spare %s\n", SpriteToString(victim));
-		return 0;
-	}
-	Debug("remove_all_except_player: remove %s\n", SpriteToString(victim));
-	return -1;
+	return GameGetPlayer() == victim ? 0 : -1;
 }

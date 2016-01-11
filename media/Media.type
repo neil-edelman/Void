@@ -14,7 +14,7 @@ string name
 SpaceZone to
 int x
 int y
-float theta
+int theta
 ~
 ShipClass
 string name

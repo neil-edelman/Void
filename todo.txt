@@ -12,9 +12,12 @@ kind, character, ethos
 
 
 
-Wmd is not working
 
-put an Auto<-Lore or something before each auto-generated thing
+Wmd is not working
+when I put the combo-sprites it started popping
+I think these are the same
+
+put an Auto<-Lore or something before each auto-generated thing, it's confusing
 
 Random.c
 
@@ -45,7 +48,8 @@ static Foo {
 static Bar foo_bars[2] = { &bar[0], &bar[1]; };
 static Foo foo[] = { { "foo", 2, &foo_bars[0] } }
 
-interpretation orbits
+interpretation orbits; hell no!
+
 do something about the shaking?
 
 things that you can buy that allow different things to be picked up, eg gold mining sieve
@@ -74,4 +78,4 @@ missions
 
 max wattage (increased with add-ons) 65GW(start) 317GW(all full of the important) 453GW(2 bars) 824GW(almost full)
 
-Mercury is too blurry near the edges
+Mercury is too blurry near the edges; remnants of other Mercury remain (turn off save tx px?)

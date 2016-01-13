@@ -92,7 +92,8 @@ void Light_(int *id_ptr) {
 		colour[light].g   = colour[replace].g;
 		colour[light].b   = colour[replace].b;
 		notify[light]     = notify[replace];
-		if(notify[light]) *notify[light] = light_to_id(light);
+		if(notify[light])   *notify[light]   = light_to_id(light);
+		if(notify[replace]) *notify[replace] = 0;
 		snprintf((char *)buffer, sizeof buffer, "; %s is replacing", to_string(replace));
 	}
 	Pedantic("~Light: erase %s%s.\n", to_string(light), buffer);

@@ -1403,8 +1403,10 @@ void do_ai(struct Sprite *const a, const int dt_ms) {
 static void sprite_poll(void) {
 	struct Sprite *s;
 
-	Info("Sprites:\n");
-	while((s = iterate())) {
-		Info("%s\n", SpriteToString(s));
-	}
+	Info("Sprites by array index:\n");
+	while((s = iterate())) Info("%s\n", SpriteToString(s));
+	Info("Sprites by x:\n");
+	for(s = first_x; s; s = s->next_x) Info("%s\n", SpriteToString(s));
+	Info("Sprites by y:\n");
+	for(s = first_y; s; s = s->next_y) Info("%s\n", SpriteToString(s));
 }

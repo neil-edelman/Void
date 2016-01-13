@@ -232,7 +232,7 @@ static void gametime(void) {
 static void position(void) {
 	float x, y, t;
 	if(!game.player) {
-		Info("You are dead.\n");
+		Info("You are scattered across space.\n");
 		return;
 	}
 	SpriteGetPosition(game.player, &x, &y);

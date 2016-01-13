@@ -25,8 +25,6 @@
  @version	3.3, 2016-01
  @since		3.2, 2015-06 */
 
-#define PRINT_PEDANTIC
-
 #include <stdarg.h> /* va_* */
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
@@ -392,10 +390,8 @@ void Sprite_(struct Sprite **sprite_ptr) {
 
 		replace = &sprites[sprites_size];
 		memcpy(sprite, replace, sizeof(struct Sprite));
-		/* modify light to point to the new location; fixme: not all things
-		 will be lit, have a flag? or wmd.light == 0 (would shift it all) */
-		if(sprite->sp_type == SP_WMD/* && sprite->sp.wmd.light*/) {
-			Debug("%s: %s is %d -> %d\n", SpriteToString(sprite), LightToString(sprite->sp.wmd.light), sprite->sp.wmd.light, replace->sp.wmd.light);
+		/* modify light to have notify point to the new location */
+		if(sprite->sp_type == SP_WMD && sprite->sp.wmd.light) {
 			LightSetNotify(replace->sp.wmd.light, &sprite->sp.wmd.light);
 		}
 

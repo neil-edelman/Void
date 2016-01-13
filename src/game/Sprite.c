@@ -25,8 +25,9 @@
  @version	3.3, 2016-01
  @since		3.2, 2015-06 */
 
+#define PRINT_PEDANTIC
+
 #include <stdarg.h> /* va_* */
-//#include <stdlib.h> /* malloc free */
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
 #include <stdio.h>	/* snprintf */
@@ -118,7 +119,7 @@ static struct Sprite {
 			struct Sprite  *from;
 			struct WmdType *wmd_type;
 			unsigned       expires;
-			unsigned       light;
+			int            light;
 		} wmd;
 		struct {
 			void       (*callback)(struct Sprite *const, struct Sprite *const);
@@ -393,7 +394,10 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		memcpy(sprite, replace, sizeof(struct Sprite));
 		/* modify light to point to the new location; fixme: not all things
 		 will be lit, have a flag? or wmd.light == 0 (would shift it all) */
-		if(sprite->sp_type == SP_WMD/* && sprite->sp.wmd.light*/) LightSetNotify(replace->sp.wmd.light, &sprite->sp.wmd.light);
+		if(sprite->sp_type == SP_WMD/* && sprite->sp.wmd.light*/) {
+			Debug("%s: %s is %d -> %d\n", SpriteToString(sprite), LightToString(sprite->sp.wmd.light), sprite->sp.wmd.light, replace->sp.wmd.light);
+			LightSetNotify(replace->sp.wmd.light, &sprite->sp.wmd.light);
+		}
 
 		sprite->prev_x = replace->prev_x;
 		sprite->next_x = replace->next_x;
@@ -1173,8 +1177,8 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 	const float bounding = a->bounding + b->bounding;
 	/* fixme: float stored in memory? */
 
-	Pedantic("elasitic_bounce: colision between Spr%u-%u %f; sum_r %f\n",
-			SpriteGetId(a), SpriteGetId(b), sqrtf(n_d2), bounding);
+	Pedantic("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f\n",
+			SpriteToString(a), SpriteToString(b), sqrtf(n_d2), bounding);
 
 	/* interpenetation; happens about half the time because of IEEE754 numerics,
 	 which could be on one side or the other; also, sprites that just appear,
@@ -1201,7 +1205,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 		a->vx1           += a_vx;
 		a->vy1           += a_vy;
 		a->no_collisions++;
-		Pedantic(" \\%u collisions Spr%u (Spr%u.)\n", a->no_collisions, SpriteGetId(a), SpriteGetId(b));
+		Pedantic(" \\%u collisions %s (%s.)\n", a->no_collisions, SpriteToString(a), SpriteToString(b));
 	}
 	if(!b->no_collisions) {
 		/* first collision */
@@ -1215,7 +1219,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 		b->vx1           += b_vx;
 		b->vy1           += b_vy;
 		b->no_collisions++;
-		Pedantic(" \\%u collisions Spr%u (Spr%u.)\n", b->no_collisions, SpriteGetId(b), SpriteGetId(a));
+		Pedantic(" \\%u collisions %s (%s.)\n", b->no_collisions, SpriteToString(b), SpriteToString(a));
 	}
 
 }

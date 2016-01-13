@@ -12,8 +12,6 @@
  @version	3.3, 2016-01
  @since		1.0, 2000 */
 
-#define PRINT_PEDANTIC
-
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* memcpy */
 #include "../Print.h"
@@ -30,22 +28,27 @@ struct Colour3f { float r, g, b; };
 
 static struct Vec2f    position[MAX_LIGHTS];
 static struct Colour3f colour[MAX_LIGHTS];
-static unsigned        *notify[MAX_LIGHTS];
+static int             *notify[MAX_LIGHTS];
+
+unsigned id_to_light(const int id);
+int light_to_id(const unsigned light);
+char *to_string(const unsigned light);
 
 /* public */
 
 /** Constructor.
- @param light_ptr	The pointer where this light lives.
- @param i			The intensity, i > 0.
- @param r,g,b		The colours, [0, 1].
- @return			Boolean true on success; the light_ptr has the value. */
-int Light(unsigned *const light_ptr, const float i, const float r, const float g, const float b) {
+ @param id_ptr	The pointer where this light lives.
+ @param i		The intensity, i > 0.
+ @param r,g,b	The colours, [0, 1].
+ @return		Boolean true on success; the id_ptr has (0, MAX_LIGHTS]. */
+int Light(int *const id_ptr, const float i, const float r, const float g, const float b) {
 	unsigned light;
 
-	if(!light_ptr) {
+	if(!id_ptr) {
 		Warn("Light: light_ptr is null; where do you want the light to go?\n");
 		return 0;
 	}
+	if(*id_ptr) Warn("Light: overriding %u on notify.\n", *id_ptr);
 	if(r < 0.0f || g < 0.0f || b < 0.0f || r > 1.0f || g > 1.0f || b > 1.0f) {
 		Warn("Light: invalid colour, [%f, %f, %f].\n", r, g, b);
 		return 0;
@@ -60,21 +63,22 @@ int Light(unsigned *const light_ptr, const float i, const float r, const float g
 	colour[light].r   = i * r;
 	colour[light].g   = i * g;
 	colour[light].b   = i * b;
-	notify[light]     = light_ptr;
-	*light_ptr         = light;
-	Pedantic("Light: created from pool, %s #%p.\n", LightToString(light), light_ptr);
+	notify[light]     = id_ptr;
+	*id_ptr           = light_to_id(light);
+	Pedantic("Light: created from pool, %s.\n", to_string(light));
 	return -1;
 }
 
 /** Destructor of light, will update with new particle at light.
  @param index	The light that's being destroyed. */
-void Light_(unsigned *light_ptr) {
+void Light_(int *id_ptr) {
 	static char *buffer[64];
 	unsigned light, replace;
+	int id;
 
-	if(!light_ptr) return;
-	if((light = *light_ptr) >= lights_size) {
-		Debug("~Light: %u/%u out-of-bounds.\n", light + 1, lights_size);
+	if(!id_ptr /*|| !(id = *id_ptr)*/) return; id = *id_ptr;
+	if((light = id_to_light(id)) >= lights_size) {
+		Debug("~Light: %u/%u out-of-bounds.\n", id, lights_size);
 		return;
 	}
 
@@ -88,24 +92,16 @@ void Light_(unsigned *light_ptr) {
 		colour[light].g   = colour[replace].g;
 		colour[light].b   = colour[replace].b;
 		notify[light]     = notify[replace];
-		Pedantic("#%p = %u\n", notify[light], light);
-		if(notify[light]) *notify[light] = light;
-		snprintf((char *)buffer, sizeof buffer, "; %s is now %s", LightToString(replace), LightToString(light));
+		if(notify[light]) *notify[light] = light_to_id(light);
+		snprintf((char *)buffer, sizeof buffer, "; %s is replacing", to_string(replace));
 	}
-	Pedantic("~Light: erase %s%s.\n", LightToString(light), buffer);
+	Pedantic("~Light: erase %s%s.\n", to_string(light), buffer);
 	lights_size = replace;
-	*light_ptr = light = 0;
-}
-
-/** Sets the size to zero, clearing all lights. Fixme: Does not notify
- anything; it probably doesn't matter, but this is also useless */
-void LightClear(void) {
-	Pedantic("Light::clear: clearing Lights.\n");
-	lights_size = 0;
+	*id_ptr = 0;
 }
 
 /** @return		The number of lights active. */
-int LightGetArraySize(void) { return lights_size; }
+unsigned LightGetArraySize(void) { return lights_size; }
 
 /** @return		The positions of the lights. */
 struct Vec2f *LightGetPositionArray(void) { return position; }
@@ -117,9 +113,11 @@ struct Colour3f *LightGetColourArray(void) { return colour; }
  @param index	Index.
  @param x
  @param y		*/
-void LightSetPosition(const unsigned light, const float x, const float y) {
+void LightSetPosition(const int id, const float x, const float y) {
+	const unsigned light = id_to_light(id);
+
 	if(light >= lights_size) {
-		Warn("Light::setPosition: %u/%u not in range.\n");
+		Warn("Light::setPosition: %u/%u not in range.\n", id, lights_size);
 		return;
 	}
 	position[light].x = x;
@@ -127,33 +125,41 @@ void LightSetPosition(const unsigned light, const float x, const float y) {
 }
 
 /** This is important because Sprites change places, as well. */
-void LightSetNotify(const unsigned light, unsigned *const light_ptr) {
+void LightSetNotify(const int id, int *const id_ptr) {
+	const unsigned light = id_to_light(id);
+
 	if(light >= lights_size) {
-		Warn("Light::setPosition: %u/%u not in range.\n");
+		Warn("Light::setPosition: %u/%u not in range.\n", id, lights_size);
 		return;
 	}
-	notify[light] = light_ptr;
+	notify[light] = id_ptr;
 }
 
 /** Volatile-ish: can only print 4 Lights at once. */
-char *LightToString(const unsigned light) {
-	static int b;
-	static char buffer[4][64];
-
-	b &= 3;
-	if(light >= lights_size) {
-		snprintf(buffer[b], sizeof buffer[b], "%s", "not a light");
-	} else {
-		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d(%.1f,%.1f,%.1f)[%.1f,%.1f]", light + 1, colour[light].r, colour[light].g, colour[light].b, position[light].x, position[light].y);*/
-		snprintf(buffer[b], sizeof buffer[b], "Lgh%d[%.1f,%.1f]", light + 1, position[light].x, position[light].y);
-	}
-	return buffer[b++];
-}
+char *LightToString(const int id) { return to_string(id_to_light(id)); }
 
 void LightList(void) {
 	unsigned i;
 	Info("Lights: { ");
 	for(i = 0; i < lights_size; i++) {
-		Info("%s%s", LightToString(i), i == lights_size - 1 ? " }\n" : ", ");
+		Info("%s%s", to_string(i), i == lights_size - 1 ? " }\n" : ", ");
 	}
+}
+
+unsigned id_to_light(const int id) { return id/* - 1*/; }
+
+int light_to_id(const unsigned light) { return light/* + 1*/; }
+
+char *to_string(const unsigned light) {
+	static int b;
+	static char buffer[4][64];
+	
+	b &= 3;
+	if(light >= lights_size) {
+		snprintf(buffer[b], sizeof buffer[b], "%s (Lgh%d)", "not a light", light_to_id(light));
+	} else {
+		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d(%.1f,%.1f,%.1f)[%.1f,%.1f]", id, colour[light].r, colour[light].g, colour[light].b, position[light].x, position[light].y);*/
+		snprintf(buffer[b], sizeof buffer[b], "Lgh%d[%.1f,%.1f]", light_to_id(light), position[light].x, position[light].y);
+	}
+	return buffer[b++];
 }

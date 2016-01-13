@@ -8,7 +8,6 @@
 #include "Game.h"
 #include "Far.h"
 #include "Sprite.h"
-#include "Light.h"
 #include "Event.h"
 #include "../system/Draw.h"
 
@@ -52,7 +51,6 @@ void Zone(const struct SpaceZone *const sz) {
 
 	/* clear all objects */
 	SpriteRemoveIf(&remove_all_except_player);
-	LightClear();
 	EventClear();
 	FarClear();
 

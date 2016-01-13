@@ -1,174 +1,159 @@
 /* Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
+/** Lighting effects! Unfortunately, UBOs, which allow structs, were introduced
+ in GLSL3.1; using 1.1 for compatibility, and only have 1.2. Ergo, this is a
+ little bit messy. Maybe in 10 years I'll do a change.
+ <p>
+ Lights depend on external unsigned integers to keep track. Don't modify the
+ light with a function not in this and don't free the unsigned without calling
+ Light_.
+ @author	Neil
+ @version	3.3, 2016-01
+ @since		1.0, 2000 */
+
+#define PRINT_PEDANTIC
+
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* memcpy */
 #include "../Print.h"
 #include "Light.h"
 
-struct Vec2f { float x, y; };
-struct Colour3f { float r, g, b; };
-
-/** Lighting effects! Unfortunately, UBOs, which allow structs, were introduced
- in GLSL3.1; using 1.1 for compatibility, and only have 1.2. Ergo, this is a
- little bit messy. Maybe in 10 years I'll do a change.
- <p>
- Fixme: the other way, viz, having a pointer to change is probably better and
- more straightforward. (Fixed)
- @author	Neil
- @version	3.2, 2015-05
- @since		1.0, 2000 */
-
 /* must be the same as in Lighting.fs */
 #define MAX_LIGHTS (64)
 
-/* private */
-/*static int find_new_hash(void);*/
+static const unsigned lights_capacity = MAX_LIGHTS;
+static unsigned       lights_size;
 
-static int             no_lights;
+struct Vec2f { float x, y; };
+struct Colour3f { float r, g, b; };
+
 static struct Vec2f    position[MAX_LIGHTS];
 static struct Colour3f colour[MAX_LIGHTS];
-static int             *notify[MAX_LIGHTS];
-/*
-static int             hash[MAX_LIGHTS];
-static int             next_hash;
-static int             hash_table_p1[MAX_LIGHTS * 2];
-const static int max_hash = sizeof(hash_table_p1) / sizeof(int); *//* must be a power of two */
-
-/* This is what I want to do!
-static struct Light {
-	float           intensity;
-	struct Vec2f    position;
-	struct Colour3f colour;
-} light[64];
-const static int max_lights = sizeof(light) / sizeof(struct Light);*/
+static unsigned        *notify[MAX_LIGHTS];
 
 /* public */
 
 /** Constructor.
- @param i	The intensity, <tt>i > 0</tt>.
- @param r
- @param g
- @param b	The colours, <tt>0 >= x >= 1</tt>.
- @return	An index that Light_ will destroy or zero on failure. */
-int Light(const float i, const float r, const float g, const float b) {
-	/*int h;*/
+ @param light_ptr	The pointer where this light lives.
+ @param i			The intensity, i > 0.
+ @param r,g,b		The colours, [0, 1].
+ @return			Boolean true on success; the light_ptr has the value. */
+int Light(unsigned *const light_ptr, const float i, const float r, const float g, const float b) {
+	unsigned light;
 
+	if(!light_ptr) {
+		Warn("Light: light_ptr is null; where do you want the light to go?\n");
+		return 0;
+	}
 	if(r < 0.0f || g < 0.0f || b < 0.0f || r > 1.0f || g > 1.0f || b > 1.0f) {
-		Debug("Light: invalid colour, [%f, %f, %f].\n", r, g, b);
+		Warn("Light: invalid colour, [%f, %f, %f].\n", r, g, b);
 		return 0;
 	}
-	if(no_lights >= MAX_LIGHTS) {
-		Debug("Light: reached limit of %d/%d lights.\n", no_lights, MAX_LIGHTS);
+	if(lights_size >= lights_capacity) {
+		Warn("Light: reached limit of %u/%u lights.\n", lights_size, lights_capacity);
 		return 0;
 	}
-	/*h = find_new_hash();*/
-	position[no_lights].x = 0.0f;
-	position[no_lights].y = 0.0f;
-	colour[no_lights].r   = i * r;
-	colour[no_lights].g   = i * g;
-	colour[no_lights].b   = i * b;
-	notify[no_lights]     = 0;
-	Pedantic("Light: created from pool, colour (%f,%f,%f), Lgt%u.\n", colour[no_lights].r, colour[no_lights].g, colour[no_lights].b, no_lights + 1);
-	/*hash[no_lights]       = h;
-	hash_table_p1[h]      = no_lights + 1;
-	Debug("Light: new, colour (%f,%f,%f) at (%f,%f), light %u, #%u.\n", colour[no_lights].r, colour[no_lights].g, colour[no_lights].b, 0.0f, 0.0f, no_lights, h + 1);
-	no_lights++;
-
-	return h + 1;*/
-	return ++no_lights;
+	light = lights_size++;
+	position[light].x = 0.0f;
+	position[light].y = 0.0f;
+	colour[light].r   = i * r;
+	colour[light].g   = i * g;
+	colour[light].b   = i * b;
+	notify[light]     = light_ptr;
+	*light_ptr         = light;
+	Pedantic("Light: created from pool, %s #%p.\n", LightToString(light), light_ptr);
+	return -1;
 }
 
-/** Destructor of no, will update with new particle at no.
+/** Destructor of light, will update with new particle at light.
  @param index	The light that's being destroyed. */
-void Light_(const int h_p1) {
-	/*const int h = h_p1 - 1;
-	int no;
+void Light_(unsigned *light_ptr) {
+	static char *buffer[64];
+	unsigned light, replace;
 
-	if(h < 0 || h >= max_hash) return;
-	if((no = hash_table_p1[h] - 1) == -1) {
-		Debug("~Light: #%u is not a light.\n", h_p1);
+	if(!light_ptr) return;
+	if((light = *light_ptr) >= lights_size) {
+		Debug("~Light: %u/%u out-of-bounds.\n", light + 1, lights_size);
 		return;
 	}
-	hash_table_p1[h] = 0;*/
-	const int no = h_p1 - 1;
-	if(h_p1 == 0) return;
-	if(no < 0 || no >= no_lights) {
-		Debug("~Light: Lgt%u, out-of-bounds (index %u.)\n", h_p1, no);
-		return;
-	}
-	Pedantic("~Light: erase, turning off light (index %u,) Lgt%u.\n", no, h_p1);
 
-	/* place the no_lights item into this one, decrese #; nobody will know */
-	if(no < --no_lights) {
-		/*int rep = no_lights, replace_hash;*/
-		position[no].x = position[no_lights].x;
-		position[no].y = position[no_lights].y;
-		colour[no].r   = colour[no_lights].r;
-		colour[no].g   = colour[no_lights].g;
-		colour[no].b   = colour[no_lights].b;
-		notify[no]     = notify[no_lights];
-		if(notify[no]) *notify[no] = no + 1;
-		/*replace_hash   = hash[no_lights];
-		hash_table_p1[replace_hash] = no + 1;*/
-		Pedantic("~Light: Lgt%u is now Lgt%u.\n", no_lights + 1, no + 1);
+	buffer[0] = '\0';
+
+	/* place the lights_size item into this one, decrese # */
+	if(light < (replace = lights_size - 1)) {
+		position[light].x = position[replace].x;
+		position[light].y = position[replace].y;
+		colour[light].r   = colour[replace].r;
+		colour[light].g   = colour[replace].g;
+		colour[light].b   = colour[replace].b;
+		notify[light]     = notify[replace];
+		Pedantic("#%p = %u\n", notify[light], light);
+		if(notify[light]) *notify[light] = light;
+		snprintf((char *)buffer, sizeof buffer, "; %s is now %s", LightToString(replace), LightToString(light));
 	}
+	Pedantic("~Light: erase %s%s.\n", LightToString(light), buffer);
+	lights_size = replace;
+	*light_ptr = light = 0;
 }
 
-/** Sets the size to zero, clearing all lights. Does not notify anything. */
+/** Sets the size to zero, clearing all lights. Fixme: Does not notify
+ anything; it probably doesn't matter, but this is also useless */
 void LightClear(void) {
-	Debug("Light::clear: clearing Lights.\n");
-	no_lights = 0;
-}
-
-/** Lights can change number; this will notify a location of the new pointer.
- @param no_p1_ptr	Notify this (no + 1 pointer.) */
-void LightSetContainer(int *const no_p1_ptr) {
-	int no_p1, no;
-	if(!no_p1_ptr || !(no_p1 = *no_p1_ptr) || (no = no_p1 - 1) < 0 || no >= MAX_LIGHTS) return;
-	notify[no] = no_p1_ptr;
+	Pedantic("Light::clear: clearing Lights.\n");
+	lights_size = 0;
 }
 
 /** @return		The number of lights active. */
-int LightGetNo(void) {
-	return no_lights;
-}
+int LightGetArraySize(void) { return lights_size; }
 
 /** @return		The positions of the lights. */
-struct Vec2f *LightGetPositions(void) {
-	return position;
-}
+struct Vec2f *LightGetPositionArray(void) { return position; }
+
+/** @return		The colours of the lights. */
+struct Colour3f *LightGetColourArray(void) { return colour; }
 
 /**
  @param index	Index.
  @param x
  @param y		*/
-void LightSetPosition(const int h_p1, const float x, const float y) {
-	/*const int h = h_p1 - 1;
-	int no;*/
-	const int no = h_p1 - 1;
-
-	/*if(h < 0 || h >= max_hash || (no = hash_table_p1[h] - 1) == -1) return;*/
-	if(no < 0 || no >= MAX_LIGHTS) return;
-	position[no].x = x;
-	position[no].y = y;
-}
-
-/** @return		The colours of the lights. */
-struct Colour3f *LightGetColours(void) {
-	return colour;
-}
-
-/* fixme: clear */
-
-#if 0
-/** Find an index that's 0. */
-static int find_new_hash(void) {
-	/* assert: max_indeces must be >= MAX_LIGHTS and a power of two */
-	while(hash_table_p1[next_hash] != 0) {
-		Debug("Light::find_new_hash: collision.\n");
-		next_hash = (next_hash + 1) & (max_hash - 1);
+void LightSetPosition(const unsigned light, const float x, const float y) {
+	if(light >= lights_size) {
+		Warn("Light::setPosition: %u/%u not in range.\n");
+		return;
 	}
-	return next_hash++;
+	position[light].x = x;
+	position[light].y = y;
 }
-#endif
+
+/** This is important because Sprites change places, as well. */
+void LightSetNotify(const unsigned light, unsigned *const light_ptr) {
+	if(light >= lights_size) {
+		Warn("Light::setPosition: %u/%u not in range.\n");
+		return;
+	}
+	notify[light] = light_ptr;
+}
+
+/** Volatile-ish: can only print 4 Lights at once. */
+char *LightToString(const unsigned light) {
+	static int b;
+	static char buffer[4][64];
+
+	b &= 3;
+	if(light >= lights_size) {
+		snprintf(buffer[b], sizeof buffer[b], "%s", "not a light");
+	} else {
+		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d(%.1f,%.1f,%.1f)[%.1f,%.1f]", light + 1, colour[light].r, colour[light].g, colour[light].b, position[light].x, position[light].y);*/
+		snprintf(buffer[b], sizeof buffer[b], "Lgh%d[%.1f,%.1f]", light + 1, position[light].x, position[light].y);
+	}
+	return buffer[b++];
+}
+
+void LightList(void) {
+	unsigned i;
+	Info("Lights: { ");
+	for(i = 0; i < lights_size; i++) {
+		Info("%s%s", LightToString(i), i == lights_size - 1 ? " }\n" : ", ");
+	}
+}

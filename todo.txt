@@ -14,8 +14,6 @@ kind, character, ethos
 
 Wmd is not working
 
-do something about the shaking?
-
 put an Auto<-Lore or something before each auto-generated thing
 
 Random.c
@@ -47,9 +45,12 @@ static Foo {
 static Bar foo_bars[2] = { &bar[0], &bar[1]; };
 static Foo foo[] = { { "foo", 2, &foo_bars[0] } }
 
+interpretation orbits
+do something about the shaking?
+
 things that you can buy that allow different things to be picked up, eg gold mining sieve
 
-StaticDoublyLinkedList, fix over-limit crash bug (also, enum SpriteType type; union { struct{}; struct{};etc } t; )
+StaticDoublyLinkedList, fix over-limit crash bug
 
 P[\mu_x,\mu_y,\sigma] = f(x|\mu,\sigma) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(x-\mu)^2}{2\sigma^2}} Gaussian distribution in space to find ships. Also, custom dist based on objects of interest
 

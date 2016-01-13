@@ -73,14 +73,14 @@ void Zone(const struct SpaceZone *const sz) {
 	//Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), -100, -100, 1.0f, 50);
 
 	/* some asteroids */
-	for(i = 0; i < 1000; i++) {
+	for(i = 0; i < 1; i++) {
 		s = Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), 10);
 		SpriteSetVelocity(s, rnd(0.02f), rnd(0.02f));
 		/*SpriteSetOmega(s, rnd(10.0f));*/
 	}
 
 	/* sprinkle some ships */
-	for(i = 0; i < 100; i++) {
+	for(i = 0; i < 1; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
 

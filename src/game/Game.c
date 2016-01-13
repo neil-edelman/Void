@@ -16,9 +16,9 @@
 #include "../../bin/Lore.h"
 #include "Sprite.h"
 #include "Far.h"
-#include "Light.h"
 #include "Event.h"
 #include "Zone.h"
+#include "Light.h"
 #include "../general/Map.h"
 #include "../system/Key.h"
 #include "../system/Window.h"
@@ -77,6 +77,7 @@ int Game(void) {
 	KeyRegister('f',  &fps);
 	KeyRegister('z',  &position);
 	KeyRegister('t',  &gametime);
+	KeyRegister('l',  &LightList);
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/

@@ -739,10 +739,10 @@ static void display(void) {
 
 	/* turn on lighting */
 	glUseProgram(light_shader);
-	glUniform1i(light_lights_location, lights = LightGetNo());
+	glUniform1i(light_lights_location, lights = LightGetArraySize());
 	if(lights) {
-		glUniform2fv(light_lightpos_location, lights, (GLfloat *)LightGetPositions());
-		glUniform3fv(light_lightclr_location, lights, (GLfloat *)LightGetColours());
+		glUniform2fv(light_lightpos_location, lights, (GLfloat *)LightGetPositionArray());
+		glUniform3fv(light_lightclr_location, lights, (GLfloat *)LightGetColourArray());
 	}
 
 	/* sprites:

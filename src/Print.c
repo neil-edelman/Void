@@ -1,6 +1,9 @@
 /* Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
+/* include definition */
+#define PRINT_PEDANTIC
+
 #include <stdio.h>  /* stderr vfprintf */
 #include <stdarg.h> /* va_* */
 #include "Print.h"
@@ -29,7 +32,6 @@ void Info(const char *format, ...) {
 	va_end(args);
 }
 
-#ifdef PRINT_DEBUG
 /** Debug level message to stderr. */
 void Debug(const char *format, ...) {
 	va_list args;
@@ -37,9 +39,7 @@ void Debug(const char *format, ...) {
 	vfprintf(stderr, format, args);
 	va_end(args);
 }
-#endif
 
-#ifdef PRINT_PEDANTIC
 /** Dubug level pedantic to stderr. */
 void Pedantic(const char *format, ...) {
 	va_list args;
@@ -47,4 +47,3 @@ void Pedantic(const char *format, ...) {
 	vfprintf(stderr, format, args);
 	va_end(args);
 }
-#endif

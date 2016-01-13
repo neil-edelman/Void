@@ -18,7 +18,9 @@
  SP_ETHEREAL: are in the forground but poll collision detection instead of
  interacting; they do something in the game. For example, gates are devices
  that can magically transport you faster than light, or powerups.
- 
+ <p>
+ Sprites can change address. If you want to hold an address, use
+ Sprite::setUpdate() (only one address is updated.)
  @author	Neil
  @version	3.3, 2016-01
  @since		3.2, 2015-06 */
@@ -67,6 +69,7 @@ static const float deb_explosion_elasticity = 0.5f; /* < 1 */
 static const float deb_minimum_mass         = 1.0f;
 
 static const float deg_sec_to_rad_ms  = (float)(M_PI / (180.0 * 1000.0));
+static const float px_s_to_px_ms      = 0.001f;
 static const float px_s_to_px2_ms2    = 0.000001f;
 static const float deg_to_rad         = (float)(M_PI / 180.0);
 
@@ -77,7 +80,7 @@ static const int   shp_ai_speed       = 15;       /* pixel^2 / ms */
 static const float shp_ai_turn_sloppy = 0.4f;     /* rad */
 static const float shp_ai_turn_constant = 10.0f;
 
-static const float wmd_distance_mod         = 1.1f; /* to clear ship */
+static const float wmd_distance_mod         = 2.1f; /* to clear ship */
 
 static struct Sprite {
 	float    x,  y;
@@ -115,7 +118,7 @@ static struct Sprite {
 			struct Sprite  *from;
 			struct WmdType *wmd_type;
 			unsigned       expires;
-			int            light;			
+			unsigned       light;
 		} wmd;
 		struct {
 			void       (*callback)(struct Sprite *const, struct Sprite *const);
@@ -170,7 +173,6 @@ static void shp_eth(struct Sprite *, struct Sprite *, const float);
 static void eth_shp(struct Sprite *, struct Sprite *, const float);
 char *sprite_type(const struct Sprite *const s);
 char *decode_sprite_type(const enum SpType sptype);
-static void fire(struct Sprite *const s);
 void gate_travel(struct Sprite *const gate, struct Sprite *ship);
 void do_ai(struct Sprite *const s, const int dt_ms);
 static void sprite_poll(void);
@@ -262,22 +264,22 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.ship.behaviour       = va_arg(args, const enum Behaviour);
 			break;
 		case SP_WMD:
-			/* fixme: this could change! not gauranteed to have a valid from */
+			/* fixme: 'from' could change! tie it with, I don't know, ship[] */
 			s->sp.wmd.from     = from  = va_arg(args, struct Sprite *const);
 			s->sp.wmd.wmd_type = wtype = va_arg(args, struct WmdType *const);
 			image              = (struct Image *)wtype->image;
 			s->sp.wmd.expires  = TimerGetGameTime() + wtype->ms_range;
 			lenght = sqrtf(wtype->r*wtype->r + wtype->g*wtype->g + wtype->b*wtype->b);
 			one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0;
-			s->sp.wmd.light = Light(lenght, wtype->r*one_lenght, wtype->g*one_lenght, wtype->b*one_lenght);
+			Light(&s->sp.wmd.light, lenght, wtype->r*one_lenght, wtype->g*one_lenght, wtype->b*one_lenght);
 			/* set the wmd's position as a function of the ship's position */
 			cs = cosf(s->sp.wmd.from->theta);
 			sn = sinf(s->sp.wmd.from->theta);
 			s->x = s->x1 = s->sp.wmd.from->x + cs*from->bounding*wmd_distance_mod;
 			s->y = s->y1 = s->sp.wmd.from->y + sn*from->bounding*wmd_distance_mod;
 			s->theta = s->sp.wmd.from->theta;
-			s->vx = s->vx1 = s->sp.wmd.from->vx + cs*wtype->speed;
-			s->vy = s->vy1 = s->sp.wmd.from->vy + sn*wtype->speed;
+			s->vx = s->vx1 = s->sp.wmd.from->vx + cs*wtype->speed*px_s_to_px_ms;
+			s->vy = s->vy1 = s->sp.wmd.from->vy + sn*wtype->speed*px_s_to_px_ms;
 			break;
 		case SP_ETHEREAL:
 			image             = va_arg(args, struct Image *);
@@ -364,15 +366,10 @@ void Sprite_(struct Sprite **sprite_ptr) {
 
 	Pedantic("~Sprite: returning to pool, %s.\n", SpriteToString(sprite));
 
-	/* polymorphism */
-	switch(sprite->sp_type) {
-		case SP_WMD:
-			Light_(sprite->sp.wmd.light);
-			break;
-		case SP_SHIP:
-		case SP_DEBRIS:
-		case SP_ETHEREAL:
-			break;
+	/* git rid of the wmd's light */
+	if(sprite->sp_type == SP_WMD) {
+		Pedantic("~Sprite: getting rid of light from %s.\n", SpriteToString(sprite));
+		Light_(&sprite->sp.wmd.light);
 	}
 
 	/* deal with deleting it while iterating; fixme: have more complex? */
@@ -394,6 +391,9 @@ void Sprite_(struct Sprite **sprite_ptr) {
 
 		replace = &sprites[sprites_size];
 		memcpy(sprite, replace, sizeof(struct Sprite));
+		/* modify light to point to the new location; fixme: not all things
+		 will be lit, have a flag? or wmd.light == 0 (would shift it all) */
+		if(sprite->sp_type == SP_WMD/* && sprite->sp.wmd.light*/) LightSetNotify(replace->sp.wmd.light, &sprite->sp.wmd.light);
 
 		sprite->prev_x = replace->prev_x;
 		sprite->next_x = replace->next_x;
@@ -520,7 +520,7 @@ enum SpType SpriteGetType(const struct Sprite *const sprite) {
 	return sprite->sp_type;
 }
 
-/** The id is the position in the array + 1. Volatile-ish. */
+/** Volatile-ish: can only print 4 Sprites at once. */
 char *SpriteToString(const struct Sprite *const s) {
 	static int b;
 	static char buffer[4][64];
@@ -686,7 +686,15 @@ void SpriteInput(struct Sprite *s, const int turning, const int acceleration, co
 	SpriteAddTheta(s, s->omega * dt_ms);
 }
 
-void SpriteShoot(struct Sprite *const s) { fire(s); }
+void SpriteShoot(struct Sprite *const s) {
+	const unsigned time_ms = TimerGetGameTime();
+	struct Sprite *wmd;
+
+	if(!s || s->sp_type != SP_SHIP || time_ms < s->sp.ship.ms_recharge_wmd) return;
+	wmd = Sprite(SP_WMD, s, s->sp.ship.class->weapon);
+	s->sp.ship.ms_recharge_wmd = time_ms + s->sp.ship.class->weapon->ms_recharge;
+	Pedantic("Sprite::shoot: %s shot %s\n", SpriteToString(s), SpriteToString(wmd));
+}
 
 /** Linear search for Sprites that are gates that go to to. */
 struct Sprite *SpriteOutgoingGate(const struct SpaceZone *to) {
@@ -889,9 +897,8 @@ void SpriteUpdate(const int dt_ms) {
 		sort_notify(s);
 	}
 
-	/* destroy sprites? */
+	/* do some stuff that is unique to each sprite type */
 	while((s = iterate())) {
-		/* static; each element does what it wants after the commotion */
 		switch(s->sp_type) {
 			/* fixme: have more drama then just deleting */
 			case SP_DEBRIS:
@@ -1317,15 +1324,6 @@ char *decode_sprite_type(const enum SpType sp_type) {
 	}
 }
 
-/** Only works on ships (because they have weapons.) */
-static void fire(struct Sprite *const s) {
-	const unsigned time_ms = TimerGetGameTime();
-
-	if(!s || s->sp_type != SP_SHIP || time_ms < s->sp.ship.ms_recharge_wmd) return;
-	Sprite(SP_WMD, s, s->sp.ship.class->weapon);
-	s->sp.ship.ms_recharge_wmd = time_ms + s->sp.ship.class->weapon->ms_recharge;
-}
-
 /** can be a callback for an Ethereal, whenever it collides with a Ship.
  IT CAN'T MODIFY THE LIST */
 void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
@@ -1395,7 +1393,7 @@ void do_ai(struct Sprite *const a, const int dt_ms) {
 		 t -= (float)M_PI;
 		 }*/
 	} else if(d_2 > shp_ai_too_close && d_2 < shp_ai_too_far) {
-		fire(a);
+		SpriteShoot(a);
 	} else if(t > -shp_ai_turn_sloppy && t < shp_ai_turn_sloppy) {
 		acceleration = shp_ai_speed;
 	}

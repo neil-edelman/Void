@@ -599,7 +599,7 @@ int SpriteIsDestroyed(const struct Sprite *const s) {
 	switch(s->sp_type) {
 		case SP_DEBRIS:		return s->sp.debris.hit <= 0;
 		case SP_SHIP:		return s->sp.ship.hit <= 0;
-		case SP_WMD:		return s->sp.wmd.expires >= TimerGetGameTime();
+		case SP_WMD:		return TimerIsTime(s->sp.wmd.expires);
 		case SP_ETHEREAL:	return s->sp.ethereal.is_picked_up;
 	}
 	return -1;
@@ -1023,6 +1023,7 @@ void collide(struct Sprite *a) {
 		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
 							  b->y1, a->bounding + b->bounding, &t0))
 			response(a, b, t0);
+			/*Debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
 	}
 	for(b = a->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
 		b_adj_y = b->next_y;
@@ -1032,6 +1033,7 @@ void collide(struct Sprite *a) {
 		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
 							  b->y1, a->bounding + b->bounding, &t0))
 			response(a, b, t0);
+			/*Debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
 	}
 
 	/* reset for next time; fixme: ugly */
@@ -1041,8 +1043,6 @@ void collide(struct Sprite *a) {
 	for(b = a->next_x; b && b->x <= explore_x_max; b = b->next_x) {
 		b->is_selected = 0;
 	}
-
-	/*if(collide) printf("collide: Spr%u: Spr%u...\n", SpriteGetId(s), SpriteGetId(collide));*/
 }
 
 /** Given two seqments, u: a->b and v: c->d, and their combined radius, r,
@@ -1278,6 +1278,9 @@ static void deb_shp(struct Sprite *d, struct Sprite *s, const float d0) {
 }
 
 static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
+	Debug("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));
+	if(SpriteIsDestroyed(w)) Debug(" destroyed %s\n", SpriteToString(w));
+	if(SpriteIsDestroyed(d)) Debug(" destroyed %s\n", SpriteToString(d));
 	/* avoid inifinite destruction loop */
 	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);

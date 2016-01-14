@@ -62,14 +62,15 @@ void Zone(const struct SpaceZone *const sz) {
 	Far(sz->ois2);
 	Far(sz->ois3);
 
-	SpriteGate(sz->gate1);
+	//SpriteGate(sz->gate1);
 
 	/* update the current zone */
 	current_zone = sz;
 
 	//Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
-	//Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), -100, -100, 1.0f, 50);
+	Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), 100, 100, 1.0f, 50);
 
+#if 0
 	/* some asteroids */
 	for(i = 0; i < 1; i++) {
 		s = Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), 10);
@@ -81,6 +82,7 @@ void Zone(const struct SpaceZone *const sz) {
 	for(i = 0; i < 1; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
+#endif
 
 }
 

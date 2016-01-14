@@ -1,6 +1,7 @@
 /* Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
  General Public License, see copying.txt */
 
+#include <limits.h> /* MAX_INT, MIN_INT */
 #include "../Print.h"
 #include "Glew.h"
 #include "Timer.h"
@@ -60,9 +61,19 @@ unsigned TimerGetGameTime(void) {
 }
 
 /** The value is a positive number.
- @returns	Moving average in milliseconds. */
+ @return	Moving average in milliseconds. */
 unsigned TimerGetMean(void) {
 	return mean_frametime > 0 ? mean_frametime : 1;
+}
+
+/** @return		If the game time is greater or equal t. */
+int TimerIsTime(const unsigned t) {
+	const int p1 = (t <= game_time);
+	const int p2 = ((game_time ^ INT_MIN) < t);
+	const int p3 = (game_time <= INT_MAX);
+
+	/* this is literally the worst case for optimising */
+	return (p1 && p2) || (p2 && p3) || (p3 && p1);
 }
 
 /** Callback for glutTimerFunc.

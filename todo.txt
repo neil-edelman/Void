@@ -13,7 +13,7 @@ kind, character, ethos
 
 
 
-Wmd is not working
+Wmd has crazy recoil; also, search for x < timer and replace with TimerIsTime()
 when I put the combo-sprites it started popping
 I think these are the same
 

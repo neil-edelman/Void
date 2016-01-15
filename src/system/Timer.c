@@ -66,14 +66,17 @@ unsigned TimerGetMean(void) {
 	return mean_frametime > 0 ? mean_frametime : 1;
 }
 
-/** @return		If the game time is greater or equal t. */
+/** @return		If the game time is greater or equal t. Only game time is
+				represented as a circular list; 'greater than' is not really
+				defined, so as long as it's (t - INT_MIN, t] it's considered
+				'in.' This defines a limit of an interval of 24.85 days. */
 int TimerIsTime(const unsigned t) {
 	const int p1 = (t <= game_time);
 	const int p2 = ((game_time ^ INT_MIN) < t);
 	const int p3 = (game_time <= INT_MAX);
 
-	/* this is literally the worst case for optimising */
-	return (p1 && p2) || (p2 && p3) || (p3 && p1);
+	/* this is literally the worst case for optimising; p3 is generally true */
+	return (p1 && p2) || ((p2 || p1) && p3);
 }
 
 /** Callback for glutTimerFunc.

@@ -27,7 +27,7 @@ INST  := $(PROJ)-$(VA)_$(VB)
 MSVC := build/msvc2013
 
 # extra stuff we should back up
-EXTRA := $(MDIR)/icon.rc todo.txt build/msvc2010.txt build/unix.txt performance.txt tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c $(MSVC)/Void.sln $(MSVC)/Void.v12.suo $(MSVC)/Void.vcxproj $(MSVC)/Void.vcxproj.filters $(MSVC)/Void.vcxproj.user build/Makefile-Redhat #$(MSVC)/Void.sdf
+EXTRA := $(MDIR)/icon.rc todo.txt build/msvc2010.txt build/unix.txt performance.txt tests/TimerIsTime.c tests/SortingTest.c tests/Collision.c tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c $(MSVC)/Void.sln $(MSVC)/Void.v12.suo $(MSVC)/Void.vcxproj $(MSVC)/Void.vcxproj.filters $(MSVC)/Void.vcxproj.user build/Makefile-Redhat #$(MSVC)/Void.sdf
 
 # John Graham-Cumming:
 # rwildcard is a recursive wildcard
@@ -163,13 +163,16 @@ $(LOADER): $(LOADER_DEP)
 	make --directory $(LOADER_DIR)
 
 ######
-# test programmes
+# test programmes (fixme)
 
-$(BDIR)/sort: $(SDIR)/$(GEN)/Sorting.c $(SDIR)/test/SortingTest.c
+$(BDIR)/sort: $(SDIR)/$(GEN)/Sorting.c $(TEST)/SortingTest.c
 	$(CC) $(CF) $^ -o $(BDIR)/sort
 
-$(BDIR)/cd: $(SDIR)/test/Collision.c
+$(BDIR)/cd: $(TEST)/Collision.c
 	$(CC) $(CF) $< -o $(BDIR)/cd
+
+$(BDIR)/time: $(TEST)/TimerIsTime.c
+	$(CC) $(CF) $< -o $(BDIR)/time
 
 ######
 # phoney targets

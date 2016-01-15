@@ -222,13 +222,6 @@ static void gametime(void) {
 	Event(5000, FN_RUNNABLE, &add_sprites);
 }*/
 
-/*static void poll_sprites(void) {
-	int w, h;
-	DrawGetScreen(&w, &h);
-	printf("%d\t%d\t%d\t%.1f\t%d\t%d\n", SpriteNo(), SpriteGetConsidered(), SpriteGetOnscreen(), 1000.0 / TimerGetMean(), w, h);
-	Event(500, FN_RUNNABLE, &poll_sprites);
-}*/
-
 static void position(void) {
 	float x, y, t;
 	if(!game.player) {

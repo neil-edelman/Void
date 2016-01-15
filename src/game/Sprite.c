@@ -687,12 +687,11 @@ void SpriteInput(struct Sprite *s, const int turning, const int acceleration, co
 }
 
 void SpriteShoot(struct Sprite *const s) {
-	const unsigned time_ms = TimerGetGameTime();
 	struct Sprite *wmd;
 
-	if(!s || s->sp_type != SP_SHIP || time_ms < s->sp.ship.ms_recharge_wmd) return;
+	if(!s || s->sp_type != SP_SHIP || !TimerIsTime(s->sp.ship.ms_recharge_wmd)) return;
 	wmd = Sprite(SP_WMD, s, s->sp.ship.class->weapon);
-	s->sp.ship.ms_recharge_wmd = time_ms + s->sp.ship.class->weapon->ms_recharge;
+	s->sp.ship.ms_recharge_wmd = TimerGetGameTime() + s->sp.ship.class->weapon->ms_recharge;
 	Pedantic("Sprite::shoot: %s shot %s\n", SpriteToString(s), SpriteToString(wmd));
 }
 
@@ -836,7 +835,6 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
  @param dt_ms	Milliseconds since the last frame. */
 void SpriteUpdate(const int dt_ms) {
 	struct Sprite *s;
-	const unsigned t_ms = TimerGetGameTime();
 
 	/* sorts the sprites; they're (hopefully) almost sorted already from last
 	 frame, just freshens with insertion sort, O(n + m) where m is the
@@ -924,7 +922,7 @@ void SpriteUpdate(const int dt_ms) {
 				Sprite_(&s);
 				break;
 			case SP_WMD:
-				if(s->sp.wmd.expires <= t_ms) { Sprite_(&s); break; }
+				if(TimerIsTime(s->sp.wmd.expires)) { Sprite_(&s); break; }
 				/* update light */
 				LightSetPosition(s->sp.wmd.light, s->x, s->y);
 				break;

@@ -121,8 +121,7 @@ void EventClear(void) {
  FIXME: Aught memory alloc */
 void EventDispatch(void) {
 	struct Event *e;
-	const unsigned t_ms = TimerGetGameTime();
-	while((e = next_event) && e->t_ms <= t_ms) {
+	while((e = next_event) && TimerIsTime(e->t_ms)) {
 		Pedantic("Event: event triggered at %ums.\n", e->t_ms);
 		switch(e->type) {
 			case FN_RUNNABLE:    e->fn.runnable.run(); break;

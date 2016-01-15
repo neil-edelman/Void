@@ -8,7 +8,7 @@
 
 /** This is an idempotent class dealing with the interface to OpenGL.
  <p>
- The keys are not affected by pause!
+ Fixme: The keys are not affected by pause!
  @author	Neil
  @version	3.0, 05-2015
  @since		2.0, 2014 (<- what?) */
@@ -58,7 +58,7 @@ int KeyTime(const int key) {
 	if(key < 0 || key >= KEY_MAX) return 0;
 	k = &keys[key];
 	if(k->state) {
-		int ct = glutGet(GLUT_ELAPSED_TIME);/*TimerLastTime();*/
+		int ct  = glutGet(GLUT_ELAPSED_TIME);/*TimerLastTime(); <- too granular?*/
 		time    = ct - k->down + k->integral;
 		k->down = ct;
 	} else {

@@ -62,10 +62,12 @@ static const int half_max_size = 128;
 static const float epsilon = 0.0005f;
 extern const float de_sitter;
 
+static const float minimum_mass        = 0.01f;
+static const float small_asteroid_mass = 10.0f;
+
 static const float deb_hit_per_mass         = 5.0f;
 static const float deb_maximum_speed_2      = 20.0f; /* 2000? */
 static const float deb_explosion_elasticity = 0.5f; /* < 1 */
-static const float deb_minimum_mass         = 1.0f;
 
 static const float deg_sec_to_rad_ms  = (float)(M_PI / (180.0 * 1000.0));
 static const float px_s_to_px_ms      = 0.001f;
@@ -79,7 +81,7 @@ static const int   shp_ai_speed       = 15;       /* pixel^2 / ms */
 static const float shp_ai_turn_sloppy = 0.4f;     /* rad */
 static const float shp_ai_turn_constant = 10.0f;
 
-static const float wmd_distance_mod         = 2.1f; /* to clear ship */
+static const float wmd_distance_mod         = 1.3f; /* to clear ship */
 
 static struct Sprite {
 	float    x,  y;
@@ -88,7 +90,7 @@ static struct Sprite {
 	float    vx,  vy;
 	float    vx1, vy1;	/* temp; the velocity after colliding */
 	float    bounding;
-	unsigned mass;      /* t (ie Mg) */
+	float    mass;      /* t (ie Mg) */
 	unsigned size;		/* the (x, y) size; they are the same */
 	int      texture;	/* gpu texture */
 	/* if we store a Sprite, and the Sprite changes addresses, this will
@@ -153,7 +155,7 @@ static int collide_circles(const float a_x, const float a_y,
 						   const float d_x, const float d_y,
 						   const float r, float *t0_ptr);
 static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0);
-static void push(struct Sprite *a, const float angle, const float amount);
+static void push(struct Sprite *a, const float angle, const float impulse);
 static int compare_x(const struct Sprite *a, const struct Sprite *b);
 static int compare_y(const struct Sprite *a, const struct Sprite *b);
 static struct Sprite **address_prev_x(struct Sprite *const a);
@@ -189,7 +191,7 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 
 /** Get a new sprite from the pool of unused.
  Sprite(SP_DEBRIS, const struct Image *image, const int x, y, const float theta,
-  const int mass);
+  const unsigned mass);
  Sprite(SP_SHIP, const int x, y, const float theta, const struct ShipClass *const class,
   const enum Behaviour behaviour, const struct Ship **notify);
  Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
@@ -227,7 +229,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	s->theta  = 0.0f;
 	s->omega  = 0.0f;
 	s->vx = s->vy = s->vy1 = s->vy1 = 0.0f;
-	s->mass   = 1;
+	s->mass   = 1.0f;
 	s->notify = 0;
 
 	/* polymorphism */
@@ -239,7 +241,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->x = s->x1     = va_arg(args, const int);
 			s->y = s->y1     = va_arg(args, const int);
 			s->theta         = va_arg(args, const double);
-			s->mass          = va_arg(args, const int);
+			s->mass          = va_arg(args, const double);
 			s->sp.debris.hit = (int)(s->mass * deb_hit_per_mass);
 			break;
 		case SP_SHIP:
@@ -266,6 +268,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			/* fixme: 'from' could change! tie it with, I don't know, ship[] */
 			s->sp.wmd.from     = from  = va_arg(args, struct Sprite *const);
 			s->sp.wmd.wmd_type = wtype = va_arg(args, struct WmdType *const);
+			s->mass            = wtype->impact_mass;
 			image              = (struct Image *)wtype->image;
 			s->sp.wmd.expires  = TimerGetGameTime() + wtype->ms_range;
 			lenght = sqrtf(wtype->r*wtype->r + wtype->g*wtype->g + wtype->b*wtype->b);
@@ -326,6 +329,11 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	if(first_y) first_y->prev_y = s;
 	first_x = first_y = s;
 	sort_notify(s);
+
+	if(s->mass < minimum_mass) {
+		Warn("Sprite: %s set to minimum mass %.2f.\n", SpriteToString(s), minimum_mass);
+		s->mass = minimum_mass;
+	}
 
 	Pedantic("Sprite: created from pool, %s.\n", SpriteToString(s));
 	KeyRegister('s',  &sprite_poll);
@@ -494,8 +502,8 @@ float SpriteGetBounding(const struct Sprite *const sprite) {
 	return sprite->bounding;
 }
 
-unsigned SpriteGetMass(const struct Sprite *const s) {
-	if(!s) return 0;
+float SpriteGetMass(const struct Sprite *const s) {
+	if(!s) return 0.0f;
 	return s->mass;
 }
 
@@ -529,7 +537,7 @@ char *SpriteToString(const struct Sprite *const s) {
 	if(!s) {
 		snprintf(buffer[b], sizeof buffer[b], "%s", "null sprite");
 	} else {
-		snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%.1f,%.1f:%.1f]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta);
+		snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%.1f,%.1f:%.1f]%.2ft", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta, s->mass);
 	};
 	return buffer[b++];
 }
@@ -640,7 +648,7 @@ void SpriteDebris(const struct Sprite *const s) {
 	Debug("Sprite::debris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
 
 	/* break into pieces -- new debris */
-	sub = Sprite(SP_DEBRIS, small, s->x, s->y, s->theta, 5);
+	sub = Sprite(SP_DEBRIS, small, s->x, s->y, s->theta, small_asteroid_mass);
 	SpriteSetVelocity(sub, deb_explosion_elasticity * s->vx, deb_explosion_elasticity * s->vy);
 }
 
@@ -1171,13 +1179,13 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 	const float bounding = a->bounding + b->bounding;
 	/* fixme: float stored in memory? */
 
-	Pedantic("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f\n",
-			SpriteToString(a), SpriteToString(b), sqrtf(n_d2), bounding);
+	Debug("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f, %f--%ft\n",
+			SpriteToString(a), SpriteToString(b), sqrtf(n_d2), bounding, a_m, b_m);
 
 	/* interpenetation; happens about half the time because of IEEE754 numerics,
 	 which could be on one side or the other; also, sprites that just appear,
-	 multiple collisions interfering, and gremlins; you absolutly do not want
-	 objects to get stuck orbiting each other */
+	 multiple collisions interfering, and gremlins; you absolutely do not want
+	 objects to get stuck orbiting each other (fixme: this happens) */
 	if(n_d2 < bounding * bounding) {
 		const float push = (bounding - sqrtf(n_d2)) * 0.5f;
 		Pedantic(" \\pushing sprites %f distance apart\n", push);
@@ -1221,10 +1229,11 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 /** Pushes a from angle, amount.
  @param a		The object you want to push.
  @param angle	Standard co\:ordainates, radians, angle.
- @param amount	tonne pixels / s, of course. */
-static void push(struct Sprite *a, const float angle, const float amount) {
-	a->vx += cosf(angle) * amount;
-	a->vy += sinf(angle) * amount;
+ @param impulse	tonne pixels / ms */
+static void push(struct Sprite *a, const float angle, const float impulse) {
+	const float deltav = a->mass ? impulse / a->mass : 1.0f; /* pixel / s */
+	a->vx += cosf(angle) * deltav;
+	a->vy += sinf(angle) * deltav;
 }
 
 /* for isort */

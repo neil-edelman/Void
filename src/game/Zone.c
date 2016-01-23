@@ -24,6 +24,8 @@ extern const struct ObjectInSpace object_in_space[];
 /* from Game */
 extern const float de_sitter;
 
+static const float big_asteroid_mass = 30.0f;
+
 /* public struct */
 /*struct Zone {
 	char *name;
@@ -62,27 +64,23 @@ void Zone(const struct SpaceZone *const sz) {
 	Far(sz->ois2);
 	Far(sz->ois3);
 
-	//SpriteGate(sz->gate1);
+	SpriteGate(sz->gate1);
 
 	/* update the current zone */
 	current_zone = sz;
 
-	//Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
-	Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), 100, 100, 1.0f, 50);
+	Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), 100, 100, 1.0f, 50.0f);
 
-#if 0
 	/* some asteroids */
-	for(i = 0; i < 1; i++) {
-		s = Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), 10);
+	for(i = 0; i < 100; i++) {
+		s = Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), 50.0f);
 		SpriteSetVelocity(s, rnd(0.02f), rnd(0.02f));
 		/*SpriteSetOmega(s, rnd(10.0f));*/
 	}
-
 	/* sprinkle some ships */
-	for(i = 0; i < 1; i++) {
+	for(i = 0; i < 5; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
-#endif
 
 }
 

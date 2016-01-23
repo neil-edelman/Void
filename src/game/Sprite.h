@@ -20,7 +20,7 @@ void SpriteSetVelocity(struct Sprite *const sprite, const float vx, const float 
 float SpriteGetOmega(const struct Sprite *const sprite);
 void SpriteSetOmega(struct Sprite *const sprite, const float omega);
 float SpriteGetBounding(const struct Sprite *const sprite);
-unsigned SpriteGetMass(const struct Sprite *const s);
+float SpriteGetMass(const struct Sprite *const s);
 unsigned SpriteGetSize(const struct Sprite *const s);
 void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify);
 enum SpType SpriteGetType(const struct Sprite *const sprite);

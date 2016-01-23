@@ -94,7 +94,7 @@ Scorpion.png
 40
 1024
 50
-10
+0.0001
 30
 acid
 # Specimen name, Alignment align, ShipClass ship1, ship2, ship3, ship4
@@ -120,7 +120,7 @@ Homebound
 Mars
 Pluto
 PartyRock
-#WmdType string name, image, int ms_range, speed, ms_recharge, damage, impact, int r,g,b
+#WmdType string name, image, int ms_range, speed, ms_recharge, damage, impact_mass, int r,g,b
 WmdType
 lazer
 shot.png
@@ -128,7 +128,7 @@ shot.png
 300
 256
 32
-6
+0.5
 64
 10
 20
@@ -139,7 +139,7 @@ shot.png
 200
 2048
 32
-6
+0.5
 10
 64
 20

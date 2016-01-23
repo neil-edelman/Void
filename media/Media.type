@@ -19,7 +19,7 @@ int theta
 ShipClass
 string name
 image image
-int mass			# t (ie Mg)
+float mass			# t (ie Mg)
 int shield			# fixme: MJ?
 int ms_recharge		# ms
 int speed			# px/s \/ fixme: t/s^2
@@ -55,7 +55,7 @@ int ms_range
 int speed
 int ms_recharge
 int damage
-int impact
+float impact_mass
 int r
 int g
 int b

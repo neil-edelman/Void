@@ -69,16 +69,14 @@ void Zone(const struct SpaceZone *const sz) {
 	/* update the current zone */
 	current_zone = sz;
 
-	Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), 100, 100, 1.0f, 50.0f);
-
 	/* some asteroids */
 	for(i = 0; i < 100; i++) {
-		s = Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), 50.0f);
+		s = Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), (int)rnd(de_sitter * 0.1f), (int)rnd(de_sitter * 0.1f), rnd((float)M_PI), big_asteroid_mass);
 		SpriteSetVelocity(s, rnd(0.02f), rnd(0.02f));
-		/*SpriteSetOmega(s, rnd(10.0f));*/
+		SpriteSetOmega(s, rnd(10.0f));
 	}
 	/* sprinkle some ships */
-	for(i = 0; i < 5; i++) {
+	for(i = 0; i < 50; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
 

@@ -640,15 +640,15 @@ void SpriteDestroy(struct Sprite *const s) {
 
 /** Spawns smaller Debris (fixme: stub.) */
 void SpriteDebris(const struct Sprite *const s) {
-	struct Image *small;
+	struct Image *small_image;
 	struct Sprite *sub;
 
-	if(!s || !(small = ImageSearch("AsteroidSmall.png")) || s->size <= small->width) return;
+	if(!s || !(small_image = ImageSearch("AsteroidSmall.png")) || s->size <= small_image->width) return;
 
 	Debug("Sprite::debris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
 
 	/* break into pieces -- new debris */
-	sub = Sprite(SP_DEBRIS, small, s->x, s->y, s->theta, small_asteroid_mass);
+	sub = Sprite(SP_DEBRIS, small_image, (int)s->x, (int)s->y, s->theta, small_asteroid_mass);
 	SpriteSetVelocity(sub, deb_explosion_elasticity * s->vx, deb_explosion_elasticity * s->vy);
 }
 

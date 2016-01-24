@@ -673,6 +673,13 @@ static void display(void) {
 	float x, y, t;
 	int old_texture = 0, texture, size;
 
+	////
+	static int is_wait = -1, is_naut, is_init = 0, naut_tex;
+	if(!is_init) {
+		naut_tex = AutoImageSearch("Nautilus.png")->texture;
+		is_init = -1;
+	}
+
 	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	 <- "The buffers should always be cleared. On much older hardware, there was
 	 a technique to get away without clearing the scene, but on even semi-recent
@@ -744,6 +751,9 @@ static void display(void) {
 		glUniform3fv(light_lightclr_location, lights, (GLfloat *)LightGetColourArray());
 	}
 
+	////
+	is_naut = 0;
+
 	/* sprites:
 	 turn on transperency
 	 sprite vbo
@@ -756,6 +766,10 @@ static void display(void) {
 	/*glUniform1i(light_texture_location, T_SPRITES); <- constant, now */
 	glUniform2f(light_camera_location, camera_x, camera_y);
 	while(SpriteIterate(&x, &y, &t, &texture, &size)) {
+
+		/////
+		if(texture == naut_tex) is_naut = -1;
+
 		/* draw a sprite; fixme: minimise texture transitions */
 		if(old_texture != texture) {
 			glBindTexture(GL_TEXTURE_2D, texture);
@@ -765,6 +779,15 @@ static void display(void) {
 		glUniform1f(light_angle_location, t);
 		glUniform2f(light_position_location, x, y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
+	}
+
+	////
+	if(is_wait && !is_naut) {
+		is_wait = 0;
+		Debug("Nautlius not found!\n");
+		while(SpriteIterate(&x, &y, &t, &texture, &size)) {
+			Debug("(%f,%f:%f) Tex %d Size %d\n", x, y, texture, size);
+		}
 	}
 
 	/* create spots */

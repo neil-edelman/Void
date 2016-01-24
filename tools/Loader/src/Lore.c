@@ -29,6 +29,7 @@
 /* private prototypes */
 static struct Lore *new_lore(void);
 static int load_lore(struct Reader *r);
+static int record_comp(const struct Record *record, const struct Lore *elem);
 static int multi_comp(const char *muti_key, const struct Lore *elem);
 static int lore_comp(const struct Lore *key, const struct Lore *elem);
 static void sort(void);
@@ -224,6 +225,11 @@ int LoreSearch(const char *const multi, char **const type_ptr, int *const index_
 	return -1;
 }
 
+int LoreIsEmpty(const struct Record *const record) {
+	if(!record) return 0;
+	return bsearch(record, lores, no_lores, sizeof(struct Lore), (int (*)(const void *, const void *))&record_comp) ? 0 : -1;
+}
+
 /** Ensures that we have space for the new lore.
  @return	The new lore or null. */
 static struct Lore *new_lore(void) {
@@ -275,6 +281,12 @@ static int load_lore(struct Reader *r) {
 	}
 
 	return is_loaded;
+}
+
+/** This only checks for existance of any record in lores; used in
+ {@see LoreIsEmpty} */
+static int record_comp(const struct Record *record, const struct Lore *elem) {
+	return strcmp(RecordGetName(record), RecordGetName(elem->record));
 }
 
 /** This takes a "Record\0Value" as the foriegn keys have and compares it with

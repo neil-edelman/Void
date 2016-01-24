@@ -59,3 +59,6 @@ float impact_mass
 int r
 int g
 int b
+~
+Planetoid
+string name

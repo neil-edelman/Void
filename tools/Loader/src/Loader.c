@@ -184,10 +184,9 @@ int main(int argc, char **argv) {
 	printf("\n");
 
 	/* oh, and search f'ns; fixme: O(log n), should be O(1), but does it matter
-	 really? fixme: if any record has zero entries, this makes a reference to a
-	 variable that doesn't exist */
+	 really? fixme: code replication from Record.c */
 	{
-		/* there's one that's hard coded -- this is the same code as in Records */
+		/* there's one that's hard coded (Image) -- this is the same code as in Records */
 		const char *name          = "Image";
 		const char *snake         = "images";
 		const char *key           = "name";
@@ -199,7 +198,12 @@ int main(int argc, char **argv) {
 		printf("\treturn %s(k, e);\n", "strcmp");
 		printf("}\n\n");
 		printf("struct Auto%s *Auto%sSearch(%skey) {\n", name, name, "const char *const ");
-		printf("\treturn bsearch(&key, auto_%s, max_auto_%s, sizeof(struct Auto%s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);
+		if(!no_image_names) {
+			/* this file contains no records of this type; return zero always */
+			printf("\treturn 0; /* no lores available of \"%s\" */\n", name);
+		} else {
+			printf("\treturn bsearch(&key, auto_%s, max_auto_%s, sizeof(struct Auto%s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);
+		}
 		printf("}\n\n");
 	}
 	RecordPrintSearches();

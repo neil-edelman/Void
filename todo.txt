@@ -20,8 +20,6 @@ when I put the combo-sprites it started popping
 
 Random.c
 
-no (0) types of the resource in a file, crashing results, in pre-processing
-
 add supporting resource for resources times n, eg, (maybe opt it so it searches for repeat "strings")
 .type
 Foo

@@ -13,9 +13,8 @@ kind, character, ethos
 
 
 
-Wmd has crazy recoil; it should be: t px s^-2
 
-put an Auto<-Lore or something before each auto-generated thing, it's confusing
+Layer instead of Far
 
 when I put the combo-sprites it started popping
 
@@ -48,7 +47,7 @@ static Foo {
 static Bar foo_bars[2] = { &bar[0], &bar[1]; };
 static Foo foo[] = { { "foo", 2, &foo_bars[0] } }
 
-interpretation orbits; hell no!
+interpretating orbits; hell no!
 
 do something about the shaking?
 

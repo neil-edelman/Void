@@ -644,7 +644,7 @@ void SpriteDebris(const struct Sprite *const s) {
 
 	if(!s || !(small_image = AutoImageSearch("AsteroidSmall.png")) || s->size <= small_image->width) return;
 
-	Debug("Sprite::debris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
+	Pedantic("Sprite::debris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
 
 	/* break into pieces -- new debris */
 	sub = Sprite(SP_DEBRIS, small_image, (int)s->x, (int)s->y, s->theta, small_asteroid_mass);
@@ -926,6 +926,7 @@ void SpriteUpdate(const int dt_ms) {
 						break;
 				}
 				if(0 < s->sp.ship.hit) break;
+				Info("Sprite::update: %s desroyed.\n", SpriteToString(s));
 				Sprite_(&s);
 				break;
 			case SP_WMD:
@@ -1178,8 +1179,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 	const float bounding = a->bounding + b->bounding;
 	/* fixme: float stored in memory? */
 
-	Debug("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f, %f--%ft\n",
-			SpriteToString(a), SpriteToString(b), sqrtf(n_d2), bounding, a_m, b_m);
+	Pedantic("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f, %f--%ft\n", SpriteToString(a), SpriteToString(b), sqrtf(n_d2), bounding, a_m, b_m);
 
 	/* interpenetation; happens about half the time because of IEEE754 numerics,
 	 which could be on one side or the other; also, sprites that just appear,
@@ -1284,9 +1284,7 @@ static void deb_shp(struct Sprite *d, struct Sprite *s, const float d0) {
 }
 
 static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
-	Debug("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));
-	if(SpriteIsDestroyed(w)) Debug(" destroyed %s\n", SpriteToString(w));
-	if(SpriteIsDestroyed(d)) Debug(" destroyed %s\n", SpriteToString(d));
+	Pedantic("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));
 	/* avoid inifinite destruction loop */
 	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);

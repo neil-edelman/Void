@@ -48,7 +48,8 @@ int Light(int *const id_ptr, const float i, const float r, const float g, const 
 		Warn("Light: light_ptr is null; where do you want the light to go?\n");
 		return 0;
 	}
-	if(*id_ptr) Warn("Light: overriding %u on notify.\n", *id_ptr);
+	/* Naah, this can be un-initialised
+	 if(*id_ptr) Warn("Light: overriding %u on notify.\n", *id_ptr);*/
 	if(r < 0.0f || g < 0.0f || b < 0.0f || r > 1.0f || g > 1.0f || b > 1.0f) {
 		Warn("Light: invalid colour, [%f, %f, %f].\n", r, g, b);
 		return 0;
@@ -94,7 +95,9 @@ void Light_(int *id_ptr) {
 		notify[light]     = notify[replace];
 		if(notify[light])   *notify[light]   = light_to_id(light);
 		if(notify[replace]) *notify[replace] = 0;
+#ifdef PRINT_PEDANTIC
 		snprintf((char *)buffer, sizeof buffer, "; %s is replacing", to_string(replace));
+#endif
 	}
 	Pedantic("~Light: erase %s%s.\n", to_string(light), buffer);
 	lights_size = replace;

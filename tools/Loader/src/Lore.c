@@ -162,7 +162,7 @@ void LoreOutput(void) {
 		if(lore->record == record) continue;
 		record = lore->record;
 		name = RecordGetName(record);
-		printf("const struct %s %s[];\n", name, camel_to_snake_case(name));
+		printf("const struct Auto%s auto_%s[];\n", name, camel_to_snake_case(name));
 	}
 	printf("\n");
 
@@ -174,10 +174,10 @@ void LoreOutput(void) {
 		if(is_new_type) {
 			if(i) {
 				printf("\n};\n");
-				printf("const int max_%s = sizeof %s / sizeof(struct %s);\n\n", camel_to_snake_case(name), camel_to_snake_case(name), name);
+				printf("const int max_auto_%s = sizeof auto_%s / sizeof(struct Auto%s);\n\n", camel_to_snake_case(name), camel_to_snake_case(name), name);
 			}
 			name = RecordGetName(lore->record);
-			printf("const struct %s %s[] = {\n", name, camel_to_snake_case(name));
+			printf("const struct Auto%s auto_%s[] = {\n", name, camel_to_snake_case(name));
 			TypeResetAutoincrement();
 		} else {
 			printf(",\n");
@@ -187,7 +187,7 @@ void LoreOutput(void) {
 	}
 	printf("\n};\n");
 	/* fixme: this is ugly */
-	if(i) printf("const int max_%s = sizeof %s / sizeof(struct %s);\n", camel_to_snake_case(name), camel_to_snake_case(name), name);
+	if(i) printf("const int max_auto_%s = sizeof auto_%s / sizeof(struct Auto%s);\n", camel_to_snake_case(name), camel_to_snake_case(name), name);
 
 }
 

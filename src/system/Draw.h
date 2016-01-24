@@ -1,5 +1,5 @@
+struct AutoImage;
 struct Map;
-struct Image;
 
 int Draw(void);
 void Draw_(void);

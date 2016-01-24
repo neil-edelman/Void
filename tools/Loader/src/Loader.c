@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
 		printf("#include <stddef.h> /* size_t */\n\n");
 		printf("enum ImageFormat { IF_UNKNOWN, IF_PNG, IF_JPEG };\n\n");
 		printf("/* image is a base datatype; it's not in c; we need this */\n");
-		printf("struct Image {\n");
+		printf("struct AutoImage {\n");
 		printf("\tconst char *name;\n");
 		printf("\tconst enum ImageFormat data_format;\n");
 		printf("\tconst size_t           data_size;\n");
@@ -124,10 +124,10 @@ int main(int argc, char **argv) {
 		printf("};\n\n");
 
 		/* search thing */
-		printf("struct Image *ImageSearch(const char *const key);\n\n");
+		printf("struct AutoImage *AutoImageSearch(const char *const key);\n\n");
 
 		/* debug thing */
-		printf("void image_print(const struct Image *, const unsigned char *);\n\n");
+		printf("void AutoImagePrint(const struct AutoImage *, const unsigned char *);\n\n");
 
 		printf("/* these are datatypes that are loaded from %s%s */\n\n", types_dir, types_dir[strlen(argv[1]) - 1] != '/' ? "/" : "");
 		/*printf("void ImageSetTexture(struct Image *image, const int tex) { if(!image) return; image->texture = tex; }\n\n");*/
@@ -153,15 +153,15 @@ int main(int argc, char **argv) {
 	printf("#include <stdlib.h> /* bsearch */\n");
 	printf("#include <stdio.h>  /* fprintf */\n");
 	printf("#include <string.h> /* strcmp */\n");
-	printf("#include \"Lore.h\"   /* or whatever you ./Loader dir/ > Lore.h */\n\n");
+	printf("#include \"Auto.h\"   /* or whatever you ./Loader dir/ > Auto.h! */\n\n");
 
 	/* debug! */
-	printf("struct Image;\n\n");
+	printf("struct AutoImage;\n\n");
 	printf("/** Prints out the red channel in text format for debugging purposes; please\n");
 	printf("don't call it on large images!\n");
 	printf(" @param img\t\tThe image.\n");
 	printf(" @param fp\t\tFile pointer where you want the image to go; eg, stdout. */\n");
-	printf("void image_print(const struct Image *image, const unsigned char *data) {\n");
+	printf("void AutoImagePrint(const struct AutoImage *image, const unsigned char *data) {\n");
 	printf("\tunsigned x, y;\n\n");
 	printf("\tif(!image || !data) { fprintf(stderr, \"0\\n\"); return; }\n");
 	printf("\tfor(y = 0; y < image->height; y++) {\n");
@@ -193,13 +193,13 @@ int main(int argc, char **argv) {
 		const char *key           = "name";
 		const char *key_type_name = "const char *const ";
 		printf("/** hard-coded images comapare and search */\n\n");
-		printf("int %s_comp(%s*key_ptr, const struct %s *elem) {\n", snake, key_type_name, name);
+		printf("int %s_comp(%s*key_ptr, const struct Auto%s *elem) {\n", snake, key_type_name, name);
 		printf("\t%sk = *key_ptr;\n", key_type_name);
 		printf("\t%se = elem->%s;\n\n", key_type_name, key);
 		printf("\treturn %s(k, e);\n", "strcmp");
 		printf("}\n\n");
-		printf("struct %s *%sSearch(%skey) {\n", name, name, "const char *const ");
-		printf("\treturn bsearch(&key, %s, max_%s, sizeof(struct %s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);
+		printf("struct Auto%s *Auto%sSearch(%skey) {\n", name, name, "const char *const ");
+		printf("\treturn bsearch(&key, auto_%s, max_auto_%s, sizeof(struct Auto%s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);
 		printf("}\n\n");
 	}
 	RecordPrintSearches();
@@ -309,7 +309,7 @@ static int print_images(const char *const directory) {
 
 	if(!is_sorted) sort();
 
-	printf("/*must set texture->const*/ struct Image images[] = {\n");
+	printf("/*must set texture->const*/ struct AutoImage auto_images[] = {\n");
 	for(i = 0; i < no_image_names; i++) {
 		fn = image_names[i].name;
 
@@ -405,7 +405,7 @@ static int print_images(const char *const directory) {
 		printf("\t{ \"%s\", %s, %u, %s, %u, %u, %u, 0 }%s", fn, type, (unsigned)size, to_name(fn), width, height, depth, i != no_image_names - 1 ? ",\n" : "\n");
 	}
 	printf("};\n");
-	printf("const int max_images = sizeof images / sizeof(struct Image);\n\n");
+	printf("const int max_auto_images = sizeof auto_images / sizeof(struct AutoImage);\n\n");
 
 	return -1;
 }

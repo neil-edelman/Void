@@ -3,23 +3,24 @@
 
 #include <stdlib.h> /* rand (fixme) */
 #include <math.h>	/* M_PI */
+#include "../../bin/Auto.h"
 #include "../Print.h"
-#include "../../bin/Lore.h" /* auto-generated; used in constructor */
+#include "../system/Draw.h"
 #include "Game.h"
 #include "Far.h"
 #include "Sprite.h"
 #include "Event.h"
-#include "../system/Draw.h"
+#include "Zone.h"
 
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383279502884197169399375105820974944592307816406
 #endif
 
 /* from Lore */
-extern const struct SpaceZone space_zone[];
-extern const int max_space_zone;
-extern const struct Gate gate[];
-extern const struct ObjectInSpace object_in_space[];
+extern const struct AutoSpaceZone auto_space_zone[];
+extern const int max_auto_space_zone;
+extern const struct AutoGate auto_gate[];
+extern const struct AutoObjectInSpace auto_object_in_space[];
 
 /* from Game */
 extern const float de_sitter;
@@ -33,7 +34,7 @@ static const float big_asteroid_mass = 30.0f;
 	struct ObjectInSpace ois[2];
 } zone;*/
 
-const struct SpaceZone *current_zone;
+const struct AutoSpaceZone *current_zone;
 
 /* private prototypes */
 static float rnd(const float limit);
@@ -43,10 +44,10 @@ static int remove_all_except_player(struct Sprite *const victim);
 
 /** Clears, then sets up a new zone.
  @return		Success. */
-void Zone(const struct SpaceZone *const sz) {
+void Zone(const struct AutoSpaceZone *const sz) {
 	struct Sprite *s;
 	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
-	const struct ShipClass *scorpion_class = ShipClassSearch("Scorpion");
+	const struct AutoShipClass *scorpion_class = AutoShipClassSearch("Scorpion");
 	int i;
 
 	Debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name, sz->ois1->name, sz->ois2->name);
@@ -71,7 +72,7 @@ void Zone(const struct SpaceZone *const sz) {
 
 	/* some asteroids */
 	for(i = 0; i < 100; i++) {
-		s = Sprite(SP_DEBRIS, ImageSearch("Asteroid.png"), (int)rnd(de_sitter * 0.1f), (int)rnd(de_sitter * 0.1f), rnd((float)M_PI), big_asteroid_mass);
+		s = Sprite(SP_DEBRIS, AutoImageSearch("Asteroid.png"), (int)rnd(de_sitter * 0.1f), (int)rnd(de_sitter * 0.1f), rnd((float)M_PI), big_asteroid_mass);
 		SpriteSetVelocity(s, rnd(0.02f), rnd(0.02f));
 		SpriteSetOmega(s, rnd(10.0f));
 	}
@@ -83,7 +84,7 @@ void Zone(const struct SpaceZone *const sz) {
 }
 
 void ZoneChange(const struct Sprite *const gate) {
-	const struct SpaceZone *const new_zone = SpriteGetTo(gate), *old_zone = current_zone;
+	const struct AutoSpaceZone *const new_zone = SpriteGetTo(gate), *old_zone = current_zone;
 	struct Sprite *new_gate;
 	struct Sprite *player;
 	float oldg_x,   oldg_y,   oldg_theta,   oldg_vx,   oldg_vy;

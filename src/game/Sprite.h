@@ -1,12 +1,13 @@
-struct Image;
+struct AutoGate;
+struct AutoSpaceZone;
+
 struct Sprite;
-struct Gate;
 
 enum SpType { SP_DEBRIS, SP_SHIP, SP_WMD, SP_ETHEREAL };
 enum Behaviour { B_NONE, B_HUMAN, B_STUPID };
 
 struct Sprite *Sprite(const enum SpType sp_type, ...);
-struct Sprite *SpriteGate(const struct Gate *gate);
+struct Sprite *SpriteGate(const struct AutoGate *gate);
 void Sprite_(struct Sprite **sprite_ptr);
 int SpriteGetConsidered(void);
 int SpriteGetOnscreen(void);
@@ -25,7 +26,7 @@ unsigned SpriteGetSize(const struct Sprite *const s);
 void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify);
 enum SpType SpriteGetType(const struct Sprite *const sprite);
 char *SpriteToString(const struct Sprite *const s);
-const struct SpaceZone *SpriteGetTo(const struct Sprite *const s);
+const struct AutoSpaceZone *SpriteGetTo(const struct Sprite *const s);
 /*void (*SpriteGetCallback(struct Sprite *s))(struct Sprite *const, struct Sprite *const);*/
 int SpriteGetDamage(const struct Sprite *const s);
 int SpriteGetHit(const struct Sprite *const s);
@@ -37,6 +38,6 @@ void SpriteDebris(const struct Sprite *const s);
 void SpriteInput(struct Sprite *s, const int turning, const int acceleration, const int dt_ms);
 void SpriteUpdate(const int dt_ms);
 void SpriteShoot(struct Sprite *const s);
-struct Sprite *SpriteOutgoingGate(const struct SpaceZone *to);
+struct Sprite *SpriteOutgoingGate(const struct AutoSpaceZone *to);
 void SpriteRemoveIf(int (*const predicate)(struct Sprite *const));
 int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr);

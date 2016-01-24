@@ -11,9 +11,8 @@
 #include <math.h>   /* M_PI */
 #include <string.h> /* strcmp for bsearch */
 #include <stdio.h>  /* printf */
+#include "../../bin/Auto.h"
 #include "../Print.h"
-/* auto-generated; used in constructor */
-#include "../../bin/Lore.h"
 #include "Sprite.h"
 #include "Far.h"
 #include "Event.h"
@@ -26,11 +25,11 @@
 #include "../system/Timer.h" /* only for reporting framerate */
 #include "Game.h"
 
-/* from Lore */
-extern const struct ObjectInSpace object_in_space[];
-extern const int max_object_in_space;
-extern const struct Gate gate[];
-extern const int max_gate;
+/* from Auto */
+extern const struct AutoObjectInSpace auto_object_in_space[];
+extern const int max_auto_object_in_space;
+extern const struct AutoGate auto_gate[];
+extern const int max_auto_gate;
 
 static int is_started;
 
@@ -39,9 +38,9 @@ struct Game {
 	struct Sprite *player; /* camera moves with this */
 	int ms_turning, ms_acceleration, ms_shoot; /* input per frame, ms */
 	/* defined in Lore.h (hopefully!) */
-	const struct TypeOfObject *asteroid;
-	const struct ShipClass *nautilus, *scorpion;
-	const struct SpaceZone *start;
+	const struct AutoTypeOfObject *asteroid;
+	const struct AutoShipClass *nautilus, *scorpion;
+	const struct AutoSpaceZone *start;
 } game;
 
 static const float asteroid_max_speed = 0.03f;
@@ -83,10 +82,10 @@ int Game(void) {
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
 
 	/* game elements */
-	if(!(game.asteroid = TypeOfObjectSearch("asteroid"))
-	   || !(game.nautilus = ShipClassSearch("Nautilus"))
-	   || !(game.scorpion = ShipClassSearch("Scorpion"))
-	   || !(game.start    = SpaceZoneSearch("Earth"))) {
+	if(!(game.asteroid = AutoTypeOfObjectSearch("asteroid"))
+	   || !(game.nautilus = AutoShipClassSearch("Nautilus"))
+	   || !(game.scorpion = AutoShipClassSearch("Scorpion"))
+	   || !(game.start    = AutoSpaceZoneSearch("Earth"))) {
 		Debug("Game: couldn't find required game elements.\n");
 		return 0;
 	};

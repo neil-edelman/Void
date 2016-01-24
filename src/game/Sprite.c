@@ -29,18 +29,17 @@
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
 #include <stdio.h>	/* snprintf */
+#include "../../bin/Auto.h"
 #include "../Print.h"
-#include "../../bin/Lore.h"  /* auto-generated; Image */
-#include "Light.h"
-#include "Sprite.h"
-#include "Zone.h"
-#include "Game.h"
 #include "../general/Sorting.h"
 #include "../system/Timer.h"
 #include "../system/Draw.h"
 #include "../system/Key.h"
-
-#include "Event.h" /*?*/
+#include "Light.h"
+#include "Zone.h"
+#include "Game.h"
+#include "Event.h"
+#include "Sprite.h"
 
 /* M_ are widely accepted gnu standard, not C99 */
 #ifndef M_PI
@@ -104,7 +103,7 @@ static struct Sprite {
 			/*void          (*on_kill)(void); minerals? */
 		} debris;
 		struct {
-			const struct ShipClass *class;
+			const struct AutoShipClass *class;
 			unsigned       ms_recharge_wmd; /* ms */
 			unsigned       ms_recharge_hit, ms_offset_hit; /* ms */
 			int            hit, max_hit; /* J */
@@ -117,13 +116,13 @@ static struct Sprite {
 		} ship;
 		struct {
 			struct Sprite  *from;
-			struct WmdType *wmd_type;
+			struct AutoWmdType *wmd_type;
 			unsigned       expires;
 			int            light;
 		} wmd;
 		struct {
 			void       (*callback)(struct Sprite *const, struct Sprite *const);
-			const struct SpaceZone *to;
+			const struct AutoSpaceZone *to;
 			int        is_picked_up;
 		} ethereal;
 	} sp;
@@ -211,10 +210,10 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 					this a lot more. */
 struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	va_list args;
-	struct Image *image;
+	struct AutoImage *image;
+	struct AutoShipClass *class;
+	struct AutoWmdType *wtype;
 	struct Sprite *s, *from;
-	struct ShipClass *class;
-	struct WmdType *wtype;
 	float lenght, one_lenght, cs, sn;
 
 	if(sprites_size >= sprites_capacity) {
@@ -237,7 +236,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	va_start(args, sp_type);
 	switch(sp_type) {
 		case SP_DEBRIS:
-			image            = va_arg(args, struct Image *const);
+			image            = va_arg(args, struct AutoImage *const);
 			s->x = s->x1     = va_arg(args, const int);
 			s->y = s->y1     = va_arg(args, const int);
 			s->theta         = va_arg(args, const double);
@@ -248,8 +247,8 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->x = s->x1     = va_arg(args, const int);
 			s->y = s->y1     = va_arg(args, const int);
 			s->theta         = va_arg(args, const double);
-			s->sp.ship.class = class = va_arg(args, struct ShipClass *const);
-			image                      = (struct Image *)class->image; /*fixme*/
+			s->sp.ship.class = class = va_arg(args, struct AutoShipClass *const);
+			image                      = (struct AutoImage *)class->image; /*fixme*/
 			s->mass                    = class->mass;
 			s->sp.ship.ms_recharge_wmd = 0;
 			s->sp.ship.ms_recharge_hit = 0;
@@ -267,9 +266,9 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 		case SP_WMD:
 			/* fixme: 'from' could change! tie it with, I don't know, ship[] */
 			s->sp.wmd.from     = from  = va_arg(args, struct Sprite *const);
-			s->sp.wmd.wmd_type = wtype = va_arg(args, struct WmdType *const);
+			s->sp.wmd.wmd_type = wtype = va_arg(args, struct AutoWmdType *const);
 			s->mass            = wtype->impact_mass;
-			image              = (struct Image *)wtype->image;
+			image              = (struct AutoImage *)wtype->image;
 			s->sp.wmd.expires  = TimerGetGameTime() + wtype->ms_range;
 			lenght = sqrtf(wtype->r*wtype->r + wtype->g*wtype->g + wtype->b*wtype->b);
 			one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0;
@@ -284,7 +283,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->vy = s->vy1 = s->sp.wmd.from->vy + sn*wtype->speed*px_s_to_px_ms;
 			break;
 		case SP_ETHEREAL:
-			image             = va_arg(args, struct Image *);
+			image             = va_arg(args, struct AutoImage *);
 			s->x = s->x1      = va_arg(args, const int);
 			s->y = s->y1      = va_arg(args, const int);
 			s->theta          = va_arg(args, const double);
@@ -342,12 +341,12 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 }
 
 /** This calls Sprite and further sets it up as a Gate from gate. */
-struct Sprite *SpriteGate(const struct Gate *gate) {
+struct Sprite *SpriteGate(const struct AutoGate *gate) {
 	struct Sprite *s;
 
 	if(!gate) return 0;
 
-	if(!(s = Sprite(SP_ETHEREAL, ImageSearch("Gate.png"), gate->x, gate->y, gate->theta * deg_to_rad))) return 0;
+	if(!(s = Sprite(SP_ETHEREAL, AutoImageSearch("Gate.png"), gate->x, gate->y, gate->theta * deg_to_rad))) return 0;
 	s->sp.ethereal.callback = &gate_travel;
 	s->sp.ethereal.to       = gate->to;
 	Debug("Sprite(Gate): created from Sprite, %s.\n", SpriteToString(s));
@@ -548,7 +547,7 @@ char *SpriteToString(const struct Sprite *const s) {
 }*/
 
 /** Gets a SpaceZone that it goes to, if it exists. */
-const struct SpaceZone *SpriteGetTo(const struct Sprite *const s) {
+const struct AutoSpaceZone *SpriteGetTo(const struct Sprite *const s) {
 	if(!s || s->sp_type != SP_ETHEREAL) return 0;
 	return s->sp.ethereal.to;
 }
@@ -640,10 +639,10 @@ void SpriteDestroy(struct Sprite *const s) {
 
 /** Spawns smaller Debris (fixme: stub.) */
 void SpriteDebris(const struct Sprite *const s) {
-	struct Image *small_image;
+	struct AutoImage *small_image;
 	struct Sprite *sub;
 
-	if(!s || !(small_image = ImageSearch("AsteroidSmall.png")) || s->size <= small_image->width) return;
+	if(!s || !(small_image = AutoImageSearch("AsteroidSmall.png")) || s->size <= small_image->width) return;
 
 	Debug("Sprite::debris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
 
@@ -704,7 +703,7 @@ void SpriteShoot(struct Sprite *const s) {
 }
 
 /** Linear search for Sprites that are gates that go to to. */
-struct Sprite *SpriteOutgoingGate(const struct SpaceZone *to) {
+struct Sprite *SpriteOutgoingGate(const struct AutoSpaceZone *to) {
 	struct Sprite *s;
 
 	/*Debug("Outgoing: SpaceZone to: #%p %s.\n", to, to->name);*/

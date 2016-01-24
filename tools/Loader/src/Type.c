@@ -66,7 +66,7 @@ static const struct Type {
 		0,               &print_ai,     0 },
 	{ "float",         "const float ",         "cmp_float",
 		&load_word,      &print_float,  &cmp_float },
-	{ "image",         "const struct Image *", 0,
+	{ "image",         "const struct AutoImage *", 0,
 		&load_string,    &print_image,  0 },
 	{ "int",           "const int ",           "cmp_int",
 		&load_word,      &print_int,    &cmp_int },
@@ -208,7 +208,7 @@ static int print_image(const char *const *const data_ptr) {
 	int i;
 
 	if((i = LoaderImagePosition(fn)) == -1) return 0;
-	printf("&images[%d]/*%s*/", i, fn);
+	printf("&auto_images[%d]/*%s*/", i, fn);
 	return -1;
 }
 
@@ -235,7 +235,7 @@ static int print_fk(const char *const *const data_ptr) {
 	if(!type) {
 		printf("0");
 	} else {
-		printf("&%s[%u]/*%s*/", type, index, value);
+		printf("&auto_%s[%u]/*%s*/", type, index, value);
 	}
 
 	return -1;

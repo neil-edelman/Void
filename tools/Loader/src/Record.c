@@ -109,13 +109,13 @@ void RecordOutput(void) {
 
 	if(!is_sorted) sort();
 
-	for(i = 0; i < no_records; i++) printf("struct %s;\n", records[i].name);
+	for(i = 0; i < no_records; i++) printf("struct Auto%s;\n", records[i].name);
 	printf("\n");
 
 	/* this is variable, loaded from all the .type */
 	for(i = 0; i < no_records; i++) {
 		record = &records[i];
-		printf("struct %s {\n", record->name);
+		printf("struct Auto%s {\n", record->name);
 		printf("\t%s%s; /* key */\n", field_to_name(&record->key), record->key.name);
 		for(j = 0; j < record->no_fields; j++) {
 			printf("\t%s%s;\n", field_to_name(&record->fields[j]), record->fields[j].name);
@@ -129,7 +129,7 @@ void RecordOutput(void) {
 		record = &records[i];
 		name = record->name;
 		type = record->key.type; /* RecordGetKeyType(record) */
-		printf("struct %s *%sSearch(%s%s);\n", name, name, TypeGetTypeName(type), camel_to_snake_case(name));
+		printf("struct Auto%s *Auto%sSearch(%s%s);\n", name, name, TypeGetTypeName(type), camel_to_snake_case(name));
 	}
 }
 
@@ -242,13 +242,13 @@ void RecordPrintSearches(void) {
 		key           = record->key.name;
 		key_type      = record->key.type;
 		key_type_name = TypeGetTypeName(record->key.type);
-		printf("int %s_comp(%s*key_ptr, const struct %s *elem) {\n", snake, key_type_name, name);
+		printf("int %s_comp(%s*key_ptr, const struct Auto%s *elem) {\n", snake, key_type_name, name);
 		printf("\t%sk = *key_ptr;\n", key_type_name);
 		printf("\t%se = elem->%s;\n\n", key_type_name, key);
 		printf("\treturn %s(k, e);\n", TypeGetComparatorName(key_type));
 		printf("}\n\n");
-		printf("struct %s *%sSearch(%skey) {\n", name, name, TypeGetTypeName(key_type));
-		printf("\treturn bsearch(&key, %s, max_%s, sizeof(struct %s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);
+		printf("struct Auto%s *Auto%sSearch(%skey) {\n", name, name, TypeGetTypeName(key_type));
+		printf("\treturn bsearch(&key, auto_%s, max_auto_%s, sizeof(struct Auto%s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);
 		printf("}\n\n");
 	}
 }
@@ -378,7 +378,7 @@ static char *field_to_name(const struct Field *const field) {
 	if((type = TypeFromString(str))) {
 		type_name = TypeGetTypeName(type);
 	} else {
-		snprintf(foreign, sizeof(foreign) / sizeof(char), "const struct %s *", str);
+		snprintf(foreign, sizeof(foreign) / sizeof(char), "const struct Auto%s *", str);
 		type_name = foreign;
 	}
 	return type_name;

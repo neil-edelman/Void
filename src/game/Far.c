@@ -2,13 +2,11 @@
  Public License, see copying.txt */
 
 #include <string.h> /* memset */
+#include "../../bin/Auto.h"
 #include "../Print.h"
 #include "Far.h"
 #include "../general/Sorting.h"
 #include "../system/Draw.h"
-
-/* auto-generated from media dir; hope it's right; used in constructor */
-#include "../../bin/Lore.h"
 
 /** Sprites in the background have a (world) position, a rotation, and a bitmap.
  They are sorted by bitmap and drawn by the gpu in ../system/Draw but not lit.
@@ -58,7 +56,7 @@ static struct Far **address_next_y(struct Far *const a);
  @param texture		On the GPU.
  @param size		Pixels.
  @return			The Far. */
-struct Far *Far(const struct ObjectInSpace *ois) {
+struct Far *Far(const struct AutoObjectInSpace *ois) {
 	struct Far *far;
 
 	/* fixme: diurnal variation */

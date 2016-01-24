@@ -3,23 +3,22 @@
 
 #include <stdlib.h> /* malloc free */
 #include <math.h>   /* cis */
+#include "../../bin/Auto.h"
 #include "../Print.h"
-#include "Glew.h"
 #include "../general/Map.h"
 #include "../game/Sprite.h"
 #include "../game/Far.h"
 #include "../game/Light.h"
-#include "../game/Game.h" /* needed for shield display */
+#include "../game/Game.h"       /* shield display */
+#include "../format/lodepng.h"  /* texture() */
+#include "../format/nanojpeg.h" /* texture() */
+#include "Glew.h"
 #include "Draw.h"
 #include "Window.h"
-/* include file formats for uncompressing in texture() */
-#include "../format/lodepng.h"
-#include "../format/nanojpeg.h"
 
 /* auto-generated, hard coded resouce files; there should be the directory
  tools/ where you can compile utilities that can make these files; run "make"
  and this should be automated; ignore errors about ISO C90 string length 509  */
-#include "../../bin/Lore.h"
 #include "../../bin/shaders/Background_vs.h"
 #include "../../bin/shaders/Background_fs.h"
 #include "../../bin/shaders/Hud_vs.h"
@@ -40,8 +39,8 @@
  @version	3.2, 2015-05
  @since		1.0, 2000 */
 
-extern struct Image images[];
-extern const int max_images;
+extern struct AutoImage auto_images[];
+extern const int max_auto_images;
 
 /* if is started, we don't and can't start it again */
 static int is_started;
@@ -115,7 +114,7 @@ static const int  spot_colour_size    = 3;*/
 /* private prototypes */
 static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attrib)(const GLuint)); /* repeated */
 static void tex_map_attrib(const GLuint shader); /* callback for internal */
-static int texture(struct Image *image); /* decompresses */
+static int texture(struct AutoImage *image); /* decompresses */
 static int light_compute_texture(void); /* creates image */
 static void display(void); /* callback for odisplay */
 static void resize(int width, int height); /* callback  */
@@ -183,7 +182,7 @@ int Draw(void) {
 	glActiveTexture(GT_LIGHT);
 	if(!(light_tex = light_compute_texture())) Debug("Draw: failed computing light texture.\n");
 	/* textures stored in imgs */
-	for(i = 0; i < max_images; i++) texture(&images[i]);
+	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
 	/* shaders: simple texture for hud elements and stuff */
 	if(!(background_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(); return 0; }
@@ -296,11 +295,11 @@ void Draw_(void) {
 		}
 	} <- static now! */
 	/* textures stored in imgs */
-	for(i = max_images - 1; i; i--) {
-		if((tex = images[i].texture)) {
+	for(i = max_auto_images - 1; i; i--) {
+		if((tex = auto_images[i].texture)) {
 			Debug("~Draw: erase texture, Tex%u.\n", tex);
 			glDeleteTextures(1, &tex);
-			images[i].texture = 0;
+			auto_images[i].texture = 0;
 		}
 	}
 	if(light_tex) {
@@ -345,7 +344,7 @@ void DrawGetScreen(int *width_ptr, int *height_ptr) {
 /** Sets background to the image with key key. Fixme: allows you to set not
  GT_BACKGROUND textures, which probably don't work, maybe? (oh, they do) */
 void DrawSetBackground(const char *const str) {
-	struct Image *image;
+	struct AutoImage *image;
 	
 	/* clear the backgruoud; fixme: test, it isn't used at all */
 	if(!str) {
@@ -355,7 +354,7 @@ void DrawSetBackground(const char *const str) {
 		Debug("Image desktop cleared.\n");
 		return;
 	}
-	if(!(image = ImageSearch(str))) {
+	if(!(image = AutoImageSearch(str))) {
 		Debug("Draw::setDesktop: image \"%s\" not found.\n", str);
 		return;
 	}
@@ -367,8 +366,8 @@ void DrawSetBackground(const char *const str) {
 }
 
 void DrawSetShield(const char *const str) {
-	struct Image *image;
-	if(!(image = ImageSearch(str))) {
+	struct AutoImage *image;
+	if(!(image = AutoImageSearch(str))) {
 		Debug("Draw::setShield: image \"%s\" not found.\n", str);
 		return;
 	}
@@ -491,7 +490,7 @@ static void tex_map_attrib(const GLuint shader) {
 /** Creates a texture from an image; sets the image texture unit.
  @param image	The Image as seen in Lores.h.
  @return		Success. */
-static int texture(struct Image *image) {
+static int texture(struct AutoImage *image) {
 	unsigned width, height, depth, error;
 	unsigned char *pic;
 	int is_alloc = 0, is_bad = 0;

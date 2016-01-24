@@ -34,8 +34,8 @@ EXTRA := $(MDIR)/icon.rc todo.txt build/msvc2010.txt build/unix.txt performance.
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
 
 # select all the things in the src/; the Lore is generated automatically by a tool
-SRCS  := $(call rwildcard, $(SDIR), *.c) $(SDIR)/../$(BDIR)/Lore.c
-H     := $(call rwildcard, $(SDIR), *.h) $(SDIR)/../$(BDIR)/Lore.h
+SRCS  := $(call rwildcard, $(SDIR), *.c) $(SDIR)/../$(BDIR)/Auto.c
+H     := $(call rwildcard, $(SDIR), *.h) $(SDIR)/../$(BDIR)/Auto.h
 OBJS  := $(patsubst $(SDIR)/%.c, $(BDIR)/%.o, $(SRCS))
 VS    := $(call rwildcard, $(SDIR)/$(SDR), *.vs)
 FS    := $(call rwildcard, $(SDIR)/$(SDR), *.fs)
@@ -57,9 +57,9 @@ LOADER       := tools/Loader/bin/Loader
 
 # Loader resources
 TYPE   := $(wildcard $(MDIR)/*.type)
-LORE_H := $(BDIR)/Lore.h
+LORE_H := $(BDIR)/Auto.h
 LORE   := $(wildcard $(MDIR)/*.lore)
-LORE_C := $(BDIR)/Lore.c
+LORE_C := $(BDIR)/Auto.c
 PNG    := $(wildcard $(MDIR)/*.png)
 PNG_H  := $(patsubst $(MDIR)/%.png,$(BDIR)/%_png.h,$(PNG))
 JPEG   := $(wildcard $(MDIR)/*.jpeg)

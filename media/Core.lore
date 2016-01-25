@@ -76,13 +76,13 @@ Earth
 0
 -200
 90
-# ShipClass name, image, shield, recharge, speed, acceleration, turn_rate, rotation_limit, weapon
+# ShipClass name, image, mass, shield, ms_recharge, speed, acceleration, turn, weapon
 ShipClass
 Nautilus
 Nautilus.png
 50
 520
-16
+1024
 50
 0.0001
 90
@@ -91,8 +91,8 @@ ShipClass
 Scorpion
 Scorpion.png
 20
-40
-1024
+60
+16384
 50
 0.0001
 30

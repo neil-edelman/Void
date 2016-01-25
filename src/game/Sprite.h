@@ -30,7 +30,7 @@ const struct AutoSpaceZone *SpriteGetTo(const struct Sprite *const s);
 /*void (*SpriteGetCallback(struct Sprite *s))(struct Sprite *const, struct Sprite *const);*/
 int SpriteGetDamage(const struct Sprite *const s);
 int SpriteGetHit(const struct Sprite *const s);
-void SpriteHit(struct Sprite *const s, const int hit);
+void SpriteRecharge(struct Sprite *const s, const int recharge);
 int SpriteGetMaxHit(const struct Sprite *const s);
 int SpriteIsDestroyed(const struct Sprite *const s);
 void SpriteDestroy(struct Sprite *const s);

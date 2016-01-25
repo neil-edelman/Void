@@ -36,15 +36,21 @@ struct Event {
 
 /*void print_all_events(void);*/
 
+/******FIXME*****/
+int RandomIntInterval(const int sigma) {
+	return (float)rand() / RAND_MAX * sigma;
+}
+
 /* public */
 
 /** Constructor. (FIXME: have a pool of Events and draw from there; this will
  requre a second level of indirection.)
  fixme: this crashes on loop, more careful (TIMER!)
  @return	An object or a null pointer, if the object couldn't be created. */
-int Event(const int delay_ms, enum FnType type, ...) {
+struct Event *Event(const int delay_ms, const int sigma_ms, enum FnType type, ...) {
 	va_list args;
 	struct Event *event, *last, *next;
+	int real_delay_ms;
 
 	if(!(event = malloc(sizeof(struct Event)))) {
 		perror("Event constructor");
@@ -52,7 +58,12 @@ int Event(const int delay_ms, enum FnType type, ...) {
 		return 0;
 	}
 	event->next            = 0;
-	event->t_ms            = TimerGetGameTime() + delay_ms;
+	real_delay_ms          = delay_ms;
+	if(sigma_ms > 0) {
+		real_delay_ms += RandomIntInterval(sigma_ms);
+		if(real_delay_ms < 0) real_delay_ms = 0;
+	}
+	event->t_ms            = TimerGetGameTime() + real_delay_ms;
 	event->type            = type;
 	/* do something different based on what the type is */
 	va_start(args, type);
@@ -88,7 +99,7 @@ int Event(const int delay_ms, enum FnType type, ...) {
 		next_event  = event;
 	}
 
-	return -1;
+	return event;
 }
 
 /** Destructor.
@@ -134,6 +145,27 @@ void EventDispatch(void) {
 		Event_(&e);
 		/*print_all_events();*/
 	}
+}
+
+/** Sometimes you just want to change your mind. */
+void EventReplaceArguments(struct Event *const event, ...) {
+	va_list args;
+
+	if(!event) return;
+
+	va_start(args, event);
+	switch(event->type) {
+		case FN_RUNNABLE:
+			break;
+		case FN_CONSUMER:
+			event->fn.consumer.t      = va_arg(args, void *);
+			break;
+		case FN_BICONSUMER:
+			event->fn.biconsumer.t      = va_arg(args, void *);
+			event->fn.biconsumer.u      = va_arg(args, void *);
+			break;
+	}
+	va_end(args);
 }
 
 /*void print_all_events(void) {

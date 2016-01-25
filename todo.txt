@@ -1,37 +1,43 @@
+Things I am Bound to Forget without Internet
+--------------------------------------------
 grep -rn "Something" src
 diff -p A.c B.c
 
+Words for Things
+----------------
 gang, band, pack, horde, herd
 kind, character, ethos
 <specimen>, sample, instance, occurrence, manifestation, embodiment, epitome, representative, aitype -- have different ais, of course; also, ai(align) -- specimen: aitype, alignment, ship*
 <zone>, sector, region
 
+Bug List
+--------
+-interpretating orbits; hell no! not reproducible
+-do something about the shaking at high-v? stress test?
+-when I put the combo-sprites it started popping; defiantly not reproducible
+-fix over-limit crash (maybe)bug
 
+Features
+--------
 
+add support for shield recharge
 
+more rotational acceleration/friction
 
-
-
-
-
-Layer instead of Far
-
-when I put the combo-sprites it started popping
-
-Random.c
+I liked sort better than notify; it's always going to be uneven
 
 add supporting resource for resources times n, eg, (maybe opt it so it searches for repeat "strings")
 .type
 Foo
 string name
-Bar bars<>
+Bar bars[]
 .lore
 Foo
 foo
-<
+[
 bar1
 bar2
->
+]
 Bar
 bar1
 Bar
@@ -45,15 +51,11 @@ static Foo {
 static Bar foo_bars[2] = { &bar[0], &bar[1]; };
 static Foo foo[] = { { "foo", 2, &foo_bars[0] } }
 
-interpretating orbits; hell no!
+Random.c; P[\mu_x,\mu_y,\sigma] = f(x|\mu,\sigma) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(x-\mu)^2}{2\sigma^2}} Gaussian distribution in space to find ships. Also, custom dist based on objects of interest
 
-do something about the shaking?
+instead of having all asteroids on zone at a time, have only when the player is there; otherwise have a random field
 
 things that you can buy that allow different things to be picked up, eg gold mining sieve
-
-StaticDoublyLinkedList, fix over-limit crash bug
-
-P[\mu_x,\mu_y,\sigma] = f(x|\mu,\sigma) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(x-\mu)^2}{2\sigma^2}} Gaussian distribution in space to find ships. Also, custom dist based on objects of interest
 
 have a sprite and normals, instead of all having a cone for normals -> automate making sprites, have different views instead of rotating -> create 3d models, create ray-tracer in tools
 
@@ -65,7 +67,7 @@ landing (have landing spot (x,y))
 
 select icon, target display (ships, planets, stations, links)
 
-fog & astroids different distances (using jpeg compression?) fill in space between planets and foreground and space after planets
+fog & astroids different distances (using FFT compression?) fill in space between planets and foreground and space after planets
 
 build up asteroids from smaller chunks; hit them and calculate new chunks with procedural generation; the same for ships! when you break apart, goodies fall out
 

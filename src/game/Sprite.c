@@ -79,6 +79,7 @@ static const float shp_ai_too_far     = 32000.0f; /* pixel^(1/2) */
 static const int   shp_ai_speed       = 15;       /* pixel^2 / ms */
 static const float shp_ai_turn_sloppy = 0.4f;     /* rad */
 static const float shp_ai_turn_constant = 10.0f;
+static const int   shp_ms_sheild_uncertainty = 50;
 
 static const float wmd_distance_mod         = 1.3f; /* to clear ship */
 
@@ -105,7 +106,8 @@ static struct Sprite {
 		struct {
 			const struct AutoShipClass *class;
 			unsigned       ms_recharge_wmd; /* ms */
-			unsigned       ms_recharge_hit, ms_offset_hit; /* ms */
+			unsigned       ms_recharge_hit; /* ms */
+			struct Event   *event_recharge;
 			int            hit, max_hit; /* J */
 			float          max_speed2;
 			float          acceleration;
@@ -143,7 +145,7 @@ static int sprites_considered, sprites_onscreen; /* for stats */
 /* private prototypes */
 
 /* branch cut (-Pi,Pi] */
-void branch_cut_pi_pi(float *theta_ptr);
+static void branch_cut_pi_pi(float *theta_ptr);
 static struct Sprite *iterate(void);
 /*static void sort(void);*/
 static void sort_notify(struct Sprite *s);
@@ -171,11 +173,11 @@ static void wmd_shp(struct Sprite *, struct Sprite *, const float);
 static void shp_wmd(struct Sprite *, struct Sprite *, const float);
 static void shp_eth(struct Sprite *, struct Sprite *, const float);
 static void eth_shp(struct Sprite *, struct Sprite *, const float);
-char *sprite_type(const struct Sprite *const s);
-char *decode_sprite_type(const enum SpType sptype);
-void gate_travel(struct Sprite *const gate, struct Sprite *ship);
-void do_ai(struct Sprite *const s, const int dt_ms);
+static char *decode_sprite_type(const enum SpType sptype);
+static void gate_travel(struct Sprite *const gate, struct Sprite *ship);
+static void do_ai(struct Sprite *const s, const int dt_ms);
 static void sprite_poll(void);
+static void recharge(struct Sprite *const a);
 
 /* fixme: this assumes SP_DEBRIS = 0, ..., SP_ETHEREAL = 3 */
 static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, const float) = {
@@ -251,15 +253,17 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			image                      = (struct AutoImage *)class->image; /*fixme*/
 			s->mass                    = class->mass;
 			s->sp.ship.ms_recharge_wmd = 0;
-			s->sp.ship.ms_recharge_hit = 0;
-			s->sp.ship.ms_offset_hit   = class->ms_recharge;
+			s->sp.ship.ms_recharge_hit = class->ms_recharge;
+			/* high sigma for the first call increases staggering */
+			s->sp.ship.event_recharge  = Event(s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);
+			/*s->sp.ship.ms_recharge_hit_time = TimerGetGameTime() + class->ms_recharge;*/
 			s->sp.ship.hit = s->sp.ship.max_hit = class->shield;
 			s->sp.ship.max_speed2      = class->speed * class->speed * px_s_to_px2_ms2;
 			/* fixme:units! should be t/s^2 -> t/ms^2 */
 			s->sp.ship.acceleration    = class->acceleration;
 			s->sp.ship.turn            = class->turn * deg_sec_to_rad_ms;
 			/* fixme: have it explicity settable */
-			s->sp.ship.turn_acceleration = class->turn * deg_sec_to_rad_ms * 0.001f /*<-fixme*/;
+			s->sp.ship.turn_acceleration = class->turn * deg_sec_to_rad_ms * 0.01f /*<-fixme*/;
 			s->sp.ship.horizon         = 0.0f;
 			s->sp.ship.behaviour       = va_arg(args, const enum Behaviour);
 			break;
@@ -372,10 +376,18 @@ void Sprite_(struct Sprite **sprite_ptr) {
 
 	Pedantic("~Sprite: returning to pool, %s.\n", SpriteToString(sprite));
 
-	/* git rid of the wmd's light */
-	if(sprite->sp_type == SP_WMD) {
-		Pedantic("~Sprite: getting rid of light from %s.\n", SpriteToString(sprite));
-		Light_(&sprite->sp.wmd.light);
+	switch(sprite->sp_type) {
+		case SP_SHIP:
+			Pedantic("~Sprite: getting rid of event recharge from %s.\n", SpriteToString(sprite));
+			Event_(&sprite->sp.ship.event_recharge);
+			break;
+		case SP_WMD:
+			Pedantic("~Sprite: getting rid of light from %s.\n", SpriteToString(sprite));
+			Light_(&sprite->sp.wmd.light);
+			break;
+		case SP_DEBRIS:
+		case SP_ETHEREAL:
+			break;
 	}
 
 	/* deal with deleting it while iterating; fixme: have more complex? */
@@ -416,6 +428,10 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if((neighbor = replace->next_y)) neighbor->prev_y = sprite;
 
 		if(sprite->notify) *sprite->notify = sprite;
+		if(sprite->sp_type == SP_SHIP && sprite->sp.ship.event_recharge) {
+			Info("~Sprite: %s has event_recharge #%p.\n", SpriteToString(sprite), sprite->sp.ship.event_recharge);
+			EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
+		}
 		Pedantic("~Sprite: %s has become %s.\n", SpriteToString(replace), SpriteToString(sprite));
 	}
 
@@ -575,28 +591,30 @@ int SpriteGetMaxHit(const struct Sprite *const s) {
 	return s->sp.ship.max_hit;
 }
 
-void SpriteHit(struct Sprite *const s, const int hit) {
+void SpriteRecharge(struct Sprite *const s, const int recharge) {
 	if(!s) return;
 	switch(s->sp_type) {
 		case SP_DEBRIS:
-			if(hit < s->sp.debris.hit) {
-				s->sp.debris.hit -= (unsigned)hit;
+			if(-recharge < s->sp.debris.hit) {
+				s->sp.debris.hit += recharge;
 			} else {
 				s->sp.debris.hit = 0;
 			}
 			break;
 		case SP_SHIP:
-			if(hit < s->sp.ship.hit) {
-				s->sp.ship.hit -= (unsigned)hit;
+			if(recharge + s->sp.ship.hit >= s->sp.ship.max_hit) {
+				s->sp.ship.hit = s->sp.ship.max_hit;
+			} else if(-recharge < s->sp.ship.hit) {
+				s->sp.ship.hit += (unsigned)recharge;
 			} else {
 				s->sp.ship.hit = 0;
 			}
 			break;
 		case SP_WMD:
-			s->sp.wmd.expires = 0;
+			if(recharge < 0) s->sp.wmd.expires = 0;
 			break;
 		case SP_ETHEREAL:
-			s->sp.ethereal.is_picked_up = -1;
+			if(recharge < 0) s->sp.ethereal.is_picked_up = -1;
 			break;
 	}
 }
@@ -926,7 +944,7 @@ void SpriteUpdate(const int dt_ms) {
 						break;
 				}
 				if(0 < s->sp.ship.hit) break;
-				Info("Sprite::update: %s desroyed.\n", SpriteToString(s));
+				Info("Sprite::update: %s destroyed.\n", SpriteToString(s));
 				Sprite_(&s);
 				break;
 			case SP_WMD:
@@ -948,7 +966,7 @@ void SpriteUpdate(const int dt_ms) {
 /* private */
 
 /* branch cut (-Pi,Pi] */
-void branch_cut_pi_pi(float *theta_ptr) {
+static void branch_cut_pi_pi(float *theta_ptr) {
 	*theta_ptr -= M_2PI * floorf((*theta_ptr + M_PI) / M_2PI);
 }
 
@@ -1288,7 +1306,7 @@ static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
 	/* avoid inifinite destruction loop */
 	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
-	SpriteHit(d, SpriteGetDamage(w));
+	SpriteRecharge(d, -SpriteGetDamage(w));
 	SpriteDestroy(w);
 }
 
@@ -1300,7 +1318,7 @@ static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
 	/* avoid inifinite destruction loop */
 	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
-	SpriteHit(s, SpriteGetDamage(w));
+	SpriteRecharge(s, -SpriteGetDamage(w));
 	SpriteDestroy(w);
 }
 
@@ -1321,7 +1339,7 @@ static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
 }
 
 /** For debugging. */
-char *decode_sprite_type(const enum SpType sp_type) {
+static char *decode_sprite_type(const enum SpType sp_type) {
 	switch(sp_type) {
 		case SP_DEBRIS:		return "<Debris>";
 		case SP_SHIP:		return "<Ship>";
@@ -1333,7 +1351,7 @@ char *decode_sprite_type(const enum SpType sp_type) {
 
 /** can be a callback for an Ethereal, whenever it collides with a Ship.
  IT CAN'T MODIFY THE LIST */
-void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
+static void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
 	float x, y, /*vx, vy,*/ gate_norm_x, gate_norm_y, proj/*, h*/;
 
 	if(!gate || gate->sp_type != SP_ETHEREAL
@@ -1349,9 +1367,8 @@ void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
 	if(ship->sp.ship.horizon > 0 && proj < 0) {
 		Debug("gate_travel: %s crossed into the event horizon of %s.\n", SpriteToString(ship), SpriteToString(gate));
 		if(ship == GameGetPlayer()) {
-			/* trasport to zone */
-			/*Event(100, FN_CONSUMER, &Zone, gate->sp.ethereal.sz);*/
-			Event(0, FN_CONSUMER, &ZoneChange, gate);
+			/* trasport to zone immediately */
+			Event(0, 0, FN_CONSUMER, &ZoneChange, gate);
 		} else {
 			/* disappear */
 			/* fixme: test! */
@@ -1362,7 +1379,7 @@ void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
 	ship->sp.ship.horizon = proj;
 }
 
-void do_ai(struct Sprite *const a, const int dt_ms) {
+static void do_ai(struct Sprite *const a, const int dt_ms) {
 	const struct Sprite *const b = GameGetPlayer();
 	float c_x, c_y;
 	float d_2, theta, t;
@@ -1416,4 +1433,15 @@ static void sprite_poll(void) {
 	for(s = first_x; s; s = s->next_x) Info("%s\n", SpriteToString(s));
 	Info("Sprites by y:\n");
 	for(s = first_y; s; s = s->next_y) Info("%s\n", SpriteToString(s));
+}
+
+/** can be used as an Event */
+static void recharge(struct Sprite *const a) {
+	if(!a || SpriteGetType(a) != SP_SHIP) {
+		Warn("Sprite::recharge: called on %s.\n", SpriteToString(a));
+		return;
+	}
+	Pedantic("recharge %s\n", SpriteToString(a));
+	SpriteRecharge(a, 1);
+	a->sp.ship.event_recharge = Event(a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &recharge, a);
 }

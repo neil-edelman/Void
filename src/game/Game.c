@@ -94,9 +94,8 @@ int Game(void) {
 	DrawSetShield("Bar.png");
 
 	Zone(game.start);
-	/*Event(1000, FN_BICONSUMER, &bi, calloc(4, sizeof(char)), "asdf");*/
-	Event(3000, FN_CONSUMER, &con, "cool");
-	Event(2000, FN_RUNNABLE, &position);
+	Event(3000, 1000, FN_CONSUMER, &con, "cool");
+	Event(2000, 1000, FN_RUNNABLE, &position);
 	s = Sprite(SP_SHIP, 0, 0, 0.0, game.nautilus, B_HUMAN);
 	SpriteSetNotify(s, &game.player);
 
@@ -218,7 +217,7 @@ static void gametime(void) {
 		bad = Ship(0, game.scorpion, B_STUPID);
 		ShipSetOrientation(bad, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
-	Event(5000, FN_RUNNABLE, &add_sprites);
+	Event(5000, 500, FN_RUNNABLE, &add_sprites);
 }*/
 
 static void position(void) {
@@ -239,5 +238,5 @@ static void con(const char *const a) {
 static void bi(char *a, char *b) {
 	if(--a[0] < 'A') a[0] = 'z';
 	printf("!!!! %s : %s\n", a, b);
-	Event(1000, FN_BICONSUMER, &bi, a, b);
+	Event(1000, 100, FN_BICONSUMER, &bi, a, b);
 }

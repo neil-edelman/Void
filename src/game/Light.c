@@ -66,7 +66,7 @@ int Light(int *const id_ptr, const float i, const float r, const float g, const 
 	colour[light].b   = i * b;
 	notify[light]     = id_ptr;
 	*id_ptr           = light_to_id(light);
-	Debug("Light: created from pool, %s (%d?).\n", to_string(light), *id_ptr);
+	Pedantic("Light: created %s.\n", to_string(light));
 	return -1;
 }
 
@@ -78,7 +78,6 @@ void Light_(int *id_ptr) {
 	unsigned characters;
 	char buffer[128];
 
-	Debug("~Light: #%p size=%u id=%d\n", (void *)id_ptr, lights_size, *id_ptr);
 	if(!id_ptr || !(id = *id_ptr)) return;
 	if((light = id_to_light(id)) >= lights_size) {
 		Debug("~Light: %u/%u out-of-bounds.\n", id, lights_size);
@@ -102,7 +101,7 @@ void Light_(int *id_ptr) {
 		notify[light]     = notify[replace];
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", to_string(replace));
 	}
-	Debug("~Light: erase %s.\n", buffer);
+	Pedantic("~Light: erase %s.\n", buffer);
 	lights_size = replace;
 	*id_ptr = 0;
 }

@@ -1435,6 +1435,8 @@ static void do_ai(struct Sprite *const a, const int dt_ms) {
 	SpriteInput(a, turning, acceleration, dt_ms);
 }
 
+extern int draw_is_print_sprites;
+
 static void sprite_poll(void) {
 	struct Sprite *s;
 
@@ -1444,6 +1446,7 @@ static void sprite_poll(void) {
 	for(s = first_x; s; s = s->next_x) Info("%s\n", SpriteToString(s));
 	Info("Sprites by y:\n");
 	for(s = first_y; s; s = s->next_y) Info("%s\n", SpriteToString(s));
+	draw_is_print_sprites = -1;
 }
 
 /** can be used as an Event */

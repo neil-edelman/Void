@@ -66,40 +66,43 @@ int Light(int *const id_ptr, const float i, const float r, const float g, const 
 	colour[light].b   = i * b;
 	notify[light]     = id_ptr;
 	*id_ptr           = light_to_id(light);
-	Pedantic("Light: created from pool, %s.\n", to_string(light));
+	Debug("Light: created from pool, %s (%d?).\n", to_string(light), *id_ptr);
 	return -1;
 }
 
 /** Destructor of light, will update with new particle at light.
  @param index	The light that's being destroyed. */
 void Light_(int *id_ptr) {
-	static char *buffer[64];
 	unsigned light, replace;
 	int id;
+	unsigned characters;
+	char buffer[128];
 
-	if(!id_ptr /*|| !(id = *id_ptr)*/) return; id = *id_ptr;
+	Debug("~Light: #%p size=%u id=%d\n", (void *)id_ptr, lights_size, *id_ptr);
+	if(!id_ptr || !(id = *id_ptr)) return;
 	if((light = id_to_light(id)) >= lights_size) {
 		Debug("~Light: %u/%u out-of-bounds.\n", id, lights_size);
 		return;
 	}
 
-	buffer[0] = '\0';
+	/* store the string for debug info */
+	characters = snprintf(buffer, sizeof buffer, "%s", to_string(light));
 
 	/* place the lights_size item into this one, decrese # */
 	if(light < (replace = lights_size - 1)) {
+		/* notify that we're changing */
+		if(notify[light])   *notify[light]   = 0;
+		if(notify[replace]) *notify[replace] = light_to_id(light);
+		/* change */
 		position[light].x = position[replace].x;
 		position[light].y = position[replace].y;
 		colour[light].r   = colour[replace].r;
 		colour[light].g   = colour[replace].g;
 		colour[light].b   = colour[replace].b;
 		notify[light]     = notify[replace];
-		if(notify[light])   *notify[light]   = light_to_id(light);
-		if(notify[replace]) *notify[replace] = 0;
-#ifdef PRINT_PEDANTIC
-		snprintf((char *)buffer, sizeof buffer, "; %s is replacing", to_string(replace));
-#endif
+		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", to_string(replace));
 	}
-	Pedantic("~Light: erase %s%s.\n", to_string(light), buffer);
+	Debug("~Light: erase %s.\n", buffer);
 	lights_size = replace;
 	*id_ptr = 0;
 }
@@ -120,6 +123,8 @@ struct Colour3f *LightGetColourArray(void) { return colour; }
 void LightSetPosition(const int id, const float x, const float y) {
 	const unsigned light = id_to_light(id);
 
+	if(!id) return;
+
 	if(light >= lights_size) {
 		Warn("Light::setPosition: %u/%u not in range.\n", id, lights_size);
 		return;
@@ -129,8 +134,12 @@ void LightSetPosition(const int id, const float x, const float y) {
 }
 
 /** This is important because Sprites change places, as well. */
-void LightSetNotify(const int id, int *const id_ptr) {
-	const unsigned light = id_to_light(id);
+void LightSetNotify(int *const id_ptr) {
+	int id;
+	unsigned light;
+
+	if(!id_ptr || !(id = *id_ptr)) return;
+	light = id_to_light(id);
 
 	if(light >= lights_size) {
 		Warn("Light::setPosition: %u/%u not in range.\n", id, lights_size);
@@ -140,7 +149,10 @@ void LightSetNotify(const int id, int *const id_ptr) {
 }
 
 /** Volatile-ish: can only print 4 Lights at once. */
-char *LightToString(const int id) { return to_string(id_to_light(id)); }
+char *LightToString(const int id) {
+	if(!id) return "null light";
+	return to_string(id_to_light(id));
+}
 
 void LightList(void) {
 	unsigned i;
@@ -150,9 +162,9 @@ void LightList(void) {
 	}
 }
 
-unsigned id_to_light(const int id) { return id/* - 1*/; }
+unsigned id_to_light(const int id) { return id - 1; }
 
-int light_to_id(const unsigned light) { return light/* + 1*/; }
+int light_to_id(const unsigned light) { return light + 1; }
 
 char *to_string(const unsigned light) {
 	static int b;

@@ -108,7 +108,7 @@ void Event_(struct Event **event_ptr) {
 	struct Event *event;
 
 	if(!event_ptr || !(event = *event_ptr)) return;
-	Pedantic("~Event: erase, #%p.\n", (void *)event);
+	Debug("~Event: erase, #%p.\n", (void *)event);
 	/* Void(9908,0x7fff70b6ecc0) malloc: *** error for object 0x100785350: pointer being freed was not allocated
 	 *** set a breakpoint in malloc_error_break to debug */
 	//free(event);
@@ -158,11 +158,11 @@ void EventReplaceArguments(struct Event *const event, ...) {
 		case FN_RUNNABLE:
 			break;
 		case FN_CONSUMER:
-			event->fn.consumer.t      = va_arg(args, void *);
+			event->fn.consumer.t   = va_arg(args, void *);
 			break;
 		case FN_BICONSUMER:
-			event->fn.biconsumer.t      = va_arg(args, void *);
-			event->fn.biconsumer.u      = va_arg(args, void *);
+			event->fn.biconsumer.t = va_arg(args, void *);
+			event->fn.biconsumer.u = va_arg(args, void *);
 			break;
 	}
 	va_end(args);

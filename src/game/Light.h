@@ -9,6 +9,6 @@ unsigned LightGetArraySize(void);
 struct Vec2f *LightGetPositionArray(void);
 struct Colour3f *LightGetColourArray(void);
 void LightSetPosition(const int id, const float x, const float y);
-void LightSetNotify(const int id, int *const id_ptr);
+void LightSetNotify(int *const id_ptr);
 char *LightToString(const int id);
 void LightList(void);

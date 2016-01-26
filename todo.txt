@@ -12,11 +12,13 @@ kind, character, ethos
 
 Bug List
 --------
+-Lights +1
 -interpretating orbits; hell no! not reproducible
 -do something about the shaking at high-v? stress test?
 -when I put the combo-sprites it started popping; defiantly not reproducible
 -fix over-limit crash (maybe)bug
 -recharge <Ship>Spr103[623.0,2209.3:1.8]50.00t Sprite::recharge: called on <Wmd>Spr103[383.8,172.2:0.4]0.50t . . .
+-Event memory leak
 
 Features
 --------

@@ -81,6 +81,7 @@ static const float shp_ai_turn_sloppy = 0.4f;     /* rad */
 static const float shp_ai_turn_constant = 10.0f;
 static const int   shp_ms_sheild_uncertainty = 50;
 
+/* fixme: 1.415? */
 static const float wmd_distance_mod         = 1.3f; /* to clear ship */
 
 static struct Sprite {
@@ -255,7 +256,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.ship.ms_recharge_wmd = 0;
 			s->sp.ship.ms_recharge_hit = class->ms_recharge;
 			/* high sigma for the first call increases staggering */
-			s->sp.ship.event_recharge  = Event(s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);
+			s->sp.ship.event_recharge  = 0;/*Event(s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);*/
 			/*s->sp.ship.ms_recharge_hit_time = TimerGetGameTime() + class->ms_recharge;*/
 			s->sp.ship.hit = s->sp.ship.max_hit = class->shield;
 			s->sp.ship.max_speed2      = class->speed * class->speed * px_s_to_px2_ms2;
@@ -338,7 +339,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 		s->mass = minimum_mass;
 	}
 
-	Pedantic("Sprite: created from pool, %s.\n", SpriteToString(s));
+	Debug("Sprite: created from pool, %s.\n", SpriteToString(s));
 	KeyRegister('s',  &sprite_poll);
 
 	return s;
@@ -363,6 +364,8 @@ struct Sprite *SpriteGate(const struct AutoGate *gate) {
 void Sprite_(struct Sprite **sprite_ptr) {
 	struct Sprite *sprite, *replace, *neighbor;
 	int index;
+	unsigned characters;
+	char buffer[128];
 
 	if(!sprite_ptr || !(sprite = *sprite_ptr)) return;
 	index = sprite - sprites;
@@ -371,18 +374,20 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		return;
 	}
 
-	/* the sprite is null in some other place */
+	/* store the string for debug info */
+	characters = snprintf(buffer, sizeof buffer, "%s", SpriteToString(sprite));
+
+	/* update notify */
 	if(sprite->notify) *sprite->notify = 0;
 
-	Pedantic("~Sprite: returning to pool, %s.\n", SpriteToString(sprite));
-
+	/* gid rid of the resources associated with each type of sprite */
 	switch(sprite->sp_type) {
 		case SP_SHIP:
-			Pedantic("~Sprite: getting rid of event recharge from %s.\n", SpriteToString(sprite));
+			Debug("~Sprite: first deleting Event from %s.\n", SpriteToString(sprite));
 			Event_(&sprite->sp.ship.event_recharge);
 			break;
 		case SP_WMD:
-			Pedantic("~Sprite: getting rid of light from %s.\n", SpriteToString(sprite));
+			Debug("~Sprite: first deleting Light from %s.\n", SpriteToString(sprite));
 			Light_(&sprite->sp.wmd.light);
 			break;
 		case SP_DEBRIS:
@@ -409,10 +414,6 @@ void Sprite_(struct Sprite **sprite_ptr) {
 
 		replace = &sprites[sprites_size];
 		memcpy(sprite, replace, sizeof(struct Sprite));
-		/* modify light to have notify point to the new location */
-		if(sprite->sp_type == SP_WMD && sprite->sp.wmd.light) {
-			LightSetNotify(replace->sp.wmd.light, &sprite->sp.wmd.light);
-		}
 
 		sprite->prev_x = replace->prev_x;
 		sprite->next_x = replace->next_x;
@@ -427,16 +428,26 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		else                             first_y          = sprite;
 		if((neighbor = replace->next_y)) neighbor->prev_y = sprite;
 
+		/* update notify */
 		if(sprite->notify) *sprite->notify = sprite;
-		if(sprite->sp_type == SP_SHIP && sprite->sp.ship.event_recharge) {
-			Info("~Sprite: %s has event_recharge #%p.\n", SpriteToString(sprite), sprite->sp.ship.event_recharge);
-			EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
+
+		/* move the resouces associated from replace to sprite */
+		switch(sprite->sp_type) {
+			case SP_SHIP:
+				EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
+				break;
+			case SP_WMD:
+				LightSetNotify(&sprite->sp.wmd.light);
+				break;
+			default:
+				break;
 		}
-		Pedantic("~Sprite: %s has become %s.\n", SpriteToString(replace), SpriteToString(sprite));
+
+		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", SpriteToString(replace));
 	}
 
+	Debug("~Sprite: erase %s.\n", buffer);
 	*sprite_ptr = sprite = 0;
-
 }
 
 /** @return		The global variable sprites_considered, which is updated every

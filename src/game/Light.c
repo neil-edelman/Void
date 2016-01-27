@@ -92,9 +92,8 @@ void Light_(int *id_ptr) {
 
 	/* place the lights_size item into this one, decrese # */
 	if(light < (replace = lights_size - 1)) {
-		/* notify that we're changing */
-		if(notify[light])   *notify[light]   = 0;
-		if(notify[replace]) *notify[replace] = light_to_id(light);
+		/* notify that we're deleting */
+		if(notify[light]) *notify[light] = 0;
 		/* change */
 		position[light].x = position[replace].x;
 		position[light].y = position[replace].y;
@@ -102,6 +101,9 @@ void Light_(int *id_ptr) {
 		colour[light].g   = colour[replace].g;
 		colour[light].b   = colour[replace].b;
 		notify[light]     = notify[replace];
+		/* notify that we're changing */
+		if(notify[light]) *notify[light] = light_to_id(light);
+
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", to_string(replace));
 	}
 	Pedantic("~Light: erase %s.\n", buffer);

@@ -407,6 +407,9 @@ void Sprite_(struct Sprite **sprite_ptr) {
 
 	/* take it out of the lists */
 	if(first_x_window == sprite) first_x_window = sprite->next_x;
+	if(first_x        == sprite) first_x        = sprite->next_x;
+	if(first_y_window == sprite) first_y_window = sprite->next_y;
+	if(first_y        == sprite) first_y        = sprite->next_y;
 	if(sprite->prev_x) sprite->prev_x->next_x = sprite->next_x;
 	else               first_x                = sprite->next_x;
 	if(sprite->next_x) sprite->next_x->prev_x = sprite->prev_x;
@@ -420,18 +423,21 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		replace = &sprites[sprites_size];
 		memcpy(sprite, replace, sizeof(struct Sprite));
 
+		/* insert it into new position */
 		sprite->prev_x = replace->prev_x;
 		sprite->next_x = replace->next_x;
 		sprite->prev_y = replace->prev_y;
 		sprite->next_y = replace->next_y;
-
-		/* prev, next, have to know about the replacement */
-		if((neighbor = replace->prev_x)) neighbor->next_x = sprite;
-		else                             first_x          = sprite;
-		if((neighbor = replace->next_x)) neighbor->prev_x = sprite;
-		if((neighbor = replace->prev_y)) neighbor->next_y = sprite;
-		else                             first_y          = sprite;
-		if((neighbor = replace->next_y)) neighbor->prev_y = sprite;
+		if((neighbor = sprite->prev_x)) neighbor->next_x = sprite;
+		else                            first_x          = sprite;
+		if((neighbor = sprite->next_x)) neighbor->prev_x = sprite;
+		if((neighbor = sprite->prev_y)) neighbor->next_y = sprite;
+		else                            first_y          = sprite;
+		if((neighbor = sprite->next_y)) neighbor->prev_y = sprite;
+		if(first_x        == replace) first_x        = sprite;
+		if(first_x_window == replace) first_x_window = sprite;
+		if(first_y        == replace) first_y        = sprite;
+		if(first_y_window == replace) first_y_window = sprite;
 
 		/* update notify */
 		if(sprite->notify) *sprite->notify = sprite;
@@ -797,7 +803,7 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 	}
 
 	/* go to the first spot in the window */
-	if(is_reset/*!window_iterator*/) {
+	if(is_reset) {
 		int w, h, screen_width, screen_height;
 		DrawGetScreen(&screen_width, &screen_height);
 		w = (screen_width  >> 1) + (screen_width & 1);
@@ -808,11 +814,13 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 		x_max_window = (int)camera_x + w;
 		y_min_window = (int)camera_y - h;
 		y_max_window = (int)camera_y + h;
+		/* also should include sprites that are out of the window, but part of
+		 them is in */
 		x_min = x_min_window - half_max_size;
 		x_max = x_max_window + half_max_size;
 		y_min = y_min_window - half_max_size;
 		y_max = y_max_window + half_max_size;
-		/*Debug("window(%d:%d,%d,%d)\n", x_min, x_max, y_min, y_max);*/
+		if(draw_is_print_sprites) Debug("window+(%d:%d,%d,%d)\n", x_min, x_max, y_min, y_max);
 		/* no sprite anywhere? */
 		if(!first_x_window && !(first_x_window = first_x)) return 0;
 		/* place the first_x_window on the first x in the window */
@@ -826,8 +834,10 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 		}
 		/*Debug("first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
 		/* mark x; O(n) :[ */
-		for(s = first_x_window; s && s->x <= x_max; s = s->next_x)
+		for(s = first_x_window; s && s->x <= x_max; s = s->next_x) {
+			if(draw_is_print_sprites) Debug("marking %s\n", SpriteToString(s));
 			s->is_selected = -1;
+		}
 		/* now repeat for y; no sprite anywhere (this shouldn't happen!) */
 		if(!first_y_window && !(first_y_window = first_y)) return 0;
 		/* place the first_y_window on the first y in the window */
@@ -846,10 +856,12 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 		is_reset = 0;
 		sprites_considered = 0;
 		sprites_onscreen   = 0;
+		if(draw_is_print_sprites) Debug("first_y_window = window_iterator(_0) = %s\n", SpriteToString(window_iterator));
 	}
 
 	/* consider y */
 	while(window_iterator && window_iterator->y <= y_max) {
+		if(draw_is_print_sprites) Debug("considering %s\n", SpriteToString(window_iterator));
 		sprites_considered++;
 		if(window_iterator->is_selected) {
 			int extent = (window_iterator->size >> 1) + 1;
@@ -867,9 +879,11 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 				*size_ptr    = window_iterator->size;
 				window_iterator = window_iterator->next_y;
 				return -1;
-			}/* else {
-				Debug("Tighter bounds rejected Spr%u(%f,%f)\n", SpriteGetId(window_iterator), window_iterator->x, window_iterator->y);
-			}*/
+			} else if(draw_is_print_sprites) {
+				Debug("Tighter bounds rejected Spr%u(%f,%f)\n", SpriteToString(window_iterator));
+			}
+		} else if(draw_is_print_sprites) {
+			Debug("not marked %s\n", SpriteToString(window_iterator));
 		}
 		window_iterator = window_iterator->next_y;
 	}

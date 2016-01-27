@@ -9,6 +9,7 @@
 #include <stdio.h>  /* perror FIXME */
 #include "../Print.h"
 #include "../system/Timer.h"
+#include "../general/Random.h"
 #include "Event.h"
 
 /* Events have a specific time to call a function.
@@ -39,11 +40,6 @@ struct Event {
 
 /*void print_all_events(void);*/
 
-/******FIXME*****/
-int RandomIntInterval(const int sigma) {
-	return (float)rand() / RAND_MAX * sigma;
-}
-
 /* public */
 
 /** Constructor. (FIXME: have a pool of Events and draw from there; this will
@@ -63,7 +59,7 @@ struct Event *Event(const int delay_ms, const int sigma_ms, enum FnType type, ..
 	event->next            = 0;
 	real_delay_ms          = delay_ms;
 	if(sigma_ms > 0) {
-		real_delay_ms += RandomIntInterval(sigma_ms);
+		real_delay_ms += RandomUniformInt(sigma_ms); /* fixme */
 		if(real_delay_ms < 0) real_delay_ms = 0;
 	}
 	event->t_ms            = TimerGetGameTime() + real_delay_ms;

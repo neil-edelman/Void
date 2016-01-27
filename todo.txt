@@ -62,6 +62,8 @@ things that you can buy that allow different things to be picked up, eg gold min
 
 have a sprite and normals, instead of all having a cone for normals -> automate making sprites, have different views instead of rotating -> create 3d models, create ray-tracer in tools
 
+order the lights by distance/brighness and take the head of the list, and ignore all that pass a certain threshold. This will scale way better.
+
 look up how to get outlines (I think you just add a little bit to the size and then render it in one colour)
 
 text engine (display lists? wrapping?) -- communication

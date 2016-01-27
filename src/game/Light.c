@@ -8,6 +8,9 @@
  Lights depend on external unsigned integers to keep track. Don't modify the
  light with a function not in this and don't free the unsigned without calling
  Light_.
+ <p>
+ Fixme: order the lights by distance/brighness and take the head of the list,
+ and ignore all that pass a certain threshold. This will scale way better.
  @author	Neil
  @version	3.3, 2016-01
  @since		1.0, 2000 */
@@ -38,7 +41,7 @@ char *to_string(const unsigned light);
 
 /** Constructor.
  @param id_ptr	The pointer where this light lives.
- @param i		The intensity, i > 0.
+ @param i		The intensity, i >= 0.
  @param r,g,b	The colours, [0, 1].
  @return		Boolean true on success; the id_ptr has (0, MAX_LIGHTS]. */
 int Light(int *const id_ptr, const float i, const float r, const float g, const float b) {

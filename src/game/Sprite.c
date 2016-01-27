@@ -41,7 +41,7 @@
 #include "Event.h"
 #include "Sprite.h"
 
-/* M_ are widely accepted gnu standard, not C99 */
+/* M_PI is a widely accepted gnu standard, not C>=99 -- who knew? */
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383279502884197169399375105820974944
 #endif
@@ -304,18 +304,20 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	}
 	va_end(args);
 
-	/* ensure that we're in the pricipal branch */
+	/* could be null was passed, eg, Sprite(ImageSearch("not there")); check!
+	this is after va_end because most things have resources that define image */
+	if(!image) {
+		Warn("Sprite: couldn't create %s because image is null.\n", SpriteToString(s));
+		sprites_size--;
+		return 0;
+	}
+
+	/* ensure pricipal branch */
 	branch_cut_pi_pi(&s->theta);
 	if(s->x < -de_sitter || s->x > de_sitter
 	   || s->y < -de_sitter || s->y > de_sitter) {
 		Warn("Sprite: %s is beyond de Sitter universe, zeroed.\n", SpriteToString(s));
 		s->x = s->y = 0.0f;
-	}
-	/* could be null was passed, eg, Sprite(ImageSearch("not there")); check! */
-	if(!image) {
-		Warn("Sprite: couldn't create %s because image is null.\n", SpriteToString(s));
-		sprites_size--;
-		return 0;
 	}
 	/* fixme: have a more sutble way; ie, examine the image? */
 	s->bounding = image->width * 0.5f;
@@ -324,6 +326,13 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 
 	s->is_selected   = 0;
 	s->no_collisions = 0;
+
+	/* enforce minimum mass */
+	if(s->mass < minimum_mass) {
+		Warn("Sprite: %s set to minimum mass %.2f.\n", SpriteToString(s), minimum_mass);
+		s->mass = minimum_mass;
+	}
+
 	/* stick sprite onto the head of the lists and then sort it */
 	s->prev_x        = 0;
 	s->next_x        = first_x;
@@ -334,12 +343,9 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	first_x = first_y = s;
 	sort_notify(s);
 
-	if(s->mass < minimum_mass) {
-		Warn("Sprite: %s set to minimum mass %.2f.\n", SpriteToString(s), minimum_mass);
-		s->mass = minimum_mass;
-	}
-
 	Debug("Sprite: created from pool, %s.\n", SpriteToString(s));
+
+	/* FIXME! */
 	KeyRegister('s',  &sprite_poll);
 
 	return s;
@@ -383,11 +389,11 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	/* gid rid of the resources associated with each type of sprite */
 	switch(sprite->sp_type) {
 		case SP_SHIP:
-			Debug("~Sprite: first deleting Event from %s.\n", SpriteToString(sprite));
+			Pedantic("~Sprite: first deleting Event from %s.\n", SpriteToString(sprite));
 			Event_(&sprite->sp.ship.event_recharge);
 			break;
 		case SP_WMD:
-			Debug("~Sprite: first deleting Light from %s.\n", SpriteToString(sprite));
+			Pedantic("~Sprite: first deleting Light from %s.\n", SpriteToString(sprite));
 			Light_(&sprite->sp.wmd.light);
 			break;
 		case SP_DEBRIS:
@@ -395,13 +401,12 @@ void Sprite_(struct Sprite **sprite_ptr) {
 			break;
 	}
 
-	/* deal with deleting it while iterating; fixme: have more complex? */
-	if(sprite <= iterator) iterator--; /* <- I think? */
-
-	/* if it's the first x in the window, advance the first x */
-	if(first_x_window == sprite) first_x_window = sprite->next_x;
+	/* deal with deleting it while iterating; fixme: have more complex? I think
+	 this covers all cases, but check */
+	if(sprite <= iterator) iterator--;
 
 	/* take it out of the lists */
+	if(first_x_window == sprite) first_x_window = sprite->next_x;
 	if(sprite->prev_x) sprite->prev_x->next_x = sprite->next_x;
 	else               first_x                = sprite->next_x;
 	if(sprite->next_x) sprite->next_x->prev_x = sprite->prev_x;
@@ -543,9 +548,11 @@ void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify) {
 	if(notify) {
 		if(*notify) Warn("Sprite::setNotify: overriding a previous notification on the external pointer.\n");
 		if(s->notify) Warn("Sprite::setNotify: overriding a previous notification on the Sprite.\n");
+		s->notify = notify;
+		*s->notify = s;
+	} else {
+		s->notify = 0;
 	}
-	s->notify = notify;
-	if(notify) *s->notify = s;
 }
 
 /** Gets the Sprite type that was assigned at the beginning. */
@@ -764,6 +771,8 @@ void SpriteRemoveIf(int (*const predicate)(struct Sprite *const)) {
 	}
 }
 
+extern int draw_is_print_sprites;
+
 /** Returns true while there are more sprites in the window, sets the values.
  The pointers need to all be there or else there will surely be a segfault.
  <p>
@@ -780,6 +789,12 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 	static int is_reset = -1; /* oy, static */
 	struct Sprite *s, *feeler;
 	float camera_x, camera_y;
+
+	if(draw_is_print_sprites) {
+		Debug("%s: {", "iterate");
+		while((s = iterate())) Debug(" %s", SpriteToString(s));
+		Debug(" }\n");
+	}
 
 	/* go to the first spot in the window */
 	if(is_reset/*!window_iterator*/) {
@@ -1434,8 +1449,6 @@ static void do_ai(struct Sprite *const a, const int dt_ms) {
 	}
 	SpriteInput(a, turning, acceleration, dt_ms);
 }
-
-extern int draw_is_print_sprites;
 
 static void sprite_poll(void) {
 	struct Sprite *s;

@@ -1,6 +1,9 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
+/********************** THIS ONE NEXT! ****************/
+/* instead of having all events malloc, have pool */
+
 #include <stdarg.h>
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* perror FIXME */

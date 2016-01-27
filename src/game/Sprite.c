@@ -256,8 +256,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.ship.ms_recharge_wmd = 0;
 			s->sp.ship.ms_recharge_hit = class->ms_recharge;
 			/* high sigma for the first call increases staggering */
-			s->sp.ship.event_recharge  = 0;/*Event(s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);*/
-			/*s->sp.ship.ms_recharge_hit_time = TimerGetGameTime() + class->ms_recharge;*/
+			s->sp.ship.event_recharge  = Event(s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);
 			s->sp.ship.hit = s->sp.ship.max_hit = class->shield;
 			s->sp.ship.max_speed2      = class->speed * class->speed * px_s_to_px2_ms2;
 			/* fixme:units! should be t/s^2 -> t/ms^2 */
@@ -265,7 +264,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.ship.turn            = class->turn * deg_sec_to_rad_ms;
 			/* fixme: have it explicity settable */
 			s->sp.ship.turn_acceleration = class->turn * deg_sec_to_rad_ms * 0.01f /*<-fixme*/;
-			s->sp.ship.horizon         = 0.0f;
+			s->sp.ship.horizon         = 0.0f; /* fixme: horizon is broken w/o a way to reset */
 			s->sp.ship.behaviour       = va_arg(args, const enum Behaviour);
 			break;
 		case SP_WMD:

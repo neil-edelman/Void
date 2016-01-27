@@ -400,8 +400,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 			break;
 	}
 
-	/* deal with deleting it while iterating; fixme: have more complex? I think
-	 this covers all cases, but check */
+	/* deal with deleting it while iterating */
 	if(sprite <= iterator) iterator--;
 
 	/* take it out of the lists */
@@ -437,6 +436,10 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(first_x_window == replace) first_x_window = sprite;
 		if(first_y        == replace) first_y        = sprite;
 		if(first_y_window == replace) first_y_window = sprite;
+		if(window_iterator == replace) {
+			Warn("~Sprite: deleted %s, replacement %s; was doing window iteration on replacement, which is Bad.\n");
+			window_iterator = sprite;
+		}
 
 		/* update notify */
 		if(sprite->notify) *sprite->notify = sprite;

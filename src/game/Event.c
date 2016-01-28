@@ -18,7 +18,7 @@
 static struct Event {
 	struct Event *prev, *next;
 	unsigned     t_ms;
-	struct Event **notify;
+	/*struct Event **notify; useless! */
 	enum FnType  fn_type;
 	union {
 		struct {
@@ -45,7 +45,7 @@ void print_all_events(void);
 
 /** Constructor.
  @return	An object or a null pointer, if the object couldn't be created. */
-struct Event *Event(const char z, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...) {
+int Event(const char z, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...) {
 	va_list args;
 	struct Event *event, *prev, *next;
 	int real_delay_ms;
@@ -67,7 +67,7 @@ struct Event *Event(const char z, const int delay_ms, const int sigma_ms, enum F
 
 	event->prev    = event->next = 0;
 	event->t_ms    = TimerGetGameTime() + real_delay_ms;
-	event->notify  = 0;
+	/*event->notify  = 0;*/
 	event->z       = z;
 	event->fn_type = fn_type;
 	/* do something different based on what the type is */
@@ -110,7 +110,7 @@ struct Event *Event(const char z, const int delay_ms, const int sigma_ms, enum F
 
 	Debug("Event: new at %dms inefficiency %u %c (size %u).\n", event->t_ms, i, event->z, events_size);
 
-	return event;
+	return -1/*event*/;
 }
 
 /** Destructor.
@@ -128,7 +128,7 @@ void Event_(struct Event **event_ptr) {
 	}
 
 	/* update notify */
-	if(event->notify) *event->notify = 0;
+	/*if(event->notify) *event->notify = 0;*/
 
 	/* take it out of the queue */
 	if(event->prev) event->prev->next = event->next;
@@ -149,27 +149,27 @@ void Event_(struct Event **event_ptr) {
 		else            last_event        = event;
 
 		/* update notify */
-		if(event->notify) *event->notify = event;
+		/*if(event->notify) *event->notify = event;*/
 	}
 	Debug("~Event: erase, %c size %u.\n", event->z, events_size);
 
 	*event_ptr = event = 0;
 }
 
-/** Flush the Events without Dispatch. FIXME!!! */
+/** Flush the Events without Dispatch. */
 void EventClear(void) {
 	Debug("Event::clear: clearing Events.\n");
 	first_event = last_event = 0;
 }
 
-void EventSetNotify(struct Event **const e_ptr) {
+/*void EventSetNotify(struct Event **const e_ptr) {
 	struct Event *e;
 
 	if(!e_ptr || !(e = *e_ptr)) return;
 	if(e->notify) Warn("Event::setNotify: #%p overriding previous notification #%p.\n", (void *)e_ptr, (void *)e->notify);
 	Pedantic("Event::setNotify: Event %c set #%p.\n", e->z, (void *)e_ptr);
 	e->notify = e_ptr;
-}
+}*/
 
 /** Dispach all events up to the present. */
 void EventDispatch(void) {
@@ -178,7 +178,7 @@ void EventDispatch(void) {
 	while((e = first_event) && TimerIsTime(e->t_ms)) {
 		/* switch off notification so that the event can recurse without
 		 overriding the notify field; it's useless once it's been triggered */
-		e->notify = 0;
+		/*e->notify = 0;*/
 		Pedantic("Event: event %c triggered at %ums.\n", e->z, e->t_ms);
 		switch(e->fn_type) {
 			case FN_RUNNABLE:    e->fn.runnable.run(); break;

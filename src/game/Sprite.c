@@ -108,7 +108,8 @@ static struct Sprite {
 			const struct AutoShipClass *class;
 			unsigned       ms_recharge_wmd; /* ms */
 			unsigned       ms_recharge_hit; /* ms */
-			struct Event   *event_recharge;
+			/*struct Event   *event_recharge;*/
+			unsigned       ms_recharge_event; /* ms */
 			int            hit, max_hit; /* J */
 			float          max_speed2;
 			float          acceleration;
@@ -178,7 +179,7 @@ static char *decode_sprite_type(const enum SpType sptype);
 static void gate_travel(struct Sprite *const gate, struct Sprite *ship);
 static void do_ai(struct Sprite *const s, const int dt_ms);
 static void sprite_poll(void);
-static void recharge(struct Sprite *const a);
+/*static void recharge(struct Sprite *const a);*/
 
 /* fixme: this assumes SP_DEBRIS = 0, ..., SP_ETHEREAL = 3 */
 static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, const float) = {
@@ -191,7 +192,7 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 
 /* public */
 
-static char ARR = 'A';
+/*static char ARR = 'A';*/
 
 /** Get a new sprite from the pool of unused.
  Sprite(SP_DEBRIS, const struct Image *image, const int x, y, const float theta,
@@ -255,12 +256,13 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.ship.class = class = va_arg(args, struct AutoShipClass *const);
 			image                      = (struct AutoImage *)class->image; /*fixme*/
 			s->mass                    = class->mass;
-			s->sp.ship.ms_recharge_wmd = 0;
+			s->sp.ship.ms_recharge_wmd = TimerGetGameTime();
 			s->sp.ship.ms_recharge_hit = class->ms_recharge;
 			/* high sigma for the first call increases staggering */
-			s->sp.ship.event_recharge  = Event(ARR++, s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);
+			/*s->sp.ship.event_recharge  = Event(ARR++, s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);
 			if(ARR > 'z') ARR = 'A';
-			EventSetNotify(&s->sp.ship.event_recharge);
+			EventSetNotify(&s->sp.ship.event_recharge);*/
+			s->sp.ship.ms_recharge_event = 0; /* doesn't matter */
 			s->sp.ship.hit = s->sp.ship.max_hit = class->shield;
 			s->sp.ship.max_speed2      = class->speed * class->speed * px_s_to_px2_ms2;
 			/* fixme:units! should be t/s^2 -> t/ms^2 */
@@ -392,8 +394,8 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	/* gid rid of the resources associated with each type of sprite */
 	switch(sprite->sp_type) {
 		case SP_SHIP:
-			Pedantic("~Sprite: first deleting Event from %s.\n", SpriteToString(sprite));
-			Event_(&sprite->sp.ship.event_recharge);
+			/*Pedantic("~Sprite: first deleting Event from %s.\n", SpriteToString(sprite));
+			Event_(&sprite->sp.ship.event_recharge);*/
 			break;
 		case SP_WMD:
 			Pedantic("~Sprite: first deleting Light from %s.\n", SpriteToString(sprite));
@@ -450,9 +452,9 @@ void Sprite_(struct Sprite **sprite_ptr) {
 
 		/* move the resouces associated from replace to sprite */
 		switch(sprite->sp_type) {
-			case SP_SHIP:
+			/*case SP_SHIP:
 				EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
-				break;
+				break;*/
 			case SP_WMD:
 				LightSetNotify(&sprite->sp.wmd.light);
 				break;
@@ -634,10 +636,17 @@ void SpriteRecharge(struct Sprite *const s, const int recharge) {
 			break;
 		case SP_SHIP:
 			if(recharge + s->sp.ship.hit >= s->sp.ship.max_hit) {
+				/* cap off */
 				s->sp.ship.hit = s->sp.ship.max_hit;
 			} else if(-recharge < s->sp.ship.hit) {
+				/* recharge starts as soon as damage */
+				if(s->sp.ship.hit >= s->sp.ship.max_hit) {
+					s->sp.ship.ms_recharge_event = TimerGetGameTime() + s->sp.ship.ms_recharge_hit;
+					Debug("Sprite::recharge: %s set future recharge.\n", SpriteToString(s));
+				}
 				s->sp.ship.hit += (unsigned)recharge;
 			} else {
+				/* killed */
 				s->sp.ship.hit = 0;
 			}
 			break;
@@ -990,9 +999,19 @@ void SpriteUpdate(const int dt_ms) {
 					case B_NONE:
 						break;
 				}
-				if(0 < s->sp.ship.hit) break;
-				Info("Sprite::update: %s destroyed.\n", SpriteToString(s));
-				Sprite_(&s);
+				if(0 >= s->sp.ship.hit) {
+					Info("Sprite::update: %s destroyed.\n", SpriteToString(s));
+					Sprite_(&s);
+					break;
+				}
+				if(s->sp.ship.hit < s->sp.ship.max_hit) {
+					while(TimerIsTime(s->sp.ship.ms_recharge_event)) {
+						SpriteRecharge(s, 1);
+						if(s->sp.ship.hit >= s->sp.ship.max_hit) break;
+						s->sp.ship.ms_recharge_event += s->sp.ship.ms_recharge_hit;
+						Debug("Sprite::update: %s recharging.\n", SpriteToString(s));
+					}
+				}
 				break;
 			case SP_WMD:
 				if(TimerIsTime(s->sp.wmd.expires)) { Sprite_(&s); break; }
@@ -1484,7 +1503,7 @@ static void sprite_poll(void) {
 }
 
 /** can be used as an Event */
-static void recharge(struct Sprite *const a) {
+/*static void recharge(struct Sprite *const a) {
 	if(!a || SpriteGetType(a) != SP_SHIP) {
 		Warn("Sprite::recharge: called on %s.\n", SpriteToString(a));
 		return;
@@ -1494,4 +1513,4 @@ static void recharge(struct Sprite *const a) {
 	a->sp.ship.event_recharge = Event(ARR++, a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &recharge, a);
 	if(ARR > 'z') ARR = 'A';
 	EventSetNotify(&a->sp.ship.event_recharge);
-}
+}*/

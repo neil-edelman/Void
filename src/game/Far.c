@@ -18,8 +18,8 @@
 /* the backgrounds can be larger than the sprites, 1024x1024? */
 static const int half_max_size    = 512;
 /* changed? update shader Far.vs! should be 0.00007:14285.714; space is
- big! too slow to get anywhere, so fudge it (basically this makes space much
- smaller or us very big) */
+ big! too slow to get anywhere, so fudge it; basically, this makes space much
+ smaller */
 static const float foreshortening = 0.2f, one_foreshortening = 5.0f;
 
 struct Far {
@@ -119,11 +119,6 @@ void Far_(struct Far **far_ptr) {
 
 		replace = &backgrounds[backgrounds_size];
 		memcpy(far, replace, sizeof(struct Far));
-
-		far->prev_x = replace->prev_x;
-		far->next_x = replace->next_x;
-		far->prev_y = replace->prev_y;
-		far->next_y = replace->next_y;
 
 		/* prev, next, have to know about the replacement */
 		if((neighbor = replace->prev_x)) neighbor->next_x = far;

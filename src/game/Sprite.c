@@ -373,7 +373,7 @@ struct Sprite *SpriteGate(const struct AutoGate *gate) {
 /** Erase a sprite from the pool (array of static sprites.)
  @param sprite_ptr	A pointer to the sprite; gets set null on success. */
 void Sprite_(struct Sprite **sprite_ptr) {
-	struct Sprite *sprite, *replace, *neighbor;
+	struct Sprite *sprite, *replace;
 	int index;
 	unsigned characters;
 	char buffer[128];
@@ -427,25 +427,21 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		replace = &sprites[sprites_size];
 		memcpy(sprite, replace, sizeof(struct Sprite));
 
-		/* insert it into new position */
-		/*sprite->prev_x = replace->prev_x;
-		sprite->next_x = replace->next_x;
-		sprite->prev_y = replace->prev_y;
-		sprite->next_y = replace->next_y;*/ /* FIXME: uuuhh, didn't this memcpy? */
-		if((neighbor = sprite->prev_x)) neighbor->next_x = sprite;
-		else                            first_x          = sprite;
-		if((neighbor = sprite->next_x)) neighbor->prev_x = sprite;
-		if((neighbor = sprite->prev_y)) neighbor->next_y = sprite;
-		else                            first_y          = sprite;
-		if((neighbor = sprite->next_y)) neighbor->prev_y = sprite;
-		if(first_x        == replace) first_x        = sprite;
-		if(first_x_window == replace) first_x_window = sprite;
-		if(first_y        == replace) first_y        = sprite;
-		if(first_y_window == replace) first_y_window = sprite;
-		if(window_iterator == replace) {
-			Warn("~Sprite: deleted %s, replacement %s was doing window iteration, which is probably Bad.\n", buffer, SpriteToString(sprite));
-			window_iterator = 0/*sprite*/;
-		}
+		/* update the neighbours */
+		if(sprite->prev_x) sprite->prev_x->next_x = sprite;
+		else               first_x                = sprite;
+		if(sprite->next_x) sprite->next_x->prev_x = sprite;
+		if(sprite->prev_y) sprite->prev_y->next_y = sprite;
+		else               first_y                = sprite;
+		if(sprite->next_y) sprite->next_y->prev_y = sprite;
+
+		/* may need to update pointers to list; iterator doesn't use
+		 linked-list, rather, uses array; dealt with above */
+		if(replace == first_x)        first_x        = sprite;
+		if(replace == first_x_window) first_x_window = sprite;
+		if(replace == first_y)        first_y        = sprite;
+		if(replace == first_y_window) first_y_window = sprite;
+		if(replace == window_iterator)window_iterator= sprite;
 
 		/* update notify */
 		if(sprite->notify) *sprite->notify = sprite;

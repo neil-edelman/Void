@@ -95,7 +95,7 @@ static struct Sprite {
 	unsigned size;		/* the (x, y) size; they are the same */
 	int      texture;	/* gpu texture */
 	/* if we store a Sprite, and the Sprite changes addresses, this will
-	 automatically change the pointer; it should be null */
+	 automatically change the pointer; should be passed a null on setNotify */
 	struct Sprite **notify;
 
 	enum SpType  sp_type;
@@ -191,6 +191,8 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 
 /* public */
 
+static char ARR = 'A';
+
 /** Get a new sprite from the pool of unused.
  Sprite(SP_DEBRIS, const struct Image *image, const int x, y, const float theta,
   const unsigned mass);
@@ -256,7 +258,9 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.ship.ms_recharge_wmd = 0;
 			s->sp.ship.ms_recharge_hit = class->ms_recharge;
 			/* high sigma for the first call increases staggering */
-			s->sp.ship.event_recharge  = Event(s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);
+			s->sp.ship.event_recharge  = Event(ARR++, s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);
+			if(ARR > 'z') ARR = 'A';
+			EventSetNotify(&s->sp.ship.event_recharge);
 			s->sp.ship.hit = s->sp.ship.max_hit = class->shield;
 			s->sp.ship.max_speed2      = class->speed * class->speed * px_s_to_px2_ms2;
 			/* fixme:units! should be t/s^2 -> t/ms^2 */
@@ -342,7 +346,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	first_x = first_y = s;
 	sort_notify(s);
 
-	Debug("Sprite: created from pool, %s.\n", SpriteToString(s));
+	Pedantic("Sprite: created %s.\n", SpriteToString(s));
 
 	/* FIXME! */
 	KeyRegister('s',  &sprite_poll);
@@ -422,10 +426,10 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		memcpy(sprite, replace, sizeof(struct Sprite));
 
 		/* insert it into new position */
-		sprite->prev_x = replace->prev_x;
+		/*sprite->prev_x = replace->prev_x;
 		sprite->next_x = replace->next_x;
 		sprite->prev_y = replace->prev_y;
-		sprite->next_y = replace->next_y;
+		sprite->next_y = replace->next_y;*/ /* FIXME: uuuhh, didn't this memcpy? */
 		if((neighbor = sprite->prev_x)) neighbor->next_x = sprite;
 		else                            first_x          = sprite;
 		if((neighbor = sprite->next_x)) neighbor->prev_x = sprite;
@@ -437,8 +441,8 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(first_y        == replace) first_y        = sprite;
 		if(first_y_window == replace) first_y_window = sprite;
 		if(window_iterator == replace) {
-			Warn("~Sprite: deleted %s, replacement %s; was doing window iteration on replacement, which is Bad.\n");
-			window_iterator = sprite;
+			Warn("~Sprite: deleted %s, replacement %s was doing window iteration, which is probably Bad.\n", buffer, SpriteToString(sprite));
+			window_iterator = 0/*sprite*/;
 		}
 
 		/* update notify */
@@ -459,7 +463,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", SpriteToString(replace));
 	}
 
-	Debug("~Sprite: erase %s.\n", buffer);
+	Pedantic("~Sprite: erase %s.\n", buffer);
 	*sprite_ptr = sprite = 0;
 }
 
@@ -551,6 +555,7 @@ unsigned SpriteGetSize(const struct Sprite *const s) {
 	return s->size;
 }
 
+/* FIXME: only one is needed? */
 void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify) {
 	if(!s) return;
 	if(notify) {
@@ -1410,7 +1415,7 @@ static void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
 		Debug("gate_travel: %s crossed into the event horizon of %s.\n", SpriteToString(ship), SpriteToString(gate));
 		if(ship == GameGetPlayer()) {
 			/* trasport to zone immediately */
-			Event(0, 0, FN_CONSUMER, &ZoneChange, gate);
+			Event('g', 0, 0, FN_CONSUMER, &ZoneChange, gate);
 		} else {
 			/* disappear */
 			/* fixme: test! */
@@ -1486,5 +1491,7 @@ static void recharge(struct Sprite *const a) {
 	}
 	Pedantic("recharge %s\n", SpriteToString(a));
 	SpriteRecharge(a, 1);
-	a->sp.ship.event_recharge = Event(a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &recharge, a);
+	a->sp.ship.event_recharge = Event(ARR++, a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &recharge, a);
+	if(ARR > 'z') ARR = 'A';
+	EventSetNotify(&a->sp.ship.event_recharge);
 }

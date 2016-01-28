@@ -18,7 +18,7 @@
 static struct Event {
 	struct Event *prev, *next;
 	unsigned     t_ms;
-	/*struct Event **notify; useless! */
+	struct Event **notify;
 	enum FnType  fn_type;
 	union {
 		struct {
@@ -40,12 +40,13 @@ static const int events_capacity = sizeof events / sizeof(struct Event);
 static int       events_size;
 
 void print_all_events(void);
+char *decode_fn_type(const struct Event *const e);
 
 /* public */
 
 /** Constructor.
  @return	An object or a null pointer, if the object couldn't be created. */
-int Event(const char z, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...) {
+struct Event *Event(const char z, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...) {
 	va_list args;
 	struct Event *event, *prev, *next;
 	int real_delay_ms;
@@ -67,7 +68,7 @@ int Event(const char z, const int delay_ms, const int sigma_ms, enum FnType fn_t
 
 	event->prev    = event->next = 0;
 	event->t_ms    = TimerGetGameTime() + real_delay_ms;
-	/*event->notify  = 0;*/
+	event->notify  = 0;
 	event->z       = z;
 	event->fn_type = fn_type;
 	/* do something different based on what the type is */
@@ -90,6 +91,7 @@ int Event(const char z, const int delay_ms, const int sigma_ms, enum FnType fn_t
 
 	/* O(n), technically; however, new values have a higher likelihood of being
 	 at the end. FIXME: gets screwed up 29.3 days in!!!! use TimerCompare() */
+	/* FIXME: singly-linked!!! more events are happening soon */
 	for(prev = last_event, next = 0, i = 0;
 		prev && prev->t_ms > event->t_ms;
 		next = prev, prev = prev->prev, i++);
@@ -109,8 +111,10 @@ int Event(const char z, const int delay_ms, const int sigma_ms, enum FnType fn_t
 	}
 
 	Debug("Event: new at %dms inefficiency %u %c (size %u).\n", event->t_ms, i, event->z, events_size);
+	print_all_events();
+	if(event->fn_type == FN_CONSUMER) Debug("Event: oh, Consumer #%p of #%p\n", event->fn.consumer.accept, event->fn.consumer.t);
 
-	return -1/*event*/;
+	return event;
 }
 
 /** Destructor.
@@ -128,7 +132,7 @@ void Event_(struct Event **event_ptr) {
 	}
 
 	/* update notify */
-	/*if(event->notify) *event->notify = 0;*/
+	if(event->notify) *event->notify = 0;
 
 	/* take it out of the queue */
 	if(event->prev) event->prev->next = event->next;
@@ -149,7 +153,7 @@ void Event_(struct Event **event_ptr) {
 		else            last_event        = event;
 
 		/* update notify */
-		/*if(event->notify) *event->notify = event;*/
+		if(event->notify) *event->notify = event;
 	}
 	Debug("~Event: erase, %c size %u.\n", event->z, events_size);
 
@@ -162,14 +166,14 @@ void EventClear(void) {
 	first_event = last_event = 0;
 }
 
-/*void EventSetNotify(struct Event **const e_ptr) {
+void EventSetNotify(struct Event **const e_ptr) {
 	struct Event *e;
 
 	if(!e_ptr || !(e = *e_ptr)) return;
-	if(e->notify) Warn("Event::setNotify: #%p overriding previous notification #%p.\n", (void *)e_ptr, (void *)e->notify);
+	if(e->notify) Warn("Event::setNotify: #%p overriding a previous notification #%p on #%p.\n", (void *)e_ptr, (void *)e->notify, (void *)e);
 	Pedantic("Event::setNotify: Event %c set #%p.\n", e->z, (void *)e_ptr);
 	e->notify = e_ptr;
-}*/
+}
 
 /** Dispach all events up to the present. */
 void EventDispatch(void) {
@@ -178,11 +182,14 @@ void EventDispatch(void) {
 	while((e = first_event) && TimerIsTime(e->t_ms)) {
 		/* switch off notification so that the event can recurse without
 		 overriding the notify field; it's useless once it's been triggered */
-		/*e->notify = 0;*/
+		e->notify = 0;
 		Pedantic("Event: event %c triggered at %ums.\n", e->z, e->t_ms);
 		switch(e->fn_type) {
 			case FN_RUNNABLE:    e->fn.runnable.run(); break;
-			case FN_CONSUMER:    e->fn.consumer.accept(e->fn.consumer.t); break;
+			case FN_CONSUMER:    Debug("Event %c activated #%p of #%p.\n", e->z, e->fn.consumer.accept, e->fn.consumer.t);
+				e->fn.consumer.accept(e->fn.consumer.t);
+				Debug("Event %c finished.\n", e->z);
+				break;
 			case FN_BICONSUMER:
 				e->fn.biconsumer.accept(e->fn.biconsumer.t, e->fn.biconsumer.u);
 				break;
@@ -196,10 +203,12 @@ void EventReplaceArguments(struct Event *const event, ...) {
 	va_list args;
 
 	if(!event) return;
+	Debug("Event::replaceArguments: #%p.\n");
 
 	va_start(args, event);
 	switch(event->fn_type) {
 		case FN_RUNNABLE:
+			Warn("Event::replaceArguments: #%p has no arguments.\n");
 			break;
 		case FN_CONSUMER:
 			event->fn.consumer.t   = va_arg(args, void *);
@@ -214,9 +223,19 @@ void EventReplaceArguments(struct Event *const event, ...) {
 
 void print_all_events(void) {
 	struct Event *e;
-	Debug("%d {\n", TimerGetGameTime());
+	Debug("Events %ums {\n", TimerGetGameTime());
 	for(e = first_event; e; e = e->next) {
-		Debug("Event %c at %ums.\n", e->z, e->t_ms);
+		Debug("\t%c\t%s\t%ums\n", e->z, decode_fn_type(e), e->t_ms);
 	}
 	Debug("}\n");
+}
+
+char *decode_fn_type(const struct Event *const e) {
+	if(!e) return "Null";
+	switch(e->fn_type) {
+		case FN_RUNNABLE: return "Runnable";
+		case FN_CONSUMER: return "Consumer";
+		case FN_BICONSUMER: return "Biconsumer";
+	}
+	return "FnTypeNotEnum";
 }

@@ -70,7 +70,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* update the current zone */
 	current_zone = sz;
 
-#if 0
+#if 1
 	/* some asteroids */
 	for(i = 0; i < 1000; i++) {
 		s = Sprite(SP_DEBRIS, AutoImageSearch("Asteroid.png"), (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), big_asteroid_mass);

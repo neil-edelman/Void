@@ -10,11 +10,12 @@
 #define STRCOPY
 #define CAMEL_TO_SNAKE_CASE
 #include "Functions.h"
-
 #include "Error.h"
 #include "Reader.h"
 #include "Type.h"
 #include "Record.h"
+
+#include "Lore.h" /* FIXME: only one instance, LoreIsEmpty */
 
 /* asprintf, index, strsep, snprintf undefined */
 

@@ -553,7 +553,15 @@ unsigned SpriteGetSize(const struct Sprite *const s) {
 	return s->size;
 }
 
-/* FIXME: only one is needed? */
+/** Sets a spot in memory which points to the, possibly changing, sprite. */
+void SpriteSetNotify(struct Sprite **const s_ptr) {
+	struct Sprite *s;
+	
+	if(!s_ptr || !(s = *s_ptr)) return;
+	if(s->notify) Warn("Sprite::setNotify: overriding a previous notification.\n");
+	s->notify = s_ptr;
+}
+/* FIXME: only one is needed?
 void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify) {
 	if(!s) return;
 	if(notify) {
@@ -564,7 +572,7 @@ void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify) {
 	} else {
 		s->notify = 0;
 	}
-}
+}*/
 
 /** Gets the Sprite type that was assigned at the beginning. */
 enum SpType SpriteGetType(const struct Sprite *const sprite) {

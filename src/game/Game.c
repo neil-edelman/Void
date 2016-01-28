@@ -65,7 +65,6 @@ static void bi(char *, char *);
 
 /** constructor */
 int Game(void) {
-	struct Sprite *s;
 
 	if(is_started) return -1;
 
@@ -96,8 +95,8 @@ int Game(void) {
 	Zone(game.start);
 	Event('a', 3000, 1000, FN_CONSUMER, &con, "cool");
 	Event('b', 2000, 1000, FN_RUNNABLE, &position);
-	s = Sprite(SP_SHIP, 0, 0, 0.0, game.nautilus, B_HUMAN);
-	SpriteSetNotify(s, &game.player);
+	game.player = Sprite(SP_SHIP, 0, 0, 0.0, game.nautilus, B_HUMAN);
+	SpriteSetNotify(&game.player);
 
 	Debug("Game: on.\n");
 	is_started = -1;

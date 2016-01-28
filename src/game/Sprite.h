@@ -23,7 +23,8 @@ void SpriteSetOmega(struct Sprite *const sprite, const float omega);
 float SpriteGetBounding(const struct Sprite *const sprite);
 float SpriteGetMass(const struct Sprite *const s);
 unsigned SpriteGetSize(const struct Sprite *const s);
-void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify);
+/*void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify);*/
+void SpriteSetNotify(struct Sprite **const s_ptr);
 enum SpType SpriteGetType(const struct Sprite *const sprite);
 char *SpriteToString(const struct Sprite *const s);
 const struct AutoSpaceZone *SpriteGetTo(const struct Sprite *const s);

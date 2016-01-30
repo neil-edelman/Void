@@ -112,9 +112,7 @@ struct Event *Event(const char z, const int delay_ms, const int sigma_ms, enum F
 		last_event  = event;
 	}
 
-	Debug("Event: new at %dms inefficiency %u %c (size %u).\n", event->t_ms, i, event->z, events_size);
-	print_all_events();
-	if(event->fn_type == FN_CONSUMER) Debug("Event: oh, Consumer #%p of #%p\n", event->fn.consumer.accept, event->fn.consumer.t);
+	Pedantic("Event: new at %dms inefficiency %u %c (size %u).\n", event->t_ms, i, event->z, events_size);
 
 	return event;
 }
@@ -157,7 +155,7 @@ void Event_(struct Event **event_ptr) {
 		/* update notify */
 		if(event->notify) *event->notify = event;
 	}
-	Debug("~Event: erase, %s size %u.\n", EventToString(event), events_size);
+	Pedantic("~Event: erase, %s size %u.\n", EventToString(event), events_size);
 
 	*event_ptr = event = 0;
 }
@@ -167,13 +165,12 @@ void EventRemoveIf(int (*const predicate)(struct Event *const)) {
 	struct Event *e;
 
 	Debug("Event::clear: clearing Events.\n");
-	print_all_events();
-	//first_event = last_event = 0;
+	/*print_all_events();*/
 	while((e = iterate())) {
 		Pedantic("Event::removeIf: consdering %s.\n", SpriteToString(s));
 		if(!predicate || predicate(e)) Event_(&e);
 	}
-	print_all_events();
+	/*print_all_events();*/
 }
 
 void EventSetNotify(struct Event **const e_ptr) {
@@ -181,7 +178,6 @@ void EventSetNotify(struct Event **const e_ptr) {
 
 	if(!e_ptr || !(e = *e_ptr)) return;
 	if(e->notify) Warn("Event::setNotify: #%p overriding a previous notification #%p on #%p.\n", (void *)e_ptr, (void *)e->notify, (void *)e);
-	Pedantic("Event::setNotify: Event %c set #%p.\n", e->z, (void *)e_ptr);
 	e->notify = e_ptr;
 }
 
@@ -201,10 +197,7 @@ void EventDispatch(void) {
 		Pedantic("Event: event %s triggered.\n", EventToString(e));
 		switch(e->fn_type) {
 			case FN_RUNNABLE:    e->fn.runnable.run(); break;
-			case FN_CONSUMER:    Debug("Event: %s activated #%p of #%p.\n", EventToString(e), e->fn.consumer.accept, e->fn.consumer.t);
-				e->fn.consumer.accept(e->fn.consumer.t);
-				Debug("Event: %s finished.\n", EventToString(e));
-				break;
+			case FN_CONSUMER:    e->fn.consumer.accept(e->fn.consumer.t); break;
 			case FN_BICONSUMER:
 				e->fn.biconsumer.accept(e->fn.biconsumer.t, e->fn.biconsumer.u);
 				break;
@@ -218,7 +211,7 @@ void EventReplaceArguments(struct Event *const event, ...) {
 	va_list args;
 
 	if(!event) return;
-	Debug("Event::replaceArguments: %s.\n", EventToString(event));
+	Pedantic("Event::replaceArguments: %s.\n", EventToString(event));
 
 	va_start(args, event);
 	switch(event->fn_type) {

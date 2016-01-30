@@ -346,7 +346,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	first_x = first_y = s;
 	sort_notify(s);
 
-	Debug("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
+	Pedantic("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
 
 	/* FIXME! */
 	KeyRegister('s',  &sprite_poll);
@@ -363,7 +363,7 @@ struct Sprite *SpriteGate(const struct AutoGate *gate) {
 	if(!(s = Sprite(SP_ETHEREAL, AutoImageSearch("Gate.png"), gate->x, gate->y, gate->theta * deg_to_rad))) return 0;
 	s->sp.ethereal.callback = &gate_travel;
 	s->sp.ethereal.to       = gate->to;
-	Debug("Sprite(Gate): created from Sprite, %s.\n", SpriteToString(s));
+	Pedantic("Sprite(Gate): created from Sprite, %s.\n", SpriteToString(s));
 
 	return s;
 }
@@ -636,7 +636,7 @@ void SpriteRecharge(struct Sprite *const s, const int recharge) {
 				/* rechage */
 				if(!s->sp.ship.event_recharge
 				   && s->sp.ship.hit < s->sp.ship.max_hit) {
-					Debug("recharge: %s beginning charging cycle, function #%p of #%p.\n", SpriteToString(s), &ship_recharge, s);
+					Pedantic("Sprite::recharge: %s beginning charging cycle.\n", SpriteToString(s));
 					s->sp.ship.event_recharge = Event('R', s->sp.ship.ms_recharge_hit, 0, FN_CONSUMER, &ship_recharge, s);
 					EventSetNotify(&s->sp.ship.event_recharge);
 				}

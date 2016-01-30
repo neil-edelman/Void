@@ -4,7 +4,9 @@ struct Event;
 
 struct Event *Event(const char z, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...);
 void Event_(struct Event **event_ptr);
-void EventClear(void);
+void EventRemoveIf(int (*const predicate)(struct Event *const));
 void EventSetNotify(struct Event **const e_ptr);
+void (*EventGetConsumerAccept(const struct Event *const e))(void *);
 void EventDispatch(void);
 void EventReplaceArguments(struct Event *const e, ...);
+char *EventToString(const struct Event *const e);

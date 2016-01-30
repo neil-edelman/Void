@@ -559,18 +559,6 @@ void SpriteSetNotify(struct Sprite **const s_ptr) {
 	if(s->notify) Warn("Sprite::setNotify: %s overriding a previous notification.\n", SpriteToString(s));
 	s->notify = s_ptr;
 }
-/* only one is needed
-void SpriteSetNotify(struct Sprite *const s, struct Sprite **const notify) {
-	if(!s) return;
-	if(notify) {
-		if(*notify) Warn("Sprite::setNotify: overriding a previous notification on the external pointer.\n");
-		if(s->notify) Warn("Sprite::setNotify: overriding a previous notification on the Sprite.\n");
-		s->notify = notify;
-		*s->notify = s;
-	} else {
-		s->notify = 0;
-	}
-}*/
 
 /** Gets the Sprite type that was assigned at the beginning. */
 enum SpType SpriteGetType(const struct Sprite *const sprite) {
@@ -582,20 +570,18 @@ enum SpType SpriteGetType(const struct Sprite *const sprite) {
 char *SpriteToString(const struct Sprite *const s) {
 	static int b;
 	static char buffer[4][64];
+	int last_b;
 
-	b &= 3;
 	if(!s) {
 		snprintf(buffer[b], sizeof buffer[b], "%s", "null sprite");
 	} else {
 		snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%.1f,%.1f:%.1f]%.2ft", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta, s->mass);
 	};
-	return buffer[b++];
-}
+	last_b = b;
+	b = (b + 1) & 3;
 
-/*void (*SpriteGetCallback(struct Sprite *s))(struct Sprite *const, struct Sprite *const) {
-	if(!s || s->sp_type != SP_ETHEREAL) return 0;
-	return s->sp.ethereal.callback;
-}*/
+	return buffer[last_b];
+}
 
 /** Gets a SpaceZone that it goes to, if it exists. */
 const struct AutoSpaceZone *SpriteGetTo(const struct Sprite *const s) {
@@ -626,6 +612,11 @@ int SpriteGetMaxHit(const struct Sprite *const s) {
 	return s->sp.ship.max_hit;
 }
 
+struct Event *SpriteGetEventRecharge(const struct Sprite *const s) {
+	if(!s || s->sp_type != SP_SHIP) return 0;
+	return s->sp.ship.event_recharge;
+}
+
 void SpriteRecharge(struct Sprite *const s, const int recharge) {
 	if(!s) return;
 	switch(s->sp_type) {
@@ -641,12 +632,8 @@ void SpriteRecharge(struct Sprite *const s, const int recharge) {
 				/* cap off */
 				s->sp.ship.hit = s->sp.ship.max_hit;
 			} else if(-recharge < s->sp.ship.hit) {
-				/* recharge starts as soon as damage */
-				/*if(s->sp.ship.hit >= s->sp.ship.max_hit) {
-					s->sp.ship.ms_recharge_event = TimerGetGameTime() + s->sp.ship.ms_recharge_hit;
-					Debug("Sprite::recharge: %s set future recharge.\n", SpriteToString(s));
-				}*/
 				s->sp.ship.hit += (unsigned)recharge;
+				/* rechage */
 				if(!s->sp.ship.event_recharge
 				   && s->sp.ship.hit < s->sp.ship.max_hit) {
 					Debug("recharge: %s beginning charging cycle, function #%p of #%p.\n", SpriteToString(s), &ship_recharge, s);
@@ -1512,6 +1499,7 @@ static void sprite_poll(void) {
 
 /** can be used as an Event */
 void ship_recharge(struct Sprite *const a) {
+	static char letter = 'a';
 	if(!a || SpriteGetType(a) != SP_SHIP) {
 		Warn("Sprite::recharge: called on %s.\n", SpriteToString(a));
 		return;
@@ -1522,6 +1510,7 @@ void ship_recharge(struct Sprite *const a) {
 		Debug("ship_recharge: %s shields full.\n", SpriteToString(a));
 		return;
 	}
-	a->sp.ship.event_recharge = Event('r', a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &ship_recharge, a);
+	a->sp.ship.event_recharge = Event(letter, a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &ship_recharge, a);
+	if(letter++ == 'z') letter = 'A';
 	EventSetNotify(&a->sp.ship.event_recharge);
 }

@@ -1,6 +1,7 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
+#include <stdio.h>  /* snprintf */
 #include <stdarg.h>
 #include <string.h> /* memcpy */
 #include "../Print.h"
@@ -35,12 +36,13 @@ static struct Event {
 		} biconsumer;
 	} fn;
 	char z;
-} events[2048], *first_event, *last_event;
+} events[2048], *first_event, *last_event, *iterator;
 static const int events_capacity = sizeof events / sizeof(struct Event);
 static int       events_size;
 
+static struct Event *iterate(void);
 void print_all_events(void);
-char *decode_fn_type(const struct Event *const e);
+char *decode_fn_type(const enum FnType fn_type);
 
 /* public */
 
@@ -126,7 +128,7 @@ void Event_(struct Event **event_ptr) {
 	if(!event_ptr || !(event = *event_ptr)) return;
 	index = event - events;
 	if(index < 0 || index >= events_size) {
-		Warn("~Event: %u not in range %u (%c).\n", index + 1, events_size, event->z);
+		Warn("~Event: %s, %u not in range %u.\n", EventToString(event), index + 1, events_size);
 		print_all_events();
 		return;
 	}
@@ -155,15 +157,23 @@ void Event_(struct Event **event_ptr) {
 		/* update notify */
 		if(event->notify) *event->notify = event;
 	}
-	Debug("~Event: erase, %c size %u.\n", event->z, events_size);
+	Debug("~Event: erase, %s size %u.\n", EventToString(event), events_size);
 
 	*event_ptr = event = 0;
 }
 
-/** Flush the Events without Dispatch. */
-void EventClear(void) {
+/** Flush the Events without Dispatch according to predicate. */
+void EventRemoveIf(int (*const predicate)(struct Event *const)) {
+	struct Event *e;
+
 	Debug("Event::clear: clearing Events.\n");
-	first_event = last_event = 0;
+	print_all_events();
+	//first_event = last_event = 0;
+	while((e = iterate())) {
+		Pedantic("Event::removeIf: consdering %s.\n", SpriteToString(s));
+		if(!predicate || predicate(e)) Event_(&e);
+	}
+	print_all_events();
 }
 
 void EventSetNotify(struct Event **const e_ptr) {
@@ -175,6 +185,11 @@ void EventSetNotify(struct Event **const e_ptr) {
 	e->notify = e_ptr;
 }
 
+void (*EventGetConsumerAccept(const struct Event *const e))(void *) {
+	if(!e || e->fn_type != FN_CONSUMER) return 0;
+	return e->fn.consumer.accept;
+}
+
 /** Dispach all events up to the present. */
 void EventDispatch(void) {
 	struct Event *e;
@@ -183,12 +198,12 @@ void EventDispatch(void) {
 		/* switch off notification so that the event can recurse without
 		 overriding the notify field; it's useless once it's been triggered */
 		e->notify = 0;
-		Pedantic("Event: event %c triggered at %ums.\n", e->z, e->t_ms);
+		Pedantic("Event: event %s triggered.\n", EventToString(e));
 		switch(e->fn_type) {
 			case FN_RUNNABLE:    e->fn.runnable.run(); break;
-			case FN_CONSUMER:    Debug("Event %c activated #%p of #%p.\n", e->z, e->fn.consumer.accept, e->fn.consumer.t);
+			case FN_CONSUMER:    Debug("Event: %s activated #%p of #%p.\n", EventToString(e), e->fn.consumer.accept, e->fn.consumer.t);
 				e->fn.consumer.accept(e->fn.consumer.t);
-				Debug("Event %c finished.\n", e->z);
+				Debug("Event: %s finished.\n", EventToString(e));
 				break;
 			case FN_BICONSUMER:
 				e->fn.biconsumer.accept(e->fn.biconsumer.t, e->fn.biconsumer.u);
@@ -203,12 +218,12 @@ void EventReplaceArguments(struct Event *const event, ...) {
 	va_list args;
 
 	if(!event) return;
-	Debug("Event::replaceArguments: #%p.\n");
+	Debug("Event::replaceArguments: %s.\n", EventToString(event));
 
 	va_start(args, event);
 	switch(event->fn_type) {
 		case FN_RUNNABLE:
-			Warn("Event::replaceArguments: #%p has no arguments.\n");
+			Warn("Event::replaceArguments: %s has no arguments.\n", EventToString(event));
 			break;
 		case FN_CONSUMER:
 			event->fn.consumer.t   = va_arg(args, void *);
@@ -221,21 +236,45 @@ void EventReplaceArguments(struct Event *const event, ...) {
 	va_end(args);
 }
 
+char *EventToString(const struct Event *const e) {
+	static int b;
+	static char buffer[4][64];
+	int last_b;
+
+	if(!e) {
+		snprintf(buffer[b], sizeof buffer[b], "%s", "null event");
+	} else {
+		snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->z, e->t_ms);
+	};
+	last_b = b;
+	b = (b + 1) & 3;
+
+	return buffer[last_b];
+}
+
+static struct Event *iterate(void) {
+	if(!iterator) {
+		iterator = first_event;
+	} else {
+		iterator = iterator->next;
+	}
+	return iterator;
+}
+
 void print_all_events(void) {
 	struct Event *e;
 	Debug("Events %ums {\n", TimerGetGameTime());
 	for(e = first_event; e; e = e->next) {
-		Debug("\t%c\t%s\t%ums\n", e->z, decode_fn_type(e), e->t_ms);
+		Debug("\t%s\n", EventToString(e));
 	}
 	Debug("}\n");
 }
 
-char *decode_fn_type(const struct Event *const e) {
-	if(!e) return "Null";
-	switch(e->fn_type) {
-		case FN_RUNNABLE: return "Runnable";
-		case FN_CONSUMER: return "Consumer";
-		case FN_BICONSUMER: return "Biconsumer";
+char *decode_fn_type(const enum FnType fn_type) {
+	switch(fn_type) {
+		case FN_RUNNABLE:	return "<Runnable>";
+		case FN_CONSUMER:	return "<Consumer>";
+		case FN_BICONSUMER:	return "<Biconsumer>";
+		default:			return "<not an event type>";
 	}
-	return "FnTypeNotEnum";
 }

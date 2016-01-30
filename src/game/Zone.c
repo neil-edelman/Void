@@ -39,6 +39,7 @@ const struct AutoSpaceZone *current_zone;
 /* private prototypes */
 static float rnd(const float limit);
 static int remove_all_except_player(struct Sprite *const victim);
+static int remove_all_events_except(struct Event *const victim);
 
 /* public */
 
@@ -54,7 +55,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 	/* clear all objects */
 	SpriteRemoveIf(&remove_all_except_player);
-	EventClear();
+	EventRemoveIf(&remove_all_events_except);
 	FarClear();
 
 	/* set drawing elements */
@@ -167,5 +168,13 @@ static float rnd(const float limit) {
 }
 
 static int remove_all_except_player(struct Sprite *const victim) {
-	return GameGetPlayer() == victim ? 0 : -1;
+	const struct Sprite *const player = GameGetPlayer();
+	return !player || player != victim;
+}
+
+static int remove_all_events_except(struct Event *const victim) {
+	/* we don't erase the player's recharge event nor any (one?) event that uses
+	 ZoneChange because it's probably happening right now */
+	return SpriteGetEventRecharge(GameGetPlayer()) != victim
+	    && EventGetConsumerAccept(victim) != (void (*)(void *))&ZoneChange;
 }

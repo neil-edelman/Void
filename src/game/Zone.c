@@ -71,7 +71,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* update the current zone */
 	current_zone = sz;
 
-#if 1
+#if 0
 	/* some asteroids */
 	for(i = 0; i < 1000; i++) {
 		s = Sprite(SP_DEBRIS, AutoImageSearch("Asteroid.png"), (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), big_asteroid_mass);
@@ -79,9 +79,9 @@ void Zone(const struct AutoSpaceZone *const sz) {
 		SpriteSetOmega(s, rnd(10.0f));
 	}
 #endif
-#if 1
+#if 0
 	/* sprinkle some ships */
-	for(i = 0; i < 50; i++) {
+	for(i = 0; i < 10; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter * 0.2f), (int)rnd(de_sitter * 0.2f), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
 #endif

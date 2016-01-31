@@ -76,6 +76,8 @@ int Game(void) {
 	KeyRegister('z',  &position);
 	KeyRegister('t',  &gametime);
 	KeyRegister('l',  &LightList);
+	KeyRegister('.',  &BubblePush);
+	KeyRegister('/',  &BubblePop);
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/

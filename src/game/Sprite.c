@@ -199,6 +199,8 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
   const enum Behaviour behaviour, const struct Ship **notify);
  Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
  Sprite(SP_ETHEREAL, const struct Image *image, const int x, y, const float theta);
+ <p>
+ FIXME: const float x, y!
  @param sp_type		Type of sprite.
  @param image		(SP_DEBRIS|SP_ETHEREAL) (const struct Image *) Image.
  @param x, y, theta	(SP_DEBRIS|SP_SHIP|SP_ETHEREAL) Orientation.
@@ -280,7 +282,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.wmd.expires  = TimerGetGameTime() + wtype->ms_range;
 			lenght = sqrtf(wtype->r*wtype->r + wtype->g*wtype->g + wtype->b*wtype->b);
 			one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0;
-			Light(&s->sp.wmd.light, lenght, wtype->r*one_lenght, wtype->g*one_lenght, wtype->b*one_lenght);
+			Light(&s->sp.wmd.light, lenght, wtype->r*one_lenght, wtype->g*one_lenght, wtype->b*one_lenght, s);
 			/* set the wmd's position as a function of the ship's position */
 			cs = cosf(s->sp.wmd.from->theta);
 			sn = sinf(s->sp.wmd.from->theta);
@@ -450,6 +452,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 				EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
 				break;
 			case SP_WMD:
+				Debug("\tsprite %s becomes %s\n", SpriteToString(replace), SpriteToString(sprite));
 				LightSetNotify(&sprite->sp.wmd.light);
 				break;
 			default:
@@ -459,7 +462,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", SpriteToString(replace));
 	}
 
-	Pedantic("~Sprite: erase %s.\n", buffer);
+	Debug("~Sprite: erase %s.\n", buffer);
 	*sprite_ptr = sprite = 0;
 }
 
@@ -1501,13 +1504,13 @@ static void sprite_poll(void) {
 void ship_recharge(struct Sprite *const a) {
 	static char letter = 'a';
 	if(!a || SpriteGetType(a) != SP_SHIP) {
-		Warn("Sprite::recharge: called on %s.\n", SpriteToString(a));
+		Warn("ship_recharge: called on %s.\n", SpriteToString(a));
 		return;
 	}
-	Debug("Recharge %s %uGJ/%uGJ\n", SpriteToString(a), a->sp.ship.hit, a->sp.ship.max_hit);
+	Pedantic("ship_recharge %s %uGJ/%uGJ\n", SpriteToString(a), a->sp.ship.hit, a->sp.ship.max_hit);
 	SpriteRecharge(a, 1);
 	if(a->sp.ship.hit >= a->sp.ship.max_hit) {
-		Debug("ship_recharge: %s shields full.\n", SpriteToString(a));
+		Debug("ship_recharge: %s shields full %uGJ/%uGJ.\n", SpriteToString(a), a->sp.ship.hit, a->sp.ship.max_hit);
 		return;
 	}
 	a->sp.ship.event_recharge = Event(letter, a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &ship_recharge, a);

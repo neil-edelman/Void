@@ -41,3 +41,4 @@ void SpriteShoot(struct Sprite *const s);
 struct Sprite *SpriteOutgoingGate(const struct AutoSpaceZone *to);
 void SpriteRemoveIf(int (*const predicate)(struct Sprite *const));
 int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr);
+void SpriteList(void);

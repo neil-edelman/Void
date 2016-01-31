@@ -1027,6 +1027,17 @@ void SpriteUpdate(const int dt_ms) {
 	}
 }
 
+void SpriteList(void) {
+	struct Sprite *s;
+	int is_first = -1;
+	Info("Sprites: {");
+	while((s = iterate())) {
+		Info("%s%s", is_first ? " " : ", ", SpriteToString(s));
+		is_first = 0;
+	}
+	Info(" }\n");
+}
+
 /* private */
 
 /* branch cut (-Pi,Pi] */

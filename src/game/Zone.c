@@ -66,7 +66,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	Far(sz->ois2);
 	Far(sz->ois3);
 
-	SpriteGate(sz->gate1);
+	//SpriteGate(sz->gate1);
 
 	/* update the current zone */
 	current_zone = sz;

@@ -1,6 +1,8 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
+#define PRINT_PEDANTIC
+
 #include <stdio.h>  /* snprintf */
 #include <stdarg.h>
 #include <string.h> /* memcpy */
@@ -18,6 +20,7 @@
 
 static struct Event {
 	struct Event *prev, *next;
+	char         label;
 	unsigned     t_ms;
 	struct Event **notify;
 	enum FnType  fn_type;
@@ -35,7 +38,6 @@ static struct Event {
 			void *u;
 		} biconsumer;
 	} fn;
-	char z;
 } events[2048], *first_event, *last_event, *iterator;
 static const int events_capacity = sizeof events / sizeof(struct Event);
 static int       events_size;
@@ -48,14 +50,14 @@ char *decode_fn_type(const enum FnType fn_type);
 
 /** Constructor.
  @return	An object or a null pointer, if the object couldn't be created. */
-struct Event *Event(const char z, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...) {
+int Event(const char label, struct Event **const event_ptr, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...) {
 	va_list args;
 	struct Event *event, *prev, *next;
 	int real_delay_ms;
 	unsigned i;
 
 	if(events_size >= events_capacity) {
-		Warn("Event: couldn't be created; reached maximum of %u.\n", events_capacity);
+		Warn("Event: couldn't be created; reached maximum of %u/%u.\n", events_size, events_capacity);
 		return 0;
 	}
 
@@ -66,12 +68,15 @@ struct Event *Event(const char z, const int delay_ms, const int sigma_ms, enum F
 		if(real_delay_ms < 0) real_delay_ms = 0;
 	}
 
+	if(event_ptr && *event_ptr) Warn("Event: overriding %s on creation of %u.\n", EventToString(*event_ptr), events_size);
+
 	event = &events[events_size++];
 
 	event->prev    = event->next = 0;
+	event->label   = label;
 	event->t_ms    = TimerGetGameTime() + real_delay_ms;
-	event->notify  = 0;
-	event->z       = z;
+	event->notify  = event_ptr;
+	if(event_ptr) *event_ptr = event;
 	event->fn_type = fn_type;
 	/* do something different based on what the type is */
 	va_start(args, fn_type);
@@ -112,9 +117,9 @@ struct Event *Event(const char z, const int delay_ms, const int sigma_ms, enum F
 		last_event  = event;
 	}
 
-	Pedantic("Event: new at %dms inefficiency %u %c (size %u).\n", event->t_ms, i, event->z, events_size);
+	Pedantic("Event: new '%c' at %dms inefficiency %u (size %u.)\n", event->label, event->t_ms, i, events_size);
 
-	return event;
+	return -1;
 }
 
 /** Destructor.
@@ -167,7 +172,7 @@ void EventRemoveIf(int (*const predicate)(struct Event *const)) {
 	Debug("Event::clear: clearing Events.\n");
 	/*print_all_events();*/
 	while((e = iterate())) {
-		Pedantic("Event::removeIf: consdering %s.\n", SpriteToString(s));
+		Pedantic("Event::removeIf: consdering %s.\n", EventToString(e));
 		if(!predicate || predicate(e)) Event_(&e);
 	}
 	/*print_all_events();*/
@@ -237,7 +242,7 @@ char *EventToString(const struct Event *const e) {
 	if(!e) {
 		snprintf(buffer[b], sizeof buffer[b], "%s", "null event");
 	} else {
-		snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->z, e->t_ms);
+		snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms);
 	};
 	last_b = b;
 	b = (b + 1) & 3;

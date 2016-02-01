@@ -95,10 +95,21 @@ int Game(void) {
 	DrawSetShield("Bar.png");
 
 	Zone(game.start);
-	Event('a', 3000, 1000, FN_CONSUMER, &con, "cool");
-	Event('b', 2000, 1000, FN_RUNNABLE, &position);
+	Event('a', 0, 3000, 1000, FN_CONSUMER, &con, "cool");
+	Event('b', 0, 2000, 1000, FN_RUNNABLE, &position);
 	game.player = Sprite(SP_SHIP, 0, 0, 0.0, game.nautilus, B_HUMAN);
 	SpriteSetNotify(&game.player);
+
+/*	{
+		struct Sprite *a = Sprite(SP_WMD, game.player, SpriteGetWeapon(game.player));
+		struct Sprite *b = Sprite(SP_WMD, game.player, SpriteGetWeapon(game.player));
+		struct Sprite *c = Sprite(SP_WMD, game.player, SpriteGetWeapon(game.player));
+		Debug("Game %s %s %s.\n", SpriteToString(a), SpriteToString(b), SpriteToString(c));
+		Sprite_(&a);
+		a = Sprite(SP_WMD, game.player, SpriteGetWeapon(game.player));
+		Sprite_(&a);
+		Sprite_(&b);
+	}*/
 
 	Debug("Game: on.\n");
 	is_started = -1;
@@ -239,5 +250,5 @@ static void con(const char *const a) {
 static void bi(char *a, char *b) {
 	if(--a[0] < 'A') a[0] = 'z';
 	printf("!!!! %s : %s\n", a, b);
-	Event('z', 1000, 100, FN_BICONSUMER, &bi, a, b);
+	Event('z', 0, 1000, 100, FN_BICONSUMER, &bi, a, b);
 }

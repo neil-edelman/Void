@@ -335,7 +335,7 @@ void DrawGetCamera(float *x_ptr, float *y_ptr) {
 }
 
 /** Gets the width and height. */
-void DrawGetScreen(int *width_ptr, int *height_ptr) {
+void DrawGetScreen(unsigned *width_ptr, unsigned *height_ptr) {
 	/*if(!is_started) return; no, easier to guarantee valid */
 	if(width_ptr)  *width_ptr  = screen_width;
 	if(height_ptr) *height_ptr = screen_height;

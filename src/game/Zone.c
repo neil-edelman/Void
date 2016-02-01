@@ -79,9 +79,9 @@ void Zone(const struct AutoSpaceZone *const sz) {
 		SpriteSetOmega(s, rnd(10.0f));
 	}
 #endif
-#if 0
+#if 1
 	/* sprinkle some ships */
-	for(i = 0; i < 10; i++) {
+	for(i = 0; i < 20; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter * 0.2f), (int)rnd(de_sitter * 0.2f), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
 #endif

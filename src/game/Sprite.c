@@ -258,11 +258,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->mass                    = class->mass;
 			s->sp.ship.ms_recharge_wmd = TimerGetGameTime();
 			s->sp.ship.ms_recharge_hit = class->ms_recharge;
-			s->sp.ship.event_recharge  = 0;
-			/* high sigma for the first call increases staggering */
-			/*s->sp.ship.event_recharge  = Event(ARR++, s->sp.ship.ms_recharge_hit, s->sp.ship.ms_recharge_hit, FN_CONSUMER, &recharge, s);
-			if(ARR > 'z') ARR = 'A';
-			EventSetNotify(&s->sp.ship.event_recharge);*/
+			s->sp.ship.event_recharge  = 0; /* full shields, not recharging */
 			s->sp.ship.hit = s->sp.ship.max_hit = class->shield;
 			s->sp.ship.max_speed2      = class->speed * class->speed * px_s_to_px2_ms2;
 			/* fixme:units! should be t/s^2 -> t/ms^2 */
@@ -274,9 +270,11 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.ship.behaviour       = va_arg(args, const enum Behaviour);
 			break;
 		case SP_WMD:
+			Debug("%c Sprites %u Lights %u\n", '[', sprites_size - 1, LightGetN());
 			/* fixme: 'from' could change! tie it with, I don't know, ship[] */
 			s->sp.wmd.from     = from  = va_arg(args, struct Sprite *const);
 			s->sp.wmd.wmd_type = wtype = va_arg(args, struct AutoWmdType *const);
+			/* fixme: both those should be non-null! */
 			s->mass            = wtype->impact_mass;
 			image              = (struct AutoImage *)wtype->image;
 			s->sp.wmd.expires  = TimerGetGameTime() + wtype->ms_range;
@@ -291,6 +289,8 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->theta = s->sp.wmd.from->theta;
 			s->vx = s->vx1 = s->sp.wmd.from->vx + cs*wtype->speed*px_s_to_px_ms;
 			s->vy = s->vy1 = s->sp.wmd.from->vy + sn*wtype->speed*px_s_to_px_ms;
+			Debug("\tSprite create %s (%u.)\n", SpriteToString(s), sprites_size);
+			Debug("%c\n", ']');
 			break;
 		case SP_ETHEREAL:
 			image             = va_arg(args, struct AutoImage *);
@@ -377,6 +377,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	int index;
 	unsigned characters;
 	char buffer[128];
+	enum SpType type;
 
 	if(!sprite_ptr || !(sprite = *sprite_ptr)) return;
 	index = sprite - sprites;
@@ -384,6 +385,9 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		Warn("~Sprite: Spr%u not in range Spr%u.\n", index + 1, sprites_size);
 		return;
 	}
+
+	type = sprite->sp_type;
+	if(type == SP_WMD) Debug("%c Sprites %u Lights %u\n", '(', sprites_size, LightGetN());
 
 	/* store the string for debug info */
 	characters = snprintf(buffer, sizeof buffer, "%s", SpriteToString(sprite));
@@ -399,6 +403,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 			break;
 		case SP_WMD:
 			Pedantic("~Sprite: first deleting Light from %s.\n", SpriteToString(sprite));
+			Debug("\tSprite delete %s (%u.)\n", SpriteToString(sprite), sprites_size);
 			Light_(&sprite->sp.wmd.light);
 			break;
 		case SP_DEBRIS:
@@ -452,8 +457,8 @@ void Sprite_(struct Sprite **sprite_ptr) {
 				EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
 				break;
 			case SP_WMD:
-				Debug("\tsprite %s becomes %s\n", SpriteToString(replace), SpriteToString(sprite));
-				LightSetNotify(&sprite->sp.wmd.light);
+				Debug("\tSprite replace %s (%u.)\n", SpriteToString(sprite), sprites_size);
+				LightSetNotify(&sprite->sp.wmd.light, sprite);
 				break;
 			default:
 				break;
@@ -462,8 +467,10 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", SpriteToString(replace));
 	}
 
-	Debug("~Sprite: erase %s.\n", buffer);
+	Pedantic("~Sprite: erase %s.\n", buffer);
 	*sprite_ptr = sprite = 0;
+
+	if(type == SP_WMD) Debug("%c\n", ')');
 }
 
 /** @return		The global variable sprites_considered, which is updated every
@@ -578,7 +585,8 @@ char *SpriteToString(const struct Sprite *const s) {
 	if(!s) {
 		snprintf(buffer[b], sizeof buffer[b], "%s", "null sprite");
 	} else {
-		snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%.1f,%.1f:%.1f]%.2ft", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta, s->mass);
+		/*snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%.1f,%.1f:%.1f]%.2ft", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta, s->mass);*/
+		snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[Lgh%d]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->sp_type == SP_WMD ? s->sp.wmd.light : 0);
 	};
 	last_b = b;
 	b = (b + 1) & 3;
@@ -620,6 +628,11 @@ struct Event *SpriteGetEventRecharge(const struct Sprite *const s) {
 	return s->sp.ship.event_recharge;
 }
 
+const struct AutoWmdType *SpriteGetWeapon(const struct Sprite *const s) {
+	if(!s || s->sp_type != SP_SHIP) return 0;
+	return s->sp.ship.class->weapon;
+}
+
 void SpriteRecharge(struct Sprite *const s, const int recharge) {
 	if(!s) return;
 	switch(s->sp_type) {
@@ -640,8 +653,7 @@ void SpriteRecharge(struct Sprite *const s, const int recharge) {
 				if(!s->sp.ship.event_recharge
 				   && s->sp.ship.hit < s->sp.ship.max_hit) {
 					Pedantic("Sprite::recharge: %s beginning charging cycle.\n", SpriteToString(s));
-					s->sp.ship.event_recharge = Event('R', s->sp.ship.ms_recharge_hit, 0, FN_CONSUMER, &ship_recharge, s);
-					EventSetNotify(&s->sp.ship.event_recharge);
+//					s->sp.ship.event_recharge = Event('R', &s->sp.ship.event_recharge, s->sp.ship.ms_recharge_hit, 0, FN_CONSUMER, &ship_recharge, s);
 				}
 			} else {
 				/* killed */
@@ -818,7 +830,7 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 
 	/* go to the first spot in the window */
 	if(is_reset) {
-		int w, h, screen_width, screen_height;
+		unsigned w, h, screen_width, screen_height;
 		DrawGetScreen(&screen_width, &screen_height);
 		w = (screen_width  >> 1) + (screen_width & 1);
 		h = (screen_height >> 1) + (screen_height & 1);
@@ -1427,6 +1439,7 @@ static char *decode_sprite_type(const enum SpType sp_type) {
 /** can be a callback for an Ethereal, whenever it collides with a Ship.
  IT CAN'T MODIFY THE LIST */
 static void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
+	/* this doesn't help!!! */
 	float x, y, /*vx, vy,*/ gate_norm_x, gate_norm_y, proj/*, h*/;
 
 	if(!gate || gate->sp_type != SP_ETHEREAL
@@ -1443,7 +1456,7 @@ static void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
 		Debug("gate_travel: %s crossed into the event horizon of %s.\n", SpriteToString(ship), SpriteToString(gate));
 		if(ship == GameGetPlayer()) {
 			/* trasport to zone immediately */
-			Event('g', 0, 0, FN_CONSUMER, &ZoneChange, gate);
+			Event('g', 0, 0, 0, FN_CONSUMER, &ZoneChange, gate);
 		} else {
 			/* disappear */
 			/* fixme: test! */
@@ -1524,7 +1537,6 @@ void ship_recharge(struct Sprite *const a) {
 		Debug("ship_recharge: %s shields full %uGJ/%uGJ.\n", SpriteToString(a), a->sp.ship.hit, a->sp.ship.max_hit);
 		return;
 	}
-	a->sp.ship.event_recharge = Event(letter, a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &ship_recharge, a);
+	Event(letter, &a->sp.ship.event_recharge, a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &ship_recharge, a);
 	if(letter++ == 'z') letter = 'A';
-	EventSetNotify(&a->sp.ship.event_recharge);
 }

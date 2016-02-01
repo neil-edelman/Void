@@ -181,7 +181,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 
 	/* go to the first spot in the window */
 	if(is_reset) {
-		int w, h, screen_width, screen_height;
+		unsigned w, h, screen_width, screen_height;
 		DrawGetScreen(&screen_width, &screen_height);
 		w = (screen_width  >> 1) + (screen_width & 1);
 		h = (screen_height >> 1) + (screen_height & 1);

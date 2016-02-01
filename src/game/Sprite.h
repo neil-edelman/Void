@@ -31,6 +31,7 @@ int SpriteGetDamage(const struct Sprite *const s);
 int SpriteGetHit(const struct Sprite *const s);
 int SpriteGetMaxHit(const struct Sprite *const s);
 struct Event *SpriteGetEventRecharge(const struct Sprite *const s);
+const struct AutoWmdType *SpriteGetWeapon(const struct Sprite *const s);
 void SpriteRecharge(struct Sprite *const s, const int recharge);
 int SpriteIsDestroyed(const struct Sprite *const s);
 void SpriteDestroy(struct Sprite *const s);

@@ -42,6 +42,11 @@ char *to_string(const unsigned light);
 
 /* public */
 
+/* TEMP */
+unsigned LightGetN(void) {
+	return lights_size;
+}
+
 /** Constructor.
  @param id_ptr	The pointer where this light lives.
  @param i		The intensity, i >= 0.
@@ -73,7 +78,7 @@ int Light(int *const id_ptr, const float i, const float r, const float g, const 
 	notify[light]     = id_ptr;
 	*id_ptr           = light_to_id(light);
 	Pedantic("Light: created %s.\n", to_string(light));
-	Debug("\t%u.notify = id#%p(%d) create (lights %u) for %s\n", light, notify[light], *notify[light], lights_size, s ? SpriteToString(s) : "<not a sprite>");
+	Debug("\tLight create %s (%u) for %s.\n", to_string(light), lights_size, s ? SpriteToString(s) : "<not a sprite>");
 	return -1;
 }
 
@@ -92,7 +97,8 @@ void Light_(int *id_ptr) {
 		return;
 	}
 
-	Debug("\t%u.notify = id#%p(%d) delete (lights %u) -> id#%p(0)\n", light, notify[light], *notify[light], lights_size, notify[light]);
+	Debug("\tLight delete %s (%u.)\n", to_string(light), lights_size);
+
 	/* notify that we're deleting */
 	if(notify[light]) *notify[light] = 0;
 
@@ -101,7 +107,6 @@ void Light_(int *id_ptr) {
 
 	/* place the lights_size item into this one, decrese # */
 	if(light < (replace = lights_size - 1)) {
-		Debug("\t%u.notify = id#%p(%d) replace (lights %u->%u)\n", replace, notify[replace], *notify[replace], lights_size, replace);
 		/* change */
 		position[light].x = position[replace].x;
 		position[light].y = position[replace].y;
@@ -111,7 +116,8 @@ void Light_(int *id_ptr) {
 		notify[light]     = notify[replace];
 		/* notify that we're changing */
 		if(notify[light]) *notify[light] = light_to_id(light);
-		Debug("\t%u.notify = id#%p(%d) replaced and updated (lights %u)\n", light, notify[light], *notify[light], replace);
+
+		Debug("\tLight replace %s (%u.)\n", to_string(light), replace);
 
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", to_string(replace));
 	}
@@ -147,7 +153,7 @@ void LightSetPosition(const int id, const float x, const float y) {
 }
 
 /** This is important because Sprites change places, as well. */
-void LightSetNotify(int *const id_ptr) {
+void LightSetNotify(int *const id_ptr, const struct Sprite *const s) {
 	int id;
 	unsigned light;
 
@@ -157,7 +163,7 @@ void LightSetNotify(int *const id_ptr) {
 		Warn("Light::setNotify: %u/%u not in range.\n", id, lights_size);
 		return;
 	}
-	Debug("\t%u.notify = id#%p(%d) -> %u.notify = id#%p(%d) (lights %u)\n", light, notify[light], *notify[light], light, id_ptr, id, lights_size);
+	Debug("\tLight update %s (%u) for %s.\n", to_string(light), lights_size, s ? SpriteToString(s) : "<not a sprite>");
 	notify[light] = id_ptr;
 }
 
@@ -189,7 +195,9 @@ char *to_string(const unsigned light) {
 		snprintf(buffer[b], sizeof buffer[b], "%s (Lgh%d)", "not a light", light_to_id(light));
 	} else {
 		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d(%.1f,%.1f,%.1f)[%.1f,%.1f]", id, colour[light].r, colour[light].g, colour[light].b, position[light].x, position[light].y);*/
-		snprintf(buffer[b], sizeof buffer[b], "Lgh%d[%.1f,%.1f]", light_to_id(light), position[light].x, position[light].y);
+		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d[%.1f,%.1f]", light_to_id(light), position[light].x, position[light].y);*/
+		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d[#%p]", light_to_id(light), (void *)notify[light]);*/
+		snprintf(buffer[b], sizeof buffer[b], "Lgh%d[%d]", light_to_id(light), notify[light] ? *notify[light] : 0);
 	}
 	return buffer[b++];
 }
@@ -230,3 +238,38 @@ void BubblePop(void) {
 	SpriteList();
 	LightList();
 }
+
+/*static int lgt_bubbles[64];
+static struct Sprite *spr_bubbles[64];
+static int bubble = 0;
+
+void BubblePush(void) {
+	float x = RandomUniformFloat(300.0f);
+	float y = RandomUniformFloat(300.0f);
+	if(bubble >= 64) {
+		Warn("Bubble capacity reached %u.\n", bubble);
+		return;
+	}
+	Debug("Creating Bubble %u.\n", bubble);
+	Light(&lgt_bubbles[bubble], 32.0f, 1.0f, 1.0f, 1.0f, 0);
+	LightSetPosition(lgt_bubbles[bubble], x, y);
+	spr_bubbles[bubble] = Sprite(SP_ETHEREAL, AutoImageSearch("AsteroidSmall.png"), (int)x, (int)y, 0.0f);
+	SpriteSetNotify(&spr_bubbles[bubble]);
+	bubble++;
+	SpriteList();
+	LightList();
+}
+
+void BubblePop(void) {
+	if(bubble >= 0) {
+		Warn("No Bubbles to delete %u.\n", bubble);
+		return;
+	}
+	Debug("Deleting Bubble %u\n", bubble);
+	Light_(&lgt_bubbles[bubble]);
+	Sprite_(&spr_bubbles[bubble]);
+	bubble--;
+	SpriteList();
+	LightList();
+}
+*/

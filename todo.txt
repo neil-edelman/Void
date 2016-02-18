@@ -14,6 +14,7 @@ specimen, sample, instance, occurrence, manifestation, embodiment, epitome, repr
 Bug List
 --------
 -Light, sometimes they don't turn off -- it's the Gate's fault, somehow (no it isn't) -- turning the alien's shield down to one hit turns it off, similarly, turning it up makes more artifacts, turning off recharging makes it go away
+-Events: instead of making an Event and deleting it, delete it, and make
 -interpretating orbits; hell no! not reproducible
 -do something about the shaking at high-v? stress test? int->float?
 -fix over-limit crash (maybe)bug

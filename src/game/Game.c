@@ -76,8 +76,8 @@ int Game(void) {
 	KeyRegister('z',  &position);
 	KeyRegister('t',  &gametime);
 	KeyRegister('l',  &LightList);
-	KeyRegister('.',  &BubblePush);
-	KeyRegister('/',  &BubblePop);
+	/*KeyRegister('.',  &BubblePush);
+	KeyRegister('/',  &BubblePop);*/
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
@@ -95,21 +95,10 @@ int Game(void) {
 	DrawSetShield("Bar.png");
 
 	Zone(game.start);
-	Event('a', 0, 3000, 1000, FN_CONSUMER, &con, "cool");
-	Event('b', 0, 2000, 1000, FN_RUNNABLE, &position);
+	Event(0, 3000, 1000, FN_CONSUMER, &con, "cool");
+	Event(0, 2000, 1000, FN_RUNNABLE, &position);
 	game.player = Sprite(SP_SHIP, 0, 0, 0.0, game.nautilus, B_HUMAN);
 	SpriteSetNotify(&game.player);
-
-/*	{
-		struct Sprite *a = Sprite(SP_WMD, game.player, SpriteGetWeapon(game.player));
-		struct Sprite *b = Sprite(SP_WMD, game.player, SpriteGetWeapon(game.player));
-		struct Sprite *c = Sprite(SP_WMD, game.player, SpriteGetWeapon(game.player));
-		Debug("Game %s %s %s.\n", SpriteToString(a), SpriteToString(b), SpriteToString(c));
-		Sprite_(&a);
-		a = Sprite(SP_WMD, game.player, SpriteGetWeapon(game.player));
-		Sprite_(&a);
-		Sprite_(&b);
-	}*/
 
 	Debug("Game: on.\n");
 	is_started = -1;
@@ -122,18 +111,6 @@ void Game_(void) {
 
 	if(!is_started) return;
 
-	/*int i;
-	struct Ship *ship;
-	struct Game *game;
-	if(!gptr || !(game = *gptr)) return;
-	for(i = 0, ship = game->ship; i < game->noShips; i++, ship++) {
-		Sprite_(&ship->sprite);
-	}
-	Pilot_(&game->pilot);
-	Resources_(&game->resources);
-	Debug("~Game: deleting #%p.\n", (void *)game);
-	free(game);
-	*gptr = game = 0;*/
 	Debug("~Game: over.\n");
 	is_started = 0;
 }
@@ -142,13 +119,6 @@ void Game_(void) {
 void GameUpdate(const int dt_ms) {
 
 	if(!is_started) return;
-
-	/* update game time (fixme: time is accessed multiple ways, confusing) */
-	/*game.t_s = t_ms * 0.001f;*/ /* fixme: may cause overflow; wrap-around will cause crazyness if you run it for 49.8 days (I assume; it will just
-		wrap around and not do anthing crazy? because, if so 24.9 days) */
-	/*game.dt_s = dt_ms * 0.001f;*/
-	/* fixme: where is this even used? it should be taken out; it's numerically
-	 unstable */
 
 	/* in-game */
 	game.ms_turning      = KeyTime(k_left) - KeyTime(k_right);
@@ -201,15 +171,6 @@ static void gametime(void) {
 	Info("%u ms game time.\n", TimerGetGameTime());
 }
 
-/** "Random" -- used for initialising. FIXME: this will be used a lot! have
- Rando.c include all sorts of random fuctions.
- @param limit
- @return		A uniformly distributed random variable in the range
-				[-limit, limit]. */
-/*static float rnd(const float limit) {
-	return limit * (2.0f * rand() / RAND_MAX - 1.0f);
-}*/
-
 /*static void add_sprites(void) {
 	struct Debris *asteroid;
 	struct Ship *bad;
@@ -250,5 +211,5 @@ static void con(const char *const a) {
 static void bi(char *a, char *b) {
 	if(--a[0] < 'A') a[0] = 'z';
 	printf("!!!! %s : %s\n", a, b);
-	Event('z', 0, 1000, 100, FN_BICONSUMER, &bi, a, b);
+	Event(0, 1000, 100, FN_BICONSUMER, &bi, a, b);
 }

@@ -80,9 +80,9 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	}
 #endif
 #if 1
-	/* sprinkle some ships */
-	for(i = 0; i < 20; i++) {
-		Sprite(SP_SHIP, (int)rnd(de_sitter * 0.2f), (int)rnd(de_sitter * 0.2f), rnd((float)M_PI), scorpion_class, B_STUPID);
+	/* sprinkle some ships (1 works fine -- 2+ light is left if you alternate between shooting them with rechage turned on) */
+	for(i = 0; i < 2; i++) {
+		Sprite(SP_SHIP, (int)rnd(de_sitter * 0.05f), (int)rnd(de_sitter * 0.05f), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
 #endif
 

@@ -18,10 +18,8 @@
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* memcpy */
 #include "../Print.h"
+#include "../general/Orcish.h"
 #include "Light.h"
-
-//////////// REMOVE
-#include "Sprite.h"
 
 /* must be the same as in Lighting.fs */
 #define MAX_LIGHTS (64)
@@ -35,6 +33,7 @@ struct Colour3f { float r, g, b; };
 static struct Vec2f    position[MAX_LIGHTS];
 static struct Colour3f colour[MAX_LIGHTS];
 static int             *notify[MAX_LIGHTS];
+static char            label[MAX_LIGHTS][16];
 
 unsigned id_to_light(const int id);
 int light_to_id(const unsigned light);
@@ -42,17 +41,12 @@ char *to_string(const unsigned light);
 
 /* public */
 
-/* TEMP */
-unsigned LightGetN(void) {
-	return lights_size;
-}
-
 /** Constructor.
  @param id_ptr	The pointer where this light lives.
  @param i		The intensity, i >= 0.
  @param r,g,b	The colours, [0, 1].
  @return		Boolean true on success; the id_ptr has (0, MAX_LIGHTS]. */
-int Light(int *const id_ptr, const float i, const float r, const float g, const float b, const struct Sprite *const s) {
+int Light(int *const id_ptr, const float i, const float r, const float g, const float b) {
 	unsigned light;
 
 	if(!id_ptr) {
@@ -76,9 +70,9 @@ int Light(int *const id_ptr, const float i, const float r, const float g, const 
 	colour[light].g   = i * g;
 	colour[light].b   = i * b;
 	notify[light]     = id_ptr;
+	Orcish(label[light], sizeof label[light]);
 	*id_ptr           = light_to_id(light);
-	Pedantic("Light: created %s.\n", to_string(light));
-	Debug("\tLight create %s (%u) for %s.\n", to_string(light), lights_size, s ? SpriteToString(s) : "<not a sprite>");
+	Debug("Light: created %s.\n", to_string(light));
 	return -1;
 }
 
@@ -92,12 +86,9 @@ void Light_(int *id_ptr) {
 
 	if(!id_ptr || !(id = *id_ptr)) return;
 	if((light = id_to_light(id)) >= lights_size) {
-		Debug("~Light: %u/%u out-of-bounds.\n", id, lights_size);
-		Debug("\t****************NOOOOOOOOO%c\n", 'O');
+		Warn("~Light: %u/%u out-of-bounds.\n", id, lights_size);
 		return;
 	}
-
-	Debug("\tLight delete %s (%u.)\n", to_string(light), lights_size);
 
 	/* notify that we're deleting */
 	if(notify[light]) *notify[light] = 0;
@@ -114,14 +105,14 @@ void Light_(int *id_ptr) {
 		colour[light].g   = colour[replace].g;
 		colour[light].b   = colour[replace].b;
 		notify[light]     = notify[replace];
+		strncpy(label[light], label[replace], sizeof label[light]);
+		/*label[light]      = label[replace];*/
 		/* notify that we're changing */
 		if(notify[light]) *notify[light] = light_to_id(light);
 
-		Debug("\tLight replace %s (%u.)\n", to_string(light), replace);
-
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", to_string(replace));
 	}
-	Pedantic("~Light: erase %s.\n", buffer);
+	Debug("~Light: erase %s.\n", buffer);
 	lights_size = replace;
 	*id_ptr = 0;
 }
@@ -153,7 +144,7 @@ void LightSetPosition(const int id, const float x, const float y) {
 }
 
 /** This is important because Sprites change places, as well. */
-void LightSetNotify(int *const id_ptr, const struct Sprite *const s) {
+void LightSetNotify(int *const id_ptr) {
 	int id;
 	unsigned light;
 
@@ -163,7 +154,6 @@ void LightSetNotify(int *const id_ptr, const struct Sprite *const s) {
 		Warn("Light::setNotify: %u/%u not in range.\n", id, lights_size);
 		return;
 	}
-	Debug("\tLight update %s (%u) for %s.\n", to_string(light), lights_size, s ? SpriteToString(s) : "<not a sprite>");
 	notify[light] = id_ptr;
 }
 
@@ -197,12 +187,12 @@ char *to_string(const unsigned light) {
 		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d(%.1f,%.1f,%.1f)[%.1f,%.1f]", id, colour[light].r, colour[light].g, colour[light].b, position[light].x, position[light].y);*/
 		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d[%.1f,%.1f]", light_to_id(light), position[light].x, position[light].y);*/
 		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d[#%p]", light_to_id(light), (void *)notify[light]);*/
-		snprintf(buffer[b], sizeof buffer[b], "Lgh%d[%d]", light_to_id(light), notify[light] ? *notify[light] : 0);
+		snprintf(buffer[b], sizeof buffer[b], "Lgh%s[%d no%d]", label[light], light_to_id(light), notify[light] ? *notify[light] : 0);
 	}
 	return buffer[b++];
 }
 
-#include "../general/Random.h"
+/*#include "../general/Random.h"
 #include "../../bin/Auto.h"
 
 static int lgt_bubbles[64];
@@ -237,7 +227,7 @@ void BubblePop(void) {
 	tail_bubble = (tail_bubble + 1) & 63;
 	SpriteList();
 	LightList();
-}
+}*/
 
 /*static int lgt_bubbles[64];
 static struct Sprite *spr_bubbles[64];

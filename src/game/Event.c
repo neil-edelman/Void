@@ -49,6 +49,11 @@ char *decode_fn_type(const enum FnType fn_type);
 
 /* public */
 
+/////////
+struct Sprite;
+void ship_recharge(struct Sprite *const a);
+char *SpriteToString(const struct Sprite *const s);
+
 ///////////////////
 unsigned EventGetN(void) {
 	return events_size;
@@ -61,6 +66,8 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 	struct Event *event, *prev, *next;
 	int real_delay_ms;
 	unsigned i;
+
+	Debug("\tEVENT! %s\n", decode_fn_type(fn_type));
 
 	if(events_size >= events_capacity) {
 		Warn("Event: couldn't be created; reached maximum of %u/%u.\n", events_size, events_capacity);
@@ -83,7 +90,6 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 
 	event->prev    = event->next = 0;
 	Orcish(event->label, sizeof event->label);
-	/*event->label   = label;*/
 	event->t_ms    = TimerGetGameTime() + real_delay_ms;
 	event->notify  = event_ptr;
 	if(event_ptr) *event_ptr = event;
@@ -97,6 +103,9 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 		case FN_CONSUMER:
 			event->fn.consumer.accept = va_arg(args, void (*)(void *));
 			event->fn.consumer.t      = va_arg(args, void *);
+			Debug("Hi%s.\n", "foo");
+			// this crashes
+			Debug("Event<Cons>: %s\n", SpriteToString(event->fn.consumer.t));
 			break;
 		case FN_BICONSUMER:
 			event->fn.biconsumer.accept = va_arg(args, void (*)(void *, void *));
@@ -127,7 +136,7 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 		last_event  = event;
 	}
 
-	Pedantic("Event: new %s at %dms inefficiency %u (size %u.)\n", EventToString(event), event->t_ms, i, events_size);
+	Debug("Event: new %s at %dms inefficiency %u (size %u.)\n", EventToString(event), event->t_ms, i, events_size);
 
 	return -1;
 }
@@ -153,7 +162,10 @@ void Event_(struct Event **event_ptr) {
 
 	/* update notify */
 	if(event->notify) {
+		/* THIS IS BUGGY! FIXME */
 		Debug("~Event: %s notify %s to 0.\n", EventToString(event), EventToString(*event->notify));
+		/* ~Event: <Consumer>EvtIckshabubhosh[1 16407ms] notify <Runnable>Evt?1?A???A?C1?A????????[2576927469 109704695m to 0. */
+		/* it's not updating the event */
 		*event->notify = 0;
 	}
 
@@ -230,6 +242,7 @@ void EventDispatch(void) {
 				runnable = e->fn.runnable.run;
 				break;
 			case FN_CONSUMER:
+				Debug("Event consumer %s(%s) run...\n", EventToString(e), SpriteToString(e->fn.consumer.t));
 				consumer = e->fn.consumer.accept;
 				t = e->fn.consumer.t;
 				break;
@@ -250,16 +263,14 @@ void EventDispatch(void) {
 	}
 }
 
-/////////
-struct Sprite;
-void ship_recharge(struct Sprite *const a);
-char *SpriteToString(const struct Sprite *const s);
-
 /** Sometimes you just want to change your mind. */
 void EventReplaceArguments(struct Event *const event, ...) {
 	va_list args;
 
-	if(!event) return;
+	if(!event) {
+		Debug("Event::replaceArguments: no %s.\n", "event");
+		return;
+	}
 	Pedantic("Event::replaceArguments: %s.\n", EventToString(event));
 
 	va_start(args, event);
@@ -272,8 +283,10 @@ void EventReplaceArguments(struct Event *const event, ...) {
 			// FIXME!!!!!!!
 			// AHA!!!!!!!!!! I've found the problem, I think!!!
 			// called by Sprite.c:450
+			Warn("!\tEvent::replaceArguments: before %s\n", SpriteToString(event->fn.consumer.t));
 			event->fn.consumer.t   = va_arg(args, void *);
 			Warn("!\tEvent::replaceArguments: now %s\n", SpriteToString(event->fn.consumer.t));
+			print_all_events();
 			break;
 		case FN_BICONSUMER:
 			event->fn.biconsumer.t = va_arg(args, void *);
@@ -294,7 +307,8 @@ char *EventToString(const struct Event *const e) {
 		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms);
 		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]%s", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? SpriteToString(e->fn.consumer.t) : "<not a recharge>");
 		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]#%p", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? e->fn.consumer.t : 0);
-		snprintf(buffer[b], sizeof buffer[b], "%sEvt%s[%u %ums]", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms);
+		snprintf(buffer[b], sizeof buffer[b], "%sEvt%s[%u %ums]<%s>", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? SpriteToString(e->fn.consumer.t)/*"yes"*/ : "no"); // SpriteToString crashes
+		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%s[%u %ums]<#%p>", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? e->fn.consumer.t : 0);
 	};
 	last_b = b;
 	b = (b + 1) & 3;

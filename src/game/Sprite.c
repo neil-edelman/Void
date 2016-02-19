@@ -579,7 +579,8 @@ char *SpriteToString(const struct Sprite *const s) {
 	} else {
 		/*snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%.1f,%.1f:%.1f]%.2ft", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta, s->mass);*/
 		/*snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[Lgh%d]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->sp_type == SP_WMD ? s->sp.wmd.light : 0);*/
-		snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%s]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->sp_type == SP_SHIP && s->sp.ship.event_recharge ? EventToString(s->sp.ship.event_recharge) : "");
+		//snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%s]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->sp_type == SP_SHIP && s->sp.ship.event_recharge ? EventToString(s->sp.ship.event_recharge) : "");
+		snprintf(buffer[b], sizeof buffer[b], "%sSpr%u", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1);
 	};
 	last_b = b;
 	b = (b + 1) & 3;
@@ -647,8 +648,10 @@ void SpriteRecharge(struct Sprite *const s, const int recharge) {
 				/* rechage */
 				if(!s->sp.ship.event_recharge
 				   && s->sp.ship.hit < s->sp.ship.max_hit) {
+					Debug("Sprite::recharge: %s beginning charging cycle %d/%d.\n#%p", SpriteToString(s), s->sp.ship.hit, s->sp.ship.max_hit, s);
 					Event(&s->sp.ship.event_recharge, s->sp.ship.ms_recharge_hit, 0, FN_CONSUMER, &ship_recharge, s);
-					Debug("Sprite::recharge: %s beginning charging cycle %d/%d with %s #%p.\n", SpriteToString(s), s->sp.ship.hit, s->sp.ship.max_hit, EventToString(s->sp.ship.event_recharge), s);
+					// this is crashing -- never gets here
+					Debug("Sprite::recharge: %s with %s #%p.\n", SpriteToString(s), EventToString(s->sp.ship.event_recharge), s);
 				}
 			} else {
 				/* killed */
@@ -1398,6 +1401,7 @@ static void deb_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
 }
 
 static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
+	Pedantic("wmd_shp: %s -- %s\n", SpriteToString(w), SpriteToString(s));
 	/* avoid inifinite destruction loop */
 	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);

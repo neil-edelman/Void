@@ -71,20 +71,17 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* update the current zone */
 	current_zone = sz;
 
-#if 1
 	/* some asteroids */
 	for(i = 0; i < 7000; i++) {
 		s = Sprite(SP_DEBRIS, AutoImageSearch("Asteroid.png"), (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), big_asteroid_mass);
 		SpriteSetVelocity(s, rnd(0.02f), rnd(0.02f));
 		SpriteSetOmega(s, rnd(10.0f));
 	}
-#endif
-#if 1
+
 	/* sprinkle some ships (1 works fine -- 2+ light is left if you alternate between shooting them with rechage turned on) */
 	for(i = 0; i < 200; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
 	}
-#endif
 
 }
 

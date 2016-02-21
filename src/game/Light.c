@@ -72,7 +72,7 @@ int Light(int *const id_ptr, const float i, const float r, const float g, const 
 	notify[light]     = id_ptr;
 	Orcish(label[light], sizeof label[light]);
 	*id_ptr           = light_to_id(light);
-	Debug("Light: created %s.\n", to_string(light));
+	Pedantic("Light: created %s.\n", to_string(light));
 	return -1;
 }
 
@@ -112,7 +112,7 @@ void Light_(int *id_ptr) {
 
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", to_string(replace));
 	}
-	Debug("~Light: erase %s.\n", buffer);
+	Pedantic("~Light: erase %s.\n", buffer);
 	lights_size = replace;
 	*id_ptr = 0;
 }
@@ -182,12 +182,12 @@ char *to_string(const unsigned light) {
 	
 	b &= 3;
 	if(light >= lights_size) {
-		snprintf(buffer[b], sizeof buffer[b], "%s (Lgh%d)", "not a light", light_to_id(light));
+		snprintf(buffer[b], sizeof buffer[b], "not a light (#%d)", light_to_id(light));
 	} else {
 		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d(%.1f,%.1f,%.1f)[%.1f,%.1f]", id, colour[light].r, colour[light].g, colour[light].b, position[light].x, position[light].y);*/
 		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d[%.1f,%.1f]", light_to_id(light), position[light].x, position[light].y);*/
 		/*snprintf(buffer[b], sizeof buffer[b], "Lgh%d[#%p]", light_to_id(light), (void *)notify[light]);*/
-		snprintf(buffer[b], sizeof buffer[b], "Lgh%s[%d no%d]", label[light], light_to_id(light), notify[light] ? *notify[light] : 0);
+		snprintf(buffer[b], sizeof buffer[b], "%s[#%d no#%d]", label[light], light_to_id(light), notify[light] ? *notify[light] : 0);
 	}
 	return buffer[b++];
 }

@@ -11,3 +11,4 @@ void (*EventGetConsumerAccept(const struct Event *const e))(void *);
 void EventDispatch(void);
 void EventReplaceArguments(struct Event *const e, ...);
 char *EventToString(const struct Event *const e);
+void EventList(void);

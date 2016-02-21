@@ -32,6 +32,7 @@
 #include "../../bin/Auto.h"
 #include "../Print.h"
 #include "../general/Sorting.h"
+#include "../general/Orcish.h"
 #include "../system/Timer.h"
 #include "../system/Draw.h"
 #include "../system/Key.h"
@@ -85,6 +86,7 @@ static const int   shp_ms_sheild_uncertainty = 50;
 static const float wmd_distance_mod         = 1.3f; /* to clear ship */
 
 static struct Sprite {
+	char     label[16];
 	float    x,  y;
 	float    x1, y1;	/* temp; the spot where you want to go */
 	float    theta, omega;
@@ -229,6 +231,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 
 	s = &sprites[sprites_size++];
 
+	Orcish(s->label, sizeof s->label);
 	s->x = s->x1 = 0.0f;
 	s->y = s->y1 = 0.0f;
 	s->theta  = 0.0f;
@@ -346,7 +349,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	first_x = first_y = s;
 	sort_notify(s);
 
-	Pedantic("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
+	Debug("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
 
 	/* FIXME! */
 	KeyRegister('s',  &sprite_poll);
@@ -447,8 +450,11 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		/* move the resouces associated from replace to sprite */
 		switch(sprite->sp_type) {
 			case SP_SHIP:
-				Debug("!\t~Sprite: %s replacing Event assocated %s.\n", SpriteToString(sprite), EventToString(sprite->sp.ship.event_recharge));
+				Debug("!\t~Sprite: erased %s, replacing arguments of Event associated with %s, %s.\n", buffer, SpriteToString(sprite), EventToString(sprite->sp.ship.event_recharge));
+				/********** EXPERIMENTAL **********/
+				EventSetNotify(&sprite->sp.ship.event_recharge);
 				EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
+				SpriteList();
 				break;
 			case SP_WMD:
 				LightSetNotify(&sprite->sp.wmd.light);
@@ -460,7 +466,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", SpriteToString(sprite));
 	}
 
-	Pedantic("~Sprite: erase %s.\n", buffer);
+	Debug("~Sprite: erase %s.\n", buffer);
 	*sprite_ptr = sprite = 0;
 
 }
@@ -580,7 +586,7 @@ char *SpriteToString(const struct Sprite *const s) {
 		/*snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%.1f,%.1f:%.1f]%.2ft", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta, s->mass);*/
 		/*snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[Lgh%d]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->sp_type == SP_WMD ? s->sp.wmd.light : 0);*/
 		//snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%s]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->sp_type == SP_SHIP && s->sp.ship.event_recharge ? EventToString(s->sp.ship.event_recharge) : "");
-		snprintf(buffer[b], sizeof buffer[b], "%sSpr%u", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1);
+		snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u]", decode_sprite_type(s->sp_type), s->label, (int)(s - sprites) + 1);
 	};
 	last_b = b;
 	b = (b + 1) & 3;
@@ -648,9 +654,8 @@ void SpriteRecharge(struct Sprite *const s, const int recharge) {
 				/* rechage */
 				if(!s->sp.ship.event_recharge
 				   && s->sp.ship.hit < s->sp.ship.max_hit) {
-					Debug("Sprite::recharge: %s beginning charging cycle %d/%d.\n#%p", SpriteToString(s), s->sp.ship.hit, s->sp.ship.max_hit, s);
+					Debug("Sprite::recharge: %s beginning charging cycle %d/%d.\n", SpriteToString(s), s->sp.ship.hit, s->sp.ship.max_hit);
 					Event(&s->sp.ship.event_recharge, s->sp.ship.ms_recharge_hit, 0, FN_CONSUMER, &ship_recharge, s);
-					// this is crashing -- never gets here
 					Debug("Sprite::recharge: %s with %s #%p.\n", SpriteToString(s), EventToString(s->sp.ship.event_recharge), s);
 				}
 			} else {
@@ -1009,7 +1014,12 @@ void SpriteUpdate(const int dt_ms) {
 				}
 				if(0 >= s->sp.ship.hit) {
 					Info("Sprite::update: %s destroyed.\n", SpriteToString(s));
+					EventList();
+					SpriteList();
 					Sprite_(&s);
+					EventList();
+					SpriteList();
+					Info("%c", '\n');
 					break;
 				}
 				/* left over from polling */
@@ -1040,13 +1050,16 @@ void SpriteUpdate(const int dt_ms) {
 
 void SpriteList(void) {
 	struct Sprite *s;
+	int i;
 	int is_first = -1;
-	Info("Sprites: {");
-	while((s = iterate())) {
-		Info("%s%s", is_first ? " " : ", ", SpriteToString(s));
+	Info("Sprites: {\n");
+	for(i = 0; i < sprites_size; i++) {
+		/*while((s = iterate())) {*/
+		s = &sprites[i];
+		Info("\t%s\n", /*is_first ? "\n" : ",\n",*/ SpriteToString(s));
 		is_first = 0;
 	}
-	Info(" }\n");
+	Info("}\n");
 }
 
 /* private */

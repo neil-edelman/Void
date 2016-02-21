@@ -19,6 +19,11 @@
  @version	3.3; 2016-01
  @since		3.2; 2015-11 */
 
+/* Q15.11: va_ macros don't like function-pointers */
+typedef void (*Runnable)(void);
+typedef void (*Consumer)(void *);
+typedef void (*Biconsumer)(void *, void *);
+
 static struct Event {
 	struct Event *prev, *next;
 	char         label[16];
@@ -27,14 +32,17 @@ static struct Event {
 	enum FnType  fn_type;
 	union {
 		struct {
-			void (*run)(void);
+			/*void (*run)(void);*/
+			Runnable run;
 		} runnable;
 		struct {
-			void (*accept)(void *);
+			/*void (*accept)(void *);*/
+			Consumer accept;
 			void *t;
 		} consumer;
 		struct {
-			void (*accept)(void *, void *);
+			/*void (*accept)(void *, void *);*/
+			Biconsumer accept;
 			void *t;
 			void *u;
 		} biconsumer;
@@ -44,7 +52,6 @@ static const int events_capacity = sizeof events / sizeof(struct Event);
 static int       events_size;
 
 static struct Event *iterate(void);
-void print_all_events(void);
 char *decode_fn_type(const enum FnType fn_type);
 
 /* public */
@@ -67,8 +74,6 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 	int real_delay_ms;
 	unsigned i;
 
-	Debug("\tEVENT! %s\n", decode_fn_type(fn_type));
-
 	if(events_size >= events_capacity) {
 		Warn("Event: couldn't be created; reached maximum of %u/%u.\n", events_size, events_capacity);
 		return 0;
@@ -82,7 +87,8 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 	}
 
 	if(event_ptr && *event_ptr) {
-		Warn("!!!!!! Event: would override %s on creation. WTF!!!!\n", EventToString(*event_ptr));
+		Warn("\n!!!!!! Event: would override %s on creation of %s %u. WTF!!!!\n\n", EventToString(*event_ptr), decode_fn_type(fn_type), events_size);
+		EventList();
 		return 0;
 	}
 
@@ -98,17 +104,17 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 	va_start(args, fn_type);
 	switch(fn_type) {
 		case FN_RUNNABLE:
-			event->fn.runnable.run = va_arg(args, void (*)(void));
+			//event->fn.runnable.run = va_arg(args, void (*)(void));
+			event->fn.runnable.run = va_arg(args, Runnable);
 			break;
 		case FN_CONSUMER:
-			event->fn.consumer.accept = va_arg(args, void (*)(void *));
+			//event->fn.consumer.accept = va_arg(args, void (*)(void *));
+			event->fn.consumer.accept = va_arg(args, Consumer);
 			event->fn.consumer.t      = va_arg(args, void *);
-			Debug("Hi%s.\n", "foo");
-			// this crashes
-			Debug("Event<Cons>: %s\n", SpriteToString(event->fn.consumer.t));
 			break;
 		case FN_BICONSUMER:
-			event->fn.biconsumer.accept = va_arg(args, void (*)(void *, void *));
+			//event->fn.biconsumer.accept = va_arg(args, void (*)(void *, void *));
+			event->fn.biconsumer.accept = va_arg(args, Biconsumer);
 			event->fn.biconsumer.t      = va_arg(args, void *);
 			event->fn.biconsumer.u      = va_arg(args, void *);
 			break;
@@ -153,7 +159,7 @@ void Event_(struct Event **event_ptr) {
 	index = event - events;
 	if(index < 0 || index >= events_size) {
 		Warn("~Event: %s, %u not in range %u.\n", EventToString(event), index + 1, events_size);
-		print_all_events();
+		EventList();
 		return;
 	}
 
@@ -202,7 +208,7 @@ void Event_(struct Event **event_ptr) {
 void EventRemoveIf(int (*const predicate)(struct Event *const)) {
 	struct Event *e;
 
-	Debug("Event::clear: clearing Events.\n");
+	Debug("Event::removeIf: clearing Events.\n");
 	/*print_all_events();*/
 	while((e = iterate())) {
 		Pedantic("Event::removeIf: consdering %s.\n", EventToString(e));
@@ -216,7 +222,7 @@ void EventSetNotify(struct Event **const e_ptr) {
 	struct Event *e;
 
 	if(!e_ptr || !(e = *e_ptr)) return;
-	if(e->notify) Warn("Event::setNotify: #%p overriding a previous notification #%p on #%p.\n", (void *)e_ptr, (void *)e->notify, (void *)e);
+	if(e->notify) Warn("!!\t\tEvent::setNotify: #%p overriding a previous notification #%p on #%p.\n", (void *)e_ptr, (void *)e->notify, (void *)e);
 	e->notify = e_ptr;
 }
 
@@ -226,6 +232,18 @@ void (*EventGetConsumerAccept(const struct Event *const e))(void *) {
 }
 
 /** Dispach all events up to the present. */
+
+/*
+Event consumer <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1])(<Ship>Luthvaldush[#1]) run...
+~Event: <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1]) notify <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1]) to 0.
+~Event: erase, <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1]) size 0.
+Event: <Consumer> triggered; 0 events left.
+ship_recharge <Ship>Luthvaldush[#1] 494GJ/520GJ
+EVENT! <Consumer>
+!!!!!! Event: would override <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1]) on creation. WTF!!!!
+Lights: { }
+*/
+
 void EventDispatch(void) {
 	struct Event *e;
 
@@ -242,7 +260,6 @@ void EventDispatch(void) {
 				runnable = e->fn.runnable.run;
 				break;
 			case FN_CONSUMER:
-				Debug("Event consumer %s(%s) run...\n", EventToString(e), SpriteToString(e->fn.consumer.t));
 				consumer = e->fn.consumer.accept;
 				t = e->fn.consumer.t;
 				break;
@@ -253,6 +270,7 @@ void EventDispatch(void) {
 				break;
 		}
 		/* delete */
+		Debug("\nEvent: %s triggered, first deleting.\n", EventToString(e));
 		Event_(&e);
 		Debug("Event: %s triggered; %u events left.\n", decode_fn_type(fn_type), events_size);
 		switch(fn_type) {
@@ -279,14 +297,14 @@ void EventReplaceArguments(struct Event *const event, ...) {
 			Warn("Event::replaceArguments: %s has no arguments.\n", EventToString(event));
 			break;
 		case FN_CONSUMER:
-			Warn("!\tEvent::replaceArguments: %s will fuckup?!!!!\n", EventToString(event));
+			Warn("!\tEvent::replaceArguments: consumer %s.\n", EventToString(event));
 			// FIXME!!!!!!!
 			// AHA!!!!!!!!!! I've found the problem, I think!!!
 			// called by Sprite.c:450
 			Warn("!\tEvent::replaceArguments: before %s\n", SpriteToString(event->fn.consumer.t));
 			event->fn.consumer.t   = va_arg(args, void *);
 			Warn("!\tEvent::replaceArguments: now %s\n", SpriteToString(event->fn.consumer.t));
-			print_all_events();
+			EventList();
 			break;
 		case FN_BICONSUMER:
 			event->fn.biconsumer.t = va_arg(args, void *);
@@ -295,6 +313,13 @@ void EventReplaceArguments(struct Event *const event, ...) {
 	}
 	va_end(args);
 }
+
+/*void EventUpdate(struct Event **const e_ptr) {
+	struct Event *e;
+
+	if(!e_ptr || !(e = *e_ptr)) return;
+	e->notify = s_ptr;
+}*/
 
 char *EventToString(const struct Event *const e) {
 	static int b;
@@ -307,13 +332,26 @@ char *EventToString(const struct Event *const e) {
 		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms);
 		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]%s", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? SpriteToString(e->fn.consumer.t) : "<not a recharge>");
 		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]#%p", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? e->fn.consumer.t : 0);
-		snprintf(buffer[b], sizeof buffer[b], "%sEvt%s[%u %ums]<%s>", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? SpriteToString(e->fn.consumer.t)/*"yes"*/ : "no"); // SpriteToString crashes
-		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%s[%u %ums]<#%p>", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? e->fn.consumer.t : 0);
+		snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u %ums](%s,%s)", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? "rcrg" : "not rcrg", e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? SpriteToString(e->fn.consumer.t) : "no");
 	};
 	last_b = b;
 	b = (b + 1) & 3;
 
 	return buffer[last_b];
+}
+
+void EventList(void) {
+	struct Event *e;
+	/*int i;*/
+	Debug("Events %ums {\n", TimerGetGameTime());
+	for(e = first_event; e; e = e->next) {
+		Debug("\t%s\n", EventToString(e));
+	}
+	/*Debug("} or {\n");
+	 for(i = 0; i < events_size; i++) {
+	 Debug("\t%s\n", EventToString(events + i));
+	 }*/
+	Debug("}\n");
 }
 
 static struct Event *iterate(void) {
@@ -323,20 +361,6 @@ static struct Event *iterate(void) {
 		iterator = iterator->next;
 	}
 	return iterator;
-}
-
-void print_all_events(void) {
-	struct Event *e;
-	/*int i;*/
-	Debug("Events %ums {\n", TimerGetGameTime());
-	for(e = first_event; e; e = e->next) {
-		Debug("\t%s\n", EventToString(e));
-	}
-	/*Debug("} or {\n");
-	for(i = 0; i < events_size; i++) {
-		Debug("\t%s\n", EventToString(events + i));
-	}*/
-	Debug("}\n");
 }
 
 char *decode_fn_type(const enum FnType fn_type) {

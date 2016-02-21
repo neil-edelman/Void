@@ -2,6 +2,7 @@ Things I am Bound to Forget without Internet
 --------------------------------------------
 grep -rn "Something" src
 diff -p A.c B.c
+fmt <text> > <text2>
 git checkout -b <newbranch> (before commit)
 git commit -am "Some message."
 git checkout master

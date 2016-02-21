@@ -3,6 +3,10 @@ Things I am Bound to Forget without Internet
 grep -rn "Something" src
 diff -p A.c B.c
 git checkout -b <newbranch> (before commit)
+git checkout master
+git merge <newbranch>
+git mergetool
+git branch -d <newbranch>
 
 Words for Things
 ----------------

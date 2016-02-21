@@ -1,8 +1,6 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the
  GNU General Public License, see copying.txt */
 
-#define PRINT_PEDANTIC
-
 #include <stdio.h>  /* snprintf */
 #include <stdarg.h>
 #include <string.h> /* memcpy */
@@ -87,7 +85,7 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 	}
 
 	if(event_ptr && *event_ptr) {
-		Warn("\n!!!!!! Event: would override %s on creation of %s %u. WTF!!!!\n\n", EventToString(*event_ptr), decode_fn_type(fn_type), events_size);
+		Warn("Event: would override %s on creation of %s %u!\n", EventToString(*event_ptr), decode_fn_type(fn_type), events_size);
 		EventList();
 		return 0;
 	}
@@ -123,7 +121,7 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 
 	/* O(n), technically; however, new values have a higher likelihood of being
 	 at the end. FIXME: gets screwed up 29.3 days in!!!! use TimerCompare() */
-	/* FIXME: singly-linked!!! more events are happening soon */
+	/* FIXME: singly-linked!!! more events are happening soon? */
 	for(prev = last_event, next = 0, i = 0;
 		prev && prev->t_ms > event->t_ms;
 		next = prev, prev = prev->prev, i++);
@@ -142,7 +140,7 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 		last_event  = event;
 	}
 
-	Debug("Event: new %s at %dms inefficiency %u (size %u.)\n", EventToString(event), event->t_ms, i, events_size);
+	Pedantic("Event: new %s at %dms inefficiency %u (size %u.)\n", EventToString(event), event->t_ms, i, events_size);
 
 	return -1;
 }
@@ -166,12 +164,9 @@ void Event_(struct Event **event_ptr) {
 	/* store the string for debug info */
 	characters = snprintf(buffer, sizeof buffer, "%s", EventToString(event));
 
-	/* update notify */
+	/* update notify for delete */
 	if(event->notify) {
-		/* THIS IS BUGGY! FIXME */
-		Debug("~Event: %s notify %s to 0.\n", EventToString(event), EventToString(*event->notify));
-		/* ~Event: <Consumer>EvtIckshabubhosh[1 16407ms] notify <Runnable>Evt?1?A???A?C1?A????????[2576927469 109704695m to 0. */
-		/* it's not updating the event */
+		Pedantic("~Event: %s notify %s to 0.\n", EventToString(event), EventToString(*event->notify));
 		*event->notify = 0;
 	}
 
@@ -209,7 +204,6 @@ void EventRemoveIf(int (*const predicate)(struct Event *const)) {
 	struct Event *e;
 
 	Debug("Event::removeIf: clearing Events.\n");
-	/*print_all_events();*/
 	while((e = iterate())) {
 		Pedantic("Event::removeIf: consdering %s.\n", EventToString(e));
 		if(!predicate || predicate(e)) Event_(&e);
@@ -222,7 +216,9 @@ void EventSetNotify(struct Event **const e_ptr) {
 	struct Event *e;
 
 	if(!e_ptr || !(e = *e_ptr)) return;
-	if(e->notify) Warn("!!\t\tEvent::setNotify: #%p overriding a previous notification #%p on #%p.\n", (void *)e_ptr, (void *)e->notify, (void *)e);
+	/* this is supposed to happen -- Sprites are moving around thus this pointer
+	 has to update
+	 if(e->notify) Warn("Event::setNotify: %s overriding a previous notification, %s!\n", EventToString(e), EventToString(*e->notify));*/
 	e->notify = e_ptr;
 }
 
@@ -232,18 +228,6 @@ void (*EventGetConsumerAccept(const struct Event *const e))(void *) {
 }
 
 /** Dispach all events up to the present. */
-
-/*
-Event consumer <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1])(<Ship>Luthvaldush[#1]) run...
-~Event: <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1]) notify <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1]) to 0.
-~Event: erase, <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1]) size 0.
-Event: <Consumer> triggered; 0 events left.
-ship_recharge <Ship>Luthvaldush[#1] 494GJ/520GJ
-EVENT! <Consumer>
-!!!!!! Event: would override <Consumer>Ettebatdush[#1 14464ms](<Ship>Luthvaldush[#1]) on creation. WTF!!!!
-Lights: { }
-*/
-
 void EventDispatch(void) {
 	struct Event *e;
 
@@ -270,9 +254,8 @@ void EventDispatch(void) {
 				break;
 		}
 		/* delete */
-		Debug("\nEvent: %s triggered, first deleting.\n", EventToString(e));
+		Pedantic("\nEvent: %s triggered. First deleting; then %u events left.\n", EventToString(e), events_size - 1);
 		Event_(&e);
-		Debug("Event: %s triggered; %u events left.\n", decode_fn_type(fn_type), events_size);
 		switch(fn_type) {
 			case FN_RUNNABLE:	runnable();			break;
 			case FN_CONSUMER:	consumer(t);		break;
@@ -285,10 +268,7 @@ void EventDispatch(void) {
 void EventReplaceArguments(struct Event *const event, ...) {
 	va_list args;
 
-	if(!event) {
-		Debug("Event::replaceArguments: no %s.\n", "event");
-		return;
-	}
+	if(!event) return;
 	Pedantic("Event::replaceArguments: %s.\n", EventToString(event));
 
 	va_start(args, event);
@@ -297,14 +277,7 @@ void EventReplaceArguments(struct Event *const event, ...) {
 			Warn("Event::replaceArguments: %s has no arguments.\n", EventToString(event));
 			break;
 		case FN_CONSUMER:
-			Warn("!\tEvent::replaceArguments: consumer %s.\n", EventToString(event));
-			// FIXME!!!!!!!
-			// AHA!!!!!!!!!! I've found the problem, I think!!!
-			// called by Sprite.c:450
-			Warn("!\tEvent::replaceArguments: before %s\n", SpriteToString(event->fn.consumer.t));
 			event->fn.consumer.t   = va_arg(args, void *);
-			Warn("!\tEvent::replaceArguments: now %s\n", SpriteToString(event->fn.consumer.t));
-			EventList();
 			break;
 		case FN_BICONSUMER:
 			event->fn.biconsumer.t = va_arg(args, void *);
@@ -314,13 +287,6 @@ void EventReplaceArguments(struct Event *const event, ...) {
 	va_end(args);
 }
 
-/*void EventUpdate(struct Event **const e_ptr) {
-	struct Event *e;
-
-	if(!e_ptr || !(e = *e_ptr)) return;
-	e->notify = s_ptr;
-}*/
-
 char *EventToString(const struct Event *const e) {
 	static int b;
 	static char buffer[4][64];
@@ -329,10 +295,8 @@ char *EventToString(const struct Event *const e) {
 	if(!e) {
 		snprintf(buffer[b], sizeof buffer[b], "%s", "null event");
 	} else {
-		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms);
-		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]%s", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? SpriteToString(e->fn.consumer.t) : "<not a recharge>");
-		//snprintf(buffer[b], sizeof buffer[b], "%sEvt%u[%c at %ums]#%p", decode_fn_type(e->fn_type), (int)(e - events) + 1, e->label, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? e->fn.consumer.t : 0);
-		snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u %ums](%s,%s)", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? "rcrg" : "not rcrg", e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? SpriteToString(e->fn.consumer.t) : "no");
+		//snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u %ums](%s,%s)", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? "rcrg" : "not rcrg", e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? SpriteToString(e->fn.consumer.t) : "no");
+		snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u %ums]", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms);
 	};
 	last_b = b;
 	b = (b + 1) & 3;
@@ -343,9 +307,9 @@ char *EventToString(const struct Event *const e) {
 void EventList(void) {
 	struct Event *e;
 	/*int i;*/
-	Debug("Events %ums {\n", TimerGetGameTime());
+	Info("Events %ums {\n", TimerGetGameTime());
 	for(e = first_event; e; e = e->next) {
-		Debug("\t%s\n", EventToString(e));
+		Info("\t%s\n", EventToString(e));
 	}
 	/*Debug("} or {\n");
 	 for(i = 0; i < events_size; i++) {

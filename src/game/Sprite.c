@@ -349,7 +349,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	first_x = first_y = s;
 	sort_notify(s);
 
-	Debug("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
+	Pedantic("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
 
 	/* FIXME! */
 	KeyRegister('s',  &sprite_poll);
@@ -450,11 +450,9 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		/* move the resouces associated from replace to sprite */
 		switch(sprite->sp_type) {
 			case SP_SHIP:
-				Debug("!\t~Sprite: erased %s, replacing arguments of Event associated with %s, %s.\n", buffer, SpriteToString(sprite), EventToString(sprite->sp.ship.event_recharge));
-				/********** EXPERIMENTAL **********/
+				Pedantic("~Sprite: replacing arguments of Event associated with %s, %s.\n", SpriteToString(sprite), EventToString(sprite->sp.ship.event_recharge));
 				EventSetNotify(&sprite->sp.ship.event_recharge);
 				EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
-				SpriteList();
 				break;
 			case SP_WMD:
 				LightSetNotify(&sprite->sp.wmd.light);
@@ -466,7 +464,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", SpriteToString(sprite));
 	}
 
-	Debug("~Sprite: erase %s.\n", buffer);
+	Pedantic("~Sprite: erase %s.\n", buffer);
 	*sprite_ptr = sprite = 0;
 
 }
@@ -654,9 +652,8 @@ void SpriteRecharge(struct Sprite *const s, const int recharge) {
 				/* rechage */
 				if(!s->sp.ship.event_recharge
 				   && s->sp.ship.hit < s->sp.ship.max_hit) {
-					Debug("Sprite::recharge: %s beginning charging cycle %d/%d.\n", SpriteToString(s), s->sp.ship.hit, s->sp.ship.max_hit);
+					Pedantic("Sprite::recharge: %s beginning charging cycle %d/%d.\n", SpriteToString(s), s->sp.ship.hit, s->sp.ship.max_hit);
 					Event(&s->sp.ship.event_recharge, s->sp.ship.ms_recharge_hit, 0, FN_CONSUMER, &ship_recharge, s);
-					Debug("Sprite::recharge: %s with %s #%p.\n", SpriteToString(s), EventToString(s->sp.ship.event_recharge), s);
 				}
 			} else {
 				/* killed */
@@ -1014,12 +1011,7 @@ void SpriteUpdate(const int dt_ms) {
 				}
 				if(0 >= s->sp.ship.hit) {
 					Info("Sprite::update: %s destroyed.\n", SpriteToString(s));
-					EventList();
-					SpriteList();
 					Sprite_(&s);
-					EventList();
-					SpriteList();
-					Info("%c", '\n');
 					break;
 				}
 				/* left over from polling */

@@ -54,16 +54,6 @@ char *decode_fn_type(const enum FnType fn_type);
 
 /* public */
 
-/////////
-struct Sprite;
-void ship_recharge(struct Sprite *const a);
-char *SpriteToString(const struct Sprite *const s);
-
-///////////////////
-unsigned EventGetN(void) {
-	return events_size;
-}
-
 /** Constructor.
  @return	An object or a null pointer, if the object couldn't be created. */
 int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...) {

@@ -2,7 +2,6 @@ enum FnType { FN_RUNNABLE, FN_CONSUMER, FN_BICONSUMER };
 
 struct Event;
 
-unsigned EventGetN(void);
 int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...);
 void Event_(struct Event **event_ptr);
 void EventRemoveIf(int (*const predicate)(struct Event *const));

@@ -1,3 +1,10 @@
+7000 asteroids, 200 ships
+99%
+31.2 fps, 32ms average frame-time; 5797ms game-time.
+31.2 fps, 32ms average frame-time; 7079ms game-time.
+
+
+
 66 sprites, old thing
 28%
 

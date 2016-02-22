@@ -46,7 +46,8 @@ struct Game {
 static const float asteroid_max_speed = 0.03f;
 
 /* positions larger then this value will be looped around;
- used in Sprite and Zone */
+ used in Sprite and Zone; if you change, you should also change waypoints in
+ Sprite */
 const float de_sitter = 8192.0f;
 
 /* private */
@@ -58,8 +59,6 @@ static void gametime(void);
 /*static void add_sprites(void);*/
 /*static void poll_sprites(void);*/
 static void position(void);
-static void con(const char *const a);
-static void bi(char *, char *);
 
 /* public */
 
@@ -73,11 +72,10 @@ int Game(void) {
 	KeyRegister('p',  &pause);
 	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &fps);
-	KeyRegister('z',  &position);
+	KeyRegister('a',  &position);
 	KeyRegister('t',  &gametime);
 	KeyRegister('l',  &LightList);
-	/*KeyRegister('.',  &BubblePush);
-	KeyRegister('/',  &BubblePop);*/
+	KeyRegister('s',  &SpriteList);
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
@@ -95,7 +93,6 @@ int Game(void) {
 	DrawSetShield("Bar.png");
 
 	Zone(game.start);
-	Event(0, 3000, 1000, FN_CONSUMER, &con, "cool");
 	Event(0, 2000, 1000, FN_RUNNABLE, &position);
 	game.player = Sprite(SP_SHIP, 0, 0, 0.0, game.nautilus, B_HUMAN);
 	SpriteSetNotify(&game.player);
@@ -201,15 +198,5 @@ static void position(void) {
 	}
 	SpriteGetPosition(game.player, &x, &y);
 	t = SpriteGetTheta(game.player);
-	Info("Position(%.1f,%.1f:%.1f)\n", x, y, t);
-}
-
-static void con(const char *const a) {
-	Info("con: %s\n", a);
-}
-
-static void bi(char *a, char *b) {
-	if(--a[0] < 'A') a[0] = 'z';
-	printf("!!!! %s : %s\n", a, b);
-	Event(0, 1000, 100, FN_BICONSUMER, &bi, a, b);
+	Info("You are %s at position (%.1f,%.1f:%.1f) with %dGJ/%dGJ.\n", SpriteToString(game.player), x, y, t, SpriteGetHit(game.player), SpriteGetMaxHit(game.player));
 }

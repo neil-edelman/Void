@@ -50,6 +50,8 @@
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #endif
 
+#define CLIP(c, a, z) ((c) <= (a) ? (a) : (c) >= (z) ? (z) : (c))
+
 /* from Lore */
 extern const struct Gate gate;
 
@@ -59,6 +61,8 @@ extern const struct Gate gate;
  a sprite is 256x256 to be guaranteed to be without clipping and collision
  artifacts */
 static const int half_max_size = 128;
+/* log_2(half_max_size * 2.0f), used for waypoints */
+static const int max_size_pow  = 8;
 static const float epsilon = 0.0005f;
 extern const float de_sitter;
 
@@ -140,11 +144,22 @@ static struct Sprite {
 
 	/* sort by axes in doubly-linked list */
 	struct Sprite *prev_x, *next_x, *prev_y, *next_y;
+
+	/* linked list in waypoint, and the waypoint */
+	struct Sprite *next_waypoint;
+	int waypoint_x, waypoint_y;
+
 } sprites[8192], *first_x, *first_y, *first_x_window, *first_y_window, *window_iterator, *iterator = sprites;
-static const int sprites_capacity = sizeof(sprites) / sizeof(struct Sprite);
+static const int sprites_capacity = sizeof sprites / sizeof(struct Sprite);
 static int       sprites_size;
 
 static int sprites_considered, sprites_onscreen; /* for stats */
+
+/* should be updated once these values change!
+ (int)de_sitter * 2 / max_size = 8192 * 2 / 256 = 64 (fixme) */
+static struct Sprite *waypoints[64][64];
+static const int waypoint_size = sizeof waypoints[0] / sizeof(struct Sprite *);
+static const int waypoint_half_size = sizeof waypoints[0] / sizeof(struct Sprite *) >> 1;
 
 /* private prototypes */
 
@@ -181,7 +196,10 @@ static char *decode_sprite_type(const enum SpType sptype);
 static void gate_travel(struct Sprite *const gate, struct Sprite *ship);
 static void do_ai(struct Sprite *const s, const int dt_ms);
 static void sprite_poll(void);
-/*static*/ void ship_recharge(struct Sprite *const a);
+static void ship_recharge(struct Sprite *const a);
+static void waypoint_add(struct Sprite *const s);
+static void waypoint_change(struct Sprite *const s);
+static void waypoint_remove(struct Sprite *const s);
 
 /* fixme: this assumes SP_DEBRIS = 0, ..., SP_ETHEREAL = 3 */
 static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, const float) = {
@@ -349,10 +367,10 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	first_x = first_y = s;
 	sort_notify(s);
 
-	Pedantic("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
+	/* also stick it into waypoint */
+	waypoint_add(s);
 
-	/* FIXME! */
-	KeyRegister('s',  &sprite_poll);
+	Pedantic("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
 
 	return s;
 }
@@ -388,6 +406,9 @@ void Sprite_(struct Sprite **sprite_ptr) {
 
 	/* store the string for debug info */
 	characters = snprintf(buffer, sizeof buffer, "%s", SpriteToString(sprite));
+
+	/* take it out of the waypoint */
+	waypoint_remove(sprite);
 
 	/* update notify */
 	if(sprite->notify) *sprite->notify = 0;
@@ -443,6 +464,10 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(replace == first_y)        first_y        = sprite;
 		if(replace == first_y_window) first_y_window = sprite;
 		if(replace == window_iterator)window_iterator= sprite;
+
+		/* replace waypoint pointer */
+		waypoint_remove(replace);
+		waypoint_add(sprite);
 
 		/* update notify */
 		if(sprite->notify) *sprite->notify = sprite;
@@ -805,6 +830,10 @@ void SpriteRemoveIf(int (*const predicate)(struct Sprite *const)) {
 
 extern int draw_is_print_sprites;
 
+/************************************************************
+ fixme: instead of marking, just do waypoints
+ ************************************************************/
+
 /** Returns true while there are more sprites in the window, sets the values.
  The pointers need to all be there or else there will surely be a segfault.
  <p>
@@ -984,6 +1013,7 @@ void SpriteUpdate(const int dt_ms) {
 
 		/* keep it sorted (fixme: no?) */
 		sort_notify(s);
+		waypoint_change(s);
 	}
 
 	/* do some stuff that is unique to each sprite type */
@@ -1517,7 +1547,7 @@ static void do_ai(struct Sprite *const a, const int dt_ms) {
 	SpriteInput(a, turning, acceleration, dt_ms);
 }
 
-static void sprite_poll(void) {
+/*static void sprite_poll(void) {
 	struct Sprite *s;
 
 	Info("Sprites by array index:\n");
@@ -1527,10 +1557,10 @@ static void sprite_poll(void) {
 	Info("Sprites by y:\n");
 	for(s = first_y; s; s = s->next_y) Info("%s\n", SpriteToString(s));
 	draw_is_print_sprites = -1;
-}
+}*/
 
 /** can be used as an Event */
-/*static!*/void ship_recharge(struct Sprite *const a) {
+static void ship_recharge(struct Sprite *const a) {
 	if(!a || SpriteGetType(a) != SP_SHIP) {
 		Warn("ship_recharge: called on %s.\n", SpriteToString(a));
 		return;
@@ -1546,10 +1576,78 @@ static void sprite_poll(void) {
 		Debug("ship_recharge: %s shields full %uGJ/%uGJ.\n", SpriteToString(a), a->sp.ship.hit, a->sp.ship.max_hit);
 		return;
 	}
-	/*if(a->sp.ship.event_recharge) {
-		of course, it was SpriteRecharge
-		Warn("***************%s!!!\n", SpriteToString(a));
-		return;
-	}*/
 	Event(&a->sp.ship.event_recharge, a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &ship_recharge, a);
+}
+
+/** Called from constructor after setting (x, y). */
+static void waypoint_add(struct Sprite *const s) {
+	const int waypoint_x = (int)s->x >> max_size_pow;
+	const int waypoint_y = (int)s->y >> max_size_pow;
+	const int index_x = CLIP(waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+	const int index_y = CLIP(waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+
+	Pedantic("Sprite::waypoint_add: (%d,%d -> %d,%d).\n", waypoint_x, waypoint_y, index_x, index_y);
+	s->next_waypoint = waypoints[index_y][index_x];
+	waypoints[index_y][index_x] = s;
+	s->waypoint_x = waypoint_x;
+	s->waypoint_y = waypoint_y;
+}
+
+/** Called all the time; whenever there's a position change. */
+static void waypoint_change(struct Sprite *const s) {
+	const int waypoint_x = (int)s->x >> max_size_pow; /* @ sprite @ frame */
+	const int waypoint_y = (int)s->y >> max_size_pow; /* fixme? */
+
+	/* we're not changing waypoints; easy out */
+	if(s->waypoint_x == waypoint_x && s->waypoint_y == waypoint_y) return;
+	/* O(n) delete from linked list :0 */
+	{
+		const int index_x = CLIP(s->waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		const int index_y = CLIP(s->waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		struct Sprite *this_wp = waypoints[index_y][index_x];
+		struct Sprite *last_wp = 0;
+
+		for( ; this_wp && this_wp != s; last_wp = this_wp, this_wp = this_wp->next_waypoint);
+		if(!this_wp) {
+			Warn("Sprite::waypoint_change: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), waypoint_x, waypoint_y);
+		} else if(!last_wp) {
+			/* waypoint has the sprite first */
+			waypoints[index_y][index_x] = s->next_waypoint;
+		} else {
+			/* it's in the list somewhere */
+			last_wp->next_waypoint = s->next_waypoint;
+		}
+	}
+
+	/* add it into the changed waypoint */
+	{
+		const int index_x = CLIP(waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		const int index_y = CLIP(waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+
+		s->next_waypoint = waypoints[index_y][index_x];
+		waypoints[index_y][index_x] = s;
+		s->waypoint_x = waypoint_x;
+		s->waypoint_y = waypoint_y;
+		Pedantic("Sprite::waypoint_change: %s changed to waypoint (%d, %d).\n", SpriteToString(s), waypoint_x, waypoint_y);
+	}
+}
+
+/** Called from destructor. */
+static void waypoint_remove(struct Sprite *const s) {
+	const int index_x = CLIP(s->waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+	const int index_y = CLIP(s->waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+	struct Sprite *this_wp = waypoints[index_y][index_x];
+	struct Sprite *last_wp = 0;
+	
+	for( ; this_wp && this_wp != s; last_wp = this_wp, this_wp = this_wp->next_waypoint);
+	if(!this_wp) {
+		Warn("Sprite::waypoint_remove: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), s->waypoint_x, s->waypoint_y);
+	} else if(!last_wp) {
+		/* waypoint has the sprite first */
+		waypoints[index_y][index_x] = s->next_waypoint;
+	} else {
+		/* it's in the list somewhere */
+		last_wp->next_waypoint = s->next_waypoint;
+	}
+	s->next_waypoint = 0;
 }

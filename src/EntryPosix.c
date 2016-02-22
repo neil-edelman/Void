@@ -12,9 +12,6 @@
 #include "system/Key.h"
 #include "game/Game.h"
 
-
-#include "general/Orcish.h"
-
 /** Entry point for command-line, unix-like operating systems (ie, all of them.)
  <p>
  Fixme: have separate entry points for MacOS and Windows that are user friendly.

@@ -138,3 +138,12 @@ static char *to_name(const char *const fn) {
 }
 
 #endif
+
+#ifdef CLIP
+
+/** Clips c to [min, max]. */
+static int clip(const int c, const int min, const int max) {
+	return c <= min ? min : c >= max ? max : c;
+}
+
+#endif

@@ -50,8 +50,6 @@
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #endif
 
-#define CLIP(c, a, z) ((c) <= (a) ? (a) : (c) >= (z) ? (z) : (c))
-
 /* from Lore */
 extern const struct Gate gate;
 
@@ -200,6 +198,7 @@ static void ship_recharge(struct Sprite *const a);
 static void waypoint_add(struct Sprite *const s);
 static void waypoint_change(struct Sprite *const s);
 static void waypoint_remove(struct Sprite *const s);
+static int clip(const int c, const int min, const int max) {
 
 /* fixme: this assumes SP_DEBRIS = 0, ..., SP_ETHEREAL = 3 */
 static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, const float) = {
@@ -1583,8 +1582,8 @@ static void ship_recharge(struct Sprite *const a) {
 static void waypoint_add(struct Sprite *const s) {
 	const int waypoint_x = (int)s->x >> max_size_pow;
 	const int waypoint_y = (int)s->y >> max_size_pow;
-	const int index_x = CLIP(waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-	const int index_y = CLIP(waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+	const int index_x = clip(waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+	const int index_y = clip(waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
 
 	Pedantic("Sprite::waypoint_add: (%d,%d -> %d,%d).\n", waypoint_x, waypoint_y, index_x, index_y);
 	s->next_waypoint = waypoints[index_y][index_x];
@@ -1602,8 +1601,8 @@ static void waypoint_change(struct Sprite *const s) {
 	if(s->waypoint_x == waypoint_x && s->waypoint_y == waypoint_y) return;
 	/* O(n) delete from linked list :0 */
 	{
-		const int index_x = CLIP(s->waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-		const int index_y = CLIP(s->waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		const int index_x = clip(s->waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		const int index_y = clip(s->waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
 		struct Sprite *this_wp = waypoints[index_y][index_x];
 		struct Sprite *last_wp = 0;
 
@@ -1621,8 +1620,8 @@ static void waypoint_change(struct Sprite *const s) {
 
 	/* add it into the changed waypoint */
 	{
-		const int index_x = CLIP(waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-		const int index_y = CLIP(waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		const int index_x = clip(waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		const int index_y = clip(waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
 
 		s->next_waypoint = waypoints[index_y][index_x];
 		waypoints[index_y][index_x] = s;
@@ -1634,8 +1633,8 @@ static void waypoint_change(struct Sprite *const s) {
 
 /** Called from destructor. */
 static void waypoint_remove(struct Sprite *const s) {
-	const int index_x = CLIP(s->waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-	const int index_y = CLIP(s->waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+	const int index_x = clip(s->waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+	const int index_y = clip(s->waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
 	struct Sprite *this_wp = waypoints[index_y][index_x];
 	struct Sprite *last_wp = 0;
 	
@@ -1650,4 +1649,9 @@ static void waypoint_remove(struct Sprite *const s) {
 		last_wp->next_waypoint = s->next_waypoint;
 	}
 	s->next_waypoint = 0;
+}
+
+/** Clips c to [min, max]. */
+static int clip(const int c, const int min, const int max) {
+	return c <= min ? min : c >= max ? max : c;
 }

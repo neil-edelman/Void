@@ -9,6 +9,7 @@ git checkout master
 git merge <newbranch>
 git mergetool
 git branch -d <newbranch>
+git show
 
 Words for Things
 ----------------

@@ -2,8 +2,12 @@
 99%
 31.2 fps, 32ms average frame-time; 5797ms game-time.
 31.2 fps, 32ms average frame-time; 7079ms game-time.
-
-
+after waypoints
+31.2 fps, 32ms average frame-time; 2798ms game-time.
+31.2 fps, 32ms average frame-time; 3851ms game-time.
+31.2 fps, 32ms average frame-time; 4333ms game-time.
+31.2 fps, 32ms average frame-time; 4638ms game-time.
+it doesn't make a shred of difference
 
 66 sprites, old thing
 28%

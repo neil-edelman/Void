@@ -193,12 +193,12 @@ static void eth_shp(struct Sprite *, struct Sprite *, const float);
 static char *decode_sprite_type(const enum SpType sptype);
 static void gate_travel(struct Sprite *const gate, struct Sprite *ship);
 static void do_ai(struct Sprite *const s, const int dt_ms);
-static void sprite_poll(void);
+/*static void sprite_poll(void);*/
 static void ship_recharge(struct Sprite *const a);
 static void waypoint_add(struct Sprite *const s);
 static void waypoint_change(struct Sprite *const s);
 static void waypoint_remove(struct Sprite *const s);
-static int clip(const int c, const int min, const int max) {
+static int clip(const int c, const int min, const int max);
 
 /* fixme: this assumes SP_DEBRIS = 0, ..., SP_ETHEREAL = 3 */
 static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, const float) = {
@@ -833,6 +833,8 @@ extern int draw_is_print_sprites;
  fixme: instead of marking, just do waypoints
  ************************************************************/
 
+
+#if 0
 /** Returns true while there are more sprites in the window, sets the values.
  The pointers need to all be there or else there will surely be a segfault.
  <p>
@@ -948,6 +950,67 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 	is_reset = -1;
 	return 0;
 }
+
+#else
+int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
+	static int is_reset = -1;
+	static int x_min_index, x_max_index, y_max_index, x_index, y_index;
+	static struct Sprite *s;
+
+	/* reset */
+	if(is_reset) {
+		float camera_x, camera_y;
+		unsigned screen_width, screen_height;
+		/* this does not need to be static, top-down */
+		int y_min_index;
+		int x_min_waypoint, x_max_waypoint, y_min_waypoint, y_max_waypoint;
+
+		DrawGetScreen(&screen_width, &screen_height);
+		DrawGetCamera(&camera_x, &camera_y);
+
+		x_min_waypoint = (int)(camera_x - (0.5f * screen_width))  >> max_size_pow;
+		x_max_waypoint = (int)(camera_x + (0.5f * screen_width))  >> max_size_pow;
+		y_min_waypoint = (int)(camera_y - (0.5f * screen_height)) >> max_size_pow;
+		y_max_waypoint = (int)(camera_y + (0.5f * screen_height)) >> max_size_pow;
+
+		x_min_index = clip(x_min_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		x_max_index = clip(x_max_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		y_min_index = clip(y_min_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		y_max_index = clip(y_max_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+
+		x_index = x_min_index;
+		y_index = y_min_index;
+
+		s = waypoints[y_index][x_index];
+
+		is_reset = 0;
+	}
+
+	/* proceed to the next waypoint */
+	while(!s /*|| s->*/) {
+		if(x_max_index < ++x_index) {
+			/* all done with the sprites on-screen */
+			if(y_max_index < ++y_index) {
+				is_reset = -1;
+				return 0;
+			}
+			x_index = x_min_index;
+		}
+		s = waypoints[y_index][x_index];
+	}
+
+	/* fixme */
+	*x_ptr       = s->x;
+	*y_ptr       = s->y;
+	*theta_ptr   = s->theta;
+	*texture_ptr = s->texture;
+	*size_ptr    = s->size;
+
+	s = s->next_waypoint;
+
+	return -1;
+}
+#endif
 
 /** This is where most of the work gets done. Called every frame, O(n). Also,
  this calls appropriate handlers for subclasses.

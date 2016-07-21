@@ -29,7 +29,7 @@
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
 #include <string.h> /* memset */
 #include <stdio.h>	/* snprintf */
-#include "../../bin/Auto.h"
+#include "../../build/Auto.h"
 #include "../Print.h"
 #include "../general/Sorting.h"
 #include "../general/Orcish.h"
@@ -968,10 +968,10 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 		DrawGetScreen(&screen_width, &screen_height);
 		DrawGetCamera(&camera_x, &camera_y);
 
-		x_min_waypoint = (int)(camera_x - (0.5f * screen_width))  >> max_size_pow;
-		x_max_waypoint = (int)(camera_x + (0.5f * screen_width))  >> max_size_pow;
-		y_min_waypoint = (int)(camera_y - (0.5f * screen_height)) >> max_size_pow;
-		y_max_waypoint = (int)(camera_y + (0.5f * screen_height)) >> max_size_pow;
+		x_min_waypoint = (int)(camera_x - (0.5f * screen_width))  >> (max_size_pow);
+		x_max_waypoint = (int)(camera_x + (0.5f * screen_width))  >> (max_size_pow);
+		y_min_waypoint = (int)(camera_y - (0.5f * screen_height)) >> (max_size_pow);
+		y_max_waypoint = (int)(camera_y + (0.5f * screen_height)) >> (max_size_pow);
 
 		x_min_index = clip(x_min_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
 		x_max_index = clip(x_max_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;

@@ -3,7 +3,7 @@
 
 #include <stdlib.h> /* rand (fixme) */
 #include <math.h>	/* M_PI */
-#include "../../bin/Auto.h"
+#include "../../build/Auto.h"
 #include "../Print.h"
 #include "../system/Draw.h"
 #include "Game.h"

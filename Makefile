@@ -7,6 +7,7 @@ VB    := 3
 # dirs
 SDIR  := src
 BDIR  := bin
+GDIR  := build
 TDIR  := tools
 MDIR  := media
 BACK  := backup
@@ -34,13 +35,13 @@ EXTRA := $(MDIR)/icon.rc todo.txt build/msvc2010.txt build/unix.txt performance.
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
 
 # select all the things in the src/; the Lore is generated automatically by a tool
-SRCS  := $(call rwildcard, $(SDIR), *.c) $(SDIR)/../$(BDIR)/Auto.c
-H     := $(call rwildcard, $(SDIR), *.h) $(SDIR)/../$(BDIR)/Auto.h
-OBJS  := $(patsubst $(SDIR)/%.c, $(BDIR)/%.o, $(SRCS))
+SRCS  := $(call rwildcard, $(SDIR), *.c) $(SDIR)/../$(GDIR)/Auto.c
+H     := $(call rwildcard, $(SDIR), *.h) $(SDIR)/../$(GDIR)/Auto.h
+OBJS  := $(patsubst $(SDIR)/%.c, $(GDIR)/%.o, $(SRCS))
 VS    := $(call rwildcard, $(SDIR)/$(SDR), *.vs)
 FS    := $(call rwildcard, $(SDIR)/$(SDR), *.fs)
-VS_H  := $(patsubst $(SDIR)/$(SDR)/%.vs, $(BDIR)/$(SDR)/%_vs.h, $(VS))
-FS_H  := $(patsubst $(SDIR)/$(SDR)/%.fs, $(BDIR)/$(SDR)/%_fs.h, $(FS))
+VS_H  := $(patsubst $(SDIR)/$(SDR)/%.vs, $(GDIR)/$(SDR)/%_vs.h, $(VS))
+FS_H  := $(patsubst $(SDIR)/$(SDR)/%.fs, $(GDIR)/$(SDR)/%_fs.h, $(FS))
 
 FILE2H_DIR := tools/File2h
 FILE2H_DEP := tools/File2h/src/File2h.c tools/File2h/Makefile
@@ -57,15 +58,15 @@ LOADER       := tools/Loader/bin/Loader
 
 # Loader resources
 TYPE   := $(wildcard $(MDIR)/*.type)
-LORE_H := $(BDIR)/Auto.h
+LORE_H := $(GDIR)/Auto.h
 LORE   := $(wildcard $(MDIR)/*.lore)
-LORE_C := $(BDIR)/Auto.c
+LORE_C := $(GDIR)/Auto.c
 PNG    := $(wildcard $(MDIR)/*.png)
-PNG_H  := $(patsubst $(MDIR)/%.png,$(BDIR)/%_png.h,$(PNG))
+PNG_H  := $(patsubst $(MDIR)/%.png,$(GDIR)/%_png.h,$(PNG))
 JPEG   := $(wildcard $(MDIR)/*.jpeg)
-JPEG_H := $(patsubst $(MDIR)/%.jpeg,$(BDIR)/%_jpeg.h,$(JPEG))
+JPEG_H := $(patsubst $(MDIR)/%.jpeg,$(GDIR)/%_jpeg.h,$(JPEG))
 BMP    := $(wildcard $(MDIR)/*.bmp)
-BMP_H  := $(patsubst $(MDIR)/%.bmp,$(BDIR)/%_bmp.h,$(BMP))
+BMP_H  := $(patsubst $(MDIR)/%.bmp,$(GDIR)/%_bmp.h,$(BMP))
 TEXT   := $(wildcard $(MDIR)/*.txt)
 
 CC   := gcc
@@ -97,51 +98,46 @@ $(BDIR)/$(PROJ): $(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(OBJS)
 	$(CC) $(CF) $(OF) $(OBJS) -o $@
 
 # compiling
-$(OBJS): $(BDIR)/%.o: $(SDIR)/%.c $(VS_VS) $(FS_FS) $(H)
+$(OBJS): $(GDIR)/%.o: $(SDIR)/%.c $(VS_VS) $(FS_FS) $(H)
 	@mkdir -p $(BDIR)
-	@mkdir -p $(BDIR)/$(SYS)
-	@mkdir -p $(BDIR)/$(GEN)
-	@mkdir -p $(BDIR)/$(GME)
-	@mkdir -p $(BDIR)/$(FMT)
+	@mkdir -p $(GDIR)
+	@mkdir -p $(GDIR)/$(SYS)
+	@mkdir -p $(GDIR)/$(GEN)
+	@mkdir -p $(GDIR)/$(GME)
+	@mkdir -p $(GDIR)/$(FMT)
 	$(CC) $(CF) -c $(SDIR)/$*.c -o $@
 
-$(BDIR)/$(SDR)/%_vs.h: $(SDIR)/$(SDR)/%.vs $(TEXT2H)
+$(GDIR)/$(SDR)/%_vs.h: $(SDIR)/$(SDR)/%.vs $(TEXT2H)
 	# . . . vertex shaders into headers.
-	@mkdir -p $(BDIR)
-	@mkdir -p $(BDIR)/$(SDR)
+	@mkdir -p $(GDIR)
+	@mkdir -p $(GDIR)/$(SDR)
 	$(TEXT2H) $< > $@
 
-$(BDIR)/$(SDR)/%_fs.h: $(SDIR)/$(SDR)/%.fs $(TEXT2H)
+$(GDIR)/$(SDR)/%_fs.h: $(SDIR)/$(SDR)/%.fs $(TEXT2H)
 	# . . . fragment shaders into headers.
-	@mkdir -p $(BDIR)
-	@mkdir -p $(BDIR)/$(SDR)
+	@mkdir -p $(GDIR)
+	@mkdir -p $(GDIR)/$(SDR)
 	$(TEXT2H) $< > $@
 
 $(LORE_H): $(LOADER) $(FILE2H) $(TYPE)
 	# . . . resources lore.h
-	@mkdir -p $(BDIR)
+	@mkdir -p $(GDIR)
 	$(LOADER) $(MDIR) > $(LORE_H)
 
 $(LORE_C): $(LOADER) $(FILE2H) $(TYPE) $(LORE) $(PNG_H) $(JPEG_H) $(BMP_H)
 	# . . . resources lore.c
-	@mkdir -p $(BDIR)
+	@mkdir -p $(GDIR)
 	$(LOADER) $(MDIR) $(MDIR) > $(LORE_C)
 
-$(BDIR)/%_png.h: $(MDIR)/%.png $(FILE2H)
+$(GDIR)/%_png.h: $(MDIR)/%.png $(FILE2H)
 	# . . . File2h png
-	@mkdir -p $(BDIR)
+	@mkdir -p $(GDIR)
 	$(FILE2H) $< > $@
 
-$(BDIR)/%_jpeg.h: $(MDIR)/%.jpeg $(FILE2H)
+$(GDIR)/%_jpeg.h: $(MDIR)/%.jpeg $(FILE2H)
 	# . . . File2h jpeg
-	@mkdir -p $(BDIR)
+	@mkdir -p $(GDIR)
 	$(FILE2H) $< > $@
-
-# took out bmp
-#$(BDIR)/%_bmp.h: $(MDIR)/%.bmp $(FILE2H)
-	# . . . File2h bmp
-#	@mkdir -p $(BDIR)
-#	$(FILE2H) $< > $@
 
 # additional dependancies
 
@@ -199,10 +195,10 @@ source:
 
 icon: default
 	# . . . setting icon on a Mac.
-	cp $(MDIR)/$(ICON) $(BDIR)/$(ICON)
-	-sips --addIcon $(BDIR)/$(ICON)
-	-DeRez -only icns $(BDIR)/$(ICON) > $(BDIR)/$(RSRC)
-	-Rez -append $(BDIR)/$(RSRC) -o $(BDIR)/$(PROJ)
+	cp $(MDIR)/$(ICON) $(GDIR)/$(ICON)
+	-sips --addIcon $(GDIR)/$(ICON)
+	-DeRez -only icns $(GDIR)/$(ICON) > $(GDIR)/$(RSRC)
+	-Rez -append $(GDIR)/$(RSRC) -o $(BDIR)/$(PROJ)
 	-SetFile -a C $(BDIR)/$(PROJ)
 
 setup: default icon

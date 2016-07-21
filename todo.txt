@@ -3,13 +3,15 @@ Things I am Bound to Forget without Internet
 grep -rn "Something" src
 diff -p A.c B.c
 fmt <text> > <text2>
-git checkout -b <newbranch> (before commit)
-git commit -am "Some message."
+git checkout -b <newbranch> (before commit); git commit -am "Some message."
 git checkout master
 git merge <newbranch>
 git mergetool
 git branch -d <newbranch>
 git show
+code changes: git log -p
+git ls-tree, ls-files
+git commit --amend
 
 Words for Things
 ----------------
@@ -33,7 +35,7 @@ more rotational acceleration/friction
 
 I liked sort better than notify; it's always going to be uneven
 
-add supporting resource for resources times n, eg, (maybe opt it so it searches for repeat "strings")
+add supporting resource for array resources, eg, (maybe opt it so it searches for repeat "strings")
 .type
 Foo
 string name

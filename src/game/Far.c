@@ -2,7 +2,7 @@
  Public License, see copying.txt */
 
 #include <string.h> /* memset */
-#include "../../bin/Auto.h"
+#include "../../build/Auto.h"
 #include "../Print.h"
 #include "Far.h"
 #include "../general/Sorting.h"

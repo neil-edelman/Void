@@ -3,7 +3,7 @@
 
 #include <stdlib.h> /* malloc free */
 #include <math.h>   /* cis */
-#include "../../bin/Auto.h"
+#include "../../build/Auto.h"
 #include "../Print.h"
 #include "../general/Map.h"
 #include "../game/Sprite.h"
@@ -19,14 +19,14 @@
 /* auto-generated, hard coded resouce files; there should be the directory
  tools/ where you can compile utilities that can make these files; run "make"
  and this should be automated; ignore errors about ISO C90 string length 509  */
-#include "../../bin/shaders/Background_vs.h"
-#include "../../bin/shaders/Background_fs.h"
-#include "../../bin/shaders/Hud_vs.h"
-#include "../../bin/shaders/Hud_fs.h"
-#include "../../bin/shaders/Far_vs.h"
-#include "../../bin/shaders/Far_fs.h"
-#include "../../bin/shaders/Lighting_vs.h"
-#include "../../bin/shaders/Lighting_fs.h"
+#include "../../build/shaders/Background_vs.h"
+#include "../../build/shaders/Background_fs.h"
+#include "../../build/shaders/Hud_vs.h"
+#include "../../build/shaders/Hud_fs.h"
+#include "../../build/shaders/Far_vs.h"
+#include "../../build/shaders/Far_fs.h"
+#include "../../build/shaders/Lighting_vs.h"
+#include "../../build/shaders/Lighting_fs.h"
 
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667

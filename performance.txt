@@ -2,12 +2,63 @@
 99%
 31.2 fps, 32ms average frame-time; 5797ms game-time.
 31.2 fps, 32ms average frame-time; 7079ms game-time.
+
+Draw::resize: 600x400.
+31.2 fps, 32ms average frame-time; 1547ms game-time.
+You are <Ship>Dabnashagh[#7202] at position (0.0,0.0:0.0) with 520GJ/520GJ.
+30.3 fps, 33ms average frame-time; 2791ms game-time.
+30.3 fps, 33ms average frame-time; 4193ms game-time.
+Entering fullscreen.
+Draw::resize: 1280x800.
+29.4 fps, 34ms average frame-time; 8622ms game-time.
+29.4 fps, 34ms average frame-time; 9863ms game-time.
+29.4 fps, 34ms average frame-time; 10073ms game-time.
+29.4 fps, 34ms average frame-time; 10866ms game-time.
+29.4 fps, 34ms average frame-time; 11383ms game-time.
+
 after waypoints
 31.2 fps, 32ms average frame-time; 2798ms game-time.
 31.2 fps, 32ms average frame-time; 3851ms game-time.
 31.2 fps, 32ms average frame-time; 4333ms game-time.
 31.2 fps, 32ms average frame-time; 4638ms game-time.
 it doesn't make a shred of difference
+with expanded coverage:
+30.3 fps, 33ms average frame-time; 3686ms game-time.
+30.3 fps, 33ms average frame-time; 4764ms game-time.
+30.3 fps, 33ms average frame-time; 5845ms game-time.
+30.3 fps, 33ms average frame-time; 6456ms game-time.
+30.3 fps, 33ms average frame-time; 7139ms game-time.
+30.3 fps, 33ms average frame-time; 8360ms game-time.
+30.3 fps, 33ms average frame-time; 8532ms game-time.
+Entering fullscreen.
+Draw::resize: 1280x800.
+14.9 fps, 67ms average frame-time; 11199ms game-time.
+29.4 fps, 34ms average frame-time; 12523ms game-time.
+29.4 fps, 34ms average frame-time; 13218ms game-time.
+Draw::resize: 1280x800.
+29.4 fps, 34ms average frame-time; 4123ms game-time.
+29.4 fps, 34ms average frame-time; 5582ms game-time.
+29.4 fps, 34ms average frame-time; 7816ms game-time.
+29.4 fps, 34ms average frame-time; 14452ms game-time.
+29.4 fps, 34ms average frame-time; 15530ms game-time.
+29.4 fps, 34ms average frame-time; 15708ms game-time.
+29.4 fps, 34ms average frame-time; 16649ms game-time.
+29.4 fps, 34ms average frame-time; 17033ms game-time.
+[800x600]
+You are <Ship>Gothronkmog[#7202] at position (18.3,-3.7:0.0) with 520GJ/520GJ.
+31.2 fps, 32ms average frame-time; 3427ms game-time.
+31.2 fps, 32ms average frame-time; 4108ms game-time.
+31.2 fps, 32ms average frame-time; 4555ms game-time.
+31.2 fps, 32ms average frame-time; 4832ms game-time.
+31.2 fps, 32ms average frame-time; 5241ms game-time.
+31.2 fps, 32ms average frame-time; 5548ms game-time.
+31.2 fps, 32ms average frame-time; 5788ms game-time.
+31.2 fps, 32ms average frame-time; 5959ms game-time.
+31.2 fps, 32ms average frame-time; 6435ms game-time.
+31.2 fps, 32ms average frame-time; 6781ms game-time.
+31.2 fps, 32ms average frame-time; 7260ms game-time.
+31.2 fps, 32ms average frame-time; 7535ms game-time.
+31.2 fps, 32ms average frame-time; 7673ms game-time.
 
 66 sprites, old thing
 28%

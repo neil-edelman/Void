@@ -11,7 +11,7 @@
 #include <math.h>   /* M_PI */
 #include <string.h> /* strcmp for bsearch */
 #include <stdio.h>  /* printf */
-#include "../../bin/Auto.h"
+#include "../../build/Auto.h"
 #include "../Print.h"
 #include "Sprite.h"
 #include "Far.h"

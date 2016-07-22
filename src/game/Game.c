@@ -18,7 +18,6 @@
 #include "Event.h"
 #include "Zone.h"
 #include "Light.h"
-#include "../general/Map.h"
 #include "../system/Key.h"
 #include "../system/Window.h"
 #include "../system/Draw.h"

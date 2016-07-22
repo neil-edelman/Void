@@ -5,7 +5,6 @@
 #include <math.h>   /* cis */
 #include "../../build/Auto.h"
 #include "../Print.h"
-#include "../general/Map.h"
 #include "../game/Sprite.h"
 #include "../game/Far.h"
 #include "../game/Light.h"
@@ -259,9 +258,6 @@ int Draw(void) {
 
 /** Destructor. */
 void Draw_(void) {
-	/*struct Map *imgs = ResourcesGetImages();
-	struct Image *img;
-	char *name;*/
 	unsigned tex;
 	int i;
 

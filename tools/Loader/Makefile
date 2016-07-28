@@ -25,9 +25,19 @@ FMTSRCS := $(patsubst %,../../src/%.c,$(FORMAT))
 H     := $(patsubst %,$(SDIR)/%.h,$(FILES))
 FMTH  := $(patsubst %,../../src/format/%.h,$(FORMAT))
 
-CC   := gcc
-CF   := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -std=c99 # snprintf
-OF   :=
+CC    ?= gcc
+CF    ?= -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -std=c99 # snprintf
+OF    ?=
+MAKE  := make
+MKDIR := mkdir -p
+RM    := rm -f
+RMDIR := rm -rf
+ZIP   := zip
+CP    := cp
+# user-defined variable TARGET, if TARGET is defined, include that thing
+ifneq ($(origin TARGET), undefined)
+include ../../$(TARGET).make
+endif
 
 # props Jakob Borg and Eldar Abusalimov
 EMPTY :=
@@ -52,11 +62,11 @@ $(BDIR)/$(PROJ): $(OBJS) $(FMTOBJS)
 
 # compiling
 $(FMTOBJS): $(BDIR)/%.o: ../../src/format/%.c $(FMTH)
-	@mkdir -p $(BDIR)
+	-@$(MKDIR) $(BDIR)
 	$(CC) $(CF) -c ../../src/format/$*.c -o $@
 
 $(OBJS): $(BDIR)/%.o: $(SDIR)/%.c $(H)
-	@mkdir -p $(BDIR)
+	-@$(MKDIR) $(BDIR)
 	$(CC) $(CF) -c $(SDIR)/$*.c -o $@
 
 ######
@@ -65,8 +75,8 @@ $(OBJS): $(BDIR)/%.o: $(SDIR)/%.c $(H)
 .PHONY: setup clean backup
 
 clean:
-	-rm -f $(OBJS)
+	-$(RM) $(OBJS)
 
 backup:
-	@mkdir -p $(BACK)
-	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip Makefile $(SRCS) $(H) $(EXTRA)
+	-@$(MKDIR) $(BACK)
+	$(ZIP) $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip Makefile $(SRCS) $(H) $(EXTRA)

@@ -90,6 +90,7 @@ int LoaderImagePosition(const char *const str) {
 int main(int argc, char **argv) {
 	char *types_dir = 0, *lores_dir = 0; /* can have '/' or not! */
 
+	fprintf(stderr, "/Loader!\n");
 	/* check that the user specified dir or two */
 	if(argc <= 1 || argc >= 4 || *argv[1] == '-') {
 		usage(argv[0]);
@@ -208,6 +209,7 @@ int main(int argc, char **argv) {
 	}
 	RecordPrintSearches();
 
+	fprintf(stderr, "Loader??\n");
 	main_();
 	return EXIT_SUCCESS;
 

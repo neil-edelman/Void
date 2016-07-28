@@ -69,9 +69,21 @@ BMP    := $(wildcard $(MDIR)/*.bmp)
 BMP_H  := $(patsubst $(MDIR)/%.bmp,$(GDIR)/%_bmp.h,$(BMP))
 TEXT   := $(wildcard $(MDIR)/*.txt)
 
-CC   := gcc
-CF   := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic --std=c99# -DNDEBUG# UNIX/PC: -DGLEW
-OF   := -framework OpenGL -framework GLUT # UNIX: -lglut -lGLEW; PC: depends
+# just guess
+CC    := gcc
+CF    := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic --std=c99
+OF    := -framework OpenGL -framework GLUT
+MAKE  := make
+MKDIR := mkdir -p
+RM    := rm -f
+RMDIR := rm -rf
+ZIP   := zip
+CP    := cp
+# user-defined variable TARGET, if TARGET is defined, include that thing
+# presumably, it overrides the stuff above with more accurate guesses
+ifneq ($(origin TARGET), undefined)
+include $(TARGET).make
+endif
 
 # Jakob Borg and Eldar Abusalimov:
 # $(ARGS) is all the extra arguments
@@ -99,44 +111,46 @@ $(BDIR)/$(PROJ): $(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(OBJS)
 
 # compiling
 $(OBJS): $(GDIR)/%.o: $(SDIR)/%.c $(VS_VS) $(FS_FS) $(H)
-	@mkdir -p $(BDIR)
-	@mkdir -p $(GDIR)
-	@mkdir -p $(GDIR)/$(SYS)
-	@mkdir -p $(GDIR)/$(GEN)
-	@mkdir -p $(GDIR)/$(GME)
-	@mkdir -p $(GDIR)/$(FMT)
+	-@$(MKDIR) $(BDIR)
+	-@$(MKDIR) $(GDIR)
+	-@$(MKDIR) $(GDIR)/$(SYS)
+	-@$(MKDIR) $(GDIR)/$(GEN)
+	-@$(MKDIR) $(GDIR)/$(GME)
+	-@$(MKDIR) $(GDIR)/$(FMT)
 	$(CC) $(CF) -c $(SDIR)/$*.c -o $@
 
 $(GDIR)/$(SDR)/%_vs.h: $(SDIR)/$(SDR)/%.vs $(TEXT2H)
 	# . . . vertex shaders into headers.
-	@mkdir -p $(GDIR)
-	@mkdir -p $(GDIR)/$(SDR)
+	-@$(MKDIR) $(GDIR)
+	-@$(MKDIR) $(GDIR)/$(SDR)
 	$(TEXT2H) $< > $@
 
 $(GDIR)/$(SDR)/%_fs.h: $(SDIR)/$(SDR)/%.fs $(TEXT2H)
 	# . . . fragment shaders into headers.
-	@mkdir -p $(GDIR)
-	@mkdir -p $(GDIR)/$(SDR)
+	-@$(MKDIR) $(GDIR)
+	-@$(MKDIR) $(GDIR)/$(SDR)
 	$(TEXT2H) $< > $@
 
 $(LORE_H): $(LOADER) $(FILE2H) $(TYPE)
 	# . . . resources lore.h
-	@mkdir -p $(GDIR)
+	-@$(MKDIR) $(GDIR)
+	echo calling loader
 	$(LOADER) $(MDIR) > $(LORE_H)
+	echo finished loader
 
 $(LORE_C): $(LOADER) $(FILE2H) $(TYPE) $(LORE) $(PNG_H) $(JPEG_H) $(BMP_H)
 	# . . . resources lore.c
-	@mkdir -p $(GDIR)
+	-@$(MKDIR) $(GDIR)
 	$(LOADER) $(MDIR) $(MDIR) > $(LORE_C)
 
 $(GDIR)/%_png.h: $(MDIR)/%.png $(FILE2H)
 	# . . . File2h png
-	@mkdir -p $(GDIR)
+	-@$(MKDIR) $(GDIR)
 	$(FILE2H) $< > $@
 
 $(GDIR)/%_jpeg.h: $(MDIR)/%.jpeg $(FILE2H)
 	# . . . File2h jpeg
-	@mkdir -p $(GDIR)
+	-@$(MKDIR) $(GDIR)
 	$(FILE2H) $< > $@
 
 # additional dependancies
@@ -148,15 +162,15 @@ $(BDIR)/Open.o: $(VS_H) $(FS_H)
 
 $(TEXT2H): $(TEXT2H_DEP)
 	# . . . compiling Text2h.
-	make --directory $(TEXT2H_DIR)
+	$(MAKE) --directory $(TEXT2H_DIR)
 
 $(FILE2H): $(FILE2H_DEP)
 	@echo . . . compiling File2h.
-	make --directory $(FILE2H_DIR)
+	$(MAKE) --directory $(FILE2H_DIR)
 
 $(LOADER): $(LOADER_DEP)
 	@echo . . . compiling Loader.
-	make --directory $(LOADER_DIR)
+	$(MAKE) --directory $(LOADER_DIR)
 
 ######
 # test programmes (fixme)
@@ -176,26 +190,26 @@ $(BDIR)/time: $(TEST)/TimerIsTime.c
 .PHONY: clean backup source setup icon
 
 clean:
-	-make --directory $(TEXT2H_DIR) clean
-	-make --directory $(FILE2H_DIR) clean
-	-make --directory $(LOADER_DIR) clean
-	-rm -f $(OBJS) $(BDIR)/$(RSRC) $(VS_H) $(FS_H) $(TEXT2H) $(FILE2H) $(LOADER) $(BDIR)/sort $(BDIR)/cd $(LORE_H) $(LORE_C) $(PNG_H) $(JPEG_H) $(BMP_H)
-	-rm -rf $(BDIR)/$(SYS) $(BDIR)/$(GEN) $(BDIR)/$(GME) $(BDIR)/$(SDR) $(BDIR)/$(FMT)
+	-$(MAKE) --directory $(TEXT2H_DIR) clean
+	-$(MAKE) --directory $(FILE2H_DIR) clean
+	-$(MAKE) --directory $(LOADER_DIR) clean
+	-$(RM) $(OBJS) $(BDIR)/$(RSRC) $(VS_H) $(FS_H) $(TEXT2H) $(FILE2H) $(LOADER) $(BDIR)/sort $(BDIR)/cd $(LORE_H) $(LORE_C) $(PNG_H) $(JPEG_H) $(BMP_H)
+	-$(RMDIR) $(BDIR)/$(SYS) $(BDIR)/$(GEN) $(BDIR)/$(GME) $(BDIR)/$(SDR) $(BDIR)/$(FMT)
 
 BACKUP := readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(MDIR)/$(ICON) $(VS) $(FS) $(EXTRA) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(TEXT)
 
 backup:
-	@mkdir -p $(BACK)
-	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip $(BACKUP)
+	-@$(MKDIR) $(BACK)
+	$(ZIP) $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip $(BACKUP)
 
 # this backs up everything including the media files for publication
 source:
-	@mkdir -p $(BDIR)
-	zip $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip $(BACKUP) $(PNG) $(JPEG)
+	-@$(MKDIR) $(BDIR)
+	$(ZIP) $(BDIR)/$(INST)-`date +%Y-%m-%dT%H%M%S`.zip $(BACKUP) $(PNG) $(JPEG)
 
 icon: default
 	# . . . setting icon on a Mac.
-	cp $(MDIR)/$(ICON) $(GDIR)/$(ICON)
+	$(CP) $(MDIR)/$(ICON) $(GDIR)/$(ICON)
 	-sips --addIcon $(GDIR)/$(ICON)
 	-DeRez -only icns $(GDIR)/$(ICON) > $(GDIR)/$(RSRC)
 	-Rez -append $(GDIR)/$(RSRC) -o $(BDIR)/$(PROJ)
@@ -203,8 +217,8 @@ icon: default
 
 setup: default icon
 	# . . . setup on a Mac.
-	@mkdir -p $(BDIR)/$(INST)
-	cp $(BDIR)/$(PROJ) readme.txt gpl.txt copying.txt $(BDIR)/$(INST)
-	rm -f $(BDIR)/$(INST)-MacOSX.dmg
+	-@$(MKDIR) $(BDIR)/$(INST)
+	$(CP) $(BDIR)/$(PROJ) readme.txt gpl.txt copying.txt $(BDIR)/$(INST)
+	$(RM) $(BDIR)/$(INST)-MacOSX.dmg
 	hdiutil create $(BDIR)/$(INST)-MacOSX.dmg -volname "$(PROJ) $(VA).$(VB)" -srcfolder $(BDIR)/$(INST)
-	rm -R $(BDIR)/$(INST)
+	$(RMDIR) $(BDIR)/$(INST)

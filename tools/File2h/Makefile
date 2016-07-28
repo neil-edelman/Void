@@ -22,9 +22,19 @@ OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES)) # or $(patsubst %,$(BDIR)/%.class,$(
 SRCS  := $(patsubst %,$(SDIR)/%.c,$(FILES)) # or $(patsubst %,$(SDIR)/%.java,$(FILES))
 H     := $(patsubst %,$(SDIR)/%.h,$(FILES))
 
-CC   := gcc # /usr/local/i386-mingw32-4.3.0/bin/i386-mingw32-gcc javac nxjc
-CF   := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi
-OF   := # -framework OpenGL -framework GLUT
+CC    := gcc
+CF    := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -ansi
+OF    := -framework OpenGL -framework GLUT
+MAKE  := make
+MKDIR := mkdir -p
+RM    := rm -f
+RMDIR := rm -rf
+ZIP   := zip
+CP    := cp
+# user-defined variable TARGET, if TARGET is defined, include that thing
+ifneq ($(origin TARGET), undefined)
+include ../../$(TARGET).make
+endif
 
 # props Jakob Borg and Eldar Abusalimov
 EMPTY :=
@@ -50,7 +60,7 @@ $(BDIR)/$(PROJ): $(OBJS)
 
 # compiling
 $(OBJS): $(BDIR)/%.o: $(SDIR)/%.c
-	@mkdir -p $(BDIR)
+	-@$(MKDIR) $(BDIR)
 	$(CC) $(CF) -c $(SDIR)/$*.c -o $@
 
 ######
@@ -59,18 +69,18 @@ $(OBJS): $(BDIR)/%.o: $(SDIR)/%.c
 .PHONY: setup clean backup
 
 clean:
-	-rm -f $(OBJS)
+	-$(RM) $(OBJS)
 
 backup:
-	@mkdir -p $(BACK)
-	zip $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(EXTRA)
+	-@$(MKDIR) $(BACK)
+	$(ZIP) $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip readme.txt gpl.txt copying.txt Makefile $(SRCS) $(H) $(SDIR)/$(ICON) $(EXTRA)
 	#git commit -am "$(ARGS)"
 
 setup: default
-	@mkdir -p $(BDIR)/$(INST)
-	cp $(BDIR)/$(PROJ) readme.txt gpl.txt copying.txt $(BDIR)/$(INST)
-	rm -f $(BDIR)/$(INST)-MacOSX.dmg
-	# or rm -f $(BDIR)/$(INST)-Win32.zip
+	-@$(MKDIR) $(BDIR)/$(INST)
+	$(CP) $(BDIR)/$(PROJ) readme.txt gpl.txt copying.txt $(BDIR)/$(INST)
+	$(RM) $(BDIR)/$(INST)-MacOSX.dmg
+	# or $(RM) $(BDIR)/$(INST)-Win32.zip
 	hdiutil create $(BDIR)/$(INST)-MacOSX.dmg -volname "$(PROJ) $(VA).$(VB)" -srcfolder $(BDIR)/$(INST)
-	# or zip $(BDIR)/$(INST)-Win32.zip -r $(BDIR)/$(INST)
+	# or $(ZIP) $(BDIR)/$(INST)-Win32.zip -r $(BDIR)/$(INST)
 	rm -R $(BDIR)/$(INST)

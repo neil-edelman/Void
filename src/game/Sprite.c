@@ -59,7 +59,7 @@ extern const struct Gate gate;
  a sprite is 256x256 to be guaranteed to be without clipping and collision
  artifacts */
 static const int half_max_size = 128;
-/* log_2(half_max_size * 2.0f), used for waypoints */
+/* log_2(half_max_size * 2.0f), used for bins */
 static const int max_size_pow  = 8;
 static const float epsilon = 0.0005f;
 extern const float de_sitter;
@@ -143,9 +143,9 @@ static struct Sprite {
 	/* sort by axes in doubly-linked list */
 	struct Sprite *prev_x, *next_x, *prev_y, *next_y;
 
-	/* linked list in waypoint, and the waypoint */
-	struct Sprite *next_waypoint;
-	int waypoint_x, waypoint_y;
+	/* linked list in bin, and the bin */
+	struct Sprite *next_bin;
+	int bin_x, bin_y;
 
 } sprites[8192], *first_x, *first_y, *first_x_window, *first_y_window, *window_iterator, *iterator = sprites;
 static const int sprites_capacity = sizeof sprites / sizeof(struct Sprite);
@@ -155,9 +155,9 @@ static int sprites_considered, sprites_onscreen; /* for stats */
 
 /* should be updated once these values change!
  (int)de_sitter * 2 / max_size = 8192 * 2 / 256 = 64 (fixme) */
-static struct Sprite *waypoints[64][64];
-static const int waypoint_size = sizeof waypoints[0] / sizeof(struct Sprite *);
-static const int waypoint_half_size = sizeof waypoints[0] / sizeof(struct Sprite *) >> 1;
+static struct Sprite *bins[64][64];
+static const int bin_size = sizeof bins[0] / sizeof(struct Sprite *);
+static const int bin_half_size = sizeof bins[0] / sizeof(struct Sprite *) >> 1;
 
 /* private prototypes */
 
@@ -195,9 +195,9 @@ static void gate_travel(struct Sprite *const gate, struct Sprite *ship);
 static void do_ai(struct Sprite *const s, const int dt_ms);
 /*static void sprite_poll(void);*/
 static void ship_recharge(struct Sprite *const a);
-static void waypoint_add(struct Sprite *const s);
-static void waypoint_change(struct Sprite *const s);
-static void waypoint_remove(struct Sprite *const s);
+static void bin_add(struct Sprite *const s);
+static void bin_change(struct Sprite *const s);
+static void bin_remove(struct Sprite *const s);
 static int clip(const int c, const int min, const int max);
 
 /* fixme: this assumes SP_DEBRIS = 0, ..., SP_ETHEREAL = 3 */
@@ -366,8 +366,8 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	first_x = first_y = s;
 	sort_notify(s);
 
-	/* also stick it into waypoint */
-	waypoint_add(s);
+	/* also stick it into bin */
+	bin_add(s);
 
 	Pedantic("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
 
@@ -406,8 +406,8 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	/* store the string for debug info */
 	characters = snprintf(buffer, sizeof buffer, "%s", SpriteToString(sprite));
 
-	/* take it out of the waypoint */
-	waypoint_remove(sprite);
+	/* take it out of the bin */
+	bin_remove(sprite);
 
 	/* update notify */
 	if(sprite->notify) *sprite->notify = 0;
@@ -464,9 +464,9 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(replace == first_y_window) first_y_window = sprite;
 		if(replace == window_iterator)window_iterator= sprite;
 
-		/* replace waypoint pointer */
-		waypoint_remove(replace);
-		waypoint_add(sprite);
+		/* replace bin pointer */
+		bin_remove(replace);
+		bin_add(sprite);
 
 		/* update notify */
 		if(sprite->notify) *sprite->notify = sprite;
@@ -830,7 +830,7 @@ void SpriteRemoveIf(int (*const predicate)(struct Sprite *const)) {
 extern int draw_is_print_sprites;
 
 /************************************************************
- fixme: instead of marking, just do waypoints
+ fixme: instead of marking, just do bins
  ************************************************************/
 
 
@@ -963,30 +963,30 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 		unsigned screen_width, screen_height;
 		/* this does not need to be static, top-down */
 		int y_min_index;
-		int x_min_waypoint, x_max_waypoint, y_min_waypoint, y_max_waypoint;
+		int x_min_bin, x_max_bin, y_min_bin, y_max_bin;
 
 		DrawGetScreen(&screen_width, &screen_height);
 		DrawGetCamera(&camera_x, &camera_y);
 
-		x_min_waypoint = (int)(camera_x - (0.5f * screen_width))  >> (max_size_pow);
-		x_max_waypoint = (int)(camera_x + (0.5f * screen_width))  >> (max_size_pow);
-		y_min_waypoint = (int)(camera_y - (0.5f * screen_height)) >> (max_size_pow);
-		y_max_waypoint = (int)(camera_y + (0.5f * screen_height)) >> (max_size_pow);
+		x_min_bin = (int)(camera_x - (0.5f * screen_width))  >> (max_size_pow);
+		x_max_bin = (int)(camera_x + (0.5f * screen_width))  >> (max_size_pow);
+		y_min_bin = (int)(camera_y - (0.5f * screen_height)) >> (max_size_pow);
+		y_max_bin = (int)(camera_y + (0.5f * screen_height)) >> (max_size_pow);
 
-		x_min_index = clip(x_min_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-		x_max_index = clip(x_max_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-		y_min_index = clip(y_min_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-		y_max_index = clip(y_max_waypoint, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		x_min_index = clip(x_min_bin, -bin_half_size, bin_half_size - 1) + bin_half_size;
+		x_max_index = clip(x_max_bin, -bin_half_size, bin_half_size - 1) + bin_half_size;
+		y_min_index = clip(y_min_bin, -bin_half_size, bin_half_size - 1) + bin_half_size;
+		y_max_index = clip(y_max_bin, -bin_half_size, bin_half_size - 1) + bin_half_size;
 
 		x_index = x_min_index;
 		y_index = y_min_index;
 
-		s = waypoints[y_index][x_index];
+		s = bins[y_index][x_index];
 
 		is_reset = 0;
 	}
 
-	/* proceed to the next waypoint */
+	/* proceed to the next bin */
 	while(!s /*|| s->*/) {
 		if(x_max_index < ++x_index) {
 			/* all done with the sprites on-screen */
@@ -996,7 +996,7 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 			}
 			x_index = x_min_index;
 		}
-		s = waypoints[y_index][x_index];
+		s = bins[y_index][x_index];
 	}
 
 	/* fixme */
@@ -1006,7 +1006,7 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 	*texture_ptr = s->texture;
 	*size_ptr    = s->size;
 
-	s = s->next_waypoint;
+	s = s->next_bin;
 
 	return -1;
 }
@@ -1075,7 +1075,7 @@ void SpriteUpdate(const int dt_ms) {
 
 		/* keep it sorted (fixme: no?) */
 		sort_notify(s);
-		waypoint_change(s);
+		bin_change(s);
 	}
 
 	/* do some stuff that is unique to each sprite type */
@@ -1642,76 +1642,76 @@ static void ship_recharge(struct Sprite *const a) {
 }
 
 /** Called from constructor after setting (x, y). */
-static void waypoint_add(struct Sprite *const s) {
-	const int waypoint_x = (int)s->x >> max_size_pow;
-	const int waypoint_y = (int)s->y >> max_size_pow;
-	const int index_x = clip(waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-	const int index_y = clip(waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+static void bin_add(struct Sprite *const s) {
+	const int bin_x = (int)s->x >> max_size_pow;
+	const int bin_y = (int)s->y >> max_size_pow;
+	const int index_x = clip(bin_x, -bin_half_size, bin_half_size - 1) + bin_half_size;
+	const int index_y = clip(bin_y, -bin_half_size, bin_half_size - 1) + bin_half_size;
 
-	Pedantic("Sprite::waypoint_add: (%d,%d -> %d,%d).\n", waypoint_x, waypoint_y, index_x, index_y);
-	s->next_waypoint = waypoints[index_y][index_x];
-	waypoints[index_y][index_x] = s;
-	s->waypoint_x = waypoint_x;
-	s->waypoint_y = waypoint_y;
+	Pedantic("Sprite::bin_add: (%d,%d -> %d,%d).\n", bin_x, bin_y, index_x, index_y);
+	s->next_bin = bins[index_y][index_x];
+	bins[index_y][index_x] = s;
+	s->bin_x = bin_x;
+	s->bin_y = bin_y;
 }
 
 /** Called all the time; whenever there's a position change. */
-static void waypoint_change(struct Sprite *const s) {
-	const int waypoint_x = (int)s->x >> max_size_pow; /* @ sprite @ frame */
-	const int waypoint_y = (int)s->y >> max_size_pow; /* fixme? */
+static void bin_change(struct Sprite *const s) {
+	const int bin_x = (int)s->x >> max_size_pow; /* @ sprite @ frame */
+	const int bin_y = (int)s->y >> max_size_pow; /* fixme? */
 
-	/* we're not changing waypoints; easy out */
-	if(s->waypoint_x == waypoint_x && s->waypoint_y == waypoint_y) return;
+	/* we're not changing bins; easy out */
+	if(s->bin_x == bin_x && s->bin_y == bin_y) return;
 	/* O(n) delete from linked list :0 */
 	{
-		const int index_x = clip(s->waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-		const int index_y = clip(s->waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-		struct Sprite *this_wp = waypoints[index_y][index_x];
+		const int index_x = clip(s->bin_x, -bin_half_size, bin_half_size - 1) + bin_half_size;
+		const int index_y = clip(s->bin_y, -bin_half_size, bin_half_size - 1) + bin_half_size;
+		struct Sprite *this_wp = bins[index_y][index_x];
 		struct Sprite *last_wp = 0;
 
-		for( ; this_wp && this_wp != s; last_wp = this_wp, this_wp = this_wp->next_waypoint);
+		for( ; this_wp && this_wp != s; last_wp = this_wp, this_wp = this_wp->next_bin);
 		if(!this_wp) {
-			Warn("Sprite::waypoint_change: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), waypoint_x, waypoint_y);
+			Warn("Sprite::bin_change: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), bin_x, bin_y);
 		} else if(!last_wp) {
-			/* waypoint has the sprite first */
-			waypoints[index_y][index_x] = s->next_waypoint;
+			/* bin has the sprite first */
+			bins[index_y][index_x] = s->next_bin;
 		} else {
 			/* it's in the list somewhere */
-			last_wp->next_waypoint = s->next_waypoint;
+			last_wp->next_bin = s->next_bin;
 		}
 	}
 
-	/* add it into the changed waypoint */
+	/* add it into the changed bin */
 	{
-		const int index_x = clip(waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-		const int index_y = clip(waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
+		const int index_x = clip(bin_x, -bin_half_size, bin_half_size - 1) + bin_half_size;
+		const int index_y = clip(bin_y, -bin_half_size, bin_half_size - 1) + bin_half_size;
 
-		s->next_waypoint = waypoints[index_y][index_x];
-		waypoints[index_y][index_x] = s;
-		s->waypoint_x = waypoint_x;
-		s->waypoint_y = waypoint_y;
-		Pedantic("Sprite::waypoint_change: %s changed to waypoint (%d, %d).\n", SpriteToString(s), waypoint_x, waypoint_y);
+		s->next_bin = bins[index_y][index_x];
+		bins[index_y][index_x] = s;
+		s->bin_x = bin_x;
+		s->bin_y = bin_y;
+		Pedantic("Sprite::bin_change: %s changed to bin (%d, %d).\n", SpriteToString(s), bin_x, bin_y);
 	}
 }
 
 /** Called from destructor. */
-static void waypoint_remove(struct Sprite *const s) {
-	const int index_x = clip(s->waypoint_x, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-	const int index_y = clip(s->waypoint_y, -waypoint_half_size, waypoint_half_size - 1) + waypoint_half_size;
-	struct Sprite *this_wp = waypoints[index_y][index_x];
+static void bin_remove(struct Sprite *const s) {
+	const int index_x = clip(s->bin_x, -bin_half_size, bin_half_size - 1) + bin_half_size;
+	const int index_y = clip(s->bin_y, -bin_half_size, bin_half_size - 1) + bin_half_size;
+	struct Sprite *this_wp = bins[index_y][index_x];
 	struct Sprite *last_wp = 0;
 	
-	for( ; this_wp && this_wp != s; last_wp = this_wp, this_wp = this_wp->next_waypoint);
+	for( ; this_wp && this_wp != s; last_wp = this_wp, this_wp = this_wp->next_bin);
 	if(!this_wp) {
-		Warn("Sprite::waypoint_remove: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), s->waypoint_x, s->waypoint_y);
+		Warn("Sprite::bin_remove: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), s->bin_x, s->bin_y);
 	} else if(!last_wp) {
-		/* waypoint has the sprite first */
-		waypoints[index_y][index_x] = s->next_waypoint;
+		/* bin has the sprite first */
+		bins[index_y][index_x] = s->next_bin;
 	} else {
 		/* it's in the list somewhere */
-		last_wp->next_waypoint = s->next_waypoint;
+		last_wp->next_bin = s->next_bin;
 	}
-	s->next_waypoint = 0;
+	s->next_bin = 0;
 }
 
 /** Clips c to [min, max]. */

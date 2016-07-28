@@ -4,6 +4,9 @@ PROJ  := Void
 VA    := 3
 VB    := 3
 
+MAKE := C:\MinGW\bin\mingw32-make.exe #make
+MKDIR := mkdir #-p
+
 # dirs
 SDIR  := src
 BDIR  := bin

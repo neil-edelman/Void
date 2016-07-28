@@ -4,6 +4,8 @@ PROJ  := Loader
 VA    := 1
 VB    := 0
 
+MKDIR := mkdir #-p
+
 # dirs
 SDIR  := src
 BDIR  := bin

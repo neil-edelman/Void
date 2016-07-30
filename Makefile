@@ -4,8 +4,8 @@ PROJ  := Void
 VA    := 3
 VB    := 3
 
-MAKE := C:\MinGW\bin\mingw32-make.exe #make
-MKDIR := mkdir #-p
+MAKE := make
+MKDIR := mkdir -p
 
 # dirs
 SDIR  := src
@@ -137,9 +137,7 @@ $(GDIR)/$(SDR)/%_fs.h: $(SDIR)/$(SDR)/%.fs $(TEXT2H)
 $(LORE_H): $(LOADER) $(FILE2H) $(TYPE)
 	# . . . resources lore.h
 	-@$(MKDIR) $(GDIR)
-	echo calling loader
 	$(LOADER) $(MDIR) > $(LORE_H)
-	echo finished loader
 
 $(LORE_C): $(LOADER) $(FILE2H) $(TYPE) $(LORE) $(PNG_H) $(JPEG_H) $(BMP_H)
 	# . . . resources lore.c
@@ -168,11 +166,11 @@ $(TEXT2H): $(TEXT2H_DEP)
 	$(MAKE) --directory $(TEXT2H_DIR)
 
 $(FILE2H): $(FILE2H_DEP)
-	@echo . . . compiling File2h.
+	# . . . compiling File2h.
 	$(MAKE) --directory $(FILE2H_DIR)
 
 $(LOADER): $(LOADER_DEP)
-	@echo . . . compiling Loader.
+	# . . . compiling Loader.
 	$(MAKE) --directory $(LOADER_DIR)
 
 ######

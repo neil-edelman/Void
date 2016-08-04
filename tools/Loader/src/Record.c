@@ -17,7 +17,7 @@
 
 #include "Lore.h" /* FIXME: only one instance, LoreIsEmpty */
 
-/* asprintf, index, strsep, snprintf undefined */
+/* asprintf, index, strsep<-fixed, snprintf undefined */
 
 /* .type files contain Records.
 
@@ -134,7 +134,10 @@ void RecordOutput(void) {
 	}
 }
 
-/** Allocates and reads a record. */
+/** Allocates and reads a record. This happens after we load the Types, and we
+ want a specific Lore from read.
+@param data		An array of strings that get replaced with the record.
+@param read		A file wrapped in a Reader. */
 int RecordLoadInstance(const struct Record *const record, char *data[MAX_FIELDS], struct Reader *read) {
 	char **datum_ptr, *szvalue, *str;
 	const char *szrecord;
@@ -153,12 +156,23 @@ int RecordLoadInstance(const struct Record *const record, char *data[MAX_FIELDS]
 		 viz, two strings packed in one; it's kindof a hack! now the data has
 		 a type and a foreign key; enough to resolve, but very dangerous */
 		if(!record->fields[i].type) {
+			char *new_multi;
+
+			/* we replace having no type info by inserting the type as a string
+			 before the value, \0, and then the value, it appears */
 			szrecord = record->fields[i].type_name;
 			szvalue  = *datum_ptr; /* replace... */
-			asprintf(datum_ptr, "%s %s", szrecord, szvalue); /* \0 screws up */
+
+			/* allocate more */
+			new_multi = malloc(strlen(szrecord) + 1 + strlen(szvalue) + 1);
+			if(!new_multi) { perror(szrecord); return 0; }
+
+			/*asprintf(datum_ptr, "%s %s", szrecord, szvalue);*/ /* \0 screws up */
 			/* wtf is index(const char *, size_t)? write! */
-			*(str = index(*datum_ptr, ' ')) = '\0'; /* so we need this */
-			free(szvalue); /* replaced it */
+			/**(str = index(*datum_ptr, ' ')) = '\0';*/ /* so we need this */
+			/*free(szvalue);*/ /* replaced it */
+			sprintf(*datum_ptr, "%s", szrecord);
+
 			/* print */
 			/*szvalue = *datum_ptr + strlen(szrecord) + 1;
 			fprintf(stderr, "***< %s.%s = %s : { %s, %s } >!!!!\n", szrecord, record->fields[i].name, szvalue, *datum_ptr, szvalue);*/
@@ -304,10 +318,10 @@ static int load_record(struct Reader *r) {
 		/* comment */
 		if(*line == '#') continue;
 		/* break it up */
-		if(!(word[0] = strsep(&line, delimiters))) continue;
-		if(!(word[1] = strsep(&line, delimiters)) || (*word[1] == '#')) {
+		if(!(word[0] = strtok(line, delimiters))) continue;
+		if(!(word[1] = strtok(0, delimiters)) || (*word[1] == '#')) {
 			word[1] = 0;
-		} else if(!(word[2] = strsep(&line, delimiters)) || !(*word[2] == '#')) {
+		} else if(!(word[2] = strtok(0, delimiters)) || !(*word[2] == '#')) {
 			word[2] = 0;
 		}
 		/* ending */

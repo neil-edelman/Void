@@ -267,11 +267,13 @@ static int load_lore(struct Reader *r) {
 		line = trim(line);
 		if(*line == '#') continue;
 		/* break off the first word */
-		if(!(word = strsep(&line, delimiters))) continue;
+		/*if(!(word = strsep(&line, delimiters))) continue;*/
+		if(!(word = strtok(line, delimiters))) continue;
 		/* ending */
 		if(*word == '~') { is_loaded = -1; break; }
 		/* this is expected to be a type; only one word */
-		if((next_word = strsep(&line, delimiters)) && *next_word != '#') { Error(E_SYNTAX); return 0; }
+		/*if((next_word = strsep(&line, delimiters)) && *next_word != '#') { Error(E_SYNTAX); return 0; }*/
+		if((next_word = strtok(0, delimiters)) && *next_word != '#') { Error(E_SYNTAX); return 0; }
 		/*fprintf(stderr, "sep: \"%s\", \"%s\"\n", word, line);*/
 		if(!(record = RecordSearch(word))) { Error(E_NOT_RECORD); return 0; }
 		/*spam->fprintf(stderr, "Loading as %s.\n", RecordGetName(record));*/

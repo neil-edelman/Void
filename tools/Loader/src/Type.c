@@ -11,7 +11,7 @@
  memcpy(result, str, len + 1);
  return result;
  }*/
-#include <string.h> /* strcmp strchr ... */
+#include <string.h> /* strcmp strchr strdup ... */
 #include <ctype.h>  /* toupper */
 #define TRIM
 #include "Functions.h"
@@ -153,9 +153,12 @@ static int string_type_comp(const char **key_ptr, const struct Type *elem) {
 static int load_word(char **data_ptr, struct Reader *const r) {
 	char *line = ReaderReadLine(r), *word, *next_word;
 	line = trim(line);
-	if(!(word = strsep(&line, delimiters))
+	/*if(!(word = strsep(&line, delimiters))
 	   || ((next_word = strsep(&line, delimiters))
-		   && (*next_word != '#'))) return 0;
+		   && (*next_word != '#'))) return 0; wtf is this doing?? */
+	if(!(word = strtok(line, delimiters))
+		|| ((next_word = strtok(0, delimiters))
+			&& (*next_word != '#'))) return 0;
 	if(!(*data_ptr = strdup(word))) {
 		perror("strdup");
 		Error(E_MEMORY);

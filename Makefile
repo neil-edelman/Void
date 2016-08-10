@@ -134,9 +134,7 @@ $(GDIR)/$(SDR)/%_fs.h: $(SDIR)/$(SDR)/%.fs $(TEXT2H)
 $(LORE_H): $(LOADER) $(FILE2H) $(TYPE)
 	# . . . resources lore.h
 	-@$(MKDIR) $(GDIR)
-	echo calling loader
 	$(LOADER) $(MDIR) > $(LORE_H)
-	echo finished loader
 
 $(LORE_C): $(LOADER) $(FILE2H) $(TYPE) $(LORE) $(PNG_H) $(JPEG_H) $(BMP_H)
 	# . . . resources lore.c

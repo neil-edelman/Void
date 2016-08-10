@@ -27,6 +27,8 @@
  @version	3.2, 2015-08
  @since		3.2, 2015-08 */
 
+static const int debug = 0;
+
 /* private prototypes */
 static struct Lore *new_lore(void);
 static int load_lore(struct Reader *r);
@@ -245,7 +247,7 @@ static struct Lore *new_lore(void) {
 		}
 		lores_capacity = fibonacci[0];
 		lores = l;
-		fprintf(stderr, "Lore: grew size to %u.\n", fibonacci[0]);
+		if(debug) fprintf(stderr, "Lore: grew size to %u.\n", fibonacci[0]);
 	}
 	lore = &lores[no_lores++];
 	lore->record = 0;

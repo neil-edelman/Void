@@ -19,7 +19,6 @@
 #define STRCOPY
 #define GROW
 #define TO_NAME
-#define STRSEPARATE
 #include "Functions.h"
 
 #include "Error.h"
@@ -36,6 +35,8 @@
  @since		1.0, 2015-08 */
 
 struct ImageName;
+
+static const int debug = 0;
 
 /* private prototypes */
 static void main_(void);
@@ -89,7 +90,6 @@ int LoaderImagePosition(const char *const str) {
 int main(int argc, char **argv) {
 	char *types_dir = 0, *lores_dir = 0; /* can have '/' or not! */
 
-	fprintf(stderr, "/Loader!\n");
 	/* check that the user specified dir or two */
 	if(argc <= 1 || argc >= 4 || *argv[1] == '-') {
 		usage(argv[0]);
@@ -208,7 +208,6 @@ int main(int argc, char **argv) {
 	}
 	RecordPrintSearches();
 
-	fprintf(stderr, "Loader??\n");
 	main_();
 	return EXIT_SUCCESS;
 
@@ -275,7 +274,7 @@ static int new_image(const char *const fn) {
 		}
 		image_names_capacity = fibonacci[0];
 		image_names = i_n;
-		fprintf(stderr, "Image names: grew size to %u.\n", fibonacci[0]);
+		if(debug) fprintf(stderr, "Image names: grew size to %u.\n", fibonacci[0]);
 	}
 	strcopy(image_names[no_image_names].name, stripped, max_image_names_name);
 	no_image_names++;

@@ -378,8 +378,12 @@ static int print_images(const char *const directory) {
 				free(buffer);
 				fclose(fp);
 			} if(err) { /* catch */
-				if(err == E_PERROR) perror(pn);
-				else fprintf(stderr, "%s: decoding failed.\n", pn);
+				switch(err) {
+					case E_PERROR: perror(pn); break;
+					case E_READ: fprintf(stderr, "%s: read failed.\n", pn); break;
+					case E_DECODE: fprintf(stderr, "%s: decoding failed.\n", pn); break;
+					default: break;
+				}
 				return 0;
 			}
 		}

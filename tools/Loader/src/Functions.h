@@ -147,3 +147,31 @@ static int clip(const int c, const int min, const int max) {
 }
 
 #endif
+
+#ifdef STRSEPARATE
+
+/** strsep is not ANSI-C89, so we make our own, just in case (*cough*Windows*.)
+ @param pstr	Pointer to string; the string is modified, and pstr is advanced.
+ 				Must not be null, altough the string may be.
+ @param delim	Delimiters; this function does not collapse mutiple delimiters
+				into one; it could return a blank string. Must not be null.
+ @return		A string that has [^delim] or null. */
+static char *strseparate(char **const pstr, const char *delim) {
+	char *token, *d, *s;
+	
+	if(!(token = *pstr)) return 0;
+	for(s = token; *s; s++) {
+		for(d = (char *)delim; *d; d++) {
+			if(*s != *d) continue;
+			/* token */
+			*s    = '\0';
+			*pstr = s + 1;
+			return token;
+		}
+	}
+	/* last token */
+	*pstr = 0;
+	return token;
+}
+
+#endif

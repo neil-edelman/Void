@@ -9,6 +9,7 @@
 #define GROW
 #define STRCOPY
 #define CAMEL_TO_SNAKE_CASE
+#define STRSEPARATE
 #include "Functions.h"
 #include "Error.h"
 #include "Reader.h"
@@ -16,8 +17,6 @@
 #include "Record.h"
 
 #include "Lore.h" /* FIXME: only one instance, LoreIsEmpty */
-
-/* asprintf, index, strsep, snprintf undefined */
 
 /* .type files contain Records.
 
@@ -28,6 +27,8 @@
 struct Type;
 struct Field;
 struct Lore;
+
+static const int debug = 0;
 
 /* private prototypes */
 static struct Record *new_record(void);
@@ -149,20 +150,25 @@ int RecordLoadInstance(const struct Record *const record, char *data[MAX_FIELDS]
 		/* data is i+1 because the key is 0 */
 		datum_ptr = &data[i + 1];
 		if(!TypeLoader(record->fields[i].type, datum_ptr, read)) return 0;
-		/* is a fk; append type by replacing string with multi-string;
-		 viz, two strings packed in one; it's kindof a hack! now the data has
-		 a type and a foreign key; enough to resolve, but very dangerous */
-		if(!record->fields[i].type) {
-			szrecord = record->fields[i].type_name;
-			szvalue  = *datum_ptr; /* replace... */
-			asprintf(datum_ptr, "%s %s", szrecord, szvalue); /* \0 screws up */
-			/* wtf is index(const char *, size_t)? write! */
-			*(str = index(*datum_ptr, ' ')) = '\0'; /* so we need this */
-			free(szvalue); /* replaced it */
-			/* print */
-			/*szvalue = *datum_ptr + strlen(szrecord) + 1;
-			fprintf(stderr, "***< %s.%s = %s : { %s, %s } >!!!!\n", szrecord, record->fields[i].name, szvalue, *datum_ptr, szvalue);*/
-		}
+		if(record->fields[i].type) continue;
+		/* is a fk; append type by replacing string with two strings packed in
+		 one; it's kindof a hack! now the data has a type and a foreign key;
+		 enough to resolve, but very dangerous */
+		szrecord = record->fields[i].type_name;
+		szvalue  = *datum_ptr; /* replace . . . */
+
+		if(!(str = malloc(strlen(szrecord) + 1 + strlen(szvalue) + 1)))
+			{ perror("datum"); return 0; }
+		*datum_ptr = str;
+		strcpy(str, szrecord);
+		str += strlen(szrecord) + 1;
+		strcpy(str, szvalue);
+
+		free(szvalue); /* replaced it */
+
+		/* print */
+		/*szvalue = *datum_ptr + strlen(szrecord) + 1;
+		fprintf(stderr, "***< %s.%s = %s : { %s, %s } >!!!!\n", szrecord, record->fields[i].name, szvalue, *datum_ptr, szvalue);*/
 	}
 
 	return -1;
@@ -275,7 +281,7 @@ static struct Record *new_record(void) {
 		}
 		records_capacity = fibonacci[0];
 		records = r;
-		fprintf(stderr, "Record: grew size to %u.\n", fibonacci[0]);
+		if(debug) fprintf(stderr, "Record: grew size to %u.\n", fibonacci[0]);
 	}
 	record = &records[no_records++];
 	record->name[0]          = '\0';
@@ -304,10 +310,10 @@ static int load_record(struct Reader *r) {
 		/* comment */
 		if(*line == '#') continue;
 		/* break it up */
-		if(!(word[0] = strsep(&line, delimiters))) continue;
-		if(!(word[1] = strsep(&line, delimiters)) || (*word[1] == '#')) {
+		if(!(word[0] = strseparate(&line, delimiters))) continue;
+		if(!(word[1] = strseparate(&line, delimiters)) || (*word[1] == '#')) {
 			word[1] = 0;
-		} else if(!(word[2] = strsep(&line, delimiters)) || !(*word[2] == '#')) {
+		} else if(!(word[2] = strseparate(&line, delimiters)) || !(*word[2] == '#')) {
 			word[2] = 0;
 		}
 		/* ending */

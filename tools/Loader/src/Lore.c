@@ -8,6 +8,7 @@
 #define GROW
 #define STRCOPY
 #define CAMEL_TO_SNAKE_CASE
+#define STRSEPARATE
 #include "Functions.h"
 #include "Error.h"
 #include "Reader.h"
@@ -25,6 +26,8 @@
  @author	Neil
  @version	3.2, 2015-08
  @since		3.2, 2015-08 */
+
+static const int debug = 0;
 
 /* private prototypes */
 static struct Lore *new_lore(void);
@@ -93,9 +96,9 @@ int Lore(const char *const fn) {
 			no_content = 2;
 		} else {
 			/* just ignore all the stuff after the tilde
-			 if(!(word = strsep(&line, delimiters)) || word[0] != '~')
+			 if(!(word = strseparate(&line, delimiters)) || word[0] != '~')
 			 || (word[1] != '\0' && word[1] != '#')
-			 || ((word = strsep(&line, delimiters)) && word[0] != '#')) { */
+			 || ((word = strseparate(&line, delimiters)) && word[0] != '#')) { */
 			if(*line != '~') {
 				fprintf(stderr, "\"%s\" line %u: syntax error.\n", ReaderGetFilename(r), ReaderGetLineNumber(r));
 				return 0;
@@ -244,7 +247,7 @@ static struct Lore *new_lore(void) {
 		}
 		lores_capacity = fibonacci[0];
 		lores = l;
-		fprintf(stderr, "Lore: grew size to %u.\n", fibonacci[0]);
+		if(debug) fprintf(stderr, "Lore: grew size to %u.\n", fibonacci[0]);
 	}
 	lore = &lores[no_lores++];
 	lore->record = 0;
@@ -267,11 +270,12 @@ static int load_lore(struct Reader *r) {
 		line = trim(line);
 		if(*line == '#') continue;
 		/* break off the first word */
-		if(!(word = strsep(&line, delimiters))) continue;
+		if(!(word = strseparate(&line, delimiters))) continue;
 		/* ending */
 		if(*word == '~') { is_loaded = -1; break; }
 		/* this is expected to be a type; only one word */
-		if((next_word = strsep(&line, delimiters)) && *next_word != '#') { Error(E_SYNTAX); return 0; }
+		if((next_word = strseparate(&line, delimiters)) && *next_word != '#')
+			{ Error(E_SYNTAX); return 0; }
 		/*fprintf(stderr, "sep: \"%s\", \"%s\"\n", word, line);*/
 		if(!(record = RecordSearch(word))) { Error(E_NOT_RECORD); return 0; }
 		/*spam->fprintf(stderr, "Loading as %s.\n", RecordGetName(record));*/

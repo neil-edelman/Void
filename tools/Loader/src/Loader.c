@@ -19,6 +19,7 @@
 #define STRCOPY
 #define GROW
 #define TO_NAME
+#define STRSEPARATE
 #include "Functions.h"
 
 #include "Error.h"
@@ -29,8 +30,6 @@
 
 /** This is a crude static database that preprocesses all the media files and
  turns them into C header files for inclusion in Void.
- <p>
- {\code strsep} is not ansi, you may need to rewrite it with strtok.
 
  @author	Neil
  @version	1.0, 2015-08

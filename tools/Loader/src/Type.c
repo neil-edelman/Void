@@ -3,7 +3,7 @@
 
 #include <stdlib.h> /* bsearch */
 #include <stdio.h>  /* fprintf */
-/* fixme: strsep, strdup, not included */
+/* fixme: strdup not included */
 /* char *mystrdup(const char *str)
  {
  size_t len = strlen(str);
@@ -14,6 +14,7 @@
 #include <string.h> /* strcmp strchr ... */
 #include <ctype.h>  /* toupper */
 #define TRIM
+#define STRSEPARATE
 #include "Functions.h"
 #include "Error.h"
 #include "Loader.h"
@@ -153,8 +154,8 @@ static int string_type_comp(const char **key_ptr, const struct Type *elem) {
 static int load_word(char **data_ptr, struct Reader *const r) {
 	char *line = ReaderReadLine(r), *word, *next_word;
 	line = trim(line);
-	if(!(word = strsep(&line, delimiters))
-	   || ((next_word = strsep(&line, delimiters))
+	if(!(word = strseparate(&line, delimiters))
+	   || ((next_word = strseparate(&line, delimiters))
 		   && (*next_word != '#'))) return 0;
 	if(!(*data_ptr = strdup(word))) {
 		perror("strdup");

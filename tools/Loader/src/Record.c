@@ -9,6 +9,7 @@
 #define GROW
 #define STRCOPY
 #define CAMEL_TO_SNAKE_CASE
+#define STRSEPARATE
 #include "Functions.h"
 #include "Error.h"
 #include "Reader.h"
@@ -17,7 +18,7 @@
 
 #include "Lore.h" /* FIXME: only one instance, LoreIsEmpty */
 
-/* asprintf, index, strsep, snprintf undefined */
+/* asprintf, index undefined */
 
 /* .type files contain Records.
 
@@ -304,10 +305,10 @@ static int load_record(struct Reader *r) {
 		/* comment */
 		if(*line == '#') continue;
 		/* break it up */
-		if(!(word[0] = strsep(&line, delimiters))) continue;
-		if(!(word[1] = strsep(&line, delimiters)) || (*word[1] == '#')) {
+		if(!(word[0] = strseparate(&line, delimiters))) continue;
+		if(!(word[1] = strseparate(&line, delimiters)) || (*word[1] == '#')) {
 			word[1] = 0;
-		} else if(!(word[2] = strsep(&line, delimiters)) || !(*word[2] == '#')) {
+		} else if(!(word[2] = strseparate(&line, delimiters)) || !(*word[2] == '#')) {
 			word[2] = 0;
 		}
 		/* ending */

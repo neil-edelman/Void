@@ -1,19 +1,20 @@
-/* Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
- GNU General Public License, see copying.txt */
+/** Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
+ GNU General Public License, see copying.txt.
 
-/** Lighting effects! Unfortunately, UBOs, which allow structs, were introduced
+ Lighting effects! Unfortunately, UBOs, which allow structs, were introduced
  in GLSL3.1; using 1.1 for compatibility, and only have 1.2. Ergo, this is a
  little bit messy. Maybe in 10 years I'll do a change.
- <p>
+
  Lights depend on external unsigned integers to keep track. Don't modify the
  light with a function not in this and don't free the unsigned without calling
  Light_.
- <p>
- Fixme: order the lights by distance/brighness and take the head of the list,
- and ignore all that pass a certain threshold. This will scale way better.
+
+ @title		Light
  @author	Neil
  @version	3.3, 2016-01
- @since		1.0, 2000 */
+ @since		1.0, 2000
+ @fixme		Order the lights by distance/brighness and take the head of the
+ list, and ignore all that pass a certain threshold. This will scale better. */
 
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* memcpy */

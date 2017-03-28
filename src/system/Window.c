@@ -1,16 +1,18 @@
-/* Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
- General Public License, see copying.txt */
+/** Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
+ General Public License, see copying.txt
+
+ This is an idempotent class dealing with the interface to OpenGL.
+
+ @title		Window
+ @author	Neil
+ @version	3.0, 2015-05
+ @since		3.0, 2015-05 */
 
 #include "../Print.h"
 #include <time.h>   /* for errors: can't rely on external libraries */
 #include <stdlib.h> /* exit */
 #include "Glew.h"
 #include "Window.h"
-
-/** This is an idempotent class dealing with the interface to OpenGL.
- @author	Neil
- @version	3.0, 2015-05
- @since		3.0, 2015-05 */
 
 static const int    no_fails = 64;
 static const double forget_s = 20.0;

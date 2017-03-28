@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title></title>
+<title>Sprite</title>
 </head>
 
 
 <body>
 
-<h1></h1>
+<h1>Sprite</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -40,35 +40,41 @@
 </ul>
 
 <p>
+Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
+Public License, see copying.txt.
+</p>
+<p>
 Sprites have a (world) position, a rotation, and a bitmap. They are sorted
-by bitmap and drawn by the gpu in ../system/Draw based on the lighting. These
-are static; they have sprites_capacity maximum sprites. Sprites detect
+by bitmap and drawn by the gpu in <em>../system/Draw</em> based on the lighting.
+These are static; they have sprites_capacity maximum sprites. Sprites detect
 collisions. Sprites can be part of ships, asteroids, all sorts of gameplay
 elements, but this doesn't know that. However, background stuff is not
 sprites; ie, not collision detected, not lit. There are several types.
-&lt;p&gt;
+</p>
+<ul>
+	<li>
 SP_DEBRIS: is everything that doesn't have license, but moves around on a
 linear path, can be damaged, killed, and moved. Astroids and stuff.
-&lt;p&gt;
+	</li>
+	<li>
 SP_SHIP: has license and is controlled by a player or an ai.
-&lt;p&gt;
+	</li>
+	<li>
 SP_WMD: cannons, bombs, and other cool stuff that has sprites and can hurt.
-&lt;p&gt;
+	</li>
+	<li>
 SP_ETHEREAL: are in the forground but poll collision detection instead of
 interacting; they do something in the game. For example, gates are devices
 that can magically transport you faster than light, or powerups.
-&lt;p&gt;
+	</li>
+</ul>
+<p>
 Sprites can change address. If you want to hold an address, use
-Sprite::setUpdate() (only one address is updated.)
+<a href = "#SpriteSetUpdate">SpriteSetUpdate</a> (only one address is updated.)
 </p>
 <p>
 Enforces the maximum speed by breaking the debris into smaller chunks; the
 process is not elastic, so it loses energy (speed.)
-</p>
-<p>
-Sorts the sprites; they're (hopefully) almost sorted already from last
-frame, just freshens with insertion sort, O(n + m) where m is the
-related to the dynamicness of the scene
 </p>
 <dl>
 	<dt>author</dt>
@@ -81,6 +87,36 @@ related to the dynamicness of the scene
 
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "struct Sprite"><!-- --></a>
+<h3>struct Sprite</h3>
+<pre><b>struct Sprite</b></pre>
+<p>
+See <a href = "#Sprite">Sprite</a>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "enum SpType"><!-- --></a>
+<h3>enum SpType</h3>
+<pre><b>enum SpType</b> { SP_DEBRIS, SP_SHIP, SP_WMD, SP_ETHEREAL }</pre>
+<p>
+Sprite type.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "enum Behaviour"><!-- --></a>
+<h3>enum Behaviour</h3>
+<pre><b>enum Behaviour</b> { B_NONE, B_HUMAN, B_STUPID }</pre>
+<p>
+Sprite AI behaviour.
+</p>
+<dl>
+</dl>
+</div>
 
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>
@@ -202,15 +238,25 @@ related to the dynamicness of the scene
 <pre>struct Sprite * <b>Sprite</b> (const enum SpType sp_type, ...)</pre>
 <p>
 Get a new sprite from the pool of unused.
-Sprite(SP_DEBRIS, const struct Image *image, const int x, y, const float theta,
-const unsigned mass);
-Sprite(SP_SHIP, const int x, y, const float theta, const struct ShipClass *const class,
-const enum Behaviour behaviour, const struct Ship **notify);
-Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
-Sprite(SP_ETHEREAL, const struct Image *image, const int x, y, const float theta);
-&lt;p&gt;
-FIXME: const float x, y!
 </p>
+<ul>
+	<li>
+Sprite(SP_DEBRIS, const struct Image *image, const int x, y,
+const float theta, const unsigned mass);
+	</li>
+	<li>
+Sprite(SP_SHIP, const int x, y, const float theta,
+const struct ShipClass *const class, const enum Behaviour behaviour,
+const struct Ship **notify);
+	</li>
+	<li>
+Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
+	</li>
+	<li>
+Sprite(SP_ETHEREAL, const struct Image *image, const int x, y,
+const float theta);
+	</li>
+</ul>
 <dl>
 	<dt>parameter: sp_type</dt>
 	<dd>Type of sprite.</dd>
@@ -234,8 +280,10 @@ FIXME: const float x, y!
 	<dt>return</dt>
 	<dd>Created Sprite or null.</dd>
 	<dt>fixme</dt>
-	<dd>SpType contained in TypeOfObject instead of Image? work on
-					this a lot more.</dd>
+	<dd>SpType contained in TypeOfObject instead of Image? work on this a lot
+ more.</dd>
+	<dt>fixme</dt>
+	<dd>const float x, y</dd>
 </dl>
 </div>
 

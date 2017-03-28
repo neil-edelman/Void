@@ -1,13 +1,14 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the
- GNU General Public License, see copying.txt */
+ GNU General Public License, see copying.txt.
 
-#include "Sorting.h"
+ Sorting algoritms!
 
-/* Sorting algoritms!
-
- @author Neil
+ @title		Sorting
+ @author	Neil
  @version	3.2, 2015-06
  @since		3.2, 2015-06 */
+
+#include "Sorting.h"
 
 /* public */
 
@@ -18,7 +19,7 @@
 						positive.
  @param address_next	Given an item, returns the address of the next item.
 						Must be valid.
- @returns				The number of out-of-place items. */
+ @return				The number of out-of-place items. */
 int bubble(void **base_ptr, int (*compare)(const void *, const void *), void **(*address_next)(void *const)) {
 	void *b, *c, **a_next, **b_next, **c_next;
 	int out_of_place = 0;
@@ -50,7 +51,7 @@ int bubble(void **base_ptr, int (*compare)(const void *, const void *), void **(
 						item. Must be valid.
  @param address_next	Given an item, returns the address of the next item.
 						Must be valid.
- @returns				m + n in {@code O(n + m)}. */
+ @return				m + n in {@code O(n + m)}. */
 int isort(void **base_ptr, int (*compare)(const void *, const void *), void **(*address_prev)(void *const), void **(*address_next)(void *const)) {
 	void *b, *c, *d, **b_next, **c_prev, **c_next, **d_prev;
 	void *lte_c, *gt_c, **lte_c_next, **gt_c_prev;

@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title></title>
+<title>Light</title>
 </head>
 
 
 <body>
 
-<h1></h1>
+<h1>Light</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -40,16 +40,18 @@
 </ul>
 
 <p>
+Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
+GNU General Public License, see copying.txt.
+</p>
+<p>
 Lighting effects! Unfortunately, UBOs, which allow structs, were introduced
 in GLSL3.1; using 1.1 for compatibility, and only have 1.2. Ergo, this is a
 little bit messy. Maybe in 10 years I'll do a change.
-&lt;p&gt;
+</p>
+<p>
 Lights depend on external unsigned integers to keep track. Don't modify the
 light with a function not in this and don't free the unsigned without calling
 Light_.
-&lt;p&gt;
-Fixme: order the lights by distance/brighness and take the head of the list,
-and ignore all that pass a certain threshold. This will scale way better.
 </p>
 <dl>
 	<dt>author</dt>
@@ -58,10 +60,43 @@ and ignore all that pass a certain threshold. This will scale way better.
 	<dd>3.3, 2016-01</dd>
 	<dt>since</dt>
 	<dd>1.0, 2000</dd>
+	<dt>fixme</dt>
+	<dd>Order the lights by distance/brighness and take the head of the
+ list, and ignore all that pass a certain threshold. This will scale better.</dd>
 </dl>
 
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "struct Vec2f"><!-- --></a>
+<h3>struct Vec2f</h3>
+<pre><b>struct Vec2f</b></pre>
+<p>
+2-vector of floats.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Colour3f"><!-- --></a>
+<h3>struct Colour3f</h3>
+<pre><b>struct Colour3f</b></pre>
+<p>
+Normalised 3-vector of floats.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Light"><!-- --></a>
+<h3>struct Light</h3>
+<pre><b>struct Light</b></pre>
+<p>
+See <a href = "#Light">Light</a>.
+</p>
+<dl>
+</dl>
+</div>
 
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>

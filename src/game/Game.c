@@ -1,8 +1,9 @@
-/* Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
- GNU General Public License, see copying.txt */
+/** Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
+ GNU General Public License, see copying.txt.
 
-/* Used to set up the Game and get it running.
- 
+ Used to set up the Game and get it running.
+
+ @title		Game
  @author	Neil
  @version	3.3, 2015-12
  @since		1.0, 1999 */

@@ -39,11 +39,37 @@
 	<li><a href = "#_detail">Function Detail</a></li>
 </ul>
 
+<p>
+Copyright 2000, 2016 Neil Edelman, distributed under the terms of the
+GNU General Public License, see copying.txt.
+</p>
 <dl>
+	<dt>fixme</dt>
+	<dd>SpaceZone -&gt; Sector</dd>
 </dl>
 
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "struct AutoSpaceZone"><!-- --></a>
+<h3>struct AutoSpaceZone</h3>
+<pre><b>struct AutoSpaceZone</b></pre>
+<p>
+This is a wrapper around an automatically-generated type.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Sprite"><!-- --></a>
+<h3>struct Sprite</h3>
+<pre><b>struct Sprite</b></pre>
+<p>
+Dependence on <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
 
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>
@@ -54,6 +80,11 @@
 	<td>void</td>
 	<td><a href = "#Zone">Zone</a></td>
 	<td>const struct AutoSpaceZone *const sz</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#ZoneChange">ZoneChange</a></td>
+	<td>const struct Sprite *const gate</td>
 </tr>
 </table>
 
@@ -69,6 +100,16 @@ Clears, then sets up a new zone.
 <dl>
 	<dt>return</dt>
 	<dd>Success.</dd>
+</dl>
+</div>
+
+<div><a name = "ZoneChange"><!-- --></a>
+<h3>ZoneChange</h3>
+<pre>void <b>ZoneChange</b> (const struct Sprite *const gate)</pre>
+<p>
+Zone change with the <em>gate</em>.
+</p>
+<dl>
 </dl>
 </div>
 

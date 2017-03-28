@@ -1,3 +1,4 @@
+/** See \see{Far}. */
 struct Far;
 struct AutoObjectInSpace;
 

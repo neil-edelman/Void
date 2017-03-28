@@ -1,5 +1,8 @@
-/* Copyright 2000, 2016 Neil Edelman, distributed under the terms of the
- GNU General Public License, see copying.txt */
+/** Copyright 2000, 2016 Neil Edelman, distributed under the terms of the
+ GNU General Public License, see copying.txt.
+
+ @title Zone
+ @fixme SpaceZone -> Sector */
 
 #include <stdlib.h> /* rand (fixme) */
 #include <math.h>	/* M_PI */
@@ -15,8 +18,6 @@
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383279502884197169399375105820974944592307816406
 #endif
-
-/* fixme: SpaceZone -> Sector */
 
 /* from Lore */
 extern const struct AutoSpaceZone auto_space_zone[];
@@ -87,6 +88,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 }
 
+/** Zone change with the {gate}. */
 void ZoneChange(const struct Sprite *const gate) {
 	const struct AutoSpaceZone *const new_zone = SpriteGetTo(gate), *old_zone = current_zone;
 	struct Sprite *new_gate;
@@ -157,11 +159,10 @@ void ZoneChange(const struct Sprite *const gate) {
 	SpriteSetVelocity(player, player_vx, player_vy);
 }
 
-/** "Random" -- used for initialising. FIXME: this will be used a lot! have
- Rando.c include all sorts of random fuctions.
- @param limit
- @return		A uniformly distributed random variable in the range
-				[-limit, limit]. */
+/** "Random" -- used for initialising.
+ @return A uniformly distributed random variable in the range [-limit, limit].
+ @fixme This will be used a lot! have Rando.c include all sorts of random
+ fuctions. */
 static float rnd(const float limit) {
 	return limit * (2.0f * rand() / RAND_MAX - 1.0f);
 }

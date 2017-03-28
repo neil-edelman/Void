@@ -1,6 +1,3 @@
-struct AutoImage;
-struct Map;
-
 int Draw(void);
 void Draw_(void);
 void DrawSetCamera(const float x, const float y);

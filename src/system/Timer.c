@@ -1,16 +1,18 @@
-/* Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
- General Public License, see copying.txt */
+/** Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
+ General Public License, see copying.txt.
+
+ This is an idempotent class dealing with the interface to OpenGL.
+
+ @title		Timer
+ @author	Neil
+ @version	3.3, 2015-12
+ @since		3.0, 2014 */
 
 #include <limits.h> /* MAX_INT, MIN_INT */
 #include "../Print.h"
 #include "Glew.h"
 #include "Timer.h"
 #include "../game/Game.h"
-
-/** This is an idempotent class dealing with the interface to OpenGL.
- @author	Neil
- @version	3.3, 2015-12
- @since		3.0, 2014 */
 
 static const int frametime_ms = 20; /* 50 fps -- fixme: variable */
 static const int persistance  = (int)(0.9 * 1024); /* fixed point :10 */

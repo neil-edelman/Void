@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title></title>
+<title>EntryPosix</title>
 </head>
 
 
 <body>
 
-<h1></h1>
+<h1>EntryPosix</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -40,9 +40,11 @@
 </ul>
 
 <p>
+Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
+GNU General Public License, see copying.txt.
+</p>
+<p>
 Entry point for command-line, unix-like operating systems (ie, all of them.)
-&lt;p&gt;
-Fixme: have separate entry points for MacOS and Windows that are user friendly.
 </p>
 <dl>
 	<dt>author</dt>
@@ -51,6 +53,9 @@ Fixme: have separate entry points for MacOS and Windows that are user friendly.
 	<dd>3.2, 2015-05</dd>
 	<dt>since</dt>
 	<dd>3.2, 2015-05</dd>
+	<dt>fixme</dt>
+	<dd>Have separate entry points for MacOS and Windows that are user
+			friendly.</dd>
 </dl>
 
 
@@ -66,6 +71,11 @@ Fixme: have separate entry points for MacOS and Windows that are user friendly.
 	<td><a href = "#main">main</a></td>
 	<td>int argc, char **argv</td>
 </tr>
+<tr>
+	<td>static void</td>
+	<td><a href = "#main_">main_</a></td>
+	<td>void</td>
+</tr>
 </table>
 
 
@@ -75,7 +85,7 @@ Fixme: have separate entry points for MacOS and Windows that are user friendly.
 <h3>main</h3>
 <pre>int <b>main</b> (int argc, char **argv)</pre>
 <p>
-entry point
+Entry point.
 </p>
 <dl>
 	<dt>parameter</dt>
@@ -84,6 +94,16 @@ entry point
 	<dd>argv the arguments</dd>
 	<dt>return</dt>
 	<dd>either EXIT_SUCCESS or EXIT_FAILURE</dd>
+</dl>
+</div>
+
+<div><a name = "main_"><!-- --></a>
+<h3>main_</h3>
+<pre>static void <b>main_</b> (void)</pre>
+<p>
+Destructor (called with atexit().)
+</p>
+<dl>
 </dl>
 </div>
 

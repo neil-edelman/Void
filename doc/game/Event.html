@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title></title>
+<title>Event</title>
 </head>
 
 
 <body>
 
-<h1></h1>
+<h1>Event</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -41,11 +41,14 @@
 
 <p>
 Copyright 2015 Neil Edelman, distributed under the terms of the
-GNU General Public License, see copying.txt
+GNU General Public License, see copying.txt.
 </p>
 <p>
 Events have a specific time to call a function. Events uses a pool which is
 drawn upon and stuck in the linked-list.
+</p>
+<p>
+Accessor.
 </p>
 <dl>
 	<dt>author</dt>
@@ -58,6 +61,16 @@ drawn upon and stuck in the linked-list.
 
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "struct Event"><!-- --></a>
+<h3>struct Event</h3>
+<pre><b>struct Event</b></pre>
+<p>
+See <a href = "#Event">Event</a>.
+</p>
+<dl>
+</dl>
+</div>
 
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>
@@ -93,6 +106,16 @@ drawn upon and stuck in the linked-list.
 	<td>void</td>
 	<td><a href = "#EventReplaceArguments">EventReplaceArguments</a></td>
 	<td>struct Event *const event, ...</td>
+</tr>
+<tr>
+	<td>char *</td>
+	<td><a href = "#EventToString">EventToString</a></td>
+	<td>const struct Event *const e</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#EventList">EventList</a></td>
+	<td>void</td>
 </tr>
 </table>
 
@@ -159,6 +182,28 @@ Dispach all events up to the present.
 <pre>void <b>EventReplaceArguments</b> (struct Event *const event, ...)</pre>
 <p>
 Sometimes you just want to change your mind.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "EventToString"><!-- --></a>
+<h3>EventToString</h3>
+<pre>char * <b>EventToString</b> (const struct Event *const e)</pre>
+<p>
+Has room for four events at a time.
+</p>
+<dl>
+	<dt>parameter: e</dt>
+	<dd>Event turned into a string.</dd>
+</dl>
+</div>
+
+<div><a name = "EventList"><!-- --></a>
+<h3>EventList</h3>
+<pre>void <b>EventList</b> (void)</pre>
+<p>
+Prints the event list.
 </p>
 <dl>
 </dl>

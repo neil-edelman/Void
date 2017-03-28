@@ -1,9 +1,12 @@
 struct AutoGate;
 struct AutoSpaceZone;
 
+/** See \see{Sprite}. */
 struct Sprite;
 
+/** Sprite type. */
 enum SpType { SP_DEBRIS, SP_SHIP, SP_WMD, SP_ETHEREAL };
+/** Sprite AI behaviour. */
 enum Behaviour { B_NONE, B_HUMAN, B_STUPID };
 
 struct Sprite *Sprite(const enum SpType sp_type, ...);

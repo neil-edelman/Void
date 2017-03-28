@@ -1,17 +1,18 @@
-/* Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
- General Public License, see copying.txt */
+/** Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
+ General Public License, see copying.txt
+
+ This is an idempotent class dealing with the interface to OpenGL.
+
+ @title		Key
+ @author	Neil
+ @version	3.0, 05-2015
+ @since		2.0, 2014 (<- what?)
+ @fixme		The keys are not affected by pause. */
 
 #include "../Print.h"
 #include "Glew.h"
 #include "Key.h"
 #include "Window.h"
-
-/** This is an idempotent class dealing with the interface to OpenGL.
- <p>
- Fixme: The keys are not affected by pause!
- @author	Neil
- @version	3.0, 05-2015
- @since		2.0, 2014 (<- what?) */
 
 static struct Key {
 	int state;
@@ -72,7 +73,7 @@ int KeyTime(const int key) {
  because it is polling.
  @param key		The key.
  @return		Boolean, whether it's pressed or not.
- @depreceated	Use asynchronous @see{KeyRegister}. */
+ @deprecated	Use asynchronous @see{KeyRegister}. */
 int KeyPress(const int key) {
 	int time;
 	struct Key *k;

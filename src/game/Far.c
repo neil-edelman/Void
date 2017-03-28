@@ -1,5 +1,13 @@
-/* Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
- Public License, see copying.txt */
+/** Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
+ Public License, see copying.txt.
+
+ Sprites in the background have a (world) position, a rotation, and a bitmap.
+ They are sorted by bitmap and drawn by the gpu in ../system/Draw but not lit.
+
+ @title		Far
+ @author	Neil
+ @version	3.2, 2015-07
+ @since		3.2, 2015-07 */
 
 #include <string.h> /* memset */
 #include "../../build/Auto.h"
@@ -7,13 +15,6 @@
 #include "Far.h"
 #include "../general/Sorting.h"
 #include "../system/Draw.h"
-
-/** Sprites in the background have a (world) position, a rotation, and a bitmap.
- They are sorted by bitmap and drawn by the gpu in ../system/Draw but not lit.
- <p>
- @author	Neil
- @version	3.2, 2015-07
- @since		3.2, 2015-07 */
 
 /* the backgrounds can be larger than the sprites, 1024x1024? */
 static const int half_max_size    = 512;

@@ -1,6 +1,9 @@
+/** 2-vector of floats. */
 struct Vec2f;
+/** Normalised 3-vector of floats. */
 struct Colour3f;
 
+/** See \see{Light}. */
 struct Light;
 
 int Light(int *const id_ptr, const float i, const float r, const float g, const float b);

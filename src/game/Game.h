@@ -1,3 +1,4 @@
+/** See \see{Game}. */
 struct Game;
 
 int Game(void);

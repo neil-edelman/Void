@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title></title>
+<title>Orcish</title>
 </head>
 
 
 <body>
 
-<h1></h1>
+<h1>Orcish</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -39,52 +39,62 @@
 	<li><a href = "#_detail">Function Detail</a></li>
 </ul>
 
+<p>
+2014 Neil Edelman: neil dot edelman each mail dot mcgill dot ca.
+</p>
+<p>
+Orcish words are gathered off the Internet, SMAUG1.8, made up myself,
+etc. They originate or are inspired by JRR Tolkien's Orcish; this
+file has had many incarnations and was ported from Java. Random
+words are super-useful in testing and character generation;
+<a href = "http://en.wikipedia.org/wiki/Languages_constructed_by_J._R._R._Tolkien">http://en.wikipedia.org/wiki/Languages_constructed_by_J._R._R._Tolkien</a>.
+Provides one function, <a href = "#Orcish">Orcish</a>.
+</p>
 <dl>
+	<dt>minimum standard</dt>
+	<dd>ANSI C89/ISO C90</dd>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>version</dt>
+	<dd>1.2, 2016-09</dd>
+	<dt>since</dt>
+	<dd>2014</dd>
 </dl>
 
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
-
-<div><a name = "static const char *sylables[] ="><!-- --></a>
-<h3>static const char *sylables[] =</h3>
-<pre><b>static const char *sylables[] =</b> {
-	"ub", "ul", "uk", "um", "uu", "oo", "ee", "uuk", "uru",
-	"ick", "gn", "ch", "ar", "eth", "ith", "ath", "uth", "yth",
-	"ur", "uk", "ug", "sna", "or", "ko", "uks", "ug", "lur", "sha", "grat",
-	"mau", "eom", "lug", "uru", "mur", "ash", "goth", "sha", "cir", "un",
-	"mor", "ann", "sna", "gor", "dru", "az", "azan", "nul", "biz", "balc",
-	"balc", "tuo", "gon", "dol", "bol", "dor", "luth", "bolg", "beo",
-	"vak", "bat", "buy", "kham", "kzam", "lg", "bo", "thi",
-	"ia", "es", "en", "ion",
-	"mok", "muk", "tuk", "gol", "fim", "ette", "moor", "goth", "gri",
-	"shn", "nak", "ash", "bag", "ronk", "ask", "mal", "ome", "hi",
-	"sek", "aah", "ove", "arg", "ohk", "to", "lag", "muzg", "ash", "mit",
-	"rad", "sha", "saru", "ufth", "warg", "sin", "dar", "ann", "mor", "dab",
-	"val", "dur", "dug", "bar",
-	"ash", "krul", "gakh", "kraa", "rut", "udu", "ski", "kri", "gal",
-	"nash", "naz", "hai", "mau", "sha", "akh", "dum", "olog", "lab", "lat"
-}</pre>
-<p>
-Tolkienised random words are useful:
-<em>@link http://en.wikipedia.org/wiki/Languages_constructed_by_J._R._R._Tolkien</em>.
-</p>
-<dl>
-	<dt>author</dt>
-	<dd>Neil</dd>
-	<dt>since</dt>
-	<dd>3.3, 2016-02</dd>
-</dl>
-</div>
 
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>
 
 <table>
 <tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Orcish">Orcish</a></td>
+	<td>char *const name, const size_t name_size</td>
+</tr>
 </table>
 
 
 <a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Orcish"><!-- --></a>
+<h3>Orcish</h3>
+<pre>void <b>Orcish</b> (char *const name, const size_t name_size)</pre>
+<p>
+Takes <em>name</em>, a string, and replaces it, to a maximum of <em>name_size</em>
+characters, with a <em>rand</em> Orcish name. You must have space for (at least)
+<em>name_size</em> (byte) characters.
+</p>
+<dl>
+	<dt>parameter: name</dt>
+	<dd>Filled with a random word in psudo-Orcish.</dd>
+	<dt>parameter: name_size</dt>
+	<dd>sizeof(name); suggest 16, which would be enough for
+ 2 syllables and a suffix.</dd>
+</dl>
+</div>
 
 
 </body>

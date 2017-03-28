@@ -1,5 +1,12 @@
-/* Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
- General Public License, see copying.txt */
+/** Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
+ General Public License, see copying.txt.
+
+ This is an idempotent class dealing with the interface to OpenGL.
+
+ @title		Draw
+ @author	Neil
+ @version	3.2, 2015-05
+ @since		1.0, 2000 */
 
 #include <stdlib.h> /* malloc free */
 #include <math.h>   /* cis */
@@ -17,7 +24,8 @@
 
 /* auto-generated, hard coded resouce files; there should be the directory
  tools/ where you can compile utilities that can make these files; run "make"
- and this should be automated; ignore errors about ISO C90 string length 509  */
+ and this should be automated
+ fixme: ignore errors about ISO C90 string length 509  */
 #include "../../build/shaders/Background_vs.h"
 #include "../../build/shaders/Background_fs.h"
 #include "../../build/shaders/Hud_vs.h"
@@ -30,13 +38,9 @@
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
 #ifndef M_SQRT1_2
-#define M_SQRT1_2 0.707106781186547524400844362104849039284835937688474036588339868995366239
+#define M_SQRT1_2 \
+	0.707106781186547524400844362104849039284835937688474036588339868995366239
 #endif
-
-/** This is an idempotent class dealing with the interface to OpenGL.
- @author	Neil
- @version	3.2, 2015-05
- @since		1.0, 2000 */
 
 extern struct AutoImage auto_images[];
 extern const int max_auto_images;
@@ -140,7 +144,7 @@ static GLfloat two_width, two_height;
 static float   camera_x, camera_y;
 
 /** Gets all the graphics stuff started.
- @return		All good to draw? */
+ @return All good to draw? */
 int Draw(void) {
 	int i;
 
@@ -319,8 +323,7 @@ void Draw_(void) {
 }
 
 /** Sets the camera location.
- @param x
- @param y	(x, y) in pixels. */
+ @param x, y: (x, y) in pixels. */
 void DrawSetCamera(const float x, const float y) {
 	if(!is_started) return;
 	camera_x = x;
@@ -365,6 +368,7 @@ void DrawSetBackground(const char *const str) {
 	Debug("Image \"%s,\" (Tex%u,) set as desktop.\n", image->name, background_tex);
 }
 
+/** @param str: Resource name to set the shield indicator. */
 void DrawSetShield(const char *const str) {
 	struct AutoImage *image;
 	if(!(image = AutoImageSearch(str))) {
@@ -378,12 +382,11 @@ void DrawSetShield(const char *const str) {
 }
 
 /** Compiles, links and verifies a shader.
- @param vert_vs		Vertex shader source.
- @param frag_fs		Fragment shader source.
- @param attrib(const GLuint)
-					A function which is passed the uncompiled shader source and
-					which is supposed to set attributes. Can be null.
- @return			A shader or 0 if it didn't link. */
+ @param vert_vs: Vertex shader source.
+ @param frag_fs: Fragment shader source.
+ @param attrib(const GLuint): A function which is passed the un-compiled shader
+ source and which is supposed to set attributes. Can be null.
+ @return A shader or 0 if it didn't link. */
 static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attrib)(const GLuint)) {
 	GLchar info[128];
 	GLuint vs = 0, fs = 0, shader = 0;
@@ -480,7 +483,7 @@ static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attri
 }
 
 /** Setup tex_map attributes callback.
- @param shader	The unlinked shader. */
+ @param shader: The unlinked shader. */
 static void tex_map_attrib(const GLuint shader) {
 	/* programme, index attrib, name */
 	glBindAttribLocation(shader, G_POSITION, "vbo_position");
@@ -488,8 +491,8 @@ static void tex_map_attrib(const GLuint shader) {
 }
 
 /** Creates a texture from an image; sets the image texture unit.
- @param image	The Image as seen in Lores.h.
- @return		Success. */
+ @param image: The Image as seen in Lores.h.
+ @return Success. */
 static int texture(struct AutoImage *image) {
 	unsigned width, height, depth, error;
 	unsigned char *pic;
@@ -607,7 +610,8 @@ static int texture(struct AutoImage *image) {
 		default:
 			break;
 	}
-	Debug("Draw::texture: created %dx%dx%d texture, Tex%u.\n", width, height, depth, tex);
+	Debug("Draw::texture: created %dx%dx%d texture, Tex%u.\n",
+		width, height, depth, tex);
 
 	WindowIsGlError("texture");
 
@@ -616,7 +620,7 @@ static int texture(struct AutoImage *image) {
 
 /* Creates a hardcoded lighting texture with the Red the radius and Green the
  angle.
- @return	The texture or zero. */
+ @return The texture or zero. */
 static int light_compute_texture(void) {
 	int   i, j;
 	float x, y;
@@ -624,7 +628,8 @@ static int light_compute_texture(void) {
 	/*const int buffer_ysize = sizeof(buffer)  / sizeof(*buffer);
 	const int buffer_xsize = sizeof(*buffer) / sizeof(**buffer);*/
 	const int buffer_size = 1024/*512*/; /* width/height */
-	const float buffer_norm = (float)M_SQRT1_2 * 4.0f / sqrtf(2.0f * buffer_size * buffer_size);
+	const float buffer_norm = (float)M_SQRT1_2 * 4.0f /
+		sqrtf(2.0f * buffer_size * buffer_size);
 	unsigned name;
 
 	if(!(buffer = malloc(sizeof(float) * buffer_size * buffer_size << 1))) return 0;
@@ -632,10 +637,12 @@ static int light_compute_texture(void) {
 		for(i = 0; i < buffer_size; i++) {
 			x = (float)i - 0.5f*buffer_size + 0.5f;
 			y = (float)j - 0.5f*buffer_size + 0.5f;
-			buffer[((j*buffer_size + i) << 1) + 0] = fminf(sqrtf(x*x + y*y) * buffer_norm, 1.0f);
+			buffer[((j*buffer_size + i) << 1) + 0] =
+				fminf(sqrtf(x*x + y*y) * buffer_norm, 1.0f);
 			/* NOTE: opengl clips [0, 1), even if it says different;
 			 maybe it's GL_LINEAR? */
-			buffer[((j*buffer_size + i) << 1) + 1] = fmodf(atan2f(y, x) + (float)M_2PI, (float)M_2PI) * (float)M_1_2PI;
+			buffer[((j*buffer_size + i) << 1) + 1] = fmodf(atan2f(y, x)
+				+ (float)M_2PI, (float)M_2PI) * (float)M_1_2PI;
 		}
 	}
 	glGenTextures(1, (unsigned *)&name);
@@ -799,10 +806,8 @@ static void display(void) {
 }
 
 /** Callback for glutReshapeFunc.
- <p>
- fixme: not gauranteed to have a background! this will crash.
- @param width
- @param height	The size of the client area. */
+ @fixme not guaranteed to have a background! this will crash.
+ @param width, height: The size of the client area. */
 static void resize(int width, int height) {
 	int w_tex, h_tex;
 	float w_w_tex, h_h_tex;

@@ -1,9 +1,10 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the
- GNU General Public License, see copying.txt
+ GNU General Public License, see copying.txt.
 
  Events have a specific time to call a function. Events uses a pool which is
  drawn upon and stuck in the linked-list.
 
+ @title		Event
  @author	Neil
  @version	3.3; 2016-01
  @since		3.2; 2015-11 */
@@ -206,6 +207,7 @@ void EventSetNotify(struct Event **const e_ptr) {
 	e->notify = e_ptr;
 }
 
+/** Accessor. */
 void (*EventGetConsumerAccept(const struct Event *const e))(void *) {
 	if(!e || e->fn_type != FN_CONSUMER) return 0;
 	return e->fn.consumer.accept;
@@ -271,6 +273,8 @@ void EventReplaceArguments(struct Event *const event, ...) {
 	va_end(args);
 }
 
+/** Has room for four events at a time.
+ @param e: Event turned into a string. */
 char *EventToString(const struct Event *const e) {
 	static int b;
 	static char buffer[4][64];
@@ -296,6 +300,7 @@ char *EventToString(const struct Event *const e) {
 	return buffer[last_b];
 }
 
+/** Prints the event list. */
 void EventList(void) {
 	struct Event *e;
 	/*int i;*/

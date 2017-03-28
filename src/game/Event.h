@@ -1,5 +1,6 @@
 enum FnType { FN_RUNNABLE, FN_CONSUMER, FN_BICONSUMER };
 
+/** See \see{Event}. */
 struct Event;
 
 int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms, enum FnType fn_type, ...);

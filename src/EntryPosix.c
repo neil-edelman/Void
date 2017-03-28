@@ -1,8 +1,9 @@
 /** Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
- GNU General Public License, see copying.txt
+ GNU General Public License, see copying.txt.
 
  Entry point for command-line, unix-like operating systems (ie, all of them.)
 
+ @title		EntryPosix
  @author	Neil
  @version	3.2, 2015-05
  @since		3.2, 2015-05
@@ -29,7 +30,7 @@ static const int versionMinor  = 3;
 static void main_(void);
 static void usage(void);
 
-/** entry point
+/** Entry point.
  @param argc the number of arguments starting with the programme name
  @param argv the arguments
  @return     either EXIT_SUCCESS or EXIT_FAILURE */
@@ -61,7 +62,8 @@ int main(int argc, char **argv) {
 	return EXIT_FAILURE;
 }
 
-/** Destructor (called with atexit().) */
+/** Destructor (called with atexit().)
+ @allow */
 static void main_(void) {
 	TimerPause();
 	Game_();
@@ -70,19 +72,22 @@ static void main_(void) {
 
 /** Help screen. */
 static void usage(void) {
-	fprintf(stderr, "Usage: %s\n", programme);
-	fprintf(stderr, "To win, blow up everything that's not you.\n");
-	fprintf(stderr, "Player one controls: left, right, up, down, space\n");
-	fprintf(stderr, "Fullscreen: F1.\n");
-	fprintf(stderr, "Exit: Escape.\n\n");
-	fprintf(stderr, "Version %d.%d.\n\n", versionMajor, versionMinor);
-	fprintf(stderr, "%s Copyright %s Neil Edelman\n", programme, year);
-	fprintf(stderr, "This program comes with ABSOLUTELY NO WARRANTY.\n");
-	fprintf(stderr, "This is free software, and you are welcome to redistribute it\n");
-	fprintf(stderr, "under certain conditions; see copying.txt.\n\n");
-	fprintf(stderr, "Image credit: NASA; JPL; ESA; Caltech; UCLA; MPS; DLR; IDA; Johns\nHopkins University APL; Carnegie Institution of Washington; DSS\nConsortium; SDSS.\n\n");
-	fprintf(stderr, "lodepng: Copyright (c) 2005-2015 Lode Vandevenne\n");
-	fprintf(stderr, "http://lodev.org/lodepng/\n\n");
-	fprintf(stderr, "nanojpeg: by Martin J. Fiedler\n");
-	fprintf(stderr, "http://keyj.emphy.de/nanojpeg/\n\n");
+	fprintf(stderr, "Usage: %s\n"
+		"To win, blow up everything that's not you.\n"
+		"Player one controls: left, right, up, down, space\n"
+		"Fullscreen: F1.\n"
+		"Exit: Escape.\n\n"
+		"Version %d.%d.\n\n"
+		"%s Copyright %s Neil Edelman\n"
+		"This program comes with ABSOLUTELY NO WARRANTY.\n"
+		"This is free software, and you are welcome to redistribute it\n" 
+		"under certain conditions; see copying.txt.\n\n",
+		programme, versionMajor, versionMinor, programme, year);
+	fprintf(stderr, "Image credit: NASA; JPL; ESA; Caltech; UCLA; MPS; DLR;\n"
+		"IDA; Johns Hopkins University APL; Carnegie Institution of\n"
+		"Washington; DSS Consortium; SDSS.\n\n"
+		"lodepng: Copyright (c) 2005-2015 Lode Vandevenne\n"
+		"http://lodev.org/lodepng/\n\n"
+		"nanojpeg: by Martin J. Fiedler\n"
+		"http://keyj.emphy.de/nanojpeg/\n\n");
 }

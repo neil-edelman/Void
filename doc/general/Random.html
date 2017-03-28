@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title></title>
+<title>Random</title>
 </head>
 
 
 <body>
 
-<h1></h1>
+<h1>Random</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -41,9 +41,20 @@
 
 <p>
 Copyright 2016 Neil Edelman, distributed under the terms of the
-GNU General Public License, see copying.txt
+GNU General Public License, see copying.txt.
+</p>
+<p>
+This provides access to random functions. There is no object, just static.
+These functions use rand(), so if you want it to return different values, you
+can use srand().
 </p>
 <dl>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>version</dt>
+	<dd>3.3; 2016-01</dd>
+	<dt>since</dt>
+	<dd>3.3; 2016-01</dd>
 </dl>
 
 
@@ -54,10 +65,48 @@ GNU General Public License, see copying.txt
 
 <table>
 <tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#RandomUniformInt">RandomUniformInt</a></td>
+	<td>const int max</td>
+</tr>
+<tr>
+	<td>float</td>
+	<td><a href = "#RandomUniformFloat">RandomUniformFloat</a></td>
+	<td>const double max</td>
+</tr>
 </table>
 
 
 <a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "RandomUniformInt"><!-- --></a>
+<h3>RandomUniformInt</h3>
+<pre>int <b>RandomUniformInt</b> (const int max)</pre>
+<p>
+Uniform integer.
+</p>
+<dl>
+	<dt>parameter</dt>
+	<dd>sigma</dd>
+	<dt>return</dt>
+	<dd>Random int about [-max, max].</dd>
+</dl>
+</div>
+
+<div><a name = "RandomUniformFloat"><!-- --></a>
+<h3>RandomUniformFloat</h3>
+<pre>float <b>RandomUniformFloat</b> (const double max)</pre>
+<p>
+Uniform float.
+</p>
+<dl>
+	<dt>parameter</dt>
+	<dd>sigma</dd>
+	<dt>return</dt>
+	<dd>Random int about [-max, max].</dd>
+</dl>
+</div>
 
 
 </body>

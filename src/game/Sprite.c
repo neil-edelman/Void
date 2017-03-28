@@ -1,26 +1,25 @@
-/* Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
- Public License, see copying.txt */
+/** Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
+ Public License, see copying.txt.
 
-/** Sprites have a (world) position, a rotation, and a bitmap. They are sorted
- by bitmap and drawn by the gpu in ../system/Draw based on the lighting. These
- are static; they have sprites_capacity maximum sprites. Sprites detect
+ Sprites have a (world) position, a rotation, and a bitmap. They are sorted
+ by bitmap and drawn by the gpu in {../system/Draw} based on the lighting.
+ These are static; they have sprites_capacity maximum sprites. Sprites detect
  collisions. Sprites can be part of ships, asteroids, all sorts of gameplay
  elements, but this doesn't know that. However, background stuff is not
  sprites; ie, not collision detected, not lit. There are several types.
- <p>
- SP_DEBRIS: is everything that doesn't have license, but moves around on a
+
+ * SP_DEBRIS: is everything that doesn't have license, but moves around on a
  linear path, can be damaged, killed, and moved. Astroids and stuff.
- <p>
- SP_SHIP: has license and is controlled by a player or an ai.
- <p>
- SP_WMD: cannons, bombs, and other cool stuff that has sprites and can hurt.
- <p>
- SP_ETHEREAL: are in the forground but poll collision detection instead of
+ * SP_SHIP: has license and is controlled by a player or an ai.
+ * SP_WMD: cannons, bombs, and other cool stuff that has sprites and can hurt.
+ * SP_ETHEREAL: are in the forground but poll collision detection instead of
  interacting; they do something in the game. For example, gates are devices
  that can magically transport you faster than light, or powerups.
- <p>
+
  Sprites can change address. If you want to hold an address, use
- Sprite::setUpdate() (only one address is updated.)
+ \see{SpriteSetUpdate} (only one address is updated.)
+
+ @title		Sprite
  @author	Neil
  @version	3.3, 2016-01
  @since		3.2, 2015-06 */
@@ -212,14 +211,16 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 /* public */
 
 /** Get a new sprite from the pool of unused.
- Sprite(SP_DEBRIS, const struct Image *image, const int x, y, const float theta,
-  const unsigned mass);
- Sprite(SP_SHIP, const int x, y, const float theta, const struct ShipClass *const class,
-  const enum Behaviour behaviour, const struct Ship **notify);
- Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
- Sprite(SP_ETHEREAL, const struct Image *image, const int x, y, const float theta);
- <p>
- FIXME: const float x, y!
+
+ * Sprite(SP_DEBRIS, const struct Image *image, const int x, y,
+ const float theta, const unsigned mass);
+ * Sprite(SP_SHIP, const int x, y, const float theta,
+ const struct ShipClass *const class, const enum Behaviour behaviour,
+ const struct Ship **notify);
+ * Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
+ * Sprite(SP_ETHEREAL, const struct Image *image, const int x, y,
+ const float theta);
+
  @param sp_type		Type of sprite.
  @param image		(SP_DEBRIS|SP_ETHEREAL) (const struct Image *) Image.
  @param x, y, theta	(SP_DEBRIS|SP_SHIP|SP_ETHEREAL) Orientation.
@@ -230,9 +231,10 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 					be, and usally is, 0.
  @param from		(SP_WMD) (struct Sprite *const) Which Ship?
  @param wmd_type	(SP_WMD) (struct WmdType *const) Which WmdType?
- @return			Created Sprite or null.
- @fixme				SpType contained in TypeOfObject instead of Image? work on
-					this a lot more. */
+ @return Created Sprite or null.
+ @fixme SpType contained in TypeOfObject instead of Image? work on this a lot
+ more.
+ @fixme const float x, y */
 struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	va_list args;
 	struct AutoImage *image;
@@ -1164,11 +1166,12 @@ static struct Sprite *iterate(void) {
 	return iterator++;
 }
 
+#if 0
 /** Sorts the sprites; they're (hopefully) almost sorted already from last
  frame, just freshens with insertion sort, O(n + m) where m is the
  related to the dynamicness of the scene
  @return	The number of equvalent-swaps (doesn't do this anymore.) */
-/*static void sort(void) {
+static void sort(void) {
 	isort((void **)&first_x,
 		  (int (*)(const void *, const void *))&compare_x,
 		  (void **(*)(void *const))&address_prev_x,
@@ -1177,7 +1180,8 @@ static struct Sprite *iterate(void) {
 		  (int (*)(const void *, const void *))&compare_y,
 		  (void **(*)(void *const))&address_prev_y,
 		  (void **(*)(void *const))&address_next_y);
-}*/
+}
+#endif
 
 /** Keep it sorted when there is one element out-of-place. */
 static void sort_notify(struct Sprite *s) {

@@ -1,0 +1,498 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title></title>
+</head>
+
+
+<body>
+
+<h1></h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<p>
+Sprites have a (world) position, a rotation, and a bitmap. They are sorted
+by bitmap and drawn by the gpu in ../system/Draw based on the lighting. These
+are static; they have sprites_capacity maximum sprites. Sprites detect
+collisions. Sprites can be part of ships, asteroids, all sorts of gameplay
+elements, but this doesn't know that. However, background stuff is not
+sprites; ie, not collision detected, not lit. There are several types.
+&lt;p&gt;
+SP_DEBRIS: is everything that doesn't have license, but moves around on a
+linear path, can be damaged, killed, and moved. Astroids and stuff.
+&lt;p&gt;
+SP_SHIP: has license and is controlled by a player or an ai.
+&lt;p&gt;
+SP_WMD: cannons, bombs, and other cool stuff that has sprites and can hurt.
+&lt;p&gt;
+SP_ETHEREAL: are in the forground but poll collision detection instead of
+interacting; they do something in the game. For example, gates are devices
+that can magically transport you faster than light, or powerups.
+&lt;p&gt;
+Sprites can change address. If you want to hold an address, use
+Sprite::setUpdate() (only one address is updated.)
+</p>
+<p>
+Enforces the maximum speed by breaking the debris into smaller chunks; the
+process is not elastic, so it loses energy (speed.)
+</p>
+<p>
+Sorts the sprites; they're (hopefully) almost sorted already from last
+frame, just freshens with insertion sort, O(n + m) where m is the
+related to the dynamicness of the scene
+</p>
+<dl>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>version</dt>
+	<dd>3.3, 2016-01</dd>
+	<dt>since</dt>
+	<dd>3.2, 2015-06</dd>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>struct Sprite *</td>
+	<td><a href = "#Sprite">Sprite</a></td>
+	<td>const enum SpType sp_type, ...</td>
+</tr>
+<tr>
+	<td>struct Sprite *</td>
+	<td><a href = "#SpriteGate">SpriteGate</a></td>
+	<td>const struct AutoGate *gate</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Sprite_">Sprite_</a></td>
+	<td>struct Sprite **sprite_ptr</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#SpriteGetConsidered">SpriteGetConsidered</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#SpriteGetOnscreen">SpriteGetOnscreen</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteGetPosition">SpriteGetPosition</a></td>
+	<td>const struct Sprite *const sprite, float *x_ptr, float *const y_ptr</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteSetPosition">SpriteSetPosition</a></td>
+	<td>struct Sprite *const sprite, const float x, const float y</td>
+</tr>
+<tr>
+	<td>float</td>
+	<td><a href = "#SpriteGetBounding">SpriteGetBounding</a></td>
+	<td>const struct Sprite *const sprite</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteSetNotify">SpriteSetNotify</a></td>
+	<td>struct Sprite **const s_ptr</td>
+</tr>
+<tr>
+	<td>enum SpType</td>
+	<td><a href = "#SpriteGetType">SpriteGetType</a></td>
+	<td>const struct Sprite *const sprite</td>
+</tr>
+<tr>
+	<td>char *</td>
+	<td><a href = "#SpriteToString">SpriteToString</a></td>
+	<td>const struct Sprite *const s</td>
+</tr>
+<tr>
+	<td>const struct AutoSpaceZone *</td>
+	<td><a href = "#SpriteGetTo">SpriteGetTo</a></td>
+	<td>const struct Sprite *const s</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#SpriteGetDamage">SpriteGetDamage</a></td>
+	<td>const struct Sprite *const s</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteRecharge">SpriteRecharge</a></td>
+	<td>struct Sprite *const s, const int recharge</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteDebris">SpriteDebris</a></td>
+	<td>const struct Sprite *const s</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteInput">SpriteInput</a></td>
+	<td>struct Sprite *s, const int turning, const int acceleration, const int dt_ms</td>
+</tr>
+<tr>
+	<td>struct Sprite *</td>
+	<td><a href = "#SpriteOutgoingGate">SpriteOutgoingGate</a></td>
+	<td>const struct AutoSpaceZone *to</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteRemoveIf">SpriteRemoveIf</a></td>
+	<td>int (*const predicate)(struct Sprite *const)</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#SpriteIterate">SpriteIterate</a></td>
+	<td>float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteUpdate">SpriteUpdate</a></td>
+	<td>const int dt_ms</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#collide">collide</a></td>
+	<td>struct Sprite *a</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Sprite"><!-- --></a>
+<h3>Sprite</h3>
+<pre>struct Sprite * <b>Sprite</b> (const enum SpType sp_type, ...)</pre>
+<p>
+Get a new sprite from the pool of unused.
+Sprite(SP_DEBRIS, const struct Image *image, const int x, y, const float theta,
+const unsigned mass);
+Sprite(SP_SHIP, const int x, y, const float theta, const struct ShipClass *const class,
+const enum Behaviour behaviour, const struct Ship **notify);
+Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
+Sprite(SP_ETHEREAL, const struct Image *image, const int x, y, const float theta);
+&lt;p&gt;
+FIXME: const float x, y!
+</p>
+<dl>
+	<dt>parameter: sp_type</dt>
+	<dd>Type of sprite.</dd>
+	<dt>parameter: image</dt>
+	<dd>(SP_DEBRIS|SP_ETHEREAL) (const struct Image *) Image.</dd>
+	<dt>parameter: x, y, theta</dt>
+	<dd>(SP_DEBRIS|SP_SHIP|SP_ETHEREAL) Orientation.</dd>
+	<dt>parameter: mass</dt>
+	<dd>(SP_DEBRIS) (const int) Mass.</dd>
+	<dt>parameter: class</dt>
+	<dd>(SP_SHIP) (const struct ShipClass *const)</dd>
+	<dt>parameter: behaviour</dt>
+	<dd>(SP_SHIP) (const enum Behaviour)</dd>
+	<dt>parameter: notify</dt>
+	<dd>(SP_SHIP) (const struct Ship **) For other reference; can
+					be, and usally is, 0.</dd>
+	<dt>parameter: from</dt>
+	<dd>(SP_WMD) (struct Sprite *const) Which Ship?</dd>
+	<dt>parameter: wmd_type</dt>
+	<dd>(SP_WMD) (struct WmdType *const) Which WmdType?</dd>
+	<dt>return</dt>
+	<dd>Created Sprite or null.</dd>
+	<dt>fixme</dt>
+	<dd>SpType contained in TypeOfObject instead of Image? work on
+					this a lot more.</dd>
+</dl>
+</div>
+
+<div><a name = "SpriteGate"><!-- --></a>
+<h3>SpriteGate</h3>
+<pre>struct Sprite * <b>SpriteGate</b> (const struct AutoGate *gate)</pre>
+<p>
+This calls Sprite and further sets it up as a Gate from gate.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "Sprite_"><!-- --></a>
+<h3>Sprite_</h3>
+<pre>void <b>Sprite_</b> (struct Sprite **sprite_ptr)</pre>
+<p>
+Erase a sprite from the pool (array of static sprites.)
+</p>
+<dl>
+	<dt>parameter: sprite_ptr</dt>
+	<dd>A pointer to the sprite; gets set null on success.</dd>
+</dl>
+</div>
+
+<div><a name = "SpriteGetConsidered"><!-- --></a>
+<h3>SpriteGetConsidered</h3>
+<pre>int <b>SpriteGetConsidered</b> (void)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>The global variable sprites_considered, which is updated every
+				frame with the marked Sprites.</dd>
+</dl>
+</div>
+
+<div><a name = "SpriteGetOnscreen"><!-- --></a>
+<h3>SpriteGetOnscreen</h3>
+<pre>int <b>SpriteGetOnscreen</b> (void)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>The global variable sprites_onscreen, equal-to or smaller then
+				considered.</dd>
+</dl>
+</div>
+
+<div><a name = "SpriteGetPosition"><!-- --></a>
+<h3>SpriteGetPosition</h3>
+<pre>void <b>SpriteGetPosition</b> (const struct Sprite *const sprite, float *x_ptr, float *const y_ptr)</pre>
+<p>
+Allows you to get a single sprite if you know it's pointer.
+</p>
+<dl>
+	<dt>parameter: sprite</dt>
+	<dd>The sprite (this one can not be valid, in which case the others
+ are not modified.)</dd>
+	<dt>parameter: x_ptr</dt>
+	<dd>x</dd>
+	<dt>parameter: y_ptr</dt>
+	<dd>y</dd>
+	<dt>parameter: t_ptr</dt>
+	<dd>\theta</dd>
+</dl>
+</div>
+
+<div><a name = "SpriteSetPosition"><!-- --></a>
+<h3>SpriteSetPosition</h3>
+<pre>void <b>SpriteSetPosition</b> (struct Sprite *const sprite, const float x, const float y)</pre>
+<p>
+Sets the orientation with respect to the screen, pixels and (0, 0) is at
+the centre.
+</p>
+<dl>
+	<dt>parameter: sprite</dt>
+	<dd>Which sprite to set.</dd>
+	<dt>parameter: x</dt>
+	<dd>x</dd>
+	<dt>parameter: y</dt>
+	<dd>y</dd>
+</dl>
+</div>
+
+<div><a name = "SpriteGetBounding"><!-- --></a>
+<h3>SpriteGetBounding</h3>
+<pre>float <b>SpriteGetBounding</b> (const struct Sprite *const sprite)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>The bounding radius.</dd>
+</dl>
+</div>
+
+<div><a name = "SpriteSetNotify"><!-- --></a>
+<h3>SpriteSetNotify</h3>
+<pre>void <b>SpriteSetNotify</b> (struct Sprite **const s_ptr)</pre>
+<p>
+Sets a spot in memory which points to the, possibly changing, sprite.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteGetType"><!-- --></a>
+<h3>SpriteGetType</h3>
+<pre>enum SpType <b>SpriteGetType</b> (const struct Sprite *const sprite)</pre>
+<p>
+Gets the Sprite type that was assigned at the beginning.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteToString"><!-- --></a>
+<h3>SpriteToString</h3>
+<pre>char * <b>SpriteToString</b> (const struct Sprite *const s)</pre>
+<p>
+Volatile-ish: can only print 4 Sprites at once.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteGetTo"><!-- --></a>
+<h3>SpriteGetTo</h3>
+<pre>const struct AutoSpaceZone * <b>SpriteGetTo</b> (const struct Sprite *const s)</pre>
+<p>
+Gets a SpaceZone that it goes to, if it exists.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteGetDamage"><!-- --></a>
+<h3>SpriteGetDamage</h3>
+<pre>int <b>SpriteGetDamage</b> (const struct Sprite *const s)</pre>
+<p>
+fixme: all these set an int to zero, do not use polymorphism
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteRecharge"><!-- --></a>
+<h3>SpriteRecharge</h3>
+<pre>void <b>SpriteRecharge</b> (struct Sprite *const s, const int recharge)</pre>
+<p>
+This mostly does damage, (recharge is negative.) This also sets an Event for
+recharge.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteDebris"><!-- --></a>
+<h3>SpriteDebris</h3>
+<pre>void <b>SpriteDebris</b> (const struct Sprite *const s)</pre>
+<p>
+Spawns smaller Debris (fixme: stub.)
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteInput"><!-- --></a>
+<h3>SpriteInput</h3>
+<pre>void <b>SpriteInput</b> (struct Sprite *s, const int turning, const int acceleration, const int dt_ms)</pre>
+<p>
+Gets input to a Ship.
+</p>
+<dl>
+	<dt>parameter: sprite</dt>
+	<dd>Which sprite to set.</dd>
+	<dt>parameter: turning</dt>
+	<dd>How many &lt;em&gt;ms&lt;/em&gt; was this pressed? left = positive</dd>
+	<dt>parameter: acceleration</dt>
+	<dd>How many &lt;em&gt;ms&lt;/em&gt; was this pressed?</dd>
+	<dt>parameter: dt_s</dt>
+	<dd>How many seconds has it been?</dd>
+</dl>
+</div>
+
+<div><a name = "SpriteOutgoingGate"><!-- --></a>
+<h3>SpriteOutgoingGate</h3>
+<pre>struct Sprite * <b>SpriteOutgoingGate</b> (const struct AutoSpaceZone *to)</pre>
+<p>
+Linear search for Sprites that are gates that go to to.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteRemoveIf"><!-- --></a>
+<h3>SpriteRemoveIf</h3>
+<pre>void <b>SpriteRemoveIf</b> (int (*const predicate)(struct Sprite *const))</pre>
+<p>
+Removes all of the Sprites for which predicate is true; if predicate is
+null, than it removes all sprites.
+&lt;p&gt;
+Fixme: Is really slow copying memory in large scenes where delete nearly all
+sprite; viz, the thing you want to do.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteIterate"><!-- --></a>
+<h3>SpriteIterate</h3>
+<pre>int <b>SpriteIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr)</pre>
+<p>
+Returns true while there are more sprites in the window, sets the values.
+The pointers need to all be there or else there will surely be a segfault.
+&lt;p&gt;
+Called in ../system/Draw to draw spites.
+</p>
+<dl>
+	<dt>parameter: x_ptr</dt>
+	<dd>x</dd>
+	<dt>parameter: y_ptr</dt>
+	<dd>y</dd>
+	<dt>parameter: t_ptr</dt>
+	<dd>\theta</dd>
+	<dt>parameter: texture_ptr</dt>
+	<dd>OpenGl texture unit.</dd>
+	<dt>parameter: size_ptr</dt>
+	<dd>Size of the texture.</dd>
+	<dt>return</dt>
+	<dd>True if the values have been set.</dd>
+</dl>
+</div>
+
+<div><a name = "SpriteUpdate"><!-- --></a>
+<h3>SpriteUpdate</h3>
+<pre>void <b>SpriteUpdate</b> (const int dt_ms)</pre>
+<p>
+This is where most of the work gets done. Called every frame, O(n). Also,
+this calls appropriate handlers for subclasses.
+</p>
+<dl>
+	<dt>parameter: dt_ms</dt>
+	<dd>Milliseconds since the last frame.</dd>
+</dl>
+</div>
+
+<div><a name = "collide"><!-- --></a>
+<h3>collide</h3>
+<pre>void <b>collide</b> (struct Sprite *a)</pre>
+<p>
+First it uses the Hahn–Banach separation theorem (viz, hyperplane
+separation theorem) and the ordered list of projections on the x and y axis
+that we have been keeping, to build up a list of possible colliders based on
+their bounding circles. Calls <em>@see collide_circles</em>, and if it passed,
+<em>@see elastic_bounce</em>. Calls the items in the collision matrix.
+</p>
+<dl>
+	<dt>return</dt>
+	<dd>False if the sprite has been destroyed.</dd>
+</dl>
+</div>
+
+
+</body>
+</html>

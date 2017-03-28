@@ -5,10 +5,10 @@ Image credit: NASA; JPL; ESA; Caltech; UCLA; MPS; DLR; IDA; Johns
 Hopkins University APL; Carnegie Institution of Washington; DSS
 Consortium; SDSS.
 
-src/fileformat/lodepng: Copyright (c) 2005-2015 Lode Vandevenne
+external/lodepng: Copyright (c) 2005-2015 Lode Vandevenne
 http://lodev.org/lodepng/
 
-src/fileformat/nanojpeg: by Martin J. Fiedler <martin.fiedler@gmx.net>
+external/nanojpeg: by Martin J. Fiedler <martin.fiedler@gmx.net>
 http://keyj.emphy.de/nanojpeg/
 
 Version 3.3.
@@ -24,7 +24,7 @@ Mac, xCode tools, viz, gcc; MacOSX has native support for OpenGL1.1
 and Glut-type functions are already included. Just type <make>,
 <make icon>, or <make install> (Tested on MacOSX.6.8, but should
 be good on different versions; there's nothing dependent on the Mac
-API.)
+API.) Once set up, ide/Void.xcodedroj/, has an Xcode 3 project.
 
 http://glew.sourceforge.net/
 
@@ -32,7 +32,7 @@ Otherwise, you may have to download a loading library for OpenGL1.1.
 The one I use used in my source is Glew; turn it on by defining a
 preprocessor variable GLEW (viz, gcc -DGLEW.) Build the static
 release of Glew (glew32s) and link it to Void. I have tested it on
-MSVC10/13 and gcc Ubuntu (still trying MinGW.) Make sure you turn
+MSVC10/13/15 and gcc Ubuntu (still trying MinGW.) Make sure you turn
 off "Whole Program Optimization," on MSVC as it will fail to make
 Glew.
 

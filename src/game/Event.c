@@ -1,5 +1,12 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the
- GNU General Public License, see copying.txt */
+ GNU General Public License, see copying.txt
+
+ Events have a specific time to call a function. Events uses a pool which is
+ drawn upon and stuck in the linked-list.
+
+ @author	Neil
+ @version	3.3; 2016-01
+ @since		3.2; 2015-11 */
 
 #include <stdio.h>  /* snprintf */
 #include <stdarg.h>
@@ -9,13 +16,6 @@
 #include "../general/Random.h"
 #include "../general/Orcish.h"
 #include "Event.h"
-
-/* Events have a specific time to call a function. Events uses a pool which is
- drawn upon and stuck in the linked-list.
-
- @author	Neil
- @version	3.3; 2016-01
- @since		3.2; 2015-11 */
 
 /* Q15.11: va_ macros don't like function-pointers */
 typedef void (*Runnable)(void);
@@ -30,24 +30,21 @@ static struct Event {
 	enum FnType  fn_type;
 	union {
 		struct {
-			/*void (*run)(void);*/
 			Runnable run;
 		} runnable;
 		struct {
-			/*void (*accept)(void *);*/
 			Consumer accept;
 			void *t;
 		} consumer;
 		struct {
-			/*void (*accept)(void *, void *);*/
 			Biconsumer accept;
 			void *t;
 			void *u;
 		} biconsumer;
 	} fn;
 } events[2048], *first_event, *last_event, *iterator;
-static const int events_capacity = sizeof events / sizeof(struct Event);
-static int       events_size;
+static const unsigned events_capacity = sizeof events / sizeof(struct Event);
+static unsigned       events_size;
 
 static struct Event *iterate(void);
 char *decode_fn_type(const enum FnType fn_type);
@@ -136,14 +133,14 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
  @param event_ptr	A reference to the object that is to be deleted. */
 void Event_(struct Event **event_ptr) {
 	struct Event *event, *replace;
-	int index;
+	unsigned idx;
 	unsigned characters;
 	char buffer[128];
 
 	if(!event_ptr || !(event = *event_ptr)) return;
-	index = event - events;
-	if(index < 0 || index >= events_size) {
-		Warn("~Event: %s, %u not in range %u.\n", EventToString(event), index + 1, events_size);
+	idx = (unsigned)(event - events);
+	if(idx >= events_size) {
+		Warn("~Event: %s, %u not in range %u.\n", EventToString(event), idx + 1, events_size);
 		EventList();
 		return;
 	}
@@ -164,7 +161,7 @@ void Event_(struct Event **event_ptr) {
 	else            last_event        = event->prev;
 
 	/* replace it with the last one */
-	if(index < --events_size) {
+	if(idx < --events_size) {
 
 		replace = &events[events_size];
 		memcpy(event, replace, sizeof(struct Event));

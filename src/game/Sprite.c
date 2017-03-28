@@ -607,7 +607,7 @@ char *SpriteToString(const struct Sprite *const s) {
 	} else {
 		/*snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%.1f,%.1f:%.1f]%.2ft", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->x, s->y, s->theta, s->mass);*/
 		/*snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[Lgh%d]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->sp_type == SP_WMD ? s->sp.wmd.light : 0);*/
-		//snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%s]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->sp_type == SP_SHIP && s->sp.ship.event_recharge ? EventToString(s->sp.ship.event_recharge) : "");
+		/*snprintf(buffer[b], sizeof buffer[b], "%sSpr%u[%s]", decode_sprite_type(s->sp_type), (int)(s - sprites) + 1, s->sp_type == SP_SHIP && s->sp.ship.event_recharge ? EventToString(s->sp.ship.event_recharge) : "");*/
 		snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u]", decode_sprite_type(s->sp_type), s->label, (int)(s - sprites) + 1);
 	};
 	last_b = b;

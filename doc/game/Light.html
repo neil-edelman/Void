@@ -1,0 +1,190 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title></title>
+</head>
+
+
+<body>
+
+<h1></h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<p>
+Lighting effects! Unfortunately, UBOs, which allow structs, were introduced
+in GLSL3.1; using 1.1 for compatibility, and only have 1.2. Ergo, this is a
+little bit messy. Maybe in 10 years I'll do a change.
+&lt;p&gt;
+Lights depend on external unsigned integers to keep track. Don't modify the
+light with a function not in this and don't free the unsigned without calling
+Light_.
+&lt;p&gt;
+Fixme: order the lights by distance/brighness and take the head of the list,
+and ignore all that pass a certain threshold. This will scale way better.
+</p>
+<dl>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>version</dt>
+	<dd>3.3, 2016-01</dd>
+	<dt>since</dt>
+	<dd>1.0, 2000</dd>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#Light">Light</a></td>
+	<td>int *const id_ptr, const float i, const float r, const float g, const float b</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Light_">Light_</a></td>
+	<td>int *id_ptr</td>
+</tr>
+<tr>
+	<td>unsigned</td>
+	<td><a href = "#LightGetArraySize">LightGetArraySize</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>struct Vec2f *</td>
+	<td><a href = "#LightGetPositionArray">LightGetPositionArray</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>struct Colour3f *</td>
+	<td><a href = "#LightGetColourArray">LightGetColourArray</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#LightSetNotify">LightSetNotify</a></td>
+	<td>int *const id_ptr</td>
+</tr>
+<tr>
+	<td>char *</td>
+	<td><a href = "#LightToString">LightToString</a></td>
+	<td>const int id</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Light"><!-- --></a>
+<h3>Light</h3>
+<pre>int <b>Light</b> (int *const id_ptr, const float i, const float r, const float g, const float b)</pre>
+<p>
+Constructor.
+</p>
+<dl>
+	<dt>parameter: id_ptr</dt>
+	<dd>The pointer where this light lives.</dd>
+	<dt>parameter: i</dt>
+	<dd>The intensity, i &gt;= 0.</dd>
+	<dt>parameter: r,g,b</dt>
+	<dd>The colours, [0, 1].</dd>
+	<dt>return</dt>
+	<dd>Boolean true on success; the id_ptr has (0, MAX_LIGHTS].</dd>
+</dl>
+</div>
+
+<div><a name = "Light_"><!-- --></a>
+<h3>Light_</h3>
+<pre>void <b>Light_</b> (int *id_ptr)</pre>
+<p>
+Destructor of light, will update with new particle at light.
+</p>
+<dl>
+	<dt>parameter: index</dt>
+	<dd>The light that's being destroyed.</dd>
+</dl>
+</div>
+
+<div><a name = "LightGetArraySize"><!-- --></a>
+<h3>LightGetArraySize</h3>
+<pre>unsigned <b>LightGetArraySize</b> (void)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>The number of lights active.</dd>
+</dl>
+</div>
+
+<div><a name = "LightGetPositionArray"><!-- --></a>
+<h3>LightGetPositionArray</h3>
+<pre>struct Vec2f * <b>LightGetPositionArray</b> (void)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>The positions of the lights.</dd>
+</dl>
+</div>
+
+<div><a name = "LightGetColourArray"><!-- --></a>
+<h3>LightGetColourArray</h3>
+<pre>struct Colour3f * <b>LightGetColourArray</b> (void)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>The colours of the lights.</dd>
+</dl>
+</div>
+
+<div><a name = "LightSetNotify"><!-- --></a>
+<h3>LightSetNotify</h3>
+<pre>void <b>LightSetNotify</b> (int *const id_ptr)</pre>
+<p>
+This is important because Sprites change places, as well.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "LightToString"><!-- --></a>
+<h3>LightToString</h3>
+<pre>char * <b>LightToString</b> (const int id)</pre>
+<p>
+Volatile-ish: can only print 4 Lights at once.
+</p>
+<dl>
+</dl>
+</div>
+
+
+</body>
+</html>

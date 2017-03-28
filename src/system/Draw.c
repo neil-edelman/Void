@@ -764,7 +764,6 @@ static void display(void) {
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	}
 	if(draw_is_print_sprites) {
-		//Debug("%c", '\n');
 		draw_is_print_sprites = 0;
 	}
 

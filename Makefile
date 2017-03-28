@@ -204,7 +204,10 @@ $(build)/%_jpeg.h: $(media)/%.jpeg $(FILE2H)
 
 $(DOCS): $(doc)/%.html: $(src)/%.c $(src)/%.h
 	# documentation
-	@mkdir -p $(doc)
+	-@$(MKDIR) $(doc)
+	-@$(MKDIR) $(doc)/$(system)
+	-@$(MKDIR) $(doc)/$(general)
+	-@$(MKDIR) $(doc)/$(game)
 	-cat $^ | $(CDOC) > $@
 
 # additional dependancies

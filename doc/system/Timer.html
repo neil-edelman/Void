@@ -1,0 +1,167 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title></title>
+</head>
+
+
+<body>
+
+<h1></h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<dl>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "static const int frametime_ms = 20"><!-- --></a>
+<h3>static const int frametime_ms = 20</h3>
+<pre><b>static const int frametime_ms = 20</b></pre>
+<p>
+This is an idempotent class dealing with the interface to OpenGL.
+</p>
+<dl>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>since</dt>
+	<dd>3.0, 2014</dd>
+</dl>
+</div>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#TimerRun">TimerRun</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#TimerPause">TimerPause</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#TimerIsRunning">TimerIsRunning</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>unsigned</td>
+	<td><a href = "#TimerGetGameTime">TimerGetGameTime</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>unsigned</td>
+	<td><a href = "#TimerGetMean">TimerGetMean</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#TimerIsTime">TimerIsTime</a></td>
+	<td>const unsigned t</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "TimerRun"><!-- --></a>
+<h3>TimerRun</h3>
+<pre>void <b>TimerRun</b> (void)</pre>
+<p>
+This starts the Timer.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "TimerPause"><!-- --></a>
+<h3>TimerPause</h3>
+<pre>void <b>TimerPause</b> (void)</pre>
+<p>
+This stops the Timer.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "TimerIsRunning"><!-- --></a>
+<h3>TimerIsRunning</h3>
+<pre>int <b>TimerIsRunning</b> (void)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>Boolean value.</dd>
+</dl>
+</div>
+
+<div><a name = "TimerGetGameTime"><!-- --></a>
+<h3>TimerGetGameTime</h3>
+<pre>unsigned <b>TimerGetGameTime</b> (void)</pre>
+<p>
+Last time an update was called.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "TimerGetMean"><!-- --></a>
+<h3>TimerGetMean</h3>
+<pre>unsigned <b>TimerGetMean</b> (void)</pre>
+<p>
+The value is a positive number.
+</p>
+<dl>
+	<dt>return</dt>
+	<dd>Moving average in milliseconds.</dd>
+</dl>
+</div>
+
+<div><a name = "TimerIsTime"><!-- --></a>
+<h3>TimerIsTime</h3>
+<pre>int <b>TimerIsTime</b> (const unsigned t)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>If the game time is greater or equal t. Only game time is
+				represented as a circular list; 'greater than' is not really
+				defined, so as long as it's (t - INT_MIN, t] it's considered
+				'in.' This defines a limit of an interval of 24.85 days.</dd>
+</dl>
+</div>
+
+
+</body>
+</html>

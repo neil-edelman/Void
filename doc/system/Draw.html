@@ -1,0 +1,171 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title></title>
+</head>
+
+
+<body>
+
+<h1></h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<dl>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "extern struct AutoImage auto_images[]"><!-- --></a>
+<h3>extern struct AutoImage auto_images[]</h3>
+<pre><b>extern struct AutoImage auto_images[]</b></pre>
+<p>
+This is an idempotent class dealing with the interface to OpenGL.
+</p>
+<dl>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>since</dt>
+	<dd>1.0, 2000</dd>
+</dl>
+</div>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#Draw">Draw</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Draw_">Draw_</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#DrawSetCamera">DrawSetCamera</a></td>
+	<td>const float x, const float y</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#DrawGetCamera">DrawGetCamera</a></td>
+	<td>float *x_ptr, float *y_ptr</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#DrawGetScreen">DrawGetScreen</a></td>
+	<td>unsigned *width_ptr, unsigned *height_ptr</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#DrawSetBackground">DrawSetBackground</a></td>
+	<td>const char *const str</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Draw"><!-- --></a>
+<h3>Draw</h3>
+<pre>int <b>Draw</b> (void)</pre>
+<p>
+Gets all the graphics stuff started.
+</p>
+<dl>
+	<dt>return</dt>
+	<dd>All good to draw?</dd>
+</dl>
+</div>
+
+<div><a name = "Draw_"><!-- --></a>
+<h3>Draw_</h3>
+<pre>void <b>Draw_</b> (void)</pre>
+<p>
+Destructor.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "DrawSetCamera"><!-- --></a>
+<h3>DrawSetCamera</h3>
+<pre>void <b>DrawSetCamera</b> (const float x, const float y)</pre>
+<p>
+Sets the camera location.
+</p>
+<dl>
+	<dt>parameter</dt>
+	<dd>x</dd>
+	<dt>parameter: y</dt>
+	<dd>(x, y) in pixels.</dd>
+</dl>
+</div>
+
+<div><a name = "DrawGetCamera"><!-- --></a>
+<h3>DrawGetCamera</h3>
+<pre>void <b>DrawGetCamera</b> (float *x_ptr, float *y_ptr)</pre>
+<p>
+Gets the camera position and stores it in (*x_ptr, *y_ptr).
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "DrawGetScreen"><!-- --></a>
+<h3>DrawGetScreen</h3>
+<pre>void <b>DrawGetScreen</b> (unsigned *width_ptr, unsigned *height_ptr)</pre>
+<p>
+Gets the width and height.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "DrawSetBackground"><!-- --></a>
+<h3>DrawSetBackground</h3>
+<pre>void <b>DrawSetBackground</b> (const char *const str)</pre>
+<p>
+Sets background to the image with key key. Fixme: allows you to set not
+GT_BACKGROUND textures, which probably don't work, maybe? (oh, they do)
+</p>
+<dl>
+</dl>
+</div>
+
+
+</body>
+</html>

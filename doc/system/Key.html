@@ -1,0 +1,154 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title></title>
+</head>
+
+
+<body>
+
+<h1></h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<dl>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "static struct Key"><!-- --></a>
+<h3>static struct Key</h3>
+<pre><b>static struct Key</b> {
+	int state;
+	int down;
+	int integral;
+	int time;
+	void (*handler)(void);
+}</pre>
+<p>
+This is an idempotent class dealing with the interface to OpenGL.
+&lt;p&gt;
+Fixme: The keys are not affected by pause!
+</p>
+<dl>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>since</dt>
+	<dd>2.0, 2014 (&lt;- what?)</dd>
+</dl>
+</div>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#Key">Key</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#KeyRegister">KeyRegister</a></td>
+	<td>const unsigned k, void (*const handler)(void)</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#KeyTime">KeyTime</a></td>
+	<td>const int key</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#KeyPress">KeyPress</a></td>
+	<td>const int key</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Key"><!-- --></a>
+<h3>Key</h3>
+<pre>int <b>Key</b> (void)</pre>
+<p>
+Attach the static keys to the Window depending on whether the Timer is
+active (poll) or not (direct to functions.)
+</p>
+<dl>
+	<dt>return</dt>
+	<dd>Success?</dd>
+</dl>
+</div>
+
+<div><a name = "KeyRegister"><!-- --></a>
+<h3>KeyRegister</h3>
+<pre>void <b>KeyRegister</b> (const unsigned k, void (*const handler)(void))</pre>
+<p>
+Registers a function to call asynchronously on press.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "KeyTime"><!-- --></a>
+<h3>KeyTime</h3>
+<pre>int <b>KeyTime</b> (const int key)</pre>
+<p>
+Polls how long the key has been pressed, without repeat rate. Destructive.
+</p>
+<dl>
+	<dt>parameter: key</dt>
+	<dd>The key.</dd>
+	<dt>return</dt>
+	<dd>Number of ms.</dd>
+</dl>
+</div>
+
+<div><a name = "KeyPress"><!-- --></a>
+<h3>KeyPress</h3>
+<pre>int <b>KeyPress</b> (const int key)</pre>
+<p>
+Key press, with repeat rate (destructive.) You probably don't want this
+because it is polling.
+</p>
+<dl>
+	<dt>parameter: key</dt>
+	<dd>The key.</dd>
+	<dt>return</dt>
+	<dd>Boolean, whether it's pressed or not.</dd>
+</dl>
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title></title>
+</head>
+
+
+<body>
+
+<h1></h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<p>
+Sprites in the background have a (world) position, a rotation, and a bitmap.
+They are sorted by bitmap and drawn by the gpu in ../system/Draw but not lit.
+&lt;p&gt;
+</p>
+<dl>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>version</dt>
+	<dd>3.2, 2015-07</dd>
+	<dt>since</dt>
+	<dd>3.2, 2015-07</dd>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>struct Far *</td>
+	<td><a href = "#Far">Far</a></td>
+	<td>const struct AutoObjectInSpace *ois</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Far_">Far_</a></td>
+	<td>struct Far **far_ptr</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#FarClear">FarClear</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#FarIterate">FarIterate</a></td>
+	<td>float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#FarIterate">FarIterate</a></td>
+	<td>float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#FarSetOrientation">FarSetOrientation</a></td>
+	<td>struct Far *back, const float x, const float y, const float theta</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Far"><!-- --></a>
+<h3>Far</h3>
+<pre>struct Far * <b>Far</b> (const struct AutoObjectInSpace *ois)</pre>
+<p>
+Get a new background sprite from the pool of unused.
+</p>
+<dl>
+	<dt>parameter: texture</dt>
+	<dd>On the GPU.</dd>
+	<dt>parameter: size</dt>
+	<dd>Pixels.</dd>
+	<dt>return</dt>
+	<dd>The Far.</dd>
+</dl>
+</div>
+
+<div><a name = "Far_"><!-- --></a>
+<h3>Far_</h3>
+<pre>void <b>Far_</b> (struct Far **far_ptr)</pre>
+<p>
+Erase a sprite from the pool (array of static sprites.)
+</p>
+<dl>
+	<dt>parameter: sprite_ptr</dt>
+	<dd>A pointer to the sprite; gets set null on success.</dd>
+</dl>
+</div>
+
+<div><a name = "FarClear"><!-- --></a>
+<h3>FarClear</h3>
+<pre>void <b>FarClear</b> (void)</pre>
+<p>
+Sets the size to zero; very fast.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "FarIterate"><!-- --></a>
+<h3>FarIterate</h3>
+<pre>int <b>FarIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr)</pre>
+<p>
+Returns true while there are more, sets the values. The pointers need to
+all be there or else there will surely be a segfault.
+&lt;p&gt;
+Called in ../system/Draw to draw backgrounds.
+&lt;p&gt;
+Supports deleting.
+&lt;p&gt;
+Fixme: have a sliding window that's updated based on camera, as opposed to
+having to send all the geometry at every frame!
+</p>
+<dl>
+	<dt>parameter: x_ptr</dt>
+	<dd>x</dd>
+	<dt>parameter: y_ptr</dt>
+	<dd>y</dd>
+	<dt>parameter: t_ptr</dt>
+	<dd>\theta</dd>
+	<dt>parameter: texture_ptr</dt>
+	<dd>OpenGl texture unit.</dd>
+	<dt>parameter: size_ptr</dt>
+	<dd>Size of the texture.</dd>
+	<dt>return</dt>
+	<dd>True if the values have been set.</dd>
+</dl>
+</div>
+
+<div><a name = "FarIterate"><!-- --></a>
+<h3>FarIterate</h3>
+<pre>int <b>FarIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr)</pre>
+<p>
+This is the exact copy of SpriteIterate.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "FarSetOrientation"><!-- --></a>
+<h3>FarSetOrientation</h3>
+<pre>void <b>FarSetOrientation</b> (struct Far *back, const float x, const float y, const float theta)</pre>
+<p>
+Sets the orientation with respect to the screen, pixels and (0, 0) is at
+the centre.
+</p>
+<dl>
+	<dt>parameter: back</dt>
+	<dd>Which background to set.</dd>
+	<dt>parameter: x</dt>
+	<dd>x</dd>
+	<dt>parameter: y</dt>
+	<dd>y</dd>
+	<dt>parameter: t</dt>
+	<dd>\theta</dd>
+</dl>
+</div>
+
+
+</body>
+</html>

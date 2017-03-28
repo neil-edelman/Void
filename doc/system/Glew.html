@@ -1,0 +1,99 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title></title>
+</head>
+
+
+<body>
+
+<h1></h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<dl>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "static int is_started"><!-- --></a>
+<h3>static int is_started</h3>
+<pre><b>static int is_started</b></pre>
+<p>
+OpenGL not-on-a-mac is a little harder since OpenGL &gt; 1.0 functions have to
+be quiried from the library in a platform-specific way; I use glew to make it
+easier (ostensibly.)
+&lt;p&gt;
+Unless GLEW is defined, this does exactly nothing. If GLEW is defined, it
+loads the OpenGL2+ from the library using
+&lt;a href = "http://glew.sourceforge.net/"&gt;GLEW&lt;/a&gt;.
+&lt;p&gt;
+Include Glew.h for OpenGL functions.
+</p>
+<dl>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>since</dt>
+	<dd>3.1, 2013</dd>
+</dl>
+</div>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#Glew">Glew</a></td>
+	<td>void</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Glew"><!-- --></a>
+<h3>Glew</h3>
+<pre>int <b>Glew</b> (void)</pre>
+<p>
+Load OpenGL2+ from the library.
+</p>
+<dl>
+	<dt>return</dt>
+	<dd>True if success.</dd>
+</dl>
+</div>
+
+
+</body>
+</html>

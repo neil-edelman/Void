@@ -1,0 +1,5 @@
+Stuff to make it work in Unix, thanks to Jesse McKeown
+------------------------------------------------------
+
+CF = $(CF)  -DGLEW
+OF = -lglut -lGLEW

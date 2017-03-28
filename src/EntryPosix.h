@@ -1,2 +1,1 @@
-struct Map;
-struct Entry;
+/* this file has nothing in it, anymore */

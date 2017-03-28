@@ -1,5 +1,13 @@
-/* Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
- GNU General Public License, see copying.txt */
+/** Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
+ GNU General Public License, see copying.txt
+
+ Entry point for command-line, unix-like operating systems (ie, all of them.)
+
+ @author	Neil
+ @version	3.2, 2015-05
+ @since		3.2, 2015-05
+ @fixme		Have separate entry points for MacOS and Windows that are user
+			friendly. */
 
 #include <stdlib.h> /* exit */
 #include <stdio.h>  /* fprintf */
@@ -11,13 +19,6 @@
 #include "system/Timer.h"
 #include "system/Key.h"
 #include "game/Game.h"
-
-/** Entry point for command-line, unix-like operating systems (ie, all of them.)
- <p>
- Fixme: have separate entry points for MacOS and Windows that are user friendly.
- @author	Neil
- @version	3.2, 2015-05
- @since		3.2, 2015-05 */
 
 /* constants */
 static const char *programme   = "Void";
@@ -72,7 +73,6 @@ static void usage(void) {
 	fprintf(stderr, "Usage: %s\n", programme);
 	fprintf(stderr, "To win, blow up everything that's not you.\n");
 	fprintf(stderr, "Player one controls: left, right, up, down, space\n");
-	/* fprintf(stderr, "Player two controls: a, d, w, s, space.\n"); */
 	fprintf(stderr, "Fullscreen: F1.\n");
 	fprintf(stderr, "Exit: Escape.\n\n");
 	fprintf(stderr, "Version %d.%d.\n\n", versionMajor, versionMinor);

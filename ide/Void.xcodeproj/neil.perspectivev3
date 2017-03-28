@@ -415,8 +415,6 @@
 							<key>Tabs</key>
 							<array>
 								<dict>
-									<key>BecomeActive</key>
-									<true/>
 									<key>ContentConfiguration</key>
 									<dict>
 										<key>PBXProjectModuleGUID</key>
@@ -428,8 +426,6 @@
 									<dict>
 										<key>Frame</key>
 										<string>{{10, 27}, {603, 414}}</string>
-										<key>RubberWindowFrame</key>
-										<string>461 219 810 487 0 0 1280 778 </string>
 									</dict>
 									<key>Module</key>
 									<string>XCDetailModule</string>
@@ -484,6 +480,8 @@
 									<dict>
 										<key>Frame</key>
 										<string>{{10, 27}, {603, 414}}</string>
+										<key>RubberWindowFrame</key>
+										<string>461 219 810 487 0 0 1280 778 </string>
 									</dict>
 									<key>Module</key>
 									<string>PBXBuildResultsModule</string>
@@ -688,7 +686,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>512366618.35619801</real>
+	<real>512367312.12617499</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -706,7 +704,7 @@
 	<key>WindowOrderList</key>
 	<array>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
-		<string>280EC6331E8A181A00B87AD6</string>
+		<string>280EC6391E8A1AD000B87AD6</string>
 	</array>
 	<key>WindowString</key>
 	<string>461 219 810 487 0 0 1280 778 </string>

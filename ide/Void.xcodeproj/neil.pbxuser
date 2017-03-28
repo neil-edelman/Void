@@ -77,6 +77,20 @@
 		isa = PBXCodeSenseManager;
 		indexTemplatePath = "";
 	};
+	28FB36EC1E8A0FE1003610DC /* EntryPosix.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {578, 1209}}";
+			sepNavSelRange = "{2859, 0}";
+			sepNavVisRange = "{1123, 1736}";
+		};
+	};
+	28FB36ED1E8A0FE1003610DC /* EntryPosix.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {578, 702}}";
+			sepNavSelRange = "{39, 0}";
+			sepNavVisRange = "{0, 43}";
+		};
+	};
 	28FB36EF1E8A0FE1003610DC /* Event.c */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 4381}}";
@@ -89,6 +103,20 @@
 			sepNavIntBoundsRect = "{{0, 0}, {578, 679}}";
 			sepNavSelRange = "{0, 0}";
 			sepNavVisRange = "{0, 558}";
+		};
+	};
+	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {578, 22867}}";
+			sepNavSelRange = "{23085, 0}";
+			sepNavVisRange = "{21934, 1740}";
+		};
+	};
+	28FB37061E8A0FE1003610DC /* Draw.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {578, 11375}}";
+			sepNavSelRange = "{27385, 0}";
+			sepNavVisRange = "{26419, 2005}";
 		};
 	};
 	28FB37211E8A0FE1003610DC /* Void */ = {

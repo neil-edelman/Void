@@ -9,8 +9,8 @@
 #include "../game/Far.h"
 #include "../game/Light.h"
 #include "../game/Game.h"       /* shield display */
-#include "../format/lodepng.h"  /* texture() */
-#include "../format/nanojpeg.h" /* texture() */
+#include "../../external/lodepng.h"  /* texture() */
+#include "../../external/nanojpeg.h" /* texture() */
 #include "Glew.h"
 #include "Draw.h"
 #include "Window.h"
@@ -156,7 +156,7 @@ int Draw(void) {
 
 	/* http://www.opengl.org/sdk/docs/man2/xhtml/glBlendFunc.xml */
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glPointSize(5);
+	glPointSize(5.0f);
 	glEnable(GL_POINT_SMOOTH);
 
 	/* we don't need z-buffer depth things */
@@ -170,9 +170,11 @@ int Draw(void) {
 	/* fixme: the texture should be the same as the vetices, half the data */
 	/* fixme: done per-frame, because apparently OpenGl does not keep track of the bindings per-buffer */
 	glEnableVertexAttribArray(G_POSITION);
-	glVertexAttribPointer(G_POSITION, vertex_pos_size, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), vertex_pos_offset);
+	glVertexAttribPointer(G_POSITION, vertex_pos_size, GL_FLOAT,
+		GL_FALSE, sizeof(struct Vertex), vertex_pos_offset);
     glEnableVertexAttribArray(G_TEXTURE);
-    glVertexAttribPointer(G_TEXTURE,  vertex_tex_size, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), vertex_tex_offset);
+    glVertexAttribPointer(G_TEXTURE, vertex_tex_size, GL_FLOAT, GL_FALSE,
+		sizeof(struct Vertex), vertex_tex_offset);
 	Debug("Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
 
 	/* textures */
@@ -185,8 +187,10 @@ int Draw(void) {
 
 	/* shaders: simple texture for hud elements and stuff */
 	if(!(background_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(); return 0; }
-	glUniform1i(glGetUniformLocation(background_shader, "sampler"), T_BACKGROUND); /* it's always the background */
-	background_scale_location   = glGetUniformLocation(background_shader, "scale");
+	glUniform1i(glGetUniformLocation(background_shader, "sampler"),
+		T_BACKGROUND); /* it's always the background */
+	background_scale_location   = glGetUniformLocation(background_shader,
+		"scale");
 
 	/* shaders: simple texture for hud elements and stuff */
 	if(!(hud_shader = link_shader(Hud_vs, Hud_fs, &tex_map_attrib))) { Draw_(); return 0; }
@@ -235,10 +239,10 @@ int Draw(void) {
 		float sunshine[] = { 1.0f * 3.0f, 0.97f * 3.0f, 0.46f * 3.0f }; */
 		float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
 		glUseProgram(far_shader);
-		glUniform1f(far_dirang_location, /*0.0f*/-2.0);
+		glUniform1f(far_dirang_location, /*0.0f*/-2.0f);
 		glUniform3fv(far_dirclr_location, 1, sunshine);
 		glUseProgram(light_shader);
-		glUniform1f(light_dirang_location, /*0.0f*/-2.0);
+		glUniform1f(light_dirang_location, /*0.0f*/-2.0f);
 		glUniform3fv(light_dirclr_location, 1, sunshine);
 	}
 
@@ -428,19 +432,19 @@ static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attri
 		case S_NOERR:
 			break;
 		case S_VERT:
-			glGetShaderInfoLog(vs, sizeof(info), 0, info);
+			glGetShaderInfoLog(vs, (GLsizei)sizeof(info), 0, info);
 			Debug("Draw::link_shader: Sdr%u failed vertex shader compilation; OpenGL: %s", vs, info);
 			break;
 		case S_FRAG:
-			glGetShaderInfoLog(fs, sizeof(info), 0, info);
+			glGetShaderInfoLog(fs, (GLsizei)sizeof(info), 0, info);
 			Debug("Draw::link_shader: Sdr%u failed fragment shader compilation; OpenGL: %s", fs, info);
 			break;
 		case S_LINK:
-			glGetProgramInfoLog(shader, sizeof(info), 0, info);
+			glGetProgramInfoLog(shader, (GLsizei)sizeof(info), 0, info);
 			Debug("Draw::link_shader: Sdr%u failed shader linking; OpenGL: %s", shader, info);
 			break;
 		case S_VALIDATE: /* fixme: untested! */
-			glGetProgramInfoLog(shader, sizeof(info), 0, info);
+			glGetProgramInfoLog(shader, (GLsizei)sizeof(info), 0, info);
 			Debug("Draw::link_shader: Sdr%u failed shader validation; OpenGL: %s", shader, info);
 			break;
 	}
@@ -490,23 +494,25 @@ static int texture(struct AutoImage *image) {
 	unsigned width, height, depth, error;
 	unsigned char *pic;
 	int is_alloc = 0, is_bad = 0;
-	int format = 0, internal = 0;
-	int tex = 0;
+	unsigned format = 0, internal = 0;
+	unsigned tex = 0;
 
 	if(!image || image->texture) return 0;
 
 	/* uncompress the image! */
 	switch(image->data_format) {
 		case IF_PNG:
-			if((error = lodepng_decode32(&pic, &width, &height, image->data, image->data_size))) {
-				Debug("Draw::texture: lodepng error %u: %s\n", error, lodepng_error_text(error));
+			if((error = lodepng_decode32(&pic, &width, &height, image->data,
+				image->data_size))) {
+				Debug("Draw::texture: lodepng error %u: %s\n", error,
+					lodepng_error_text(error));
 				break;
 			}
 			is_alloc = -1;
 			depth    = 4; /* fixme: not all pngs have four? */
 			break;
 		case IF_JPEG:
-			if(njDecode(image->data, image->data_size)) break;
+			if(njDecode(image->data, (int)image->data_size)) break;
 			is_alloc = -1;
 			pic = njGetImage();
 			if(!njIsColor()) is_bad = -1;
@@ -514,15 +520,6 @@ static int texture(struct AutoImage *image) {
 			height = njGetHeight();
 			depth  = 3;
 			break;
-		/* took this out -- why would you want it when you can now save as png?
-		case IF_BMP:
-			if(!(bmp = Bitmap(image->data, image->data_size))) break;
-			is_alloc = -1;
-			width    = BitmapGetWidth(bmp);
-			height   = BitmapGetHeight(bmp);
-			depth    = BitmapGetDepth(bmp);
-			pic      = BitmapGetData(bmp);
-			break;*/
 		case IF_UNKNOWN:
 		default:
 			Debug("Draw::texture: Unknown image format.\n");
@@ -574,7 +571,7 @@ static int texture(struct AutoImage *image) {
 	/* load the uncompressed image into a texture */
 	if(!is_bad) {
 		glGenTextures(1, (unsigned *)&tex);
-		glActiveTexture(image->depth == 3 ? GT_BACKGROUND : GT_SPRITES);
+		glActiveTexture((unsigned)(image->depth == 3 ? GT_BACKGROUND : GT_SPRITES));
 		glBindTexture(GL_TEXTURE_2D, tex);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -587,8 +584,8 @@ static int texture(struct AutoImage *image) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 		/* void glTexImage2D(target, level, internalFormat, width, height,
 		 border, format, type, *data); */
-		glTexImage2D(GL_TEXTURE_2D, 0, internal, width, height, 0, format,
-					 GL_UNSIGNED_BYTE, pic);
+		glTexImage2D(GL_TEXTURE_2D, 0, internal, (int)width, (int)height, 0,
+			format, GL_UNSIGNED_BYTE, pic);
 		image->texture = tex;
 		/* debug */
 #ifdef PRINT_PEDANTIC
@@ -628,7 +625,7 @@ static int light_compute_texture(void) {
 	const int buffer_xsize = sizeof(*buffer) / sizeof(**buffer);*/
 	const int buffer_size = 1024/*512*/; /* width/height */
 	const float buffer_norm = (float)M_SQRT1_2 * 4.0f / sqrtf(2.0f * buffer_size * buffer_size);
-	int name;
+	unsigned name;
 
 	if(!(buffer = malloc(sizeof(float) * buffer_size * buffer_size << 1))) return 0;
 	for(j = 0; j < buffer_size; j++) {
@@ -669,7 +666,7 @@ static void display(void) {
 	int lights;
 	/* for SpriteIterate */
 	float x, y, t;
-	int old_texture = 0, texture, size;
+	unsigned old_texture = 0, tex, size;
 
 	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	 <- "The buffers should always be cleared. On much older hardware, there was
@@ -722,10 +719,10 @@ static void display(void) {
 	/* background sprites */
 	/*const->glUniform1i(far_texture_location, T_SPRITES); */
 	glUniform2f(far_camera_location, camera_x, camera_y);
-	while(FarIterate(&x, &y, &t, &texture, &size)) {
-		if(old_texture != texture) {
-			glBindTexture(GL_TEXTURE_2D, texture);
-			old_texture = texture;
+	while(FarIterate(&x, &y, &t, &tex, &size)) {
+		if(old_texture != tex) {
+			glBindTexture(GL_TEXTURE_2D, tex);
+			old_texture = tex;
 		}
 		glUniform1f(far_size_location, (float)size);
 		glUniform1f(far_angle_location, t);
@@ -754,12 +751,12 @@ static void display(void) {
 	/*glUniform1i(light_texture_location, T_SPRITES); <- constant, now */
 	glUniform2f(light_camera_location, camera_x, camera_y);
 	if(draw_is_print_sprites) Debug("%s:\n", "Draw");
-	while(SpriteIterate(&x, &y, &t, &texture, &size)) {
-		if(draw_is_print_sprites) Debug("Tex %d Size %d (%.1f,%.1f:%.1f)\n", texture, size, x, y, t);
+	while(SpriteIterate(&x, &y, &t, &tex, &size)) {
+		if(draw_is_print_sprites) Debug("Tex %d Size %d (%.1f,%.1f:%.1f)\n", tex, size, x, y, t);
 		/* draw a sprite; fixme: minimise texture transitions */
-		if(old_texture != texture) {
-			glBindTexture(GL_TEXTURE_2D, texture);
-			old_texture = texture;
+		if(old_texture != tex) {
+			glBindTexture(GL_TEXTURE_2D, tex);
+			old_texture = tex;
 		}
 		glUniform1f(light_size_location, (float)size);
 		glUniform1f(light_angle_location, t);
@@ -835,8 +832,8 @@ static void resize(int width, int height) {
 	vbo[2].s = vbo[3].s = -w_w_tex;
 	vbo[0].t = vbo[2].t =  h_h_tex;
 	vbo[1].t = vbo[3].t = -h_h_tex;
-	glBufferSubData(GL_ARRAY_BUFFER, vbo_bg_first,
-					vbo_bg_count * sizeof(struct Vertex), vbo + vbo_bg_first);
+	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)vbo_bg_first,
+		(GLsizeiptr)(vbo_bg_count * sizeof(struct Vertex)), vbo + vbo_bg_first);
 
 	/* the image may not cover the whole drawing area, so we may need a constant
 	 scaling; if it is so, the image will have to be linearly interpolated for

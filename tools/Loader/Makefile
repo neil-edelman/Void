@@ -4,38 +4,36 @@ PROJ  := Loader
 VA    := 1
 VB    := 0
 
-MKDIR := mkdir #-p
+MKDIR := mkdir -p
 
 # dirs
-SDIR  := src
-BDIR  := bin
-BACK  := backup
+src    := src
+bin    := bin
+build  := build
+backup := backup
+external := ../../external
 
 # files in sdir
-FILES := Reader Error Type Record Lore Loader
-FORMAT := lodepng nanojpeg #Bitmap <- took this out
+SRCS  := $(wildcard $(src)/*.c)
+SRCSH := $(wildcard $(src)/*.h)
+SRCSO := $(patsubst $(src)/%.c, $(build)/%.o, $(SRCS))
+FMTLIST := lodepng nanojpeg
+FMTS  := $(patsubst %, $(external)/%.c, $(FMTLIST))
+FMTSH := $(patsubst %, $(external)/%.h, $(FMTLIST))
+FMTSO := $(patsubst %, $(build)/%.o, $(FMTLIST))
 
-# extra stuff we should back up
-EXTRA := $(SDIR)/Functions.h
-
-INST  := $(PROJ)-$(VA)_$(VB)
-
-OBJS  := $(patsubst %,$(BDIR)/%.o,$(FILES))
-FMTOBJS := $(patsubst %,$(BDIR)/%.o,$(FORMAT))
-SRCS  := $(patsubst %,$(SDIR)/%.c,$(FILES))
-FMTSRCS := $(patsubst %,../../src/%.c,$(FORMAT))
-H     := $(patsubst %,$(SDIR)/%.h,$(FILES))
-FMTH  := $(patsubst %,../../src/format/%.h,$(FORMAT))
-
-CC    ?= gcc
-CF    ?= -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math -funroll-loops -pedantic -std=c99 # snprintf
-OF    ?=
+CC    := gcc
+# c99: snprintf
+CF    := -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math \
+-funroll-loops -pedantic -std=c99
+OF    :=
 MAKE  := make
 MKDIR := mkdir -p
 RM    := rm -f
 RMDIR := rm -rf
 ZIP   := zip
 CP    := cp
+
 # user-defined variable TARGET, if TARGET is defined, include that thing
 ifneq ($(origin TARGET), undefined)
 include ../../$(TARGET).make
@@ -56,20 +54,21 @@ endif
 ######
 # compiles the programme by default
 
-default: $(BDIR)/$(PROJ)
+default: $(bin)/$(PROJ)
 
 # linking
-$(BDIR)/$(PROJ): $(OBJS) $(FMTOBJS)
-	$(CC) $(CF) $(OF) $(OBJS) $(FMTOBJS) -o $@
+$(bin)/$(PROJ): $(SRCSO) $(FMTSO)
+	-@$(MKDIR) $(bin)
+	$(CC) $(CF) $(OF) $(SRCSO) $(FMTSO) -o $@
 
 # compiling
-$(FMTOBJS): $(BDIR)/%.o: ../../src/format/%.c $(FMTH)
-	-@$(MKDIR) $(BDIR)
-	$(CC) $(CF) -c ../../src/format/$*.c -o $@
+$(SRCSO): $(build)/%.o: $(src)/%.c $(SRCSH)
+	-@$(MKDIR) $(build)
+	$(CC) $(CF) -c $(src)/$*.c -o $@
 
-$(OBJS): $(BDIR)/%.o: $(SDIR)/%.c $(H)
-	-@$(MKDIR) $(BDIR)
-	$(CC) $(CF) -c $(SDIR)/$*.c -o $@
+$(FMTSO): $(build)/%.o: $(external)/%.c $(FMTSH)
+	-@$(MKDIR) $(build)
+	$(CC) $(CF) -c $(external)/$*.c -o $@
 
 ######
 # phoney targets
@@ -80,5 +79,5 @@ clean:
 	-$(RM) $(OBJS)
 
 backup:
-	-@$(MKDIR) $(BACK)
-	$(ZIP) $(BACK)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip Makefile $(SRCS) $(H) $(EXTRA)
+	-@$(MKDIR) $(backup)
+	$(ZIP) $(backup)/$(INST)-`date +%Y-%m-%dT%H%M%S`$(BRGS).zip Makefile $(SRCS) $(SRCSH) $(EXTRA)

@@ -305,7 +305,7 @@ static unsigned string_resize(char** out, size_t size)
 static void string_init(char** out)
 {
   *out = NULL;
-  string_resize(out, 0);
+  string_resize(out, 0ul);
 }
 
 /*free the above pair again*/
@@ -331,7 +331,7 @@ static void string_set(char** out, const char* in)
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
-unsigned lodepng_read32bitInt(const unsigned char* buffer)
+static unsigned lodepng_read32bitInt(const unsigned char* buffer)
 {
   return (unsigned)((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]);
 }
@@ -374,14 +374,14 @@ unsigned lodepng_load_file(unsigned char** out, size_t* outsize, const char* fil
   if(!file) return 78;
 
   /*get filesize:*/
-  fseek(file , 0 , SEEK_END);
+  fseek(file , 0ul, SEEK_END);
   size = ftell(file);
   rewind(file);
 
   /*read contents of the file into the vector*/
   *outsize = 0;
   *out = (unsigned char*)lodepng_malloc((size_t)size);
-  if(size && (*out)) (*outsize) = fread(*out, 1, (size_t)size, file);
+  if(size && (*out)) (*outsize) = fread(*out, 1ul, (size_t)size, file);
 
   fclose(file);
   if(!(*out) && size) return 83; /*the above malloc failed*/
@@ -394,7 +394,7 @@ unsigned lodepng_save_file(const unsigned char* buffer, size_t buffersize, const
   FILE* file;
   file = fopen(filename, "wb" );
   if(!file) return 79;
-  fwrite((char*)buffer , 1 , buffersize, file);
+  fwrite((char*)buffer , 1ul, buffersize, file);
   fclose(file);
   return 0;
 }

@@ -92,16 +92,13 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 	va_start(args, fn_type);
 	switch(fn_type) {
 		case FN_RUNNABLE:
-			//event->fn.runnable.run = va_arg(args, void (*)(void));
 			event->fn.runnable.run = va_arg(args, Runnable);
 			break;
 		case FN_CONSUMER:
-			//event->fn.consumer.accept = va_arg(args, void (*)(void *));
 			event->fn.consumer.accept = va_arg(args, Consumer);
 			event->fn.consumer.t      = va_arg(args, void *);
 			break;
 		case FN_BICONSUMER:
-			//event->fn.biconsumer.accept = va_arg(args, void (*)(void *, void *));
 			event->fn.biconsumer.accept = va_arg(args, Biconsumer);
 			event->fn.biconsumer.t      = va_arg(args, void *);
 			event->fn.biconsumer.u      = va_arg(args, void *);
@@ -285,8 +282,16 @@ char *EventToString(const struct Event *const e) {
 	if(!e) {
 		snprintf(buffer[b], sizeof buffer[b], "%s", "null event");
 	} else {
-		//snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u %ums](%s,%s)", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms, e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? "rcrg" : "not rcrg", e->fn_type == FN_CONSUMER && e->fn.consumer.accept == (void (*)(void *))&ship_recharge ? SpriteToString(e->fn.consumer.t) : "no");
-		snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u %ums]", decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms);
+		/*snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u %ums](%s,%s)", \
+		 decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1, e->t_ms, \
+		 e->fn_type == FN_CONSUMER && e->fn.consumer.accept \
+		 == (void (*)(void *))&ship_recharge ? "rcrg" : "not rcrg", \
+		 e->fn_type == FN_CONSUMER && e->fn.consumer.accept == \
+		 (void (*)(void *))&ship_recharge ? \
+		 SpriteToString(e->fn.consumer.t) : "no");*/
+		snprintf(buffer[b], sizeof buffer[b], "%s%s[#%u %ums]",
+			decode_fn_type(e->fn_type), e->label, (int)(e - events) + 1,
+			e->t_ms);
 	};
 	last_b = b;
 	b = (b + 1) & 3;

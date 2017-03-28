@@ -11,9 +11,8 @@
 #include <dirent.h> /* opendir readdir closedir */
 
 /* include code to load images for dimensions */
-/* #include "../../../src/format/Bitmap.h" took this out */
-#include "../../../src/format/lodepng.h"
-#include "../../../src/format/nanojpeg.h"
+#include "../../../external/lodepng.h"
+#include "../../../external/nanojpeg.h"
 
 #define SUFFIX
 #define STRCOPY

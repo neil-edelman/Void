@@ -52,6 +52,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	struct Sprite *s;
 	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
 	const struct AutoShipClass *scorpion_class = AutoShipClassSearch("Scorpion");
+	const struct AutoShipClass *blob_class = AutoShipClassSearch("Blob");
 	int i;
 
 	Debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name, sz->ois1->name, sz->ois2->name);
@@ -84,6 +85,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* sprinkle some ships */
 	for(i = 0; i < /*200*/50; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
+		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), blob_class, B_STUPID);
 	}
 
 }

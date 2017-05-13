@@ -836,124 +836,14 @@ extern int draw_is_print_sprites;
  ************************************************************/
 
 
-#if 0
 /** Returns true while there are more sprites in the window, sets the values.
  The pointers need to all be there or else there will surely be a segfault.
- <p>
- Called in ../system/Draw to draw spites.
- @param x_ptr		x
- @param y_ptr		y
- @param t_ptr		\theta
- @param texture_ptr	OpenGl texture unit.
- @param size_ptr	Size of the texture.
- @return			True if the values have been set. */
-int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
-	static int x_min_window, x_max_window, y_min_window, y_max_window;
-	static int x_min, x_max, y_min, y_max;
-	static int is_reset = -1; /* oy, static */
-	struct Sprite *s, *feeler;
-	float camera_x, camera_y;
-
-	if(draw_is_print_sprites) {
-		Debug("%s: {", "iterate");
-		while((s = iterate())) Debug(" %s", SpriteToString(s));
-		Debug(" }\n");
-	}
-
-	/* go to the first spot in the window */
-	if(is_reset) {
-		unsigned w, h, screen_width, screen_height;
-		DrawGetScreen(&screen_width, &screen_height);
-		w = (screen_width  >> 1) + (screen_width & 1);
-		h = (screen_height >> 1) + (screen_height & 1);
-		/* determine the window */
-		DrawGetCamera(&camera_x, &camera_y);
-		x_min_window = (int)camera_x - w;
-		x_max_window = (int)camera_x + w;
-		y_min_window = (int)camera_y - h;
-		y_max_window = (int)camera_y + h;
-		/* also should include sprites that are out of the window, but part of
-		 them is in */
-		x_min = x_min_window - half_max_size;
-		x_max = x_max_window + half_max_size;
-		y_min = y_min_window - half_max_size;
-		y_max = y_max_window + half_max_size;
-		if(draw_is_print_sprites) Debug("window+(%d:%d,%d,%d)\n", x_min, x_max, y_min, y_max);
-		/* no sprite anywhere? */
-		if(!first_x_window && !(first_x_window = first_x)) return 0;
-		/* place the first_x_window on the first x in the window */
-		if(first_x_window->x < x_min) {
-			do {
-				if(!(first_x_window = first_x_window->next_x)) return 0;
-			} while(first_x_window->x < x_min);
-		} else {
-			while((feeler = first_x_window->prev_x)
-				  && (x_min <= feeler->x)) first_x_window = feeler;
-		}
-		/*Debug("first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
-		/* mark x; O(n) :[ */
-		for(s = first_x_window; s && s->x <= x_max; s = s->next_x) {
-			if(draw_is_print_sprites) Debug("marking %s\n", SpriteToString(s));
-			s->is_selected = -1;
-		}
-		/* now repeat for y; no sprite anywhere (this shouldn't happen!) */
-		if(!first_y_window && !(first_y_window = first_y)) return 0;
-		/* place the first_y_window on the first y in the window */
-		if(first_y_window->y < y_min) {
-			do {
-				if(!(first_y_window = first_y_window->next_y)) return 0;
-			} while(first_y_window->y < y_min);
-		} else {
-			while((feeler = first_y_window->prev_y)
-				  && (y_min <= feeler->y)) first_y_window = feeler;
-		}
-		/* select the first y; fixme: should probably go the other way around,
-		 less to mark since the y-extent is probably more; or maybe it's good
-		 to mark more? */
-		window_iterator = first_y_window;
-		is_reset = 0;
-		sprites_considered = 0;
-		sprites_onscreen   = 0;
-		if(draw_is_print_sprites) Debug("first_y_window = window_iterator(_0) = %s\n", SpriteToString(window_iterator));
-	}
-
-	/* consider y */
-	while(window_iterator && window_iterator->y <= y_max) {
-		if(draw_is_print_sprites) Debug("considering %s\n", SpriteToString(window_iterator));
-		sprites_considered++;
-		if(window_iterator->is_selected) {
-			int extent = (window_iterator->size >> 1) + 1;
-			/* tighter bounds -- slow, but worth it; fixme: optimise for b-t */
-			if(   window_iterator->x > x_min_window - extent
-			   && window_iterator->x < x_max_window + extent
-			   && window_iterator->y > y_min_window - extent
-			   && window_iterator->y < y_max_window + extent) {
-				sprites_onscreen++;
-				/*Debug("Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
-				*x_ptr       = window_iterator->x;
-				*y_ptr       = window_iterator->y;
-				*theta_ptr   = window_iterator->theta;
-				*texture_ptr = window_iterator->texture;
-				*size_ptr    = window_iterator->size;
-				window_iterator = window_iterator->next_y;
-				return -1;
-			} else if(draw_is_print_sprites) {
-				Debug("Tighter bounds rejected Spr%u(%f,%f)\n", SpriteToString(window_iterator));
-			}
-		} else if(draw_is_print_sprites) {
-			Debug("not marked %s\n", SpriteToString(window_iterator));
-		}
-		window_iterator = window_iterator->next_y;
-	}
-
-	/* reset for next time */
-	for(s = first_x_window; s && s->x <= x_max; s = s->next_x)
-		s->is_selected = 0;
-	is_reset = -1;
-	return 0;
-}
-
-#else
+ @param x_ptr: x
+ @param y_ptr: y
+ @param t_ptr: \theta
+ @param texture_ptr: OpenGl texture unit.
+ @param size_ptr: Size of the texture.
+ @return: True if the values have been set. */
 int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
 	static int is_reset = -1;
 	static int x_min_index, x_max_index, y_max_index, x_index, y_index;
@@ -989,7 +879,7 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 	}
 
 	/* proceed to the next bin */
-	while(!s /*|| s->*/) {
+	while(!s) {
 		if(x_max_index < ++x_index) {
 			/* all done with the sprites on-screen */
 			if(y_max_index < ++y_index) {
@@ -1012,7 +902,6 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr
 
 	return -1;
 }
-#endif
 
 /** This is where most of the work gets done. Called every frame, O(n). Also,
  this calls appropriate handlers for subclasses.

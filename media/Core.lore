@@ -97,6 +97,16 @@ Scorpion.png
 0.0001
 30
 acid
+ShipClass
+Blob
+Blob.png
+300
+500
+4098
+20
+0.00005
+10
+acid
 # Specimen name, Alignment align, ShipClass ship1, ship2, ship3, ship4
 Specimen
 Crazy Aliens

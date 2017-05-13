@@ -39,7 +39,7 @@ struct Game {
 	int ms_turning, ms_acceleration, ms_shoot; /* input per frame, ms */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoTypeOfObject *asteroid;
-	const struct AutoShipClass *nautilus, *scorpion;
+	const struct AutoShipClass *nautilus, *scorpion, *blob;
 	const struct AutoSpaceZone *start;
 } game;
 
@@ -84,6 +84,7 @@ int Game(void) {
 	if(!(game.asteroid = AutoTypeOfObjectSearch("asteroid"))
 	   || !(game.nautilus = AutoShipClassSearch("Nautilus"))
 	   || !(game.scorpion = AutoShipClassSearch("Scorpion"))
+	   || !(game.blob     = AutoShipClassSearch("Blob"))
 	   || !(game.start    = AutoSpaceZoneSearch("Earth"))) {
 		Debug("Game: couldn't find required game elements.\n");
 		return 0;

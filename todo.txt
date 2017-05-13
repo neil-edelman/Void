@@ -29,6 +29,8 @@ Bug List
 Features
 --------
 
+gperf for resources
+
 need better Sprite selection then is_selected
 
 more rotational acceleration/friction

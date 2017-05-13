@@ -56,8 +56,8 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 512369857;
-			PBXWorkspaceStateSaveDate = 512369857;
+			PBXPerProjectTemplateStateSaveDate = 516332671;
+			PBXWorkspaceStateSaveDate = 516332671;
 		};
 		sourceControlManager = 2866766A1E8467300090EBDC /* Source Control */;
 		userBuildSettings = {
@@ -149,9 +149,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 23192}}";
-			sepNavSelRange = "{41514, 0}";
-			sepNavVisRange = "{60592, 1476}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 29536}}";
+			sepNavSelRange = "{57760, 0}";
+			sepNavVisRange = "{492, 2051}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
@@ -163,9 +163,9 @@
 	};
 	28FB36F91E8A0FE1003610DC /* Zone.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2496}}";
-			sepNavSelRange = "{120, 0}";
-			sepNavVisRange = "{0, 1381}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2522}}";
+			sepNavSelRange = "{142, 0}";
+			sepNavVisRange = "{0, 1391}";
 		};
 	};
 	28FB36FA1E8A0FE1003610DC /* Zone.h */ = {
@@ -192,8 +192,8 @@
 	28FB36FF1E8A0FE1003610DC /* Random.c */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 702}}";
-			sepNavSelRange = "{304, 0}";
-			sepNavVisRange = "{0, 770}";
+			sepNavSelRange = "{634, 0}";
+			sepNavVisRange = "{0, 802}";
 		};
 	};
 	28FB37001E8A0FE1003610DC /* Random.h */ = {
@@ -261,9 +261,9 @@
 	};
 	28FB370A1E8A0FE1003610DC /* Key.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2158}}";
-			sepNavSelRange = "{200, 0}";
-			sepNavVisRange = "{0, 1491}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2262}}";
+			sepNavSelRange = "{2007, 0}";
+			sepNavVisRange = "{1332, 1223}";
 		};
 	};
 	28FB370B1E8A0FE1003610DC /* Key.h */ = {
@@ -275,9 +275,9 @@
 	};
 	28FB370C1E8A0FE1003610DC /* Timer.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 1404}}";
-			sepNavSelRange = "{202, 0}";
-			sepNavVisRange = "{0, 1288}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 1417}}";
+			sepNavSelRange = "{3, 0}";
+			sepNavVisRange = "{0, 1289}";
 		};
 	};
 	28FB370D1E8A0FE1003610DC /* Timer.h */ = {

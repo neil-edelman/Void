@@ -57,8 +57,7 @@ EXTSO := $(patsubst $(external)/%.c, $(build)/$(external)/%.o, $(EXTS))
 # shaders
 VS    := $(call rwildcard, $(shaders), *.vs)
 FS    := $(call rwildcard, $(shaders), *.fs)
-VS_H  := $(patsubst $(shaders)/%.vs, $(build)/$(shaders)/%_vs.h, $(VS))
-FS_H  := $(patsubst $(shaders)/%.fs, $(build)/$(shaders)/%_fs.h, $(FS))
+VSFS_H:= $(patsubst $(shaders)/%.vs, $(build)/$(shaders)/%_vsfs.h, $(VS))
 # documentation
 DOCS  := $(patsubst $(src)/%.c, $(doc)/%.html, $(SRCS))
 
@@ -68,9 +67,9 @@ FILE2H_DIR := $(tools)/File2h
 FILE2H_DEP := $(tools)/File2h/src/File2h.c $(tools)/File2h/Makefile
 FILE2H     := $(tools)/File2h/bin/File2h
 
-TEXT2H_DIR := $(tools)/Text2h
-TEXT2H_DEP := $(tools)/Text2h/Text2h.c $(tools)/Text2h/Makefile
-TEXT2H     := $(tools)/Text2h/bin/Text2h
+VSFS2H_DIR := $(tools)/Vsfs2h
+VSFS2H_DEP := $(tools)/Vsfs2h/Vsfs2h.c $(tools)/Vsfs2h/Makefile
+VSFS2H     := $(tools)/Vsfs2h/bin/Vsfs2h
 
 LOADER_FILES := Error Loader Lore Reader Record Type
 LOADER_DIR   := $(tools)/Loader
@@ -89,8 +88,6 @@ PNG    := $(wildcard $(media)/*.png)
 PNG_H  := $(patsubst $(media)/%.png,$(build)/%_png.h,$(PNG))
 JPEG   := $(wildcard $(media)/*.jpeg)
 JPEG_H := $(patsubst $(media)/%.jpeg,$(build)/%_jpeg.h,$(JPEG))
-BMP    := $(wildcard $(media)/*.bmp)
-BMP_H  := $(patsubst $(media)/%.bmp,$(build)/%_bmp.h,$(BMP))
 TEXT   := $(wildcard $(media)/*.txt)
 
 # just guess
@@ -148,11 +145,11 @@ default: $(bin)/$(PROJ) $(DOCS)
 	# . . . success; executable is in $(bin)/$(PROJ)
 
 # linking
-$(bin)/$(PROJ): $(LORE_H) $(LORE_C) $(VS_H) $(FS_H) $(EXTSO) $(SRCSO)
+$(bin)/$(PROJ): $(LORE_H) $(LORE_C) $(VSFS_H) $(EXTSO) $(SRCSO)
 	$(CC) $(CF) $(OF) $(EXTSO) $(SRCSO) -o $@
 
 # compiling
-$(SRCSO): $(build)/%.o: $(src)/%.c $(VS_VS) $(FS_FS) $(SRCSH)
+$(SRCSO): $(build)/%.o: $(src)/%.c $(VSFS_H) $(SRCSH)
 	# internal C
 	-@$(MKDIR) $(bin)
 	-@$(MKDIR) $(build)
@@ -170,17 +167,12 @@ $(EXTSO): $(build)/$(external)/%.o: $(external)/%.c $(EXTSH)
 	-@$(MKDIR) $(build)/$(external)
 	$(CC) $(CF_LAX) -c $(external)/$*.c -o $@
 
-$(build)/$(shaders)/%_vs.h: $(shaders)/%.vs $(TEXT2H)
-	# vertex shaders into headers
+# vertex and fragment shaders are processed by Vsfs2h
+$(VSFS_H): $(build)/$(shaders)/%_vsfs.h: $(shaders)/%.vs $(shaders)/%.fs $(VSFS2H)
+	# shaders into headers
 	-@$(MKDIR) $(build)
 	-@$(MKDIR) $(build)/$(shaders)
-	$(TEXT2H) $< > $@
-
-$(build)/$(shaders)/%_fs.h: $(shaders)/%.fs $(TEXT2H)
-	# fragment shaders into headers
-	-@$(MKDIR) $(build)
-	-@$(MKDIR) $(build)/$(shaders)
-	$(TEXT2H) $< > $@
+	$(VSFS2H) $< $(word 2,$^) > $@
 
 $(LORE_H): $(LOADER) $(FILE2H) $(TYPE)
 	# resources lore.h
@@ -189,6 +181,7 @@ $(LORE_H): $(LOADER) $(FILE2H) $(TYPE)
 
 $(LORE_C): $(LOADER) $(FILE2H) $(TYPE) $(LORE) $(PNG_H) $(JPEG_H) $(BMP_H)
 	# resources lore.c
+	# $(VSFS_H)
 	-@$(MKDIR) $(build)
 	$(LOADER) $(media) $(media) > $(LORE_C)
 
@@ -212,14 +205,14 @@ $(DOCS): $(doc)/%.html: $(src)/%.c $(src)/%.h
 
 # additional dependancies
 
-$(bin)/Open.o: $(VS_H) $(FS_H)
+$(bin)/Open.o: $(VSFS_H)
 
 ######
 # helper programmes
 
-$(TEXT2H): $(TEXT2H_DEP)
-	# . . . compiling Text2h.
-	$(MAKE) --directory $(TEXT2H_DIR)
+$(VSFS2H): $(VSFS2H_DEP)
+	# . . . compiling Vsfs2h.
+	$(MAKE) --directory $(VSFS2H_DIR)
 
 $(FILE2H): $(FILE2H_DEP)
 	# . . . compiling File2h.
@@ -247,14 +240,14 @@ $(bin)/time: $(TEST)/TimerIsTime.c
 .PHONY: clean backup source setup icon
 
 clean:
-	-$(MAKE) --directory $(TEXT2H_DIR) clean
+	-$(MAKE) --directory $(VSFS2H_DIR) clean
 	-$(MAKE) --directory $(FILE2H_DIR) clean
 	-$(MAKE) --directory $(LOADER_DIR) clean
-	-$(RM) $(SRCSO) $(bin)/$(RSRC) $(VS_H) $(FS_H) $(TEXT2H) $(FILE2H) $(LOADER) \
+	-$(RM) $(SRCSO) $(bin)/$(RSRC) $(VSFS_H) $(VSFS2H) $(FILE2H) $(LOADER) \
 $(bin)/sort $(bin)/cd $(LORE_H) $(LORE_C) $(PNG_H) $(JPEG_H) $(BMP_H) $(DOCS)
 	-$(RMDIR) $(bin)/$(system) $(bin)/$(general) $(bin)/$(game) $(bin)/$(shaders) $(bin)/$(external)
 
-backupUP := readme.txt gpl.txt copying.txt Makefile $(SRCS) $(SRCSH) $(media)/$(ICON) $(VS) $(FS) $(EXTRA) $(TEXT2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(TEXT)
+backupUP := readme.txt gpl.txt copying.txt Makefile $(SRCS) $(SRCSH) $(EXTS) $(EXTSH) $(media)/$(ICON) $(VS) $(FS) $(EXTRA) $(VSFS2H_DEP) $(FILE2H_DEP) $(LOADER_DEP) $(TYPE) $(LORE) $(TEXT)
 
 backup:
 	-@$(MKDIR) $(backup)

@@ -1,6 +1,6 @@
-PROJ  := Text2h
+PROJ  := Vsfs2h
 PROJw := $(PROJ).exe
-FILES := Text2h
+FILES := Vsfs2h
 BDIR  := bin
 BACK  := backup
 EXTRA :=

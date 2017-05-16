@@ -23,13 +23,14 @@ specimen, sample, instance, occurrence, manifestation, embodiment, epitome, repr
 Bug List
 --------
 -interpretating orbits; hell no! not reproducible
--do something about the shaking at high-v? stress test? int->float?
+-do something about the shaking at high-v? stress test? int->float? (far enable blend)
 -fix over-limit crash (maybe)bug
+-1D textures instead of uniforms for lighting positions ( http://stackoverflow.com/questions/7954927/passing-a-list-of-values-to-fragment-shader ); maybe? slower? faster?
 
 Features
 --------
 
-gperf for resources
+relies on 1997 technology
 
 need better Sprite selection then is_selected
 

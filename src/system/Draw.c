@@ -8,8 +8,8 @@
  @version	3.2, 2015-05
  @since		1.0, 2000 */
 
-#include <stdlib.h> /* malloc free */
-#include <math.h>   /* cis */
+#include <stdlib.h> /* free */
+#include <assert.h> /* assert */
 #include "../../build/Auto.h"
 #include "../Print.h"
 #include "../game/Sprite.h"
@@ -22,18 +22,14 @@
 #include "Draw.h"
 #include "Window.h"
 
-/* auto-generated, hard coded resouce files; there should be the directory
- tools/ where you can compile utilities that can make these files; run "make"
- and this should be automated
- fixme: ignore errors about ISO C90 string length 509  */
-#include "../../build/shaders/Background_vs.h"
-#include "../../build/shaders/Background_fs.h"
-#include "../../build/shaders/Hud_vs.h"
-#include "../../build/shaders/Hud_fs.h"
-#include "../../build/shaders/Far_vs.h"
-#include "../../build/shaders/Far_fs.h"
-#include "../../build/shaders/Lighting_vs.h"
-#include "../../build/shaders/Lighting_fs.h"
+/* Auto-generated, hard coded resouce files from Vsfs2h; run "make"
+ and this should be automated.
+ @fixme Ignore errors about ISO C90 string length 509. */
+#include "../../build/shaders/Background_vsfs.h"
+#include "../../build/shaders/Hud_vsfs.h"
+#include "../../build/shaders/Far_vsfs.h"
+#include "../../build/shaders/Lighting_vsfs.h"
+#include "../../build/shaders/Phong_vsfs.h"
 
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
@@ -122,30 +118,16 @@ static int light_compute_texture(void); /* creates image */
 static void display(void); /* callback for odisplay */
 static void resize(int width, int height); /* callback  */
 
-/* so many globals! */
+/* globals */
 static int     screen_width = 300, screen_height = 200;
 static GLuint  vbo_geom, /*spot_geom,*/ light_tex, background_tex, shield_tex;
-
-static GLuint  background_shader;
-static GLint   background_scale_location;
-
-static GLuint  hud_shader;
-static GLint   hud_size_location, hud_shield_location, hud_position_location, hud_camera_location, hud_two_screen_location;
-
-static GLuint  far_shader;
-static GLint   far_size_location, far_angle_location, far_position_location, far_camera_location, /*far_texture_location,*/ far_two_screen_location;
-static GLint   far_dirang_location, far_dirclr_location;
-
-static GLuint  light_shader;
-static GLint   light_size_location, light_angle_location, light_position_location, light_camera_location, /*light_texture_location,*/ light_two_screen_location;
-static GLint   light_lights_location, light_lightpos_location, light_lightclr_location;
-static GLint   light_dirang_location, light_dirclr_location;
 static GLfloat two_width, two_height;
 static float   camera_x, camera_y;
 
 /** Gets all the graphics stuff started.
  @return All good to draw? */
 int Draw(void) {
+	const float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
 	int i;
 
 	if(is_started) return -1;
@@ -189,74 +171,23 @@ int Draw(void) {
 	/* textures stored in imgs */
 	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
-	/* shaders: simple texture for hud elements and stuff */
-	if(!(background_shader = link_shader(Background_vs, Background_fs, &tex_map_attrib))) { Draw_(); return 0; }
-	glUniform1i(glGetUniformLocation(background_shader, "sampler"),
-		T_BACKGROUND); /* it's always the background */
-	background_scale_location   = glGetUniformLocation(background_shader,
-		"scale");
-
-	/* shaders: simple texture for hud elements and stuff */
-	if(!(hud_shader = link_shader(Hud_vs, Hud_fs, &tex_map_attrib))) { Draw_(); return 0; }
-	hud_size_location      = glGetUniformLocation(hud_shader, "size");
-	hud_shield_location    = glGetUniformLocation(hud_shader, "shield");
-	hud_position_location  = glGetUniformLocation(hud_shader, "position");
-	hud_camera_location    = glGetUniformLocation(hud_shader, "camera");
-	hud_two_screen_location= glGetUniformLocation(hud_shader, "two_screen");
-	glUniform1i(glGetUniformLocation(hud_shader, "sampler"), T_SPRITES);
-
-	/* shader: objects that are far; lit, but not dynamically */
-	if(!(far_shader = link_shader(Far_vs, Far_fs, &tex_map_attrib))) { Draw_(); return 0; }
-	/* vs */
-	far_angle_location     = glGetUniformLocation(far_shader, "angle");
-	far_size_location      = glGetUniformLocation(far_shader, "size");
-	far_position_location  = glGetUniformLocation(far_shader, "position");
-	far_camera_location    = glGetUniformLocation(far_shader, "camera");
-	far_two_screen_location= glGetUniformLocation(far_shader, "two_screen");
-	/* fs */
-	/*const->far_texture_location = glGetUniformLocation(far_shader, "sampler");*/
-	glUniform1i(glGetUniformLocation(far_shader, "sampler"),       T_SPRITES);
-	glUniform1i(glGetUniformLocation(far_shader, "sampler_light"), T_LIGHT);
-	far_dirang_location  = glGetUniformLocation(far_shader, "directional_angle");
-	far_dirclr_location  = glGetUniformLocation(far_shader, "directional_colour");
-	/* this is the one that's doing the work */
-	if(!(light_shader = link_shader(Lighting_vs, Lighting_fs, &tex_map_attrib))) { Draw_(); return 0; }
-	/* vs */
-	light_angle_location     = glGetUniformLocation(light_shader, "angle");
-	light_size_location      = glGetUniformLocation(light_shader, "size");
-	light_position_location  = glGetUniformLocation(light_shader, "position");
-	light_camera_location    = glGetUniformLocation(light_shader, "camera");
-	light_two_screen_location= glGetUniformLocation(light_shader, "two_screen");
-	/* fs */
-	/*light_texture_location = glGetUniformLocation(light_shader, "sampler"); <- if you want it to be variable */
-	glUniform1i(glGetUniformLocation(light_shader, "sampler"),       T_SPRITES);
-	glUniform1i(glGetUniformLocation(light_shader, "sampler_light"), T_LIGHT);
-	light_lights_location  = glGetUniformLocation(light_shader, "lights");
-	light_lightpos_location= glGetUniformLocation(light_shader, "light_position");
-	light_lightclr_location= glGetUniformLocation(light_shader, "light_colour");
-	light_dirang_location  = glGetUniformLocation(light_shader, "directional_angle");
-	light_dirclr_location  = glGetUniformLocation(light_shader, "directional_colour");
-
-	/* sunshine; fixme: have it change in different regions */
-	{
-		/* scientificly inaccurate:
-		float sunshine[] = { 1.0f * 3.0f, 0.97f * 3.0f, 0.46f * 3.0f }; */
-		float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
-		glUseProgram(far_shader);
-		glUniform1f(far_dirang_location, /*0.0f*/-2.0f);
-		glUniform3fv(far_dirclr_location, 1, sunshine);
-		glUseProgram(light_shader);
-		glUniform1f(light_dirang_location, /*0.0f*/-2.0f);
-		glUniform3fv(light_dirclr_location, 1, sunshine);
-	}
-
-	/* particle spot buffer; oh man, this has to be done every time? */
-	/*glGenBuffers(1, (GLuint *)&spot_geom);
-	glBindBuffer(GL_ARRAY_BUFFER, spot_geom);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(spots), spots, GL_STREAM_DRAW);
-	Debug("Draw: created spot particle buffer, Vbo%u.\n", spot_geom); */
-
-	glUseProgram(0);
+	/* shader initialisation */
+	if(!auto_Background(G_POSITION, G_TEXTURE)) return Draw_(), 0;
+	/* these are constant; fixme: could they be declared as such? */
+	glUniform1i(auto_Background_shader.sampler, T_BACKGROUND);
+	if(!auto_Far(G_POSITION, G_TEXTURE)) return Draw_(), 0;
+	glUniform1i(auto_Far_shader.sampler, T_SPRITES);
+	glUniform1i(auto_Far_shader.sampler_light, T_LIGHT);
+	glUniform1f(auto_Far_shader.directional_angle, -2.0f);
+	glUniform3fv(auto_Far_shader.directional_colour, 1, sunshine);
+	if(!auto_Hud(G_POSITION, G_TEXTURE)) return Draw_(), 0;
+	glUniform1i(auto_Hud_shader.sampler, T_SPRITES);
+	if(!auto_Lighting(G_POSITION, G_TEXTURE)) return Draw_(), 0;
+	glUniform1i(auto_Lighting_shader.sampler, T_SPRITES);
+	glUniform1i(auto_Lighting_shader.sampler_light, T_LIGHT);
+	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
+	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
+	if(!auto_Phong(G_POSITION, G_TEXTURE)) return Draw_(), 0;
 
 	WindowIsGlError("Draw");
 
@@ -269,35 +200,13 @@ void Draw_(void) {
 	unsigned tex;
 	int i;
 
-	/*if(glIsBuffer(spot_geom)) {
-		glDeleteBuffers(1, &spot_geom);
-		Debug("~Draw: Deleted particle buffer.\n");
-		spot_geom = 0;
-	}*/
-	if(light_shader) {
-		Debug("~Draw: erase Sdr%u.\n", light_shader);
-		glDeleteProgram(light_shader);
-		light_shader = 0;
-	}
-	if(far_shader) {
-		Debug("~Draw: erase Sdr%u.\n", far_shader);
-		glDeleteProgram(far_shader);
-		far_shader = 0;
-	}
-	if(hud_shader) {
-		Debug("~Draw: erase Sdr%u.\n", hud_shader);
-		glDeleteProgram(hud_shader);
-		hud_shader = 0;
-	}
+	/* erase the shaders */
+	auto_Phong(G_POSITION, G_TEXTURE);
+	auto_Lighting(G_POSITION, G_TEXTURE);
+	auto_Hud(G_POSITION, G_TEXTURE);
+	auto_Far(G_POSITION, G_TEXTURE);
+	auto_Background(G_POSITION, G_TEXTURE);
 	/* erase the textures */
-	/*if(imgs) {
-		while(MapIterate(imgs, (const void **)&name, (void **)&img)) {
-			if(!img || !(tex = ImageGetTexture(img))) continue;
-			Debug("~Draw: erase \"%s,\" Tex%u.\n", name, tex);
-			glDeleteTextures(1, (unsigned *)&tex);
-			ImageSetTexture(img, 0);
-		}
-	} <- static now! */
 	/* textures stored in imgs */
 	for(i = max_auto_images - 1; i; i--) {
 		if((tex = auto_images[i].texture)) {
@@ -379,115 +288,6 @@ void DrawSetShield(const char *const str) {
 	glActiveTexture(GT_SPRITES);
 	glBindTexture(GL_TEXTURE_2D, shield_tex);
 	Debug("Image \"%s,\" (Tex%u,) set as shield.\n", image->name, shield_tex);
-}
-
-/** Compiles, links and verifies a shader.
- @param vert_vs: Vertex shader source.
- @param frag_fs: Fragment shader source.
- @param attrib(const GLuint): A function which is passed the un-compiled shader
- source and which is supposed to set attributes. Can be null.
- @return A shader or 0 if it didn't link. */
-static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attrib)(const GLuint)) {
-	GLchar info[128];
-	GLuint vs = 0, fs = 0, shader = 0;
-	GLint status;
-	enum { S_NOERR = 0, S_VERT, S_FRAG, S_LINK, S_VALIDATE } error = S_NOERR;
-
-	/* try */
-	do {
-		/* compile vs; shader, count, **string, *length */
-		vs = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vs, 1, &vert_vs, 0);
-		glCompileShader(vs);
-		glGetShaderiv(vs, GL_COMPILE_STATUS, &status);
-		if(!status) { error = S_VERT; break; }
-		Debug("Draw::link_shader: compiled vertex shader, Sdr%u.\n", vs);
-
-		/* compile fs */
-		fs = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fs, 1, &frag_fs, 0);
-		glCompileShader(fs);
-		glGetShaderiv(fs, GL_COMPILE_STATUS, &status);
-		if(!status) { error = S_FRAG; break; }
-		Debug("Draw::link_shader: compiled fragment shader, Sdr%u.\n", fs);
-
-		/* link */
-		shader = glCreateProgram();
-		glAttachShader(shader, vs);
-		glAttachShader(shader, fs);
-		/* callback */
-		if(attrib) attrib(shader);
-		glLinkProgram(shader);
-		glGetProgramiv(shader, GL_LINK_STATUS, &status);
-		if(!status) { error = S_LINK; break; }
-		Debug("Draw::link_shader: linked shader programme, Sdr%u.\n", shader);
-
-		/* validate */
-		glValidateProgram(shader);
-		glGetProgramiv(shader, GL_VALIDATE_STATUS, &status);
-		if(!status) { error = S_VALIDATE; break; }
-		Debug("Draw::link_shader: validated shader programme, Sdr%u.\n", shader);
-
-	} while(0);
-
-	/* catch */
-	switch(error) {
-		case S_NOERR:
-			break;
-		case S_VERT:
-			glGetShaderInfoLog(vs, (GLsizei)sizeof(info), 0, info);
-			Debug("Draw::link_shader: Sdr%u failed vertex shader compilation; OpenGL: %s", vs, info);
-			break;
-		case S_FRAG:
-			glGetShaderInfoLog(fs, (GLsizei)sizeof(info), 0, info);
-			Debug("Draw::link_shader: Sdr%u failed fragment shader compilation; OpenGL: %s", fs, info);
-			break;
-		case S_LINK:
-			glGetProgramInfoLog(shader, (GLsizei)sizeof(info), 0, info);
-			Debug("Draw::link_shader: Sdr%u failed shader linking; OpenGL: %s", shader, info);
-			break;
-		case S_VALIDATE: /* fixme: untested! */
-			glGetProgramInfoLog(shader, (GLsizei)sizeof(info), 0, info);
-			Debug("Draw::link_shader: Sdr%u failed shader validation; OpenGL: %s", shader, info);
-			break;
-	}
-
-	/* don't need these anymore, whatever the result */
-	if(fs) {
-		glDeleteShader(fs);
-		if(shader) glDetachShader(shader, fs);
-		Debug("Draw::link_shader: erasing fragment shader, Sdr%u.\n", fs);
-	}
-	if(vs) {
-		glDeleteShader(vs);
-		if(shader) glDetachShader(shader, vs);
-		Debug("Draw::link_shader: erasing vertex shader, Sdr%u.\n", vs);
-	}
-
-	/* resume catching */
-	if(error) {
-		if(shader) {
-			glDeleteProgram(shader);
-			Debug("Draw::link_shader: deleted shader programme, Sdr%u.\n", shader);
-		}
-		return 0;
-	}
-
-	/* immediately use the shader; we probably want to set some uniforms */
-	glUseProgram(shader);
-
-	/* catch any errors */
-	WindowIsGlError("shader");
-
-	return shader;
-}
-
-/** Setup tex_map attributes callback.
- @param shader: The unlinked shader. */
-static void tex_map_attrib(const GLuint shader) {
-	/* programme, index attrib, name */
-	glBindAttribLocation(shader, G_POSITION, "vbo_position");
-	glBindAttribLocation(shader, G_TEXTURE,  "vbo_texture");
 }
 
 /** Creates a texture from an image; sets the image texture unit.
@@ -698,7 +498,7 @@ static void display(void) {
 	 glDrawArrays(type flag, offset, no) */
 	if(background_tex) {
 		/* use background shader */
-		glUseProgram(background_shader);
+		glUseProgram(auto_Background_shader.compiled);
 
 		/* turn transperency off */
 		glDisable(GL_BLEND);
@@ -719,31 +519,31 @@ static void display(void) {
 	glActiveTexture(GT_SPRITES);
 
 	/* turn on background lighting (sprites) */
-	glUseProgram(far_shader);
+	glUseProgram(auto_Far_shader.compiled);
 	/*glUseProgram(light_shader);
 	glUniform1i(light_lights_location, 0);*/
 
 	/* background sprites */
 	/*const->glUniform1i(far_texture_location, T_SPRITES); */
-	glUniform2f(far_camera_location, camera_x, camera_y);
+	glUniform2f(auto_Far_shader.camera, camera_x, camera_y);
 	while(FarIterate(&x, &y, &t, &tex, &size)) {
 		if(old_texture != tex) {
 			glBindTexture(GL_TEXTURE_2D, tex);
 			old_texture = tex;
 		}
-		glUniform1f(far_size_location, (float)size);
-		glUniform1f(far_angle_location, t);
-		glUniform2f(far_position_location, x, y);
+		glUniform1f(auto_Far_shader.size, (float)size);
+		glUniform1f(auto_Far_shader.angle, t);
+		glUniform2f(auto_Far_shader.position, x, y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	}
 	old_texture = 0;
 
 	/* turn on lighting */
-	glUseProgram(light_shader);
-	glUniform1i(light_lights_location, lights = LightGetArraySize());
+	glUseProgram(auto_Lighting_shader.compiled);
+	glUniform1i(auto_Lighting_shader.lights, lights = LightGetArraySize());
 	if(lights) {
-		glUniform2fv(light_lightpos_location, lights, (GLfloat *)LightGetPositionArray());
-		glUniform3fv(light_lightclr_location, lights, (GLfloat *)LightGetColourArray());
+		glUniform2fv(auto_Lighting_shader.light_position, lights, (GLfloat *)LightGetPositionArray());
+		glUniform3fv(auto_Lighting_shader.light_colour, lights, (GLfloat *)LightGetColourArray());
 	}
 
 	/* sprites:
@@ -756,7 +556,7 @@ static void display(void) {
 	/*glEnable(GL_BLEND);*/
 	/* fixme: have different indices to textures; keep track with texture manager; have to worry about how many tex units there are */
 	/*glUniform1i(light_texture_location, T_SPRITES); <- constant, now */
-	glUniform2f(light_camera_location, camera_x, camera_y);
+	glUniform2f(auto_Lighting_shader.camera, camera_x, camera_y);
 	if(draw_is_print_sprites) Debug("%s:\n", "Draw");
 	while(SpriteIterate(&x, &y, &t, &tex, &size)) {
 		if(draw_is_print_sprites) Debug("Tex %d Size %d (%.1f,%.1f:%.1f)\n", tex, size, x, y, t);
@@ -765,9 +565,9 @@ static void display(void) {
 			glBindTexture(GL_TEXTURE_2D, tex);
 			old_texture = tex;
 		}
-		glUniform1f(light_size_location, (float)size);
-		glUniform1f(light_angle_location, t);
-		glUniform2f(light_position_location, x, y);
+		glUniform1f(auto_Lighting_shader.size, (float)size);
+		glUniform1f(auto_Lighting_shader.angle, t);
+		glUniform2f(auto_Lighting_shader.position, x, y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	}
 	if(draw_is_print_sprites) {
@@ -788,12 +588,12 @@ static void display(void) {
 	if(shield_tex && (player = GameGetPlayer())) {
 		SpriteGetPosition(player, &x, &y);
 		t = SpriteGetBounding(player);
-		glUseProgram(hud_shader);
+		glUseProgram(auto_Hud_shader.compiled);
 		glBindTexture(GL_TEXTURE_2D, shield_tex);
-		glUniform2f(hud_camera_location, camera_x, camera_y);
-		glUniform2f(hud_size_location, 256.0f, 8.0f);
-		glUniform2f(hud_position_location, x, y - t * 2.0f);
-		glUniform2i(hud_shield_location, SpriteGetHit(player), SpriteGetMaxHit(player));
+		glUniform2f(auto_Hud_shader.camera, camera_x, camera_y);
+		glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
+		glUniform2f(auto_Hud_shader.position, x, y - t * 2.0f);
+		glUniform2i(auto_Hud_shader.shield, SpriteGetHit(player), SpriteGetMaxHit(player));
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
 	}
 
@@ -842,25 +642,26 @@ static void resize(int width, int height) {
 	/* the image may not cover the whole drawing area, so we may need a constant
 	 scaling; if it is so, the image will have to be linearly interpolated for
 	 quality */
-	glUseProgram(background_shader);
+	glUseProgram(auto_Background_shader.compiled);
 	glBindTexture(GL_TEXTURE_2D, background_tex);
 	if(w_w_tex > 1.0f || h_h_tex > 1.0f) {
 		const float scale = 1.0f / ((w_w_tex > h_h_tex) ? w_w_tex : h_h_tex);
-		glUniform1f(background_scale_location, scale);
+		glUniform1f(auto_Background_shader.scale, scale);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	} else {
-		glUniform1f(background_scale_location, 1.0f);
+		glUniform1f(auto_Background_shader.scale, 1.0f);
+		/* fixme: here? */
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}
 
 	/* far shader and light shader also need updates of 2/[width|height];
 	 meh, we can probably do them in sw? */
-	glUseProgram(hud_shader);
-	glUniform2f(hud_two_screen_location, two_width, two_height);
-	glUseProgram(far_shader);
-	glUniform2f(far_two_screen_location, two_width, two_height);
-	glUseProgram(light_shader);
-	glUniform2f(light_two_screen_location, two_width, two_height);
+	glUseProgram(auto_Hud_shader.compiled);
+	glUniform2f(auto_Hud_shader.two_screen, two_width, two_height);
+	glUseProgram(auto_Far_shader.compiled);
+	glUniform2f(auto_Far_shader.two_screen, two_width, two_height);
+	glUseProgram(auto_Lighting_shader.compiled);
+	glUniform2f(auto_Lighting_shader.two_screen, two_width, two_height);
 }

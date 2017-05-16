@@ -1,7 +1,7 @@
 # Makefile 1.2 (GNU Make 3.81; MacOSX gcc 4.2.1; MacOSX MinGW 4.3.0)
 
 PROJ  := File2h
-VA    := 1
+VA    := 2
 VB    := 0
 
 # dirs

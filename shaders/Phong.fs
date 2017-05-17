@@ -9,7 +9,7 @@
 // for avoiding singularity
 #define EPSILON 0.1
 
-uniform sampler2D texture_bmp, normal_bmp;
+uniform sampler2D bmp_texture, bmp_normal;
 
 varying vec3 lightDir, normal;
 
@@ -26,8 +26,8 @@ float light_i(int i, float in_sprite, vec4 light);
 
 void main() {
 	float to_light, delta;
-	vec4 texel = texture2D(texture_bmp, pass_texture);
-	vec4 light = texture2D(normal_bmp, pass_light);
+	vec4 texel = texture2D(bmp_texture, pass_texture);
+	vec4 light = texture2D(bmp_normal, pass_light);
 	float in_sprite = light.g * M_2PI;
 	vec3 shade = vec3(AMBIENT);
 
@@ -45,7 +45,8 @@ void main() {
 		}
 	}
 	// final colour
-	gl_FragColor = vec4(shade, 1.0) * texel;
+	//gl_FragColor = vec4(shade, 1.0) * texel;
+	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
 
 float light_i(int i, float in_sprite, vec4 light) {

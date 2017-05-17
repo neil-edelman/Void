@@ -10,6 +10,7 @@
 
 #include <stdlib.h> /* free */
 #include <assert.h> /* assert */
+#include <math.h>   /* sqrtf fminf fmodf atan2f */
 #include "../../build/Auto.h"
 #include "../Print.h"
 #include "../game/Sprite.h"
@@ -101,6 +102,9 @@ static int     screen_width = 300, screen_height = 200; /* shared? */
 static GLuint  vbo_geom, light_tex, background_tex, shield_tex;
 static float   camera_x, camera_y;
 
+/* fixme!! */
+static GLuint sphere_tex, sphere_normals;
+
 /** Gets all the graphics stuff started.
  @return All good to draw? */
 int Draw(void) {
@@ -166,6 +170,18 @@ int Draw(void) {
 	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
 	if(!auto_Phong(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	glUniform1i(auto_Phong_shader.bmp_texture, TEX_CLASS_SPRITE);
+	glUniform1i(auto_Phong_shader.bmp_normal, TEX_CLASS_NORMAL);
+	glUniform1f(auto_Phong_shader.directional_angle, -2.0f);
+	glUniform3fv(auto_Phong_shader.directional_colour, 1, sunshine);
+
+	{
+		struct AutoImage *tex_image, *normals_image;
+		tex_image = AutoImageSearch("sphere_render.png");
+		normals_image = AutoImageSearch("sphere_normals.png");
+		if(!tex_image || !normals_image) warn("What is this magic?\n"), exit(1);
+		sphere_tex = tex_image->texture, sphere_normals = normals_image->texture;
+	}
 
 	WindowIsGlError("Draw");
 
@@ -233,7 +249,7 @@ void DrawGetScreen(unsigned *width_ptr, unsigned *height_ptr) {
  TexClassTexture(TEX_CLASS_BACKGROUND) textures, which probably don't work, maybe? (oh, they do) */
 void DrawSetBackground(const char *const str) {
 	struct AutoImage *image;
-	
+
 	/* clear the backgruoud; fixme: test, it isn't used at all */
 	if(!str) {
 		background_tex = 0;
@@ -269,6 +285,7 @@ void DrawSetShield(const char *const str) {
 }
 
 /** Creates a texture from an image; sets the image texture unit.
+ @fixme This should go in Auto?
  @param image: The Image as seen in Lores.h.
  @return Success. */
 static int texture(struct AutoImage *image) {
@@ -491,6 +508,10 @@ static void display(void) {
 	}
 	glEnable(GL_BLEND);
 
+	/* fixme: experiment! */
+	glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
+	glBindTexture(GL_TEXTURE_2D, light_tex);
+
 	/* use simple tex_map_shader */
 	/*glUseProgram(tex_map_shader);*/
 	/* why? the glsl entirely specifies this */
@@ -552,14 +573,24 @@ static void display(void) {
 		draw_is_print_sprites = 0;
 	}
 
-	/* experiment FIXME */
-	glUseProgram(auto_Phong_shader.compiled);
+	/* fixme: experiment */
+	/*glUseProgram(auto_Phong_shader.compiled);
 	glUniform2f(auto_Phong_shader.camera, camera_x, camera_y);
 	glUniform1i(auto_Phong_shader.lights, lights = LightGetArraySize());
 	if(lights) {
 		glUniform2fv(auto_Phong_shader.light_position, lights, (GLfloat *)LightGetPositionArray());
 		glUniform3fv(auto_Phong_shader.light_colour, lights, (GLfloat *)LightGetColourArray());
-	}
+	}*/
+	x = y = t = 0.0f;
+	size = 128;
+	glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
+	glBindTexture(GL_TEXTURE_2D, sphere_normals);
+	glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
+	glBindTexture(GL_TEXTURE_2D, sphere_tex);
+	glUniform1f(auto_Phong_shader.size, (float)size);
+	glUniform1f(auto_Phong_shader.angle, t);
+	glUniform2f(auto_Phong_shader.position, x, y);
+	glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {

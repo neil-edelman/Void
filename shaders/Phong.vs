@@ -1,7 +1,9 @@
 #define SQRT1_2 0.7071067811865475244008443621048490392848359376884740
 
+// these are from the vbo
 attribute vec2 attrib_position;
 attribute vec2 attrib_texture;
+// these are set in the programme
 uniform float size, angle;
 uniform vec2 position, camera;
 uniform vec2 inv_screen;
@@ -31,6 +33,5 @@ void main() {
 	pass_light    = light_pos      + rotate * attrib_texture * SQRT1_2;
 	// accurate world position in pixels and in [-1, 1] screen rendering
 	pass_position = position       + rotate * attrib_position * size;
-
 	gl_Position  = vec4(screen_pos + vertex2screen * attrib_position, 0.0, 1.0);
 }

@@ -115,6 +115,19 @@
 			28483B281ECC0C4E00E58555 /* PBXTextBookmark */ = 28483B281ECC0C4E00E58555 /* PBXTextBookmark */;
 			28483B2C1ECC0C7200E58555 /* PBXTextBookmark */ = 28483B2C1ECC0C7200E58555 /* PBXTextBookmark */;
 			28483B301ECC0CF700E58555 /* PBXTextBookmark */ = 28483B301ECC0CF700E58555 /* PBXTextBookmark */;
+			28483B321ECC0D3800E58555 /* PBXTextBookmark */ = 28483B321ECC0D3800E58555 /* PBXTextBookmark */;
+			28483B331ECC0DF100E58555 /* PBXTextBookmark */ = 28483B331ECC0DF100E58555 /* PBXTextBookmark */;
+			28483B361ECC0F9500E58555 /* PBXTextBookmark */ = 28483B361ECC0F9500E58555 /* PBXTextBookmark */;
+			28483B371ECC104200E58555 /* PBXTextBookmark */ = 28483B371ECC104200E58555 /* PBXTextBookmark */;
+			28483B3C1ECC107900E58555 /* PBXTextBookmark */ = 28483B3C1ECC107900E58555 /* PBXTextBookmark */;
+			28483B431ECC13F100E58555 /* PBXTextBookmark */ = 28483B431ECC13F100E58555 /* PBXTextBookmark */;
+			28483B551ECC179900E58555 /* PBXTextBookmark */ = 28483B551ECC179900E58555 /* PBXTextBookmark */;
+			28483B5E1ECC184600E58555 /* PBXTextBookmark */ = 28483B5E1ECC184600E58555 /* PBXTextBookmark */;
+			28483B621ECC189500E58555 /* PBXTextBookmark */ = 28483B621ECC189500E58555 /* PBXTextBookmark */;
+			28483B661ECC1AF100E58555 /* PBXTextBookmark */ = 28483B661ECC1AF100E58555 /* PBXTextBookmark */;
+			28483B691ECC1B4800E58555 /* PBXTextBookmark */ = 28483B691ECC1B4800E58555 /* PBXTextBookmark */;
+			28483B6D1ECC1B9700E58555 /* PBXTextBookmark */ = 28483B6D1ECC1B9700E58555 /* PBXTextBookmark */;
+			28483B711ECC1D0E00E58555 /* PBXTextBookmark */ = 28483B711ECC1D0E00E58555 /* PBXTextBookmark */;
 		};
 		sourceControlManager = 2866766A1E8467300090EBDC /* Source Control */;
 		userBuildSettings = {
@@ -129,7 +142,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 524;
 		vrLoc = 22473;
@@ -139,7 +152,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -149,7 +162,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 524;
 		vrLoc = 22473;
@@ -159,7 +172,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -169,7 +182,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -179,7 +192,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -189,7 +202,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 513;
 		vrLoc = 22396;
@@ -199,7 +212,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -209,7 +222,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 513;
 		vrLoc = 22396;
@@ -219,7 +232,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -229,7 +242,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 513;
 		vrLoc = 22396;
@@ -239,7 +252,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -249,7 +262,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -259,7 +272,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -269,7 +282,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -279,7 +292,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -289,7 +302,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -299,7 +312,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -309,7 +322,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -319,7 +332,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -329,7 +342,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -339,7 +352,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 648";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -349,7 +362,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 665";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -359,7 +372,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 647";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -369,7 +382,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 647";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -379,7 +392,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 647";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -389,7 +402,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 647";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -399,7 +412,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 643";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -409,7 +422,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 643";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -419,7 +432,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 653";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -429,7 +442,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 654";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -439,7 +452,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 654";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -449,7 +462,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 656";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -459,7 +472,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -469,7 +482,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 630";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -479,7 +492,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 630";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -489,7 +502,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 630";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -499,7 +512,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 630";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -509,7 +522,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 630";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 396;
 		vrLoc = 20401;
@@ -519,7 +532,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 631";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -529,7 +542,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 631";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 328;
 		vrLoc = 20410;
@@ -539,7 +552,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 631";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -549,7 +562,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 630";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -559,7 +572,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -569,7 +582,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -579,7 +592,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 305;
 		vrLoc = 20015;
@@ -589,7 +602,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -599,7 +612,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -609,7 +622,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -619,7 +632,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -629,7 +642,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -639,7 +652,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -649,7 +662,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -659,7 +672,137 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 629";
 		rLen = 0;
-		rLoc = 21932;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B321ECC0D3800E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 629";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B331ECC0DF100E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 632";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B361ECC0F9500E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 637";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B371ECC104200E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 637";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B3C1ECC107900E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 637";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B431ECC13F100E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 648";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B551ECC179900E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 654";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B5E1ECC184600E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 660";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B621ECC189500E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 660";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B661ECC1AF100E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 660";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B691ECC1B4800E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 660";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B6D1ECC1B9700E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 660";
+		rLen = 0;
+		rLoc = 23210;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483B711ECC1D0E00E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 660";
+		rLen = 0;
+		rLoc = 23210;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -722,9 +865,9 @@
 	};
 	28FB36F31E8A0FE1003610DC /* Game.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2730}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2743}}";
 			sepNavSelRange = "{4575, 5}";
-			sepNavVisRange = "{4022, 1410}";
+			sepNavVisRange = "{1771, 1412}";
 		};
 	};
 	28FB36F41E8A0FE1003610DC /* Game.h */ = {
@@ -750,9 +893,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 21203}}";
-			sepNavSelRange = "{51722, 0}";
-			sepNavVisRange = "{50878, 1728}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 21060}}";
+			sepNavSelRange = "{30747, 0}";
+			sepNavVisRange = "{29791, 1971}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
@@ -827,8 +970,8 @@
 	};
 	28FB37061E8A0FE1003610DC /* Draw.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {595, 8437}}";
-			sepNavSelRange = "{21932, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {595, 8879}}";
+			sepNavSelRange = "{23210, 0}";
 			sepNavVisRange = "{0, 0}";
 		};
 	};

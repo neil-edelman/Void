@@ -346,14 +346,14 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>30</integer>
-									<integer>29</integer>
+									<integer>12</integer>
+									<integer>7</integer>
 									<integer>4</integer>
 									<integer>0</integer>
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
-							<string>{{0, 65}, {185, 669}}</string>
+							<string>{{0, 48}, {185, 669}}</string>
 						</dict>
 						<key>PBXTopSmartGroupGIDs</key>
 						<array/>
@@ -398,7 +398,7 @@
 										<key>_historyCapacity</key>
 										<integer>20</integer>
 										<key>bookmark</key>
-										<string>28483B301ECC0CF700E58555</string>
+										<string>28483B711ECC1D0E00E58555</string>
 										<key>history</key>
 										<array>
 											<string>28483AFB1ECC096700E58555</string>
@@ -701,7 +701,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>516689143.13974798</real>
+	<real>516693262.14007002</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -718,12 +718,10 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>28483B311ECC0CF700E58555</string>
 		<string>284838FB1ECBA35D00E58555</string>
 		<string>284838FC1ECBA35D00E58555</string>
-		<string>28483A8B1ECBEF1200E58555</string>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
-		<string>28483B0B1ECC0A7600E58555</string>
+		<string>28483A8B1ECBEF1200E58555</string>
 	</array>
 	<key>WindowString</key>
 	<string>429 50 851 728 0 0 1280 778 </string>

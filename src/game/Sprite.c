@@ -847,7 +847,7 @@ extern int draw_is_print_sprites;
  @param t_ptr: \theta
  @param texture_ptr: OpenGl texture unit.
  @param size_ptr: Size of the texture.
- @return: True if the values have been set. */
+ @return True if the values have been set. */
 int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
 	static int is_reset = -1;
 	static int x_min_index, x_max_index, y_max_index, x_index, y_index;

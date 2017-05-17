@@ -57,32 +57,20 @@ static GLuint TexClassTexture(const enum TexClass class) {
 	return class + GL_TEXTURE0;
 }
 
-#if 0
-/* for textures; assert GlTex: GL_TEXTUREx <-> TexArray: x;
- fixme: do more complex texture mapping management once we have textures
- "The constants obey TEXTUREi = TEXTURE0+i (i is in the range 0 to k - 1,
- where k is the value of MAX_COMBINED_TEXTURE_IMAGE_UNITS)." */
-enum GlTex {
-	TexClassTexture(TEX_CLASS_NORMAL) = GL_TEXTURE0,
-	TexClassTexture(TEX_CLASS_BACKGROUND) = GL_TEXTURE1,
-	TexClassTexture(TEX_CLASS_SPRITE) = GL_TEXTURE2
+/** Shader attribute assigment. */
+enum { /* vec2 */ VBO_ATTRIB_POSITION, /* vec2 */ VBO_ATTRIB_TEXTURE };
+/** Corresponds to {(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)}. */
+static const struct {
+	GLint size;
+	GLenum type;
+	const GLvoid *offset;
+} vbo_attrib[] = {
+	{ 2, GL_FLOAT, 0 },
+	{ 2, GL_FLOAT, (GLvoid *)(sizeof(GLfloat) * 2) }
 };
-enum TexArray {
-	TEX_CLASS_NORMAL = 0,
-	TEX_CLASS_BACKGROUND = 1,
-	TEX_CLASS_SPRITE = 2
-};
-#endif
 
-/* for shader attribute assigment */
-enum VertexAttribs { G_POSITION, G_TEXTURE };
-/*enum SpotAttribs { S_POSITION, S_COLOUR };*/
-
-/* corresponds to VertexAttribs on hardware;
- vbo is used ubiquitously for static geometry, uploaded into video memory;
- fixme: it's just a shift, scale; we don't need half of them
- (the G_POSITIONs, since they're already being transformed); twice the stuff
- could be shown on the screen! */
+/** {struct} corresponding to the above. {vbo} is used ubiquitously for static
+ geometry, uploaded into video memory. */
 static struct Vertex {
 	GLfloat x, y;
 	GLfloat s, t;
@@ -91,17 +79,20 @@ static struct Vertex {
 	{  1.0f, -1.0f,  1.0f,  0.0f },
 	{ -1.0f,  1.0f,  0.0f,  1.0f },
 	{ -1.0f, -1.0f,  0.0f,  0.0f },
-	{ 0.5f,  0.5f, 1.0f, 1.0f },    /* sprite */
+	{ 0.5f,  0.5f, 1.0f, 1.0f },    /* generic square, for sprites, etc */
 	{ 0.5f, -0.5f, 1.0f, 0.0f },
 	{ -0.5f, 0.5f, 0.0f, 1.0f },
 	{ -0.5f,-0.5f, 0.0f, 0.0f }
 };
-static const void *vertex_pos_offset = 0;
-static const int  vertex_pos_size    = 2;
-static const void *vertex_tex_offset = (void *)(sizeof(float) * 2);
-static const int  vertex_tex_size    = 2;
+#if 0
 static const int vbo_bg_first     = 0, vbo_bg_count     = 4;
 static const int vbo_sprite_first = 4, vbo_sprite_count = 4;
+#endif
+/* Corresponds to the values in {vbo}. */
+static const struct {
+	GLint first;
+	GLsizei count;
+} vbo_background_offset = { 0, 4 }, vbo_square_offset = { 4, 4 };
 
 /* corresponds to SpotAttribs on hardware */
 /*static struct Spot {
@@ -168,12 +159,12 @@ int Draw(void) {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vbo), vbo, GL_STATIC_DRAW);
 	/* fixme: the texture should be the same as the vetices, half the data */
 	/* fixme: done per-frame, because apparently OpenGl does not keep track of the bindings per-buffer */
-	glEnableVertexAttribArray(G_POSITION);
-	glVertexAttribPointer(G_POSITION, vertex_pos_size, GL_FLOAT,
-		GL_FALSE, sizeof(struct Vertex), vertex_pos_offset);
-    glEnableVertexAttribArray(G_TEXTURE);
-    glVertexAttribPointer(G_TEXTURE, vertex_tex_size, GL_FLOAT, GL_FALSE,
-		sizeof(struct Vertex), vertex_tex_offset);
+	glEnableVertexAttribArray(VBO_ATTRIB_POSITION);
+	glVertexAttribPointer(VBO_ATTRIB_POSITION, vbo_attrib[VBO_ATTRIB_POSITION].size, vbo_attrib[VBO_ATTRIB_POSITION].type,
+		GL_FALSE, sizeof(struct Vertex), vbo_attrib[VBO_ATTRIB_POSITION].offset);
+    glEnableVertexAttribArray(VBO_ATTRIB_TEXTURE);
+    glVertexAttribPointer(VBO_ATTRIB_TEXTURE, vbo_attrib[VBO_ATTRIB_TEXTURE].size, vbo_attrib[VBO_ATTRIB_TEXTURE].type, GL_FALSE,
+		sizeof(struct Vertex), vbo_attrib[VBO_ATTRIB_TEXTURE].offset);
 	debug("Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
 
 	/* textures */
@@ -186,22 +177,22 @@ int Draw(void) {
 	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
 	/* shader initialisation */
-	if(!auto_Background(G_POSITION, G_TEXTURE)) return Draw_(), 0;
+	if(!auto_Background(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	/* these are constant; fixme: could they be declared as such? */
 	glUniform1i(auto_Background_shader.sampler, TEX_CLASS_BACKGROUND);
-	if(!auto_Far(G_POSITION, G_TEXTURE)) return Draw_(), 0;
+	if(!auto_Far(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Far_shader.sampler, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Far_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Far_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Far_shader.directional_colour, 1, sunshine);
-	if(!auto_Hud(G_POSITION, G_TEXTURE)) return Draw_(), 0;
+	if(!auto_Hud(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Hud_shader.sampler, TEX_CLASS_SPRITE);
-	if(!auto_Lighting(G_POSITION, G_TEXTURE)) return Draw_(), 0;
+	if(!auto_Lighting(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Lighting_shader.sampler, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Lighting_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
-	if(!auto_Phong(G_POSITION, G_TEXTURE)) return Draw_(), 0;
+	if(!auto_Phong(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 
 	WindowIsGlError("Draw");
 
@@ -523,7 +514,7 @@ static void display(void) {
 		/* fixme: of course it's a background, set once */
 		/*glUniform1i(background_sampler_location, TEX_CLASS_BACKGROUND);*/
 		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_background_offset.first, vbo_background_offset.count);
 	}
 	glEnable(GL_BLEND);
 
@@ -548,7 +539,7 @@ static void display(void) {
 		glUniform1f(auto_Far_shader.size, (float)size);
 		glUniform1f(auto_Far_shader.angle, t);
 		glUniform2f(auto_Far_shader.position, x, y);
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_square_offset.first, vbo_square_offset.count);
 	}
 	old_texture = 0;
 
@@ -582,7 +573,7 @@ static void display(void) {
 		glUniform1f(auto_Lighting_shader.size, (float)size);
 		glUniform1f(auto_Lighting_shader.angle, t);
 		glUniform2f(auto_Lighting_shader.position, x, y);
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_square_offset.first, vbo_square_offset.count);
 	}
 	if(draw_is_print_sprites) {
 		draw_is_print_sprites = 0;
@@ -608,7 +599,7 @@ static void display(void) {
 		glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
 		glUniform2f(auto_Hud_shader.position, x, y - t * 2.0f);
 		glUniform2i(auto_Hud_shader.shield, SpriteGetHit(player), SpriteGetMaxHit(player));
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_sprite_first, vbo_sprite_count);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_square_offset.first, vbo_square_offset.count);
 	}
 
 	/* disable, swap */
@@ -649,8 +640,8 @@ static void resize(int width, int height) {
 	vbo[2].s = vbo[3].s = -w_w_tex;
 	vbo[0].t = vbo[2].t =  h_h_tex;
 	vbo[1].t = vbo[3].t = -h_h_tex;
-	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)vbo_bg_first,
-		(GLsizeiptr)(vbo_bg_count * sizeof(struct Vertex)), vbo + vbo_bg_first);
+	glBufferSubData(GL_ARRAY_BUFFER, vbo_background_offset.first,
+		vbo_background_offset.count * (GLsizei)sizeof(struct Vertex), vbo + vbo_background_offset.first);
 
 	/* the image may not cover the whole drawing area, so we may need a constant
 	 scaling; if it is so, the image will have to be linearly interpolated for

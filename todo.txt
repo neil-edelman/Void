@@ -63,6 +63,8 @@ static Foo {
 static Bar foo_bars[2] = { &bar[0], &bar[1]; };
 static Foo foo[] = { { "foo", 2, &foo_bars[0] } }
 
+increase the range of things going off-screen (did I set it deliberately to less?)
+
 Random.c; P[\mu_x,\mu_y,\sigma] = f(x|\mu,\sigma) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(x-\mu)^2}{2\sigma^2}} Gaussian distribution in space to find ships. Also, custom dist based on objects of interest
 
 instead of having all asteroids on zone at a time, have only when the player is there; otherwise have a random field

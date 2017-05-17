@@ -32,17 +32,17 @@ struct Far {
 	struct Far *prev_x, *next_x, *prev_y, *next_y; /* sort by axes */
 	int   is_selected;
 } backgrounds[1024];
-static const int backgrounds_capacity = sizeof(backgrounds) / sizeof(struct Far);
-static int       backgrounds_size;
+static const unsigned backgrounds_capacity = sizeof(backgrounds) / sizeof(struct Far);
+static unsigned       backgrounds_size;
 
 static struct Far *first_x, *first_y; /* the projected axis sorting thing */
 
 static struct Far *first_x_window, *first_y_window, *window_iterator;
-static struct Far *iterator = backgrounds; /* for drawing and stuff */
+/*static struct Far *iterator = backgrounds;*/ /* for drawing and stuff */
 
 /* private prototypes */
 
-static struct Far *iterate(void);
+/*static struct Far *iterate(void);*/
 static void sort_notify(struct Far *);
 static int compare_x(const struct Far *a, const struct Far *b);
 static int compare_y(const struct Far *a, const struct Far *b);
@@ -62,12 +62,10 @@ struct Far *Far(const struct AutoObjectInSpace *ois) {
 
 	/* fixme: diurnal variation */
 
+	if(!ois) return 0;
 	if(backgrounds_size >= backgrounds_capacity) {
-		Debug("Far: couldn't be created; reached maximum of %u.\n", backgrounds_capacity);
-		return 0;
-	}
-	if(!ois) {
-		Debug("Far: invalid.\n");
+		warn("Far: couldn't be created; reached maximum of %u.\n",
+			backgrounds_capacity);
 		return 0;
 	}
 	far = &backgrounds[backgrounds_size++];
@@ -88,7 +86,8 @@ struct Far *Far(const struct AutoObjectInSpace *ois) {
 	first_x = first_y = far;
 	sort_notify(far);
 
-	Debug("Far: created from pool \"%s,\" Far%u->Tex%u.\n", far->name, FarGetId(far), far->texture);
+	debug("Far: created from pool \"%s,\" Far%u->Tex%u.\n", far->name,
+		FarGetId(far), far->texture);
 
 	return far;
 }
@@ -97,15 +96,16 @@ struct Far *Far(const struct AutoObjectInSpace *ois) {
  @param sprite_ptr	A pointer to the sprite; gets set null on success. */
 void Far_(struct Far **far_ptr) {
 	struct Far *far, *replace, *neighbor;
-	int index;
+	unsigned idx;
 
 	if(!far_ptr || !(far = *far_ptr)) return;
-	index = far - backgrounds;
-	if(index < 0 || index >= backgrounds_size) {
-		Debug("~Far: Far%u not in range Far%u.\n", index + 1, backgrounds_size);
+	idx = (unsigned)(far - backgrounds);
+	if(idx >= backgrounds_size) {
+		warn("~Far: Far%u not in range Far%u.\n", idx + 1,backgrounds_size);
 		return;
 	}
-	Debug("~Far: returning to pool \"%s,\" Far%u->Tex%u.\n", far->name, FarGetId(far), far->texture);
+	debug("~Far: returning to pool \"%s,\" Far%u->Tex%u.\n", far->name,
+		FarGetId(far), far->texture);
 
 	/* take it out of the lists */
 	if(far->prev_x) far->prev_x->next_x = far->next_x;
@@ -116,7 +116,7 @@ void Far_(struct Far **far_ptr) {
 	if(far->next_y) far->next_y->prev_y = far->prev_y;
 
 	/* move the terminal far to replace this one */
-	if(index < --backgrounds_size) {
+	if(idx < --backgrounds_size) {
 
 		replace = &backgrounds[backgrounds_size];
 		memcpy(far, replace, sizeof(struct Far));
@@ -129,7 +129,8 @@ void Far_(struct Far **far_ptr) {
 		else                             first_y          = far;
 		if((neighbor = replace->next_y)) neighbor->prev_y = far;
 
-		Pedantic("~Far: Far%u has become Far%u.\n", FarGetId(replace), FarGetId(far));
+		pedantic("~Far: Far%u has become Far%u.\n",
+			FarGetId(replace), FarGetId(far));
 	}
 
 	*far_ptr = far = 0;
@@ -137,7 +138,7 @@ void Far_(struct Far **far_ptr) {
 
 /** Sets the size to zero; very fast. */
 void FarClear(void) {
-	Debug("Far::clear: clearing Fars.\n");
+	debug("FarClear: clearing Fars.\n");
 	first_x = first_y = first_x_window = first_y_window = 0;
 	backgrounds_size = 0;
 }
@@ -209,7 +210,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 			while((feeler = first_x_window->prev_x)
 				  && (x_min <= feeler->x)) first_x_window = feeler;
 		}
-		/*Debug("first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
+		/*debug("first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
 		/* mark x; O(n) :[ */
 		for(b = first_x_window; b && b->x <= x_max; b = b->next_x)
 			b->is_selected = -1;
@@ -240,7 +241,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 			   && window_iterator->x < x_max_window + extent
 			   && window_iterator->y > y_min_window - extent
 			   && window_iterator->y < y_max_window + extent) {
-				/*Debug("Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
+				/*debug("Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
 				*x_ptr       = window_iterator->x;
 				*y_ptr       = window_iterator->y;
 				*theta_ptr   = window_iterator->theta;
@@ -249,7 +250,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 				window_iterator = window_iterator->next_y;
 				return -1;
 			}/* else {
-			  Debug("Tighter bounds rejected Spr%u(%f,%f)\n", SpriteGetId(window_iterator), window_iterator->x, window_iterator->y);
+			  debug("Tighter bounds rejected Spr%u(%f,%f)\n", SpriteGetId(window_iterator), window_iterator->x, window_iterator->y);
 			  }*/
 		}
 		window_iterator = window_iterator->next_y;
@@ -288,19 +289,19 @@ int FarGetId(const struct Far *b) {
 /** This is a private iteration which uses the same variable as Far::iterate.
  This actually returns a Far. Use it when you want to delete a sprite as you
  go though the list. */
-static struct Far *iterate(void) {
+/*static struct Far *iterate(void) {
 	if(iterator >= backgrounds + backgrounds_size) {
 		iterator = backgrounds;
 		return 0;
 	}
 	return iterator++;
-}
+}*/
 
 /** Sorts the sprites; they're (hopefully) almost sorted already from last
  frame, just freshens with insertion sort, O(n + m) where m is the
  related to the dynamicness of the scene
  @return	The number of equvalent-swaps (doesn't do this anymore.) */
-static void sort(void) {
+/*static void sort(void) {
 	isort((void **)&first_x,
 		  (int (*)(const void *, const void *))&compare_x,
 		  (void **(*)(void *const))&address_prev_x,
@@ -309,7 +310,7 @@ static void sort(void) {
 		  (int (*)(const void *, const void *))&compare_y,
 		  (void **(*)(void *const))&address_prev_y,
 		  (void **(*)(void *const))&address_next_y);
-}
+}*/
 
 /** Keep it sorted when there is one element out-of-place. */
 static void sort_notify(struct Far *s) {

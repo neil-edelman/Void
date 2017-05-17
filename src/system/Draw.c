@@ -111,8 +111,6 @@ static const int  spot_colour_size    = 3;*/
 };*/
 
 /* private prototypes */
-static GLuint link_shader(const char *vert_vs, const char *frag_fs, void (*attrib)(const GLuint)); /* repeated */
-static void tex_map_attrib(const GLuint shader); /* callback for internal */
 static int texture(struct AutoImage *image); /* decompresses */
 static int light_compute_texture(void); /* creates image */
 static void display(void); /* callback for odisplay */
@@ -133,7 +131,7 @@ int Draw(void) {
 	if(is_started) return -1;
 
 	if(!WindowStarted()) {
-		Debug("Draw: window not started.\n");
+		warn("Draw: window not started.\n");
 		return 0;
 	}
 
@@ -161,13 +159,14 @@ int Draw(void) {
     glEnableVertexAttribArray(G_TEXTURE);
     glVertexAttribPointer(G_TEXTURE, vertex_tex_size, GL_FLOAT, GL_FALSE,
 		sizeof(struct Vertex), vertex_tex_offset);
-	Debug("Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
+	debug("Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
 
 	/* textures */
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
 	/* lighting */
 	glActiveTexture(GT_LIGHT);
-	if(!(light_tex = light_compute_texture())) Debug("Draw: failed computing light texture.\n");
+	if(!(light_tex = light_compute_texture()))
+		warn("Draw: failed computing light texture.\n");
 	/* textures stored in imgs */
 	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
@@ -201,27 +200,25 @@ void Draw_(void) {
 	int i;
 
 	/* erase the shaders */
-	auto_Phong(G_POSITION, G_TEXTURE);
-	auto_Lighting(G_POSITION, G_TEXTURE);
-	auto_Hud(G_POSITION, G_TEXTURE);
-	auto_Far(G_POSITION, G_TEXTURE);
-	auto_Background(G_POSITION, G_TEXTURE);
+	auto_Phong_();
+	auto_Lighting_();
+	auto_Hud_();
+	auto_Far_();
+	auto_Background_();
 	/* erase the textures */
-	/* textures stored in imgs */
 	for(i = max_auto_images - 1; i; i--) {
-		if((tex = auto_images[i].texture)) {
-			Debug("~Draw: erase texture, Tex%u.\n", tex);
-			glDeleteTextures(1, &tex);
-			auto_images[i].texture = 0;
-		}
+		if(!(tex = auto_images[i].texture)) continue;
+		debug("~Draw: erase texture, Tex%u.\n", tex);
+		glDeleteTextures(1, &tex);
+		auto_images[i].texture = 0;
 	}
 	if(light_tex) {
-		Debug("~Draw: erase lighting texture, Tex%u.\n", light_tex);
+		debug("~Draw: erase lighting texture, Tex%u.\n", light_tex);
 		glDeleteTextures(1, &light_tex);
 		light_tex = 0;
 	}
 	if(vbo_geom && glIsBuffer(vbo_geom)) {
-		Debug("~Draw: erase Vbo%u.\n", vbo_geom);
+		debug("~Draw: erase Vbo%u.\n", vbo_geom);
 		glDeleteBuffers(1, &vbo_geom);
 		vbo_geom = 0;
 	}
@@ -263,31 +260,33 @@ void DrawSetBackground(const char *const str) {
 		background_tex = 0;
 		glActiveTexture(GT_BACKGROUND);
 		glBindTexture(GL_TEXTURE_2D, 0);
-		Debug("Image desktop cleared.\n");
+		debug("DrawSetBackground: image desktop cleared.\n");
 		return;
 	}
 	if(!(image = AutoImageSearch(str))) {
-		Debug("Draw::setDesktop: image \"%s\" not found.\n", str);
+		warn("DrawSetBackground: image \"%s\" not found.\n", str);
 		return;
 	}
 	/* background_tex is a global; the witdh/height of the image can be found with background_tex */
 	background_tex = image->texture;
 	glActiveTexture(GT_BACKGROUND);
 	glBindTexture(GL_TEXTURE_2D, background_tex);
-	Debug("Image \"%s,\" (Tex%u,) set as desktop.\n", image->name, background_tex);
+	debug("DrawSetBackground: image \"%s,\" (Tex%u,) set as desktop.\n",
+		image->name, background_tex);
 }
 
 /** @param str: Resource name to set the shield indicator. */
 void DrawSetShield(const char *const str) {
 	struct AutoImage *image;
 	if(!(image = AutoImageSearch(str))) {
-		Debug("Draw::setShield: image \"%s\" not found.\n", str);
+		warn("DrawSetShield: image \"%s\" not found.\n", str);
 		return;
 	}
 	shield_tex = image->texture;
 	glActiveTexture(GT_SPRITES);
 	glBindTexture(GL_TEXTURE_2D, shield_tex);
-	Debug("Image \"%s,\" (Tex%u,) set as shield.\n", image->name, shield_tex);
+	debug("DrawSetShield: image \"%s,\" (Tex%u,) set as shield.\n",
+		image->name, shield_tex);
 }
 
 /** Creates a texture from an image; sets the image texture unit.
@@ -307,7 +306,7 @@ static int texture(struct AutoImage *image) {
 		case IF_PNG:
 			if((error = lodepng_decode32(&pic, &width, &height, image->data,
 				image->data_size))) {
-				Debug("Draw::texture: lodepng error %u: %s\n", error,
+				warn("texture: lodepng error %u: %s\n", error,
 					lodepng_error_text(error));
 				break;
 			}
@@ -325,14 +324,15 @@ static int texture(struct AutoImage *image) {
 			break;
 		case IF_UNKNOWN:
 		default:
-			Debug("Draw::texture: Unknown image format.\n");
+			warn("texture: unknown image format.\n");
 	}
 	if(!is_alloc) {
-		Debug("Draw::texture: allocation failed.\n");
+		warn("texture: allocation failed.\n");
 		return 0;
 	}
 	if(width != image->width || height != image->height || depth != image->depth) {
-		Debug("Draw::texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n", image->width, image->height, image->depth, width, height, depth);
+		warn("texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n",
+			image->width, image->height, image->depth, width, height, depth);
 		is_bad = -1;
 	}
 	/* select image format */
@@ -353,7 +353,7 @@ static int texture(struct AutoImage *image) {
 			format   = GL_RGBA;
 			break;
 		default:
-			Debug("Draw::texture: not a recognised depth, %d.\n", depth);
+			warn("texture: not a recognised depth, %d.\n", depth);
 			is_bad = -1;
 	}
 	/* invert to go with OpenGL's strict adherence to standards vs traditions */
@@ -392,9 +392,9 @@ static int texture(struct AutoImage *image) {
 		image->texture = tex;
 		/* debug */
 #ifdef PRINT_PEDANTIC
-		Pedantic("Tex: %u.\n", image->texture);
+		pedantic("texture: %u:\n", image->texture);
 		if(image->width <= 80) image_print(image, pic);
-		else Pedantic("...too big to show.\n");
+		else pedantic(" . . . too big to show.\n");
 #endif
 	}
 	/* free the pic */
@@ -405,12 +405,10 @@ static int texture(struct AutoImage *image) {
 		case IF_JPEG:
 			njDone();
 			break;
-		/*case IF_BMP:
-			Bitmap_(&bmp);*/
 		default:
 			break;
 	}
-	Debug("Draw::texture: created %dx%dx%d texture, Tex%u.\n",
+	debug("texture: created %dx%dx%d texture, Tex%u.\n",
 		width, height, depth, tex);
 
 	WindowIsGlError("texture");
@@ -458,7 +456,8 @@ static int light_compute_texture(void) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, buffer_size, buffer_size, 0,
 		GL_RG, GL_FLOAT, buffer);
 	free(buffer);
-	Debug("Draw::texture: created %dx%dx%d hardcoded lighting texture, Tex%u.\n", buffer_size, buffer_size, 2, name);
+	debug("texture: created %dx%dx%d hardcoded lighting texture, Tex%u.\n",
+		buffer_size, buffer_size, 2, name);
 
 	WindowIsGlError("light_compute_texture");
 
@@ -557,9 +556,9 @@ static void display(void) {
 	/* fixme: have different indices to textures; keep track with texture manager; have to worry about how many tex units there are */
 	/*glUniform1i(light_texture_location, T_SPRITES); <- constant, now */
 	glUniform2f(auto_Lighting_shader.camera, camera_x, camera_y);
-	if(draw_is_print_sprites) Debug("%s:\n", "Draw");
+	if(draw_is_print_sprites) debug("display: dump:\n");
 	while(SpriteIterate(&x, &y, &t, &tex, &size)) {
-		if(draw_is_print_sprites) Debug("Tex %d Size %d (%.1f,%.1f:%.1f)\n", tex, size, x, y, t);
+		if(draw_is_print_sprites) debug("\tTex%d Size %d (%.1f,%.1f:%.1f)\n", tex, size, x, y, t);
 		/* draw a sprite; fixme: minimise texture transitions */
 		if(old_texture != tex) {
 			glBindTexture(GL_TEXTURE_2D, tex);
@@ -601,8 +600,7 @@ static void display(void) {
 	glUseProgram(0);
 	glutSwapBuffers();
 
-	WindowIsGlError("Draw::display");
-
+	WindowIsGlError("display");
 }
 
 /** Callback for glutReshapeFunc.
@@ -612,7 +610,7 @@ static void resize(int width, int height) {
 	int w_tex, h_tex;
 	float w_w_tex, h_h_tex;
 
-	Debug("Draw::resize: %dx%d.\n", width, height);
+	debug("resize: %dx%d.\n", width, height);
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
 	screen_width  = width; /* global shared with drawing */
@@ -627,7 +625,7 @@ static void resize(int width, int height) {
 	glBindTexture(GL_TEXTURE_2D, background_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);
-	/*Debug("w %d h %d\n", w_tex, h_tex);*/
+	/*debug("w %d h %d\n", w_tex, h_tex);*/
 	w_w_tex = (float)width  / w_tex;
 	h_h_tex = (float)height / h_tex;
 

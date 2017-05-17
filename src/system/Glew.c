@@ -32,14 +32,15 @@ int Glew(void) {
 
 #ifdef GLEW
 	if((err = glewInit()) != GLEW_OK) {
-		Debug("Glew: %s\n", glewGetErrorString(err));
+		warn("Glew: %s", glewGetErrorString(err));
 		return 0;
 	}
 	if(!glewIsSupported("GL_VERSION_2_0") /* !GLEW_VERSION_2_0 ? */) {
-		Debug("Glew: OpenGL 2.0+ shaders are not supported. :[\n");
+		warn("Glew: OpenGL 2.0+ shaders are not supported.\n");
 		return 0;
 	}
-	Debug("Glew: GLEW %s extension loading library ready for OpenGL 2.0+.\n", glewGetString(GLEW_VERSION));
+	debug("Glew: GLEW %s extension loading library ready for OpenGL2+.\n",
+		glewGetString(GLEW_VERSION));
 #endif
 
 	is_started = -1;

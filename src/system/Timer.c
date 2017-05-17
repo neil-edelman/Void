@@ -39,7 +39,8 @@ void TimerRun(void) {
 	game_time   =  last_time;
 	last_time   =  time;
 	is_running  =  -1;
-	Debug("Timer: starting timer with %ums paused, %ums programme, %ums game.\n", paused_time, last_time, TimerGetGameTime());
+	debug("Timer: starting timer with %ums paused, %ums programme, %ums game.\n",
+		paused_time, last_time, TimerGetGameTime());
 
 	glutTimerFunc(frametime_ms, &update, 0);
 
@@ -49,7 +50,7 @@ void TimerRun(void) {
 void TimerPause(void) {
 	if(!is_running) return;
 	is_running = 0;
-	Debug("Timer: stopped timer with last %ums.\n", last_time);
+	debug("TimerPause: stopped timer with last %ums.\n", last_time);
 }
 
 /** @return		Boolean value. */
@@ -88,11 +89,11 @@ static void update(int zero) {
 	const unsigned dt   = time - last_time;
 
 	if(!is_running) return;
-
 	last_time = time;
 	game_time = last_time - paused_time;
 	mean_frametime = (mean_frametime*persistance + dt*(1024-persistance)) >> 10;
 	glutTimerFunc(frametime_ms, &update, 0);
 	GameUpdate(dt);
 	glutPostRedisplay();
+	UNUSED(zero);
 }

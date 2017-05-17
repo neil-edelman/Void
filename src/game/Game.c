@@ -82,11 +82,11 @@ int Game(void) {
 
 	/* game elements */
 	if(!(game.asteroid = AutoTypeOfObjectSearch("asteroid"))
-	   || !(game.nautilus = AutoShipClassSearch("Nautilus"))
-	   || !(game.scorpion = AutoShipClassSearch("Scorpion"))
-	   || !(game.blob     = AutoShipClassSearch("Blob"))
-	   || !(game.start    = AutoSpaceZoneSearch("Earth"))) {
-		Debug("Game: couldn't find required game elements.\n");
+		|| !(game.nautilus = AutoShipClassSearch("Nautilus"))
+		|| !(game.scorpion = AutoShipClassSearch("Scorpion"))
+		|| !(game.blob     = AutoShipClassSearch("Blob"))
+		|| !(game.start    = AutoSpaceZoneSearch("Earth"))) {
+		debug("Game: couldn't find required game elements.\n");
 		return 0;
 	};
 
@@ -98,7 +98,7 @@ int Game(void) {
 	game.player = Sprite(SP_SHIP, 0, 0, 0.0, game.nautilus, B_HUMAN);
 	SpriteSetNotify(&game.player);
 
-	Debug("Game: on.\n");
+	debug("Game: on.\n");
 	is_started = -1;
 
 	return -1;
@@ -109,7 +109,7 @@ void Game_(void) {
 
 	if(!is_started) return;
 
-	Debug("~Game: over.\n");
+	debug("~Game: over.\n");
 	is_started = 0;
 }
 
@@ -148,7 +148,7 @@ struct Sprite *GameGetPlayer(void) {
 /* private */
 
 static void quit(void) {
-	Debug("Quit key pressed.\n");
+	debug("quit: key pressed.\n");
 	exit(EXIT_SUCCESS); /* meh */
 }
 
@@ -162,11 +162,11 @@ static void pause(void) {
 
 static void fps(void) {
 	unsigned mean = TimerGetMean();
-	Info("%.1f fps, %ums average frame-time; %ums game-time.\n", 1000.0 / mean, mean, TimerGetGameTime());
+	info("%.1f fps, %ums average frame-time; %ums game-time.\n", 1000.0 / mean, mean, TimerGetGameTime());
 }
 
 static void gametime(void) {
-	Info("%u ms game time.\n", TimerGetGameTime());
+	info("%u ms game time.\n", TimerGetGameTime());
 }
 
 /*static void add_sprites(void) {
@@ -176,10 +176,10 @@ static void gametime(void) {
 	int i;
 	
 	if(no + rocks + aliens >= cap) {
-		Debug("Game: reached the limit.\n");
+		debug("Game: reached the limit.\n");
 		return;
 	}
-	Debug("Game: adding more sprites.\n");
+	debug("Game: adding more sprites.\n");
 	for(i = 0; i < rocks; i++) {
 		asteroid = Debris(game.asteroid->image, 10.0f);
 		DebrisSetOrientation(asteroid, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), rnd(50.0f), rnd(50.0f), rnd(1.0f));
@@ -194,10 +194,10 @@ static void gametime(void) {
 static void position(void) {
 	float x, y, t;
 	if(!game.player) {
-		Info("You are scattered across space.\n");
+		info("You are scattered across space.\n");
 		return;
 	}
 	SpriteGetPosition(game.player, &x, &y);
 	t = SpriteGetTheta(game.player);
-	Info("You are %s at position (%.1f,%.1f:%.1f) with %dGJ/%dGJ.\n", SpriteToString(game.player), x, y, t, SpriteGetHit(game.player), SpriteGetMaxHit(game.player));
+	info("You are %s at position (%.1f,%.1f:%.1f) with %dGJ/%dGJ.\n", SpriteToString(game.player), x, y, t, SpriteGetHit(game.player), SpriteGetMaxHit(game.player));
 }

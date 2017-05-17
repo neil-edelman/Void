@@ -17,7 +17,6 @@
 		28FB37171E8A0FE1003610DC /* Orcish.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FB36FD1E8A0FE1003610DC /* Orcish.c */; };
 		28FB37181E8A0FE1003610DC /* Random.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FB36FF1E8A0FE1003610DC /* Random.c */; };
 		28FB37191E8A0FE1003610DC /* Sorting.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FB37011E8A0FE1003610DC /* Sorting.c */; };
-		28FB371A1E8A0FE1003610DC /* Print.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FB37031E8A0FE1003610DC /* Print.c */; };
 		28FB371B1E8A0FE1003610DC /* Draw.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FB37061E8A0FE1003610DC /* Draw.c */; };
 		28FB371C1E8A0FE1003610DC /* Glew.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FB37081E8A0FE1003610DC /* Glew.c */; };
 		28FB371D1E8A0FE1003610DC /* Key.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FB370A1E8A0FE1003610DC /* Key.c */; };
@@ -62,7 +61,6 @@
 		28FB37001E8A0FE1003610DC /* Random.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Random.h; sourceTree = "<group>"; };
 		28FB37011E8A0FE1003610DC /* Sorting.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = Sorting.c; sourceTree = "<group>"; };
 		28FB37021E8A0FE1003610DC /* Sorting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Sorting.h; sourceTree = "<group>"; };
-		28FB37031E8A0FE1003610DC /* Print.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = Print.c; sourceTree = "<group>"; };
 		28FB37041E8A0FE1003610DC /* Print.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Print.h; sourceTree = "<group>"; };
 		28FB37061E8A0FE1003610DC /* Draw.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = Draw.c; sourceTree = "<group>"; };
 		28FB37071E8A0FE1003610DC /* Draw.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Draw.h; sourceTree = "<group>"; };
@@ -130,7 +128,6 @@
 				28FB36ED1E8A0FE1003610DC /* EntryPosix.h */,
 				28FB36EE1E8A0FE1003610DC /* game */,
 				28FB36FB1E8A0FE1003610DC /* general */,
-				28FB37031E8A0FE1003610DC /* Print.c */,
 				28FB37041E8A0FE1003610DC /* Print.h */,
 				28FB37051E8A0FE1003610DC /* system */,
 			);
@@ -267,7 +264,6 @@
 				28FB37171E8A0FE1003610DC /* Orcish.c in Sources */,
 				28FB37181E8A0FE1003610DC /* Random.c in Sources */,
 				28FB37191E8A0FE1003610DC /* Sorting.c in Sources */,
-				28FB371A1E8A0FE1003610DC /* Print.c in Sources */,
 				28FB371B1E8A0FE1003610DC /* Draw.c in Sources */,
 				28FB371C1E8A0FE1003610DC /* Glew.c in Sources */,
 				28FB371D1E8A0FE1003610DC /* Key.c in Sources */,

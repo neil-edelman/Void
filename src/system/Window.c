@@ -36,19 +36,21 @@ int Window(const char *title, int argc, char **argv) {
 	time(&last_error);
 
 	/* glut */
-	Debug("Window: GLUT initialising.\n");
+	debug("Window: GLUT initialising.\n");
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE);
 	glutInitWindowSize(600, 400);
-	Debug("Window: starting window.\n");
+	debug("Window: starting window.\n");
 	glutCreateWindow(title ? title : "Untitled");
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex);
-	Info("GLSL stats: vendor %s; version %s; renderer %s; shading language version %s; combined texture image units %d; maximum texture size %d.\n",
-			glGetString(GL_VENDOR), glGetString(GL_VERSION),
-			glGetString(GL_RENDERER), glGetString(GL_SHADING_LANGUAGE_VERSION),
-			GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, max_tex);
+	info("GLSL: vendor %s; version %s; renderer %s; shading language version "
+		"%s; combined texture image units %d; maximum texture size %d.\n",
+		glGetString(GL_VENDOR), glGetString(GL_VERSION),
+		glGetString(GL_RENDERER), glGetString(GL_SHADING_LANGUAGE_VERSION),
+		GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, max_tex);
 	if(max_tex < warn_texture_size)
-		Warn("Window: maximum texture size is too small, %d/%d; warning! bad! (supposed to be 8 or larger.)\n", max_tex, warn_texture_size);
+		warn("Window: maximum texture size is too small, %d/%d; warning! "
+			"bad! (supposed to be 8 or larger.)\n", max_tex, warn_texture_size);
 	/*glutMouseFunc(&mouse);
 	 glutIdleFunc(0); */
 
@@ -88,9 +90,10 @@ int WindowIsGlError(const char *function) {
 			no_errs = 0;
 			time(&last_error);
 		}
-		Warn("Window::isGLError(caught in %s:) OpenGL error: %s.\n", function, gluErrorString(err));
+		warn("WindowIsGlError: OpenGL error caught in %s: %s.\n", function,
+			gluErrorString(err));
 		if(++no_errs > no_fails) {
-			Warn("Window::isGLError: too many errors! :[\n");
+			warn("Window:IsGLError: too many errors! :[\n");
 			exit(EXIT_FAILURE);
 		}
 		ohoh = -1;
@@ -104,7 +107,7 @@ void WindowToggleFullScreen(void) {
 	static int full = 0;
 
 	if(!full) {
-		Debug("Entering fullscreen.\n");
+		debug("WindowToggleFullScreen: entering fullscreen.\n");
 		full = -1;
 		x_size = glutGet(GLUT_WINDOW_WIDTH);
 		y_size = glutGet(GLUT_WINDOW_HEIGHT);
@@ -113,14 +116,14 @@ void WindowToggleFullScreen(void) {
 		glutFullScreen();
 		glutSetCursor(GLUT_CURSOR_NONE);
 	} else {
-		Debug("Exiting fullscreen.\n");
+		debug("WindowToggleFullScreen: exiting fullscreen.\n");
 		full = 0;
 		glutReshapeWindow(x_size, y_size);
 		glutPositionWindow(x_pos, y_pos);
 		glutSetCursor(GLUT_CURSOR_INHERIT);
 	}
 
-	WindowIsGlError("Window::toggleFullScreen");
+	WindowIsGlError("WindowToggleFullScreen");
 }
 
 #if 0
@@ -143,7 +146,7 @@ void OpenPrint(const char *fmt, ...) {
 	va_start(ap, fmt);
 	vsnprintf(open->console.buffer, console_buffer_size, fmt, ap);
 	va_end(ap);
-	Debug("Open::Console: \"%s\" (%d.)\n", open->console.buffer, console_buffer_size);
+	debug("OpenPrint: in Window, console: \"%s\" (%d.)\n", open->console.buffer, console_buffer_size);
 }
 
 /** called by display every frame */

@@ -1,3 +1,7 @@
+#define M_PI 3.1415926535897932384626433832795
+#define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
+#define M_1_PI 0.318309886183790671537767526745028724
+
 // must be the same as in Light.c
 #define MAX_LIGHTS 64
 // black stuff is hard to see
@@ -7,24 +11,23 @@
 
 uniform sampler2D texture_bmp, normal_bmp;
 
-
 varying vec3 lightDir, normal;
 
 uniform int       lights;
 uniform vec2      light_position[MAX_LIGHTS];
 uniform vec3      light_colour[MAX_LIGHTS];
-
 uniform float     directional_angle;
 uniform vec3      directional_colour;
-varying vec2 tex, tex_light;
-varying vec2 var_position;
+// passed these from vertex shader
+varying vec2 pass_texture, pass_light;
+varying vec2 pass_position;
 
 float light_i(int i, float in_sprite, vec4 light);
 
 void main() {
 	float to_light, delta;
-	vec4 texel = texture2D(texture_bmp, tex);
-	vec4 light = texture2D(normal_bmp, tex_light);
+	vec4 texel = texture2D(texture_bmp, pass_texture);
+	vec4 light = texture2D(normal_bmp, pass_light);
 	float in_sprite = light.g * M_2PI;
 	vec3 shade = vec3(AMBIENT);
 
@@ -46,7 +49,7 @@ void main() {
 }
 
 float light_i(int i, float in_sprite, vec4 light) {
-	vec2 relative  = light_position[i] - var_position;
+	vec2 relative  = light_position[i] - pass_position;
 	float dist     = length(relative) + EPSILON;
 	// the angle to the light, in the sprite, and the difference
 	float to_light = atan(relative.y, relative.x);

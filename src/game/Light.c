@@ -51,17 +51,17 @@ int Light(int *const id_ptr, const float i, const float r, const float g, const 
 	unsigned light;
 
 	if(!id_ptr) {
-		Warn("Light: light_ptr is null; where do you want the light to go?\n");
+		warn("Light: light_ptr is null; where do you want the light to go?\n");
 		return 0;
 	}
 	/* Naah, this can be un-initialised
-	 if(*id_ptr) Warn("Light: overriding %u on notify.\n", *id_ptr);*/
+	 if(*id_ptr) warn("Light: overriding %u on notify.\n", *id_ptr);*/
 	if(r < 0.0f || g < 0.0f || b < 0.0f || r > 1.0f || g > 1.0f || b > 1.0f) {
-		Warn("Light: invalid colour, [%f, %f, %f].\n", r, g, b);
+		warn("Light: invalid colour, [%f, %f, %f].\n", r, g, b);
 		return 0;
 	}
 	if(lights_size >= lights_capacity) {
-		Warn("Light: reached limit of %u/%u lights.\n", lights_size, lights_capacity);
+		warn("Light: reached limit of %u/%u lights.\n", lights_size, lights_capacity);
 		return 0;
 	}
 	light = lights_size++;
@@ -73,7 +73,7 @@ int Light(int *const id_ptr, const float i, const float r, const float g, const 
 	notify[light]     = id_ptr;
 	Orcish(label[light], sizeof label[light]);
 	*id_ptr           = light_to_id(light);
-	Pedantic("Light: created %s.\n", to_string(light));
+	pedantic("Light: created %s.\n", to_string(light));
 	return -1;
 }
 
@@ -87,7 +87,7 @@ void Light_(int *id_ptr) {
 
 	if(!id_ptr || !(id = *id_ptr)) return;
 	if((light = id_to_light(id)) >= lights_size) {
-		Warn("~Light: %u/%u out-of-bounds.\n", id, lights_size);
+		warn("~Light: %u/%u out-of-bounds.\n", id, lights_size);
 		return;
 	}
 
@@ -113,7 +113,7 @@ void Light_(int *id_ptr) {
 
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", to_string(replace));
 	}
-	Pedantic("~Light: erase %s.\n", buffer);
+	pedantic("~Light: erase %s.\n", buffer);
 	lights_size = replace;
 	*id_ptr = 0;
 }
@@ -137,7 +137,7 @@ void LightSetPosition(const int id, const float x, const float y) {
 	if(!id) return;
 
 	if(light >= lights_size) {
-		Warn("Light::setPosition: %u/%u not in range.\n", id, lights_size);
+		warn("LightSetPosition: %u/%u not in range.\n", id, lights_size);
 		return;
 	}
 	position[light].x = x;
@@ -152,7 +152,7 @@ void LightSetNotify(int *const id_ptr) {
 	if(!id_ptr || !(id = *id_ptr)) return;
 	light = id_to_light(id);
 	if(light >= lights_size) {
-		Warn("Light::setNotify: %u/%u not in range.\n", id, lights_size);
+		warn("LightSetNotify: %u/%u not in range.\n", id, lights_size);
 		return;
 	}
 	notify[light] = id_ptr;
@@ -166,11 +166,11 @@ char *LightToString(const int id) {
 
 void LightList(void) {
 	unsigned i;
-	Info("Lights: { ");
+	info("Lights: { ");
 	for(i = 0; i < lights_size; i++) {
-		Info("%s%s", to_string(i), i == lights_size - 1 ? " " : ", ");
+		info("%s%s", to_string(i), i == lights_size - 1 ? " " : ", ");
 	}
-	Info("}\n");
+	info("}\n");
 }
 
 unsigned id_to_light(const int id) { return id - 1; }
@@ -204,10 +204,10 @@ void BubblePush(void) {
 	float x = RandomUniformFloat(300.0f);
 	float y = RandomUniformFloat(300.0f);
 	if(((head_bubble + 1) & 63) == tail_bubble) {
-		Warn("%u-%u Bubble capacity reached.\n", tail_bubble, head_bubble);
+		warn("%u-%u Bubble capacity reached.\n", tail_bubble, head_bubble);
 		return;
 	}
-	Debug("%u-%u Creating Bubble %u\n", tail_bubble, head_bubble, head_bubble);
+	debug("%u-%u Creating Bubble %u\n", tail_bubble, head_bubble, head_bubble);
 	Light(&lgt_bubbles[head_bubble], 32.0f, 1.0f, 1.0f, 1.0f, 0);
 	LightSetPosition(lgt_bubbles[head_bubble], x, y);
 	spr_bubbles[head_bubble] = Sprite(SP_ETHEREAL, AutoImageSearch("AsteroidSmall.png"), (int)x, (int)y, 0.0f);
@@ -219,10 +219,10 @@ void BubblePush(void) {
 
 void BubblePop(void) {
 	if(head_bubble == tail_bubble) {
-		Warn("%u-%u No Bubbles to delete.\n", tail_bubble, head_bubble);
+		warn("%u-%u No Bubbles to delete.\n", tail_bubble, head_bubble);
 		return;
 	}
-	Debug("%u-%u Deleting Bubble %u\n", tail_bubble, head_bubble, tail_bubble);
+	debug("%u-%u Deleting Bubble %u\n", tail_bubble, head_bubble, tail_bubble);
 	Light_(&lgt_bubbles[tail_bubble]);
 	Sprite_(&spr_bubbles[tail_bubble]);
 	tail_bubble = (tail_bubble + 1) & 63;
@@ -238,10 +238,10 @@ void BubblePush(void) {
 	float x = RandomUniformFloat(300.0f);
 	float y = RandomUniformFloat(300.0f);
 	if(bubble >= 64) {
-		Warn("Bubble capacity reached %u.\n", bubble);
+		warn("Bubble capacity reached %u.\n", bubble);
 		return;
 	}
-	Debug("Creating Bubble %u.\n", bubble);
+	debug("Creating Bubble %u.\n", bubble);
 	Light(&lgt_bubbles[bubble], 32.0f, 1.0f, 1.0f, 1.0f, 0);
 	LightSetPosition(lgt_bubbles[bubble], x, y);
 	spr_bubbles[bubble] = Sprite(SP_ETHEREAL, AutoImageSearch("AsteroidSmall.png"), (int)x, (int)y, 0.0f);
@@ -253,10 +253,10 @@ void BubblePush(void) {
 
 void BubblePop(void) {
 	if(bubble >= 0) {
-		Warn("No Bubbles to delete %u.\n", bubble);
+		warn("No Bubbles to delete %u.\n", bubble);
 		return;
 	}
-	Debug("Deleting Bubble %u\n", bubble);
+	debug("Deleting Bubble %u\n", bubble);
 	Light_(&lgt_bubbles[bubble]);
 	Sprite_(&spr_bubbles[bubble]);
 	bubble--;

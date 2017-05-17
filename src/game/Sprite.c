@@ -244,7 +244,8 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	float lenght, one_lenght, cs, sn;
 
 	if(sprites_size >= sprites_capacity) {
-		Warn("Sprite: %s couldn't be created; reached maximum of %u.\n", decode_sprite_type(sp_type), sprites_capacity);
+		warn("Sprite: %s couldn't be created; reached maximum of %u.\n",
+			decode_sprite_type(sp_type), sprites_capacity);
 		return 0;
 	}
 
@@ -267,14 +268,14 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			image            = va_arg(args, struct AutoImage *const);
 			s->x = s->x1     = va_arg(args, const int);
 			s->y = s->y1     = va_arg(args, const int);
-			s->theta         = va_arg(args, const double);
-			s->mass          = va_arg(args, const double);
+			s->theta         = (float)va_arg(args, const double);
+			s->mass          = (float)va_arg(args, const double);
 			s->sp.debris.hit = (int)(s->mass * deb_hit_per_mass);
 			break;
 		case SP_SHIP:
 			s->x = s->x1     = va_arg(args, const int);
 			s->y = s->y1     = va_arg(args, const int);
-			s->theta         = va_arg(args, const double);
+			s->theta         = (float)va_arg(args, const double);
 			s->sp.ship.class = class = va_arg(args, struct AutoShipClass *const);
 			image                      = (struct AutoImage *)class->image; /*fixme*/
 			s->mass                    = class->mass;
@@ -323,7 +324,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.ethereal.is_picked_up  = 0;
 			break;
 		default:
-			Warn("Sprite: bad type outside of enumeration %d.\n", sp_type);
+			warn("Sprite: bad type outside of enumeration %d.\n", sp_type);
 			sprites_size--;
 			return 0;
 	}
@@ -332,7 +333,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	/* could be null was passed, eg, Sprite(ImageSearch("not there")); check!
 	this is after va_end because most things have resources that define image */
 	if(!image) {
-		Warn("Sprite: couldn't create %s because image is null.\n", SpriteToString(s));
+		warn("Sprite: couldn't create %s because image is null.\n", SpriteToString(s));
 		sprites_size--;
 		return 0;
 	}
@@ -341,7 +342,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	branch_cut_pi_pi(&s->theta);
 	if(s->x < -de_sitter || s->x > de_sitter
 	   || s->y < -de_sitter || s->y > de_sitter) {
-		Warn("Sprite: %s is beyond de Sitter universe, zeroed.\n", SpriteToString(s));
+		warn("Sprite: %s is beyond de Sitter universe, zeroed.\n", SpriteToString(s));
 		s->x = s->y = 0.0f;
 	}
 	/* fixme: have a more sutble way; ie, examine the image? */
@@ -354,7 +355,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 
 	/* enforce minimum mass */
 	if(s->mass < minimum_mass) {
-		Warn("Sprite: %s set to minimum mass %.2f.\n", SpriteToString(s), minimum_mass);
+		warn("Sprite: %s set to minimum mass %.2f.\n", SpriteToString(s), minimum_mass);
 		s->mass = minimum_mass;
 	}
 
@@ -371,21 +372,21 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	/* also stick it into bin */
 	bin_add(s);
 
-	Pedantic("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
+	pedantic("Sprite: created %s %u.\n", SpriteToString(s), SpriteGetHit(s));
 
 	return s;
 }
 
 /** This calls Sprite and further sets it up as a Gate from gate. */
-struct Sprite *SpriteGate(const struct AutoGate *gate) {
+struct Sprite *SpriteGate(const struct AutoGate *g) {
 	struct Sprite *s;
 
-	if(!gate) return 0;
+	if(!g) return 0;
 
-	if(!(s = Sprite(SP_ETHEREAL, AutoImageSearch("Gate.png"), gate->x, gate->y, gate->theta * deg_to_rad))) return 0;
+	if(!(s = Sprite(SP_ETHEREAL, AutoImageSearch("Gate.png"), g->x, g->y, g->theta * deg_to_rad))) return 0;
 	s->sp.ethereal.callback = &gate_travel;
-	s->sp.ethereal.to       = gate->to;
-	Pedantic("Sprite(Gate): created from Sprite, %s.\n", SpriteToString(s));
+	s->sp.ethereal.to       = g->to;
+	pedantic("SpriteGate: created from Sprite, %s.\n", SpriteToString(s));
 
 	return s;
 }
@@ -394,14 +395,14 @@ struct Sprite *SpriteGate(const struct AutoGate *gate) {
  @param sprite_ptr	A pointer to the sprite; gets set null on success. */
 void Sprite_(struct Sprite **sprite_ptr) {
 	struct Sprite *sprite, *replace;
-	int index;
+	unsigned idx;
 	unsigned characters;
 	char buffer[128];
 
 	if(!sprite_ptr || !(sprite = *sprite_ptr)) return;
-	index = sprite - sprites;
-	if(index < 0 || index >= sprites_size) {
-		Warn("~Sprite: %s, %u not in range %u.\n", SpriteToString(sprite), index + 1, sprites_size);
+	idx = (unsigned)(sprite - sprites);
+	if(idx >= sprites_size) {
+		warn("~Sprite: %s, %u not in range %u.\n", SpriteToString(sprite), idx + 1, sprites_size);
 		return;
 	}
 
@@ -417,11 +418,11 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	/* gid rid of the resources associated with each type of sprite */
 	switch(sprite->sp_type) {
 		case SP_SHIP:
-			Pedantic("~Sprite: first deleting Event from %s.\n", SpriteToString(sprite));
+			pedantic("~Sprite: first deleting Event from %s.\n", SpriteToString(sprite));
 			Event_(&sprite->sp.ship.event_recharge);
 			break;
 		case SP_WMD:
-			Pedantic("~Sprite: first deleting Light from %s.\n", SpriteToString(sprite));
+			pedantic("~Sprite: first deleting Light from %s.\n", SpriteToString(sprite));
 			Light_(&sprite->sp.wmd.light);
 			break;
 		case SP_DEBRIS:
@@ -445,7 +446,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 	if(sprite->next_y) sprite->next_y->prev_y = sprite->prev_y;
 
 	/* move the terminal sprite to replace this one */
-	if(index < --sprites_size) {
+	if(idx < --sprites_size) {
 
 		replace = &sprites[sprites_size];
 		memcpy(sprite, replace, sizeof(struct Sprite));
@@ -476,7 +477,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		/* move the resouces associated from replace to sprite */
 		switch(sprite->sp_type) {
 			case SP_SHIP:
-				Pedantic("~Sprite: replacing arguments of Event associated with %s, %s.\n", SpriteToString(sprite), EventToString(sprite->sp.ship.event_recharge));
+				pedantic("~Sprite: replacing arguments of Event associated with %s, %s.\n", SpriteToString(sprite), EventToString(sprite->sp.ship.event_recharge));
 				EventSetNotify(&sprite->sp.ship.event_recharge);
 				EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
 				break;
@@ -490,7 +491,7 @@ void Sprite_(struct Sprite **sprite_ptr) {
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", SpriteToString(sprite));
 	}
 
-	Pedantic("~Sprite: erase %s.\n", buffer);
+	pedantic("~Sprite: erase %s.\n", buffer);
 	*sprite_ptr = sprite = 0;
 
 }
@@ -588,7 +589,7 @@ void SpriteSetNotify(struct Sprite **const s_ptr) {
 	struct Sprite *s;
 	
 	if(!s_ptr || !(s = *s_ptr)) return;
-	if(s->notify) Warn("Sprite::setNotify: %s overriding a previous notification.\n", SpriteToString(s));
+	if(s->notify) warn("Sprite::setNotify: %s overriding a previous notification.\n", SpriteToString(s));
 	s->notify = s_ptr;
 }
 
@@ -678,7 +679,7 @@ void SpriteRecharge(struct Sprite *const s, const int recharge) {
 				/* rechage */
 				if(!s->sp.ship.event_recharge
 				   && s->sp.ship.hit < s->sp.ship.max_hit) {
-					Pedantic("Sprite::recharge: %s beginning charging cycle %d/%d.\n", SpriteToString(s), s->sp.ship.hit, s->sp.ship.max_hit);
+					pedantic("SpriteRecharge: %s beginning charging cycle %d/%d.\n", SpriteToString(s), s->sp.ship.hit, s->sp.ship.max_hit);
 					Event(&s->sp.ship.event_recharge, s->sp.ship.ms_recharge_hit, 0, FN_CONSUMER, &ship_recharge, s);
 				}
 			} else {
@@ -726,7 +727,7 @@ void SpriteDestroy(struct Sprite *const s) {
 	
 	SpriteGetVelocity(deb->sprite, &vx, &vy);
 	if((speed_2 = vx * vx + vy * vy) > maximum_speed_2) {
-		Debug("Debris::enforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
+		debug("Debris::enforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
 		DebrisExplode(deb);
 	}
 }*/
@@ -738,7 +739,7 @@ void SpriteDebris(const struct Sprite *const s) {
 
 	if(!s || !(small_image = AutoImageSearch("AsteroidSmall.png")) || s->size <= small_image->width) return;
 
-	Pedantic("Sprite::debris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
+	pedantic("SpriteDebris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
 
 	/* break into pieces -- new debris */
 	sub = Sprite(SP_DEBRIS, small_image, (int)s->x, (int)s->y, s->theta, small_asteroid_mass);
@@ -793,17 +794,20 @@ void SpriteShoot(struct Sprite *const s) {
 	if(!s || s->sp_type != SP_SHIP || !TimerIsTime(s->sp.ship.ms_recharge_wmd)) return;
 	wmd = Sprite(SP_WMD, s, s->sp.ship.class->weapon);
 	s->sp.ship.ms_recharge_wmd = TimerGetGameTime() + s->sp.ship.class->weapon->ms_recharge;
-	Pedantic("Sprite::shoot: %s shot %s\n", SpriteToString(s), SpriteToString(wmd));
+	pedantic("SpriteShoot: %s shot %s\n", SpriteToString(s),
+		SpriteToString(wmd));
 }
 
 /** Linear search for Sprites that are gates that go to to. */
 struct Sprite *SpriteOutgoingGate(const struct AutoSpaceZone *to) {
 	struct Sprite *s;
 
-	/*Debug("Outgoing: SpaceZone to: #%p %s.\n", to, to->name);*/
+	pedantic("SpriteOutgoingGate: SpaceZone to: #%p %s.\n", to, to->name);
 	while((s = iterate())) {
-		/*Debug("Outgoing: Sprite: #%p %s.\n", (void *)s, SpriteToString(s));
-		if(s->sp_type == SP_ETHEREAL) Debug("Outgoing: Ethreal to: #%p %s.\n", s->sp.ethereal.to, s->sp.ethereal.to->name);*/
+		pedantic("SpriteOutgoingGate: Sprite: #%p %s.\n", (void *)s,
+			SpriteToString(s));
+		if(s->sp_type == SP_ETHEREAL)
+			info("SpriteOutgoingGate: Ethreal to: #%p %s.\n", s->sp.ethereal.to,s->sp.ethereal.to->name);
 		if(s->sp_type != SP_ETHEREAL || s->sp.ethereal.to != to) continue;
 		iterator = sprites; /* reset */
 		break;
@@ -824,7 +828,7 @@ void SpriteRemoveIf(int (*const predicate)(struct Sprite *const)) {
 	 so push the iterator; fixed! pushed in the event queue with 0ms, don't
 	 need to wory about it anymore */
 	while((s = iterate())) {
-		Pedantic("Sprite::removeIf: consdering %s.\n", SpriteToString(s));
+		pedantic("SpriteRemoveIf: consdering %s.\n", SpriteToString(s));
 		if(!predicate || predicate(s)) Sprite_(&s);
 	}
 }
@@ -993,7 +997,7 @@ void SpriteUpdate(const int dt_ms) {
 						break;
 				}
 				if(0 >= s->sp.ship.hit) {
-					Info("Sprite::update: %s destroyed.\n", SpriteToString(s));
+					info("SpriteUpdate", "%s destroyed.\n", SpriteToString(s));
 					Sprite_(&s);
 					break;
 				}
@@ -1003,7 +1007,7 @@ void SpriteUpdate(const int dt_ms) {
 						SpriteRecharge(s, 1);
 						if(s->sp.ship.hit >= s->sp.ship.max_hit) break;
 						s->sp.ship.ms_recharge_event += s->sp.ship.ms_recharge_hit;
-						Debug("Sprite::update: %s recharging.\n", SpriteToString(s));
+						debug("Sprite::update: %s recharging.\n", SpriteToString(s));
 					}
 				}*/
 				break;
@@ -1017,7 +1021,7 @@ void SpriteUpdate(const int dt_ms) {
 				Sprite_(&s);
 				break;
 			default:
-				Warn("Sprite::update: unknown type.\n");
+				warn("SpriteUpdate: unknown type.\n");
 		}
 		/* s is possibly invalid! don't do anything here */
 	}
@@ -1027,14 +1031,14 @@ void SpriteList(void) {
 	struct Sprite *s;
 	int i;
 	int is_first = -1;
-	Info("Sprites: {\n");
+	info("SpriteList" "{\n");
 	for(i = 0; i < sprites_size; i++) {
 		/*while((s = iterate())) {*/
 		s = &sprites[i];
-		Info("\t%s\n", /*is_first ? "\n" : ",\n",*/ SpriteToString(s));
+		info("SpriteList", "\t%s\n", /*is_first ? "\n" : ",\n",*/ SpriteToString(s));
 		is_first = 0;
 	}
-	Info("}\n");
+	info("SpriteList", "}\n");
 }
 
 /* private */
@@ -1123,7 +1127,7 @@ void collide(struct Sprite *a) {
 		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
 							  b->y1, a->bounding + b->bounding, &t0))
 			response(a, b, t0);
-			/*Debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
+			/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
 	}
 	for(b = a->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
 		b_adj_y = b->next_y;
@@ -1133,7 +1137,7 @@ void collide(struct Sprite *a) {
 		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
 							  b->y1, a->bounding + b->bounding, &t0))
 			response(a, b, t0);
-			/*Debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
+			/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
 	}
 
 	/* reset for next time; fixme: ugly */
@@ -1273,19 +1277,20 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 	const float bounding = a->bounding + b->bounding;
 	/* fixme: float stored in memory? */
 
-	Pedantic("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f, %f--%ft\n", SpriteToString(a), SpriteToString(b), sqrtf(n_d2), bounding, a_m, b_m);
+	pedantic("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f, %f--%ft\n",
+		SpriteToString(a), SpriteToString(b), sqrtf(n_d2), bounding, a_m, b_m);
 
 	/* interpenetation; happens about half the time because of IEEE754 numerics,
 	 which could be on one side or the other; also, sprites that just appear,
 	 multiple collisions interfering, and gremlins; you absolutely do not want
 	 objects to get stuck orbiting each other (fixme: this happens) */
 	if(n_d2 < bounding * bounding) {
-		const float push = (bounding - sqrtf(n_d2)) * 0.5f;
-		Pedantic(" \\pushing sprites %f distance apart\n", push);
-		a->x -= n_x * push;
-		a->y -= n_y * push;
-		b->x += n_x * push;
-		b->y += n_y * push;
+		const float psuh = (bounding - sqrtf(n_d2)) * 0.5f;
+		pedantic("elastic_bounce: \\pushing sprites %f distance apart\n", push);
+		a->x -= n_x * psuh;
+		a->y -= n_y * psuh;
+		b->x += n_x * psuh;
+		b->y += n_y * psuh;
 	}
 
 	if(!a->no_collisions) {
@@ -1300,7 +1305,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 		a->vx1           += a_vx;
 		a->vy1           += a_vy;
 		a->no_collisions++;
-		Pedantic(" \\%u collisions %s (%s.)\n", a->no_collisions, SpriteToString(a), SpriteToString(b));
+		pedantic(" \\%u collisions %s (%s.)\n", a->no_collisions, SpriteToString(a), SpriteToString(b));
 	}
 	if(!b->no_collisions) {
 		/* first collision */
@@ -1314,7 +1319,7 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
 		b->vx1           += b_vx;
 		b->vy1           += b_vy;
 		b->no_collisions++;
-		Pedantic(" \\%u collisions %s (%s.)\n", b->no_collisions, SpriteToString(b), SpriteToString(a));
+		pedantic(" \\%u collisions %s (%s.)\n", b->no_collisions, SpriteToString(b), SpriteToString(a));
 	}
 
 }
@@ -1378,12 +1383,13 @@ static void deb_shp(struct Sprite *d, struct Sprite *s, const float d0) {
 }
 
 static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
-	Pedantic("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));
+	pedantic("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));
 	/* avoid inifinite destruction loop */
 	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
 	SpriteRecharge(d, -SpriteGetDamage(w));
 	SpriteDestroy(w);
+	UNUSED(d0);
 }
 
 static void deb_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
@@ -1391,12 +1397,13 @@ static void deb_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
 }
 
 static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
-	Pedantic("wmd_shp: %s -- %s\n", SpriteToString(w), SpriteToString(s));
+	pedantic("wmd_shp: %s -- %s\n", SpriteToString(w), SpriteToString(s));
 	/* avoid inifinite destruction loop */
 	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	SpriteRecharge(s, -SpriteGetDamage(w));
 	SpriteDestroy(w);
+	UNUSED(d0);
 }
 
 static void shp_wmd(struct Sprite *s, struct Sprite *w, const float d0) {
@@ -1409,6 +1416,7 @@ static void shp_eth(struct Sprite *s, struct Sprite *e, const float d0) {
 	/*if((fn = EtherealGetCallback(eth))) fn(eth, s);*/
 	/* while in iterate! danger! */
 	if(e->sp.ethereal.callback) e->sp.ethereal.callback(e, s);
+	UNUSED(d0);
 }
 
 static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
@@ -1428,25 +1436,26 @@ static char *decode_sprite_type(const enum SpType sp_type) {
 
 /** can be a callback for an Ethereal, whenever it collides with a Ship.
  IT CAN'T MODIFY THE LIST */
-static void gate_travel(struct Sprite *const gate, struct Sprite *ship) {
+static void gate_travel(struct Sprite *const gtae, struct Sprite *ship) {
 	/* this doesn't help!!! */
 	float x, y, /*vx, vy,*/ gate_norm_x, gate_norm_y, proj/*, h*/;
 
-	if(!gate || gate->sp_type != SP_ETHEREAL
+	if(!gtae || gtae->sp_type != SP_ETHEREAL
 	   || !ship || ship->sp_type != SP_SHIP) return; /* will never be true */
-	x = ship->x - gate->x;
-	y = ship->y - gate->y;
+	x = ship->x - gtae->x;
+	y = ship->y - gtae->y;
 	/* unneccesary?
 	 vx = ship_vx - gate_vx;
 	 vy = ship_vy - gate_vy;*/
-	gate_norm_x = cosf(gate->theta);
-	gate_norm_y = sinf(gate->theta);
+	gate_norm_x = cosf(gtae->theta);
+	gate_norm_y = sinf(gtae->theta);
 	proj = x * gate_norm_x + y * gate_norm_y; /* proj is the new h */
 	if(ship->sp.ship.horizon > 0 && proj < 0) {
-		Debug("gate_travel: %s crossed into the event horizon of %s.\n", SpriteToString(ship), SpriteToString(gate));
+		debug("gate_travel", "%s crossed into the event horizon of %s.\n",
+			SpriteToString(ship), SpriteToString(gtae));
 		if(ship == GameGetPlayer()) {
 			/* trasport to zone immediately */
-			Event(0, 0, 0, FN_CONSUMER, &ZoneChange, gate);
+			Event(0, 0, 0, FN_CONSUMER, &ZoneChange, gtae);
 		} else {
 			/* disappear */
 			/* fixme: test! */
@@ -1517,10 +1526,11 @@ static void do_ai(struct Sprite *const a, const int dt_ms) {
 /** can be used as an Event */
 static void ship_recharge(struct Sprite *const a) {
 	if(!a || SpriteGetType(a) != SP_SHIP) {
-		Warn("ship_recharge: called on %s.\n", SpriteToString(a));
+		warn("ship_recharge: called on %s.\n", SpriteToString(a));
 		return;
 	}
-	Debug("ship_recharge %s %uGJ/%uGJ\n", SpriteToString(a), a->sp.ship.hit, a->sp.ship.max_hit);
+	debug("ship_recharge: %s %uGJ/%uGJ\n", SpriteToString(a), a->sp.ship.hit,
+		a->sp.ship.max_hit);
 	if(a->sp.ship.hit >= a->sp.ship.max_hit) return;
 	a->sp.ship.hit++;
 	/* this checks if an Event is associated to the sprite, we momentarily don't
@@ -1528,7 +1538,8 @@ static void ship_recharge(struct Sprite *const a) {
 	 call Sprite::recharge and not stick the event down there.
 	 SpriteRecharge(a, 1);*/
 	if(a->sp.ship.hit >= a->sp.ship.max_hit) {
-		Debug("ship_recharge: %s shields full %uGJ/%uGJ.\n", SpriteToString(a), a->sp.ship.hit, a->sp.ship.max_hit);
+		debug("ship_recharge: %s shields full %uGJ/%uGJ.\n",
+			SpriteToString(a), a->sp.ship.hit, a->sp.ship.max_hit);
 		return;
 	}
 	Event(&a->sp.ship.event_recharge, a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &ship_recharge, a);
@@ -1541,7 +1552,7 @@ static void bin_add(struct Sprite *const s) {
 	const int index_x = clip(bin_x, -bin_half_size, bin_half_size - 1) + bin_half_size;
 	const int index_y = clip(bin_y, -bin_half_size, bin_half_size - 1) + bin_half_size;
 
-	Pedantic("Sprite::bin_add: (%d,%d -> %d,%d).\n", bin_x, bin_y, index_x, index_y);
+	pedantic("bin_add: (%d,%d -> %d,%d).\n", bin_x, bin_y, index_x, index_y);
 	s->next_bin = bins[index_y][index_x];
 	bins[index_y][index_x] = s;
 	s->bin_x = bin_x;
@@ -1564,7 +1575,7 @@ static void bin_change(struct Sprite *const s) {
 
 		for( ; this_wp && this_wp != s; last_wp = this_wp, this_wp = this_wp->next_bin);
 		if(!this_wp) {
-			Warn("Sprite::bin_change: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), bin_x, bin_y);
+			warn("bin_change: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), bin_x, bin_y);
 		} else if(!last_wp) {
 			/* bin has the sprite first */
 			bins[index_y][index_x] = s->next_bin;
@@ -1583,7 +1594,7 @@ static void bin_change(struct Sprite *const s) {
 		bins[index_y][index_x] = s;
 		s->bin_x = bin_x;
 		s->bin_y = bin_y;
-		Pedantic("Sprite::bin_change: %s changed to bin (%d, %d).\n", SpriteToString(s), bin_x, bin_y);
+		pedantic("bin_change: %s changed to bin (%d, %d).\n", SpriteToString(s), bin_x, bin_y);
 	}
 }
 
@@ -1596,7 +1607,7 @@ static void bin_remove(struct Sprite *const s) {
 	
 	for( ; this_wp && this_wp != s; last_wp = this_wp, this_wp = this_wp->next_bin);
 	if(!this_wp) {
-		Warn("Sprite::bin_remove: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), s->bin_x, s->bin_y);
+		warn("bin_remove: %s was nowhere to be found at (%d, %d).\n", SpriteToString(s), s->bin_x, s->bin_y);
 	} else if(!last_wp) {
 		/* bin has the sprite first */
 		bins[index_y][index_x] = s->next_bin;

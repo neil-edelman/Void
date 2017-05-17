@@ -1,3 +1,10 @@
+#include <stdio.h>  /* *printf */
+#include <stdarg.h> /* va_* */
+
+#ifndef UNUSED
+#define UNUSED(x) ((void)(x))
+#endif
+
 /* defaut is to print debug messages; turn it off by defining PRINT_NDEBUG */
 #ifndef PRINT_NDEBUG
 #define PRINT_DEBUG
@@ -5,17 +12,54 @@
 
 /* default is not to print pedantic messages; turn them on PRINT_PEDANTIC */
 
-void Warn(const char *format, ...);
-void Info(const char *format, ...);
-
-#ifndef PRINT_DEBUG
-#define Debug(fmt, ...) ((void)0)
+/** Debug level message to stderr. */
+static void debug(const char *const fmt, ...) {
+#ifdef PRINT_DEBUG
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	va_end(args);
 #else
-void Debug(const char *format, ...);
+	UNUSED(fmt);
 #endif
+}
 
-#ifndef PRINT_PEDANTIC
-#define Pedantic(fmt, ...) ((void)0)
+/** Dubug level pedantic to stderr. */
+static void pedantic(const char *const fmt, ...) {
+#ifdef PRINT_PEDANTIC
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	va_end(args);
 #else
-void Pedantic(const char *format, ...);
+	UNUSED(fmt);
 #endif
+}
+
+/** For warnings/errors that should always be printed to stderr. */
+static void warn(const char *const fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	va_end(args);
+}
+
+/** For info that should always be printed to stdout. */
+static void info(const char *const fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(stdout, fmt, args);
+	va_end(args);
+}
+
+static void unused_coda(void);
+static void unused_print(void) {
+	debug(0);
+	pedantic(0);
+	warn(0);
+	info(0);
+	unused_coda();
+}
+static void unused_coda(void) {
+	unused_print();
+}

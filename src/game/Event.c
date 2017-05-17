@@ -61,7 +61,8 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 	unsigned i;
 
 	if(events_size >= events_capacity) {
-		Warn("Event: couldn't be created; reached maximum of %u/%u.\n", events_size, events_capacity);
+		warn("Event: couldn't be created; reached maximum of %u/%u.\n",
+			events_size, events_capacity);
 		return 0;
 	}
 
@@ -73,7 +74,8 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 	}
 
 	if(event_ptr && *event_ptr) {
-		Warn("Event: would override %s on creation of %s %u!\n", EventToString(*event_ptr), decode_fn_type(fn_type), events_size);
+		warn("Event: would override %s on creation of %s %u.\n",
+			EventToString(*event_ptr), decode_fn_type(fn_type), events_size);
 		EventList();
 		return 0;
 	}
@@ -125,7 +127,8 @@ int Event(struct Event **const event_ptr, const int delay_ms, const int sigma_ms
 		last_event  = event;
 	}
 
-	Pedantic("Event: new %s at %dms inefficiency %u (size %u.)\n", EventToString(event), event->t_ms, i, events_size);
+	pedantic("Event: new %s at %dms inefficiency %u (size %u.)\n",
+		EventToString(event), event->t_ms, i, events_size);
 
 	return -1;
 }
@@ -141,7 +144,8 @@ void Event_(struct Event **event_ptr) {
 	if(!event_ptr || !(event = *event_ptr)) return;
 	idx = (unsigned)(event - events);
 	if(idx >= events_size) {
-		Warn("~Event: %s, %u not in range %u.\n", EventToString(event), idx + 1, events_size);
+		warn("~Event: %s, %u not in range %u.\n",
+			EventToString(event), idx + 1, events_size);
 		EventList();
 		return;
 	}
@@ -151,7 +155,8 @@ void Event_(struct Event **event_ptr) {
 
 	/* update notify for delete */
 	if(event->notify) {
-		Pedantic("~Event: %s notify %s to 0.\n", EventToString(event), EventToString(*event->notify));
+		pedantic("~Event: %s notify %s to 0.\n",
+			EventToString(event), EventToString(*event->notify));
 		*event->notify = 0;
 	}
 
@@ -179,7 +184,7 @@ void Event_(struct Event **event_ptr) {
 		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", EventToString(event));
 	}
 	/* FIXME: this is not the same event */
-	Pedantic("~Event: erase, %s size %u.\n", buffer, events_size);
+	pedantic("~Event: erase, %s size %u.\n", buffer, events_size);
 
 	*event_ptr = event = 0;
 }
@@ -188,9 +193,9 @@ void Event_(struct Event **event_ptr) {
 void EventRemoveIf(int (*const predicate)(struct Event *const)) {
 	struct Event *e;
 
-	Debug("Event::removeIf: clearing Events.\n");
+	debug("EventRemoveIf: maybe removing some Events.\n");
 	while((e = iterate())) {
-		Pedantic("Event::removeIf: consdering %s.\n", EventToString(e));
+		pedantic("EventRemoveIf: consdering %s.\n", EventToString(e));
 		if(!predicate || predicate(e)) Event_(&e);
 	}
 }
@@ -203,7 +208,7 @@ void EventSetNotify(struct Event **const e_ptr) {
 	if(!e_ptr || !(e = *e_ptr)) return;
 	/* this is supposed to happen -- Sprites are moving around thus this pointer
 	 has to update
-	 if(e->notify) Warn("Event::setNotify: %s overriding a previous notification, %s!\n", EventToString(e), EventToString(*e->notify));*/
+	 if(e->notify) warn("Event::setNotify: %s overriding a previous notification, %s!\n", EventToString(e), EventToString(*e->notify));*/
 	e->notify = e_ptr;
 }
 
@@ -240,7 +245,8 @@ void EventDispatch(void) {
 				break;
 		}
 		/* delete */
-		Pedantic("\nEvent: %s triggered. First deleting; then %u events left.\n", EventToString(e), events_size - 1);
+		pedantic("Event: %s triggered. First deleting; then %u events left.\n",
+			EventToString(e), events_size - 1);
 		Event_(&e);
 		switch(fn_type) {
 			case FN_RUNNABLE:	runnable();			break;
@@ -255,12 +261,13 @@ void EventReplaceArguments(struct Event *const event, ...) {
 	va_list args;
 
 	if(!event) return;
-	Pedantic("Event::replaceArguments: %s.\n", EventToString(event));
+	pedantic("EventReplaceArguments: %s.\n", EventToString(event));
 
 	va_start(args, event);
 	switch(event->fn_type) {
 		case FN_RUNNABLE:
-			Warn("Event::replaceArguments: %s has no arguments.\n", EventToString(event));
+			warn("EventReplaceArguments: %s has no arguments.\n",
+				EventToString(event));
 			break;
 		case FN_CONSUMER:
 			event->fn.consumer.t   = va_arg(args, void *);
@@ -303,16 +310,11 @@ char *EventToString(const struct Event *const e) {
 /** Prints the event list. */
 void EventList(void) {
 	struct Event *e;
-	/*int i;*/
-	Info("Events %ums {\n", TimerGetGameTime());
+	info("EventList: %ums {\n", TimerGetGameTime());
 	for(e = first_event; e; e = e->next) {
-		Info("\t%s\n", EventToString(e));
+		info("\t%s\n", EventToString(e));
 	}
-	/*Debug("} or {\n");
-	 for(i = 0; i < events_size; i++) {
-	 Debug("\t%s\n", EventToString(events + i));
-	 }*/
-	Debug("}\n");
+	info("}\n");
 }
 
 static struct Event *iterate(void) {

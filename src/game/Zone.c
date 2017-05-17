@@ -55,7 +55,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	const struct AutoShipClass *blob_class = AutoShipClassSearch("Blob");
 	int i;
 
-	Debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name, sz->ois1->name, sz->ois2->name);
+	debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name, sz->ois1->name, sz->ois2->name);
 
 	/* clear all objects */
 	SpriteRemoveIf(&remove_all_except_player);
@@ -109,14 +109,14 @@ void ZoneChange(const struct Sprite *const gate) {
 
 	/* new zone */
 	if(!new_zone) {
-		Warn("Zone::change: %s does not have information about zone.\n", SpriteToString(gate));
+		warn("ZoneChange: %s does not have information about zone.\n", SpriteToString(gate));
 		return;
 	}
 	Zone(new_zone);
 
 	/* get new gate parametres; after the Zone changes! */
 	if(!(new_gate = SpriteOutgoingGate(old_zone))) {
-		Warn("Zone::change: there doesn't seem to be a gate back.\n");
+		warn("ZoneChange: there doesn't seem to be a gate back.\n");
 		return;
 	}
 	SpriteGetPosition(new_gate, &newg_x, &newg_y);
@@ -135,7 +135,7 @@ void ZoneChange(const struct Sprite *const gate) {
 
 	/* get player parametres; after the Zone changes! */
 	if(!(player = GameGetPlayer())) {
-		Warn("Zone::change: there doesn't seem to be a player.\n");
+		warn("ZoneChange: there doesn't seem to be a player.\n");
 		return;
 	}
 	SpriteGetPosition(player, &player_x, &player_y);

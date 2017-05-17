@@ -200,7 +200,7 @@ static int print_ai(const char *const *const data_ptr) {
 static int print_float(const char *const *const data_ptr) {
 	float f;
 	sscanf(*data_ptr, "%f", &f);
-	printf("%f", f);
+	printf("%ff", f);
 	return -1;
 }
 

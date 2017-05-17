@@ -102,12 +102,12 @@ See <a href = "#Far">Far</a>.
 <tr>
 	<td>int</td>
 	<td><a href = "#FarIterate">FarIterate</a></td>
-	<td>float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr</td>
+	<td>float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr</td>
 </tr>
 <tr>
 	<td>int</td>
 	<td><a href = "#FarIterate">FarIterate</a></td>
-	<td>float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr</td>
+	<td>float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -159,7 +159,7 @@ Sets the size to zero; very fast.
 
 <div><a name = "FarIterate"><!-- --></a>
 <h3>FarIterate</h3>
-<pre>int <b>FarIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr)</pre>
+<pre>int <b>FarIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr)</pre>
 <p>
 Returns true while there are more, sets the values. The pointers need to
 all be there or else there will surely be a segfault.
@@ -189,7 +189,7 @@ having to send all the geometry at every frame!
 
 <div><a name = "FarIterate"><!-- --></a>
 <h3>FarIterate</h3>
-<pre>int <b>FarIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr)</pre>
+<pre>int <b>FarIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr)</pre>
 <p>
 This is the exact copy of SpriteIterate.
 </p>

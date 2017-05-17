@@ -1,2 +1,2 @@
 int RandomUniformInt(const int max);
-float RandomUniformFloat(const double max);
+float RandomUniformFloat(const float max);

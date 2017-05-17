@@ -85,6 +85,8 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* sprinkle some ships */
 	for(i = 0; i < /*200*/50; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
+	}
+	for(i = 0; i < 10; i++) {
 		Sprite(SP_SHIP, (int)rnd(de_sitter), (int)rnd(de_sitter), rnd((float)M_PI), blob_class, B_STUPID);
 	}
 

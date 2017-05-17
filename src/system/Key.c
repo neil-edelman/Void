@@ -131,7 +131,7 @@ static void key_down(unsigned char k, int x, int y) {
 	key->down  = glutGet(GLUT_ELAPSED_TIME);
 	if(key->handler) key->handler();
 	pedantic("key_down: key %d hit at %d ms.\n", k, key->down);
-	UNUSED(x);
+	UNUSED(x), UNUSED(y);
 }
 
 /** callback for glutKeyboardUpFunc */
@@ -141,7 +141,7 @@ static void key_up(unsigned char k, int x, int y) {
 	key->state = 0;
 	key->integral += glutGet(GLUT_ELAPSED_TIME) - key->down;
 	pedantic("key_up: key %d pressed %d ms at end of frame.\n", k, key->integral);
-	UNUSED(x);
+	UNUSED(x), UNUSED(y);
 }
 
 /** callback for glutSpecialFunc */
@@ -152,7 +152,7 @@ static void key_down_special(int k, int x, int y) {
 	key->down = glutGet(GLUT_ELAPSED_TIME);
 	if(key->handler) key->handler();
 	pedantic("key_down_special: key %d hit at %d ms.\n", k, key->down);
-	UNUSED(x);
+	UNUSED(x), UNUSED(y);
 }
 
 /** callback for glutSpecialUpFunc */
@@ -162,4 +162,5 @@ static void key_up_special(int k, int x, int y) {
 	key->state = 0;
 	key->integral += glutGet(GLUT_ELAPSED_TIME) - key->down;
 	pedantic("key_up_special: key %d pressed %d ms at end of frame.\n", k, key->integral);
+	UNUSED(x), UNUSED(y);
 }

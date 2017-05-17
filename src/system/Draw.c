@@ -23,6 +23,8 @@
 #include "Draw.h"
 #include "Window.h"
 
+#include "../system/Timer.h" /* TimerGetTime */
+
 /* Auto-generated, hard coded resouce files from Vsfs2h; run "make"
  and this should be automated.
  @fixme Ignore errors about ISO C90 string length 509. */
@@ -170,8 +172,10 @@ int Draw(void) {
 	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
 	if(!auto_Phong(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
-	glUniform1i(auto_Phong_shader.bmp_texture, TEX_CLASS_SPRITE);
-	glUniform1i(auto_Phong_shader.bmp_normal, TEX_CLASS_NORMAL);
+	glUniform1i(auto_Phong_shader.sampler, TEX_CLASS_SPRITE);
+	glUniform1i(auto_Phong_shader.sampler_light, TEX_CLASS_NORMAL);
+	/*glUniform1i(auto_Phong_shader.bmp_texture, TEX_CLASS_SPRITE);
+	glUniform1i(auto_Phong_shader.bmp_normal, TEX_CLASS_NORMAL);*/
 	glUniform1f(auto_Phong_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Phong_shader.directional_colour, 1, sunshine);
 
@@ -559,7 +563,7 @@ static void display(void) {
 	if(draw_is_print_sprites) debug("display: dump:\n");
 	while(SpriteIterate(&x, &y, &t, &tex, &size)) {
 		if(draw_is_print_sprites) debug("\tTex%d Size %d (%.1f,%.1f:%.1f)\n", tex, size, x, y, t);
-		/* draw a sprite; fixme: minimise texture transitions */
+		/* draw a sprite; fixme: minimise texture transitions? */
 		if(old_texture != tex) {
 			glBindTexture(GL_TEXTURE_2D, tex);
 			old_texture = tex;
@@ -574,14 +578,16 @@ static void display(void) {
 	}
 
 	/* fixme: experiment */
-	/*glUseProgram(auto_Phong_shader.compiled);
+	/* doesn't work
+	glUseProgram(auto_Phong_shader.compiled);*/
 	glUniform2f(auto_Phong_shader.camera, camera_x, camera_y);
 	glUniform1i(auto_Phong_shader.lights, lights = LightGetArraySize());
 	if(lights) {
 		glUniform2fv(auto_Phong_shader.light_position, lights, (GLfloat *)LightGetPositionArray());
 		glUniform3fv(auto_Phong_shader.light_colour, lights, (GLfloat *)LightGetColourArray());
-	}*/
-	x = y = t = 0.0f;
+	}
+	x = y = 0.0f;
+	t = 0.0001f * TimerGetGameTime();
 	size = 128;
 	glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
 	glBindTexture(GL_TEXTURE_2D, sphere_normals);
@@ -591,6 +597,7 @@ static void display(void) {
 	glUniform1f(auto_Phong_shader.angle, t);
 	glUniform2f(auto_Phong_shader.position, x, y);
 	glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
+	WindowIsGlError("display");
 
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {

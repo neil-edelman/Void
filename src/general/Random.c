@@ -26,6 +26,6 @@ int RandomUniformInt(const int max) {
 /** Uniform float.
  @param sigma
  @return		Random int about [-max, max]. */
-float RandomUniformFloat(const double max) {
-	return (float)((double)rand() / (1.0 + RAND_MAX) - 0.5) * 2.0 * max;
+float RandomUniformFloat(const float max) {
+	return (float)(((double)rand() / (1.0 + RAND_MAX) - 0.5) * 2.0 * (double)max);
 }

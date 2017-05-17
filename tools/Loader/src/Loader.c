@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
 		const char *key           = "name";
 		const char *key_type_name = "const char *const ";
 		printf("/** hard-coded images comapare and search */\n\n");
-		printf("int %s_comp(%s*key_ptr, const struct Auto%s *elem) {\n", snake, key_type_name, name);
+		printf("static int %s_comp(%s*key_ptr, const struct Auto%s *elem) {\n", snake, key_type_name, name);
 		printf("\t%sk = *key_ptr;\n", key_type_name);
 		printf("\t%se = elem->%s;\n\n", key_type_name, key);
 		printf("\treturn %s(k, e);\n", "strcmp");

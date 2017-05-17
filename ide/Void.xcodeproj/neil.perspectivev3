@@ -337,6 +337,7 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateExpansionKey</key>
 							<array>
 								<string>08FB7794FE84155DC02AAC07</string>
+								<string>28FB37271E8A1031003610DC</string>
 								<string>28FB36EB1E8A0FE1003610DC</string>
 								<string>28FB36EE1E8A0FE1003610DC</string>
 								<string>28FB36FB1E8A0FE1003610DC</string>
@@ -346,14 +347,12 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>12</integer>
-									<integer>7</integer>
-									<integer>4</integer>
+									<integer>6</integer>
 									<integer>0</integer>
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
-							<string>{{0, 48}, {185, 669}}</string>
+							<string>{{0, 0}, {185, 669}}</string>
 						</dict>
 						<key>PBXTopSmartGroupGIDs</key>
 						<array/>
@@ -386,23 +385,13 @@
 								<key>PBXProjectModuleGUID</key>
 								<string>2866766C1E8467350090EBDC</string>
 								<key>PBXProjectModuleLabel</key>
-								<string>Draw.c</string>
+								<string>&lt;No Editor&gt;</string>
 								<key>PBXSplitModuleInNavigatorKey</key>
 								<dict>
 									<key>Split0</key>
 									<dict>
 										<key>PBXProjectModuleGUID</key>
 										<string>2866766D1E8467350090EBDC</string>
-										<key>PBXProjectModuleLabel</key>
-										<string>Draw.c</string>
-										<key>_historyCapacity</key>
-										<integer>20</integer>
-										<key>bookmark</key>
-										<string>28483B711ECC1D0E00E58555</string>
-										<key>history</key>
-										<array>
-											<string>28483AFB1ECC096700E58555</string>
-										</array>
 									</dict>
 									<key>SplitCount</key>
 									<string>1</string>
@@ -524,11 +513,11 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>284838F21ECBA35D00E58555</string>
+				<string>288343891ECCE45900A451AC</string>
 				<string>1CA23ED40692098700951B8B</string>
-				<string>284838F31ECBA35D00E58555</string>
+				<string>2883438A1ECCE45900A451AC</string>
 				<string>2866766C1E8467350090EBDC</string>
-				<string>284838F41ECBA35D00E58555</string>
+				<string>2883438B1ECCE45900A451AC</string>
 				<string>1CA23EDF0692099D00951B8B</string>
 				<string>1CA23EE00692099D00951B8B</string>
 				<string>1CA23EE10692099D00951B8B</string>
@@ -677,14 +666,14 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>284838F51ECBA35D00E58555</string>
+				<string>288343981ECCE4F000A451AC</string>
 				<string>1CCC7628064C1048000F2A68</string>
 				<string>1CCC7629064C1048000F2A68</string>
-				<string>284838F61ECBA35D00E58555</string>
-				<string>284838F71ECBA35D00E58555</string>
-				<string>284838F81ECBA35D00E58555</string>
-				<string>284838F91ECBA35D00E58555</string>
-				<string>2866766C1E8467350090EBDC</string>
+				<string>288343991ECCE4F000A451AC</string>
+				<string>2883439A1ECCE4F000A451AC</string>
+				<string>2883439B1ECCE4F000A451AC</string>
+				<string>2883439C1ECCE4F000A451AC</string>
+				<string>2883439D1ECCE4F000A451AC</string>
 			</array>
 			<key>ToolbarConfigUserDefaultsMinorVersion</key>
 			<string>2</string>
@@ -701,7 +690,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>516693262.14007002</real>
+	<real>516749087.32270598</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -718,10 +707,11 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>284838FB1ECBA35D00E58555</string>
-		<string>284838FC1ECBA35D00E58555</string>
+		<string>288343E01ECCF71F00A451AC</string>
+		<string>288343E11ECCF71F00A451AC</string>
+		<string>2883439F1ECCE4F000A451AC</string>
+		<string>288343A01ECCE4F000A451AC</string>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
-		<string>28483A8B1ECBEF1200E58555</string>
 	</array>
 	<key>WindowString</key>
 	<string>429 50 851 728 0 0 1280 778 </string>
@@ -1097,7 +1087,7 @@
 			<key>TableOfContents</key>
 			<array>
 				<string>1C530D5B069F1CE1000CFCEE</string>
-				<string>28B6DE611ECADE1C00322E29</string>
+				<string>289893091ECCE44E00B05F13</string>
 				<string>1C78EAAC065D492600B07095</string>
 			</array>
 			<key>ToolbarConfiguration</key>

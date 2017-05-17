@@ -249,7 +249,7 @@ void RecordPrintSearches(void) {
 		key           = record->key.name;
 		key_type      = record->key.type;
 		key_type_name = TypeGetTypeName(record->key.type);
-		printf("int %s_comp(%s*key_ptr, const struct Auto%s *elem) {\n", snake, key_type_name, name);
+		printf("static int %s_comp(%s*key_ptr, const struct Auto%s *elem) {\n", snake, key_type_name, name);
 		printf("\t%sk = *key_ptr;\n", key_type_name);
 		printf("\t%se = elem->%s;\n\n", key_type_name, key);
 		printf("\treturn %s(k, e);\n", TypeGetComparatorName(key_type));

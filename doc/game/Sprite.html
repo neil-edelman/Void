@@ -216,7 +216,7 @@ Sprite AI behaviour.
 <tr>
 	<td>int</td>
 	<td><a href = "#SpriteIterate">SpriteIterate</a></td>
-	<td>float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr</td>
+	<td>float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -489,7 +489,7 @@ sprite; viz, the thing you want to do.
 
 <div><a name = "SpriteIterate"><!-- --></a>
 <h3>SpriteIterate</h3>
-<pre>int <b>SpriteIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr)</pre>
+<pre>int <b>SpriteIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr)</pre>
 <p>
 Returns true while there are more sprites in the window, sets the values.
 The pointers need to all be there or else there will surely be a segfault.
@@ -505,6 +505,8 @@ The pointers need to all be there or else there will surely be a segfault.
 	<dd>OpenGl texture unit.</dd>
 	<dt>parameter: size_ptr</dt>
 	<dd>Size of the texture.</dd>
+	<dt>return</dt>
+	<dd>True if the values have been set.</dd>
 </dl>
 </div>
 

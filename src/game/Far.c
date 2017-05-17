@@ -159,7 +159,7 @@ void FarClear(void) {
  @param texture_ptr	OpenGl texture unit.
  @param size_ptr	Size of the texture.
  @return			True if the values have been set. */
-int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
+int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr) {
 	if(iterator >= backgrounds + backgrounds_size) {
 		iterator = backgrounds;
 		return 0;
@@ -174,7 +174,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, i
 }
 #else
 /** This is the exact copy of SpriteIterate. */
-int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, int *texture_ptr, int *size_ptr) {
+int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr) {
 	static int x_min_window, x_max_window, y_min_window, y_max_window;
 	static int x_min, x_max, y_min, y_max; /* these are more expansive */
 	static int is_reset = -1; /* oy, static */

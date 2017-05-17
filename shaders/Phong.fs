@@ -9,22 +9,22 @@
 // for avoiding singularity
 #define EPSILON 0.1
 
-uniform sampler2D sampler;
-uniform sampler2D sampler_light;
-uniform int       lights;
-uniform vec2      light_position[MAX_LIGHTS];
-uniform vec3      light_colour[MAX_LIGHTS];
-uniform float     directional_angle;
-uniform vec3      directional_colour;
-varying vec2 tex, tex_light;
-varying vec2 var_position;
+uniform sampler2D bmp_sprite, bmp_normal;
+uniform int   lights;
+uniform vec2  light_position[MAX_LIGHTS];
+uniform vec3  light_colour[MAX_LIGHTS];
+uniform float directional_angle;
+uniform vec3  directional_colour;
+// passed these from vertex shader
+varying vec2 pass_texture, pass_light;
+varying vec2 pass_position;
 
 float light_i(int i, float in_sprite, vec4 light);
 
 void main() {
 	float to_light, delta;
-	vec4 texel = texture2D(sampler,       tex);
-	vec4 light = texture2D(sampler_light, tex_light);
+	vec4 texel = texture2D(bmp_sprite, pass_texture);
+	vec4 light = texture2D(bmp_normal, pass_light);
 	float in_sprite = light.g * M_2PI;
 	vec3 shade = vec3(AMBIENT);
 
@@ -42,11 +42,12 @@ void main() {
 		}
 	}
 	// final colour
-	gl_FragColor = vec4(shade, 1.0) * texel;
+	//gl_FragColor = vec4(shade, 1.0) * texel;
+	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
 
 float light_i(int i, float in_sprite, vec4 light) {
-	vec2 relative  = light_position[i] - var_position;
+	vec2 relative  = light_position[i] - pass_position;
 	float dist     = length(relative) + EPSILON;
 	// the angle to the light, in the sprite, and the difference
 	float to_light = atan(relative.y, relative.x);

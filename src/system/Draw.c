@@ -172,10 +172,8 @@ int Draw(void) {
 	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
 	if(!auto_Phong(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
-	glUniform1i(auto_Phong_shader.sampler, TEX_CLASS_SPRITE);
-	glUniform1i(auto_Phong_shader.sampler_light, TEX_CLASS_NORMAL);
-	/*glUniform1i(auto_Phong_shader.bmp_texture, TEX_CLASS_SPRITE);
-	glUniform1i(auto_Phong_shader.bmp_normal, TEX_CLASS_NORMAL);*/
+	glUniform1i(auto_Phong_shader.bmp_sprite, TEX_CLASS_SPRITE);
+	glUniform1i(auto_Phong_shader.bmp_normal, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Phong_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Phong_shader.directional_colour, 1, sunshine);
 
@@ -578,8 +576,7 @@ static void display(void) {
 	}
 
 	/* fixme: experiment */
-	/* doesn't work
-	glUseProgram(auto_Phong_shader.compiled);*/
+	glUseProgram(auto_Phong_shader.compiled);
 	glUniform2f(auto_Phong_shader.camera, camera_x, camera_y);
 	glUniform1i(auto_Phong_shader.lights, lights = LightGetArraySize());
 	if(lights) {
@@ -671,12 +668,14 @@ static void resize(int width, int height) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}
 
-	/* far shader and light shader also need updates of 2/[width|height];
-	 meh, we can probably do them in sw? */
+	/* update the shaders; YOU MUST CALL THIS IF THE PROGRAMME HAS ANY
+	 DEPENDENCE ON SCREEN SIZE */
 	glUseProgram(auto_Hud_shader.compiled);
 	glUniform2f(auto_Hud_shader.two_screen, two_width, two_height);
 	glUseProgram(auto_Far_shader.compiled);
 	glUniform2f(auto_Far_shader.two_screen, two_width, two_height);
 	glUseProgram(auto_Lighting_shader.compiled);
 	glUniform2f(auto_Lighting_shader.two_screen, two_width, two_height);
+	glUseProgram(auto_Phong_shader.compiled);
+	glUniform2f(auto_Phong_shader.inv_screen, two_width, two_height);
 }

@@ -75,7 +75,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 665";
 		rLen = 0;
-		rLoc = 23463;
+		rLoc = 23315;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -99,7 +99,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 665";
 		rLen = 0;
-		rLoc = 23463;
+		rLoc = 23315;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -109,7 +109,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 665";
 		rLen = 0;
-		rLoc = 23463;
+		rLoc = 23315;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -119,7 +119,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 665";
 		rLen = 0;
-		rLoc = 23463;
+		rLoc = 23315;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -129,7 +129,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 665";
 		rLen = 0;
-		rLoc = 23463;
+		rLoc = 23315;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -383,9 +383,9 @@
 	};
 	28FB37221E8A100A003610DC /* Auto.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 3614}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 3575}}";
 			sepNavSelRange = "{6743, 0}";
-			sepNavVisRange = "{5859, 1576}";
+			sepNavVisRange = "{5859, 1512}";
 		};
 	};
 	28FB37281E8A1031003610DC /* lodepng.c */ = {

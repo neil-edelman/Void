@@ -352,7 +352,7 @@
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
-							<string>{{0, 0}, {185, 669}}</string>
+							<string>{{0, 72}, {185, 669}}</string>
 						</dict>
 						<key>PBXTopSmartGroupGIDs</key>
 						<array/>
@@ -690,7 +690,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>516749087.32270598</real>
+	<real>516753335.332205</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -707,11 +707,10 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>288343E01ECCF71F00A451AC</string>
-		<string>288343E11ECCF71F00A451AC</string>
 		<string>2883439F1ECCE4F000A451AC</string>
 		<string>288343A01ECCE4F000A451AC</string>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
+		<string>288343F21ECCFDA100A451AC</string>
 	</array>
 	<key>WindowString</key>
 	<string>429 50 851 728 0 0 1280 778 </string>

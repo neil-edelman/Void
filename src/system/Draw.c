@@ -44,20 +44,35 @@ extern const int max_auto_images;
 /* if is started, we don't and can't start it again */
 static int is_started;
 
+/** Texture addresses on the graphics card, when you want different textures
+ simultaneously. Limit of {MAX_COMBINED_TEXTURE_IMAGE_UNITS}, which may be
+ small, (like 2?) */
+enum TexClass {
+	TEX_CLASS_SPRITE,
+	TEX_CLASS_NORMAL,
+	TEX_CLASS_BACKGROUND
+};
+static GLuint TexClassTexture(const enum TexClass class) {
+	assert(class < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+	return class + GL_TEXTURE0;
+}
+
+#if 0
 /* for textures; assert GlTex: GL_TEXTUREx <-> TexArray: x;
  fixme: do more complex texture mapping management once we have textures
  "The constants obey TEXTUREi = TEXTURE0+i (i is in the range 0 to k - 1,
  where k is the value of MAX_COMBINED_TEXTURE_IMAGE_UNITS)." */
 enum GlTex {
-	GT_LIGHT = GL_TEXTURE0,
-	GT_BACKGROUND = GL_TEXTURE1,
-	GT_SPRITES = GL_TEXTURE2
+	TexClassTexture(TEX_CLASS_NORMAL) = GL_TEXTURE0,
+	TexClassTexture(TEX_CLASS_BACKGROUND) = GL_TEXTURE1,
+	TexClassTexture(TEX_CLASS_SPRITE) = GL_TEXTURE2
 };
 enum TexArray {
-	T_LIGHT = 0,
-	T_BACKGROUND = 1,
-	T_SPRITES = 2
+	TEX_CLASS_NORMAL = 0,
+	TEX_CLASS_BACKGROUND = 1,
+	TEX_CLASS_SPRITE = 2
 };
+#endif
 
 /* for shader attribute assigment */
 enum VertexAttribs { G_POSITION, G_TEXTURE };
@@ -164,7 +179,7 @@ int Draw(void) {
 	/* textures */
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
 	/* lighting */
-	glActiveTexture(GT_LIGHT);
+	glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
 	if(!(light_tex = light_compute_texture()))
 		warn("Draw: failed computing light texture.\n");
 	/* textures stored in imgs */
@@ -173,17 +188,17 @@ int Draw(void) {
 	/* shader initialisation */
 	if(!auto_Background(G_POSITION, G_TEXTURE)) return Draw_(), 0;
 	/* these are constant; fixme: could they be declared as such? */
-	glUniform1i(auto_Background_shader.sampler, T_BACKGROUND);
+	glUniform1i(auto_Background_shader.sampler, TEX_CLASS_BACKGROUND);
 	if(!auto_Far(G_POSITION, G_TEXTURE)) return Draw_(), 0;
-	glUniform1i(auto_Far_shader.sampler, T_SPRITES);
-	glUniform1i(auto_Far_shader.sampler_light, T_LIGHT);
+	glUniform1i(auto_Far_shader.sampler, TEX_CLASS_SPRITE);
+	glUniform1i(auto_Far_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Far_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Far_shader.directional_colour, 1, sunshine);
 	if(!auto_Hud(G_POSITION, G_TEXTURE)) return Draw_(), 0;
-	glUniform1i(auto_Hud_shader.sampler, T_SPRITES);
+	glUniform1i(auto_Hud_shader.sampler, TEX_CLASS_SPRITE);
 	if(!auto_Lighting(G_POSITION, G_TEXTURE)) return Draw_(), 0;
-	glUniform1i(auto_Lighting_shader.sampler, T_SPRITES);
-	glUniform1i(auto_Lighting_shader.sampler_light, T_LIGHT);
+	glUniform1i(auto_Lighting_shader.sampler, TEX_CLASS_SPRITE);
+	glUniform1i(auto_Lighting_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
 	if(!auto_Phong(G_POSITION, G_TEXTURE)) return Draw_(), 0;
@@ -251,14 +266,14 @@ void DrawGetScreen(unsigned *width_ptr, unsigned *height_ptr) {
 }
 
 /** Sets background to the image with key key. Fixme: allows you to set not
- GT_BACKGROUND textures, which probably don't work, maybe? (oh, they do) */
+ TexClassTexture(TEX_CLASS_BACKGROUND) textures, which probably don't work, maybe? (oh, they do) */
 void DrawSetBackground(const char *const str) {
 	struct AutoImage *image;
 	
 	/* clear the backgruoud; fixme: test, it isn't used at all */
 	if(!str) {
 		background_tex = 0;
-		glActiveTexture(GT_BACKGROUND);
+		glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
 		glBindTexture(GL_TEXTURE_2D, 0);
 		debug("DrawSetBackground: image desktop cleared.\n");
 		return;
@@ -269,7 +284,7 @@ void DrawSetBackground(const char *const str) {
 	}
 	/* background_tex is a global; the witdh/height of the image can be found with background_tex */
 	background_tex = image->texture;
-	glActiveTexture(GT_BACKGROUND);
+	glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
 	glBindTexture(GL_TEXTURE_2D, background_tex);
 	debug("DrawSetBackground: image \"%s,\" (Tex%u,) set as desktop.\n",
 		image->name, background_tex);
@@ -283,7 +298,7 @@ void DrawSetShield(const char *const str) {
 		return;
 	}
 	shield_tex = image->texture;
-	glActiveTexture(GT_SPRITES);
+	glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
 	glBindTexture(GL_TEXTURE_2D, shield_tex);
 	debug("DrawSetShield: image \"%s,\" (Tex%u,) set as shield.\n",
 		image->name, shield_tex);
@@ -374,7 +389,7 @@ static int texture(struct AutoImage *image) {
 	/* load the uncompressed image into a texture */
 	if(!is_bad) {
 		glGenTextures(1, (unsigned *)&tex);
-		glActiveTexture((unsigned)(image->depth == 3 ? GT_BACKGROUND : GT_SPRITES));
+		glActiveTexture((unsigned)(image->depth == 3 ? TexClassTexture(TEX_CLASS_BACKGROUND) : TexClassTexture(TEX_CLASS_SPRITE)));
 		glBindTexture(GL_TEXTURE_2D, tex);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -503,10 +518,10 @@ static void display(void) {
 		glDisable(GL_BLEND);
 
 		/* why?? */
-		glActiveTexture(GT_BACKGROUND);
+		glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
 
 		/* fixme: of course it's a background, set once */
-		/*glUniform1i(background_sampler_location, T_BACKGROUND);*/
+		/*glUniform1i(background_sampler_location, TEX_CLASS_BACKGROUND);*/
 		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_bg_first, vbo_bg_count);
 	}
@@ -515,7 +530,7 @@ static void display(void) {
 	/* use simple tex_map_shader */
 	/*glUseProgram(tex_map_shader);*/
 	/* why? the glsl entirely specifies this */
-	glActiveTexture(GT_SPRITES);
+	glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
 
 	/* turn on background lighting (sprites) */
 	glUseProgram(auto_Far_shader.compiled);
@@ -523,7 +538,7 @@ static void display(void) {
 	glUniform1i(light_lights_location, 0);*/
 
 	/* background sprites */
-	/*const->glUniform1i(far_texture_location, T_SPRITES); */
+	/*const->glUniform1i(far_texture_location, TEX_CLASS_SPRITE); */
 	glUniform2f(auto_Far_shader.camera, camera_x, camera_y);
 	while(FarIterate(&x, &y, &t, &tex, &size)) {
 		if(old_texture != tex) {
@@ -554,7 +569,7 @@ static void display(void) {
 	 -draw */
 	/*glEnable(GL_BLEND);*/
 	/* fixme: have different indices to textures; keep track with texture manager; have to worry about how many tex units there are */
-	/*glUniform1i(light_texture_location, T_SPRITES); <- constant, now */
+	/*glUniform1i(light_texture_location, TEX_CLASS_SPRITE); <- constant, now */
 	glUniform2f(auto_Lighting_shader.camera, camera_x, camera_y);
 	if(draw_is_print_sprites) debug("display: dump:\n");
 	while(SpriteIterate(&x, &y, &t, &tex, &size)) {
@@ -621,7 +636,7 @@ static void resize(int width, int height) {
 	two_height = 2.0f / height;
 
 	/* resize the background */
-	/* glActiveTexture(T_BACKGROUND); this does nothing? */
+	/* glActiveTexture(TEX_CLASS_BACKGROUND); this does nothing? */
 	glBindTexture(GL_TEXTURE_2D, background_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);

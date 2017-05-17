@@ -81,6 +81,9 @@
 			284839CD1ECBCE4100E58555 /* PBXTextBookmark */ = 284839CD1ECBCE4100E58555 /* PBXTextBookmark */;
 			28483A351ECBD4C300E58555 /* PBXTextBookmark */ = 28483A351ECBD4C300E58555 /* PBXTextBookmark */;
 			28483A811ECBE67500E58555 /* PBXTextBookmark */ = 28483A811ECBE67500E58555 /* PBXTextBookmark */;
+			28483A861ECBE97F00E58555 /* PBXTextBookmark */ = 28483A861ECBE97F00E58555 /* PBXTextBookmark */;
+			28483A8A1ECBEF1200E58555 /* PBXTextBookmark */ = 28483A8A1ECBEF1200E58555 /* PBXTextBookmark */;
+			28483A911ECBF12F00E58555 /* PBXTextBookmark */ = 28483A911ECBF12F00E58555 /* PBXTextBookmark */;
 		};
 		sourceControlManager = 2866766A1E8467300090EBDC /* Source Control */;
 		userBuildSettings = {
@@ -95,7 +98,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 524;
 		vrLoc = 22473;
@@ -105,7 +108,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -115,7 +118,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 524;
 		vrLoc = 22473;
@@ -125,7 +128,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -135,7 +138,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -145,7 +148,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -155,7 +158,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 513;
 		vrLoc = 22396;
@@ -165,7 +168,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -175,7 +178,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 513;
 		vrLoc = 22396;
@@ -185,7 +188,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -195,7 +198,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 513;
 		vrLoc = 22396;
@@ -205,7 +208,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -215,7 +218,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -225,7 +228,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -235,7 +238,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -245,7 +248,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -255,7 +258,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -265,7 +268,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -275,7 +278,7 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 652";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -285,7 +288,37 @@
 		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
 		name = "Draw.c: 650";
 		rLen = 0;
-		rLoc = 22324;
+		rLoc = 23121;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483A861ECBE97F00E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 650";
+		rLen = 0;
+		rLoc = 23121;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483A8A1ECBEF1200E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 648";
+		rLen = 0;
+		rLoc = 23121;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
+	};
+	28483A911ECBF12F00E58555 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
+		name = "Draw.c: 665";
+		rLen = 0;
+		rLoc = 23121;
 		rType = 0;
 		vrLen = 0;
 		vrLoc = 0;
@@ -320,7 +353,7 @@
 	};
 	28FB36EF1E8A0FE1003610DC /* Event.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 4290}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 4264}}";
 			sepNavSelRange = "{5976, 0}";
 			sepNavVisRange = "{5104, 1622}";
 		};
@@ -362,7 +395,7 @@
 	};
 	28FB36F51E8A0FE1003610DC /* Light.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 3614}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 3653}}";
 			sepNavSelRange = "{7937, 0}";
 			sepNavVisRange = "{6584, 1523}";
 		};
@@ -376,9 +409,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 21437}}";
-			sepNavSelRange = "{54207, 1}";
-			sepNavVisRange = "{53212, 1771}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 21203}}";
+			sepNavSelRange = "{51722, 0}";
+			sepNavVisRange = "{50878, 1728}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
@@ -390,9 +423,9 @@
 	};
 	28FB36F91E8A0FE1003610DC /* Zone.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2652}}";
-			sepNavSelRange = "{1567, 0}";
-			sepNavVisRange = "{822, 1485}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2483}}";
+			sepNavSelRange = "{4176, 0}";
+			sepNavVisRange = "{3206, 1719}";
 		};
 	};
 	28FB36FA1E8A0FE1003610DC /* Zone.h */ = {
@@ -453,8 +486,8 @@
 	};
 	28FB37061E8A0FE1003610DC /* Draw.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {595, 8554}}";
-			sepNavSelRange = "{22324, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {595, 8853}}";
+			sepNavSelRange = "{23121, 0}";
 			sepNavVisRange = "{0, 0}";
 		};
 	};
@@ -560,14 +593,14 @@
 	};
 	28FB37291E8A1031003610DC /* lodepng.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 22698}}";
-			sepNavSelRange = "{0, 0}";
-			sepNavVisRange = "{0, 1803}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 22841}}";
+			sepNavSelRange = "{37244, 4}";
+			sepNavVisRange = "{35962, 1896}";
 		};
 	};
 	28FB372A1E8A1031003610DC /* nanojpeg.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 11258}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 11336}}";
 			sepNavSelRange = "{28951, 0}";
 			sepNavVisRange = "{28008, 1994}";
 		};

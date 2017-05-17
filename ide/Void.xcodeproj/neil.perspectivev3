@@ -346,14 +346,14 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>16</integer>
-									<integer>7</integer>
+									<integer>30</integer>
+									<integer>29</integer>
 									<integer>4</integer>
 									<integer>0</integer>
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
-							<string>{{0, 8}, {185, 669}}</string>
+							<string>{{0, 65}, {185, 669}}</string>
 						</dict>
 						<key>PBXTopSmartGroupGIDs</key>
 						<array/>
@@ -398,7 +398,7 @@
 										<key>_historyCapacity</key>
 										<integer>20</integer>
 										<key>bookmark</key>
-										<string>28483A811ECBE67500E58555</string>
+										<string>28483A911ECBF12F00E58555</string>
 										<key>history</key>
 										<array>
 											<string>284839121ECBAD8700E58555</string>
@@ -701,7 +701,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>516679285.589311</real>
+	<real>516682031.50029898</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -718,24 +718,10 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>28483A821ECBE67500E58555</string>
 		<string>284838FB1ECBA35D00E58555</string>
 		<string>284838FC1ECBA35D00E58555</string>
-		<string>28483A361ECBD4C300E58555</string>
-		<string>28483A3B1ECBD4C300E58555</string>
-		<string>28483A3C1ECBD4C300E58555</string>
-		<string>28483A3E1ECBD4C300E58555</string>
-		<string>28483A3D1ECBD4C300E58555</string>
-		<string>28483A411ECBD4C300E58555</string>
-		<string>28483A831ECBE67500E58555</string>
-		<string>28483A401ECBD4C300E58555</string>
-		<string>28483A3F1ECBD4C300E58555</string>
-		<string>28483A371ECBD4C300E58555</string>
-		<string>28483A391ECBD4C300E58555</string>
-		<string>28483A841ECBE67500E58555</string>
-		<string>28483A3A1ECBD4C300E58555</string>
-		<string>28483A851ECBE67500E58555</string>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
+		<string>28483A8B1ECBEF1200E58555</string>
 	</array>
 	<key>WindowString</key>
 	<string>429 50 851 728 0 0 1280 778 </string>

@@ -58,6 +58,60 @@ This is an idempotent class dealing with the interface to OpenGL.
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
 
+<div><a name = "enum TexClass"><!-- --></a>
+<h3>enum TexClass</h3>
+<pre><b>enum TexClass</b> {
+	TEX_CLASS_SPRITE,
+	TEX_CLASS_NORMAL,
+	TEX_CLASS_BACKGROUND
+}</pre>
+<p>
+Texture addresses on the graphics card, when you want different textures
+simultaneously. Limit of <em>MAX_COMBINED_TEXTURE_IMAGE_UNITS</em>, which may be
+small, (like 2?)
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "enum"><!-- --></a>
+<h3>enum</h3>
+<pre><b>enum</b> { /* vec2 */ VBO_ATTRIB_POSITION, /* vec2 */ VBO_ATTRIB_TEXTURE }</pre>
+<p>
+Shader attribute assigment.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "static const struct"><!-- --></a>
+<h3>static const struct</h3>
+<pre><b>static const struct</b> {
+	GLint size;
+	GLenum type;
+	const GLvoid *offset;
+}</pre>
+<p>
+Corresponds to <em>(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "static struct Vertex"><!-- --></a>
+<h3>static struct Vertex</h3>
+<pre><b>static struct Vertex</b> {
+	GLfloat x, y;
+	GLfloat s, t;
+}</pre>
+<p>
+<em>struct</em> corresponding to the above. <em>vbo</em> is used ubiquitously for static
+geometry, uploaded into video memory. Fixme: not fully variablised!?
+</p>
+<dl>
+</dl>
+</div>
+
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>
 
@@ -162,7 +216,7 @@ Gets the width and height.
 <pre>void <b>DrawSetBackground</b> (const char *const str)</pre>
 <p>
 Sets background to the image with key key. Fixme: allows you to set not
-GT_BACKGROUND textures, which probably don't work, maybe? (oh, they do)
+TexClassTexture(TEX_CLASS_BACKGROUND) textures, which probably don't work, maybe? (oh, they do)
 </p>
 <dl>
 </dl>

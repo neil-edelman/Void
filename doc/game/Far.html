@@ -47,6 +47,16 @@ Public License, see copying.txt.
 Sprites in the background have a (world) position, a rotation, and a bitmap.
 They are sorted by bitmap and drawn by the gpu in ../system/Draw but not lit.
 </p>
+<p>
+This is a private iteration which uses the same variable as Far::iterate.
+This actually returns a Far. Use it when you want to delete a sprite as you
+go though the list.
+</p>
+<p>
+Sorts the sprites; they're (hopefully) almost sorted already from last
+frame, just freshens with insertion sort, O(n + m) where m is the
+related to the dynamicness of the scene
+</p>
 <dl>
 	<dt>author</dt>
 	<dd>Neil</dd>

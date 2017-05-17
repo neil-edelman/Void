@@ -70,7 +70,7 @@ static const struct {
 };
 
 /** {struct} corresponding to the above. {vbo} is used ubiquitously for static
- geometry, uploaded into video memory. */
+ geometry, uploaded into video memory. Fixme: not fully variablised!? */
 static struct Vertex {
 	GLfloat x, y;
 	GLfloat s, t;
@@ -84,37 +84,11 @@ static struct Vertex {
 	{ -0.5f, 0.5f, 0.0f, 1.0f },
 	{ -0.5f,-0.5f, 0.0f, 0.0f }
 };
-#if 0
-static const int vbo_bg_first     = 0, vbo_bg_count     = 4;
-static const int vbo_sprite_first = 4, vbo_sprite_count = 4;
-#endif
 /* Corresponds to the values in {vbo}. */
 static const struct {
 	GLint first;
 	GLsizei count;
-} vbo_background_offset = { 0, 4 }, vbo_square_offset = { 4, 4 };
-
-/* corresponds to SpotAttribs on hardware */
-/*static struct Spot {
-	GLfloat x, y;
-	GLfloat r, g, b;
-} spots[512];
-static const int spot_capacity = sizeof(spots) / sizeof(struct Spot);
-static int       spot_size;
-static const void *spot_pos_offset    = 0;
-static const int  spot_pos_size       = 2;
-static const void *spot_colour_offset = (void *)(sizeof(float) * 2);
-static const int  spot_colour_size    = 3;*/
-
-/* this is for drawing the background with tex_map programme; 2 * 0.5 = 1,
- column -- fixme: not really necessary for tex_map_shader to have all these
- degrees-of-freedom; position on screen and size should be enough */
-/*static const GLfloat background_matrix[] = {
-	1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 1.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f
-};*/
+} vbo_info_bg = { 0, 4 }, vbo_info_square = { 4, 4 };
 
 /* private prototypes */
 static int texture(struct AutoImage *image); /* decompresses */
@@ -123,9 +97,8 @@ static void display(void); /* callback for odisplay */
 static void resize(int width, int height); /* callback  */
 
 /* globals */
-static int     screen_width = 300, screen_height = 200;
-static GLuint  vbo_geom, /*spot_geom,*/ light_tex, background_tex, shield_tex;
-static GLfloat two_width, two_height;
+static int     screen_width = 300, screen_height = 200; /* shared? */
+static GLuint  vbo_geom, light_tex, background_tex, shield_tex;
 static float   camera_x, camera_y;
 
 /** Gets all the graphics stuff started.
@@ -514,7 +487,7 @@ static void display(void) {
 		/* fixme: of course it's a background, set once */
 		/*glUniform1i(background_sampler_location, TEX_CLASS_BACKGROUND);*/
 		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_background_offset.first, vbo_background_offset.count);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_bg.first, vbo_info_bg.count);
 	}
 	glEnable(GL_BLEND);
 
@@ -539,7 +512,7 @@ static void display(void) {
 		glUniform1f(auto_Far_shader.size, (float)size);
 		glUniform1f(auto_Far_shader.angle, t);
 		glUniform2f(auto_Far_shader.position, x, y);
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_square_offset.first, vbo_square_offset.count);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
 	old_texture = 0;
 
@@ -573,21 +546,20 @@ static void display(void) {
 		glUniform1f(auto_Lighting_shader.size, (float)size);
 		glUniform1f(auto_Lighting_shader.angle, t);
 		glUniform2f(auto_Lighting_shader.position, x, y);
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_square_offset.first, vbo_square_offset.count);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
 	if(draw_is_print_sprites) {
 		draw_is_print_sprites = 0;
 	}
 
-	/* create spots */
-	/*glBindBuffer(GL_ARRAY_BUFFER, spot_geom);
-	glEnableVertexAttribArray(S_POSITION);
-	glVertexAttribPointer(S_POSITION, spot_pos_size, GL_FLOAT, GL_FALSE, sizeof(struct Spot), spot_pos_offset);
-	glEnableVertexAttribArray(S_COLOUR);
-	glVertexAttribPointer(S_COLOUR, spot_colour_size, GL_FLOAT, GL_FALSE, sizeof(struct Spot), spot_colour_offset);
-	glDrawArrays(GL_POINTS, 0, 1);
-	glDisableVertexAttribArray(S_POSITION);
-	glDisableVertexAttribArray(S_COLOUR);*/
+	/* experiment FIXME */
+	glUseProgram(auto_Phong_shader.compiled);
+	glUniform2f(auto_Phong_shader.camera, camera_x, camera_y);
+	glUniform1i(auto_Phong_shader.lights, lights = LightGetArraySize());
+	if(lights) {
+		glUniform2fv(auto_Phong_shader.light_position, lights, (GLfloat *)LightGetPositionArray());
+		glUniform3fv(auto_Phong_shader.light_colour, lights, (GLfloat *)LightGetColourArray());
+	}
 
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {
@@ -599,7 +571,7 @@ static void display(void) {
 		glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
 		glUniform2f(auto_Hud_shader.position, x, y - t * 2.0f);
 		glUniform2i(auto_Hud_shader.shield, SpriteGetHit(player), SpriteGetMaxHit(player));
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_square_offset.first, vbo_square_offset.count);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
 
 	/* disable, swap */
@@ -613,6 +585,7 @@ static void display(void) {
  @fixme not guaranteed to have a background! this will crash.
  @param width, height: The size of the client area. */
 static void resize(int width, int height) {
+	GLfloat two_width, two_height;
 	int w_tex, h_tex;
 	float w_w_tex, h_h_tex;
 
@@ -640,8 +613,8 @@ static void resize(int width, int height) {
 	vbo[2].s = vbo[3].s = -w_w_tex;
 	vbo[0].t = vbo[2].t =  h_h_tex;
 	vbo[1].t = vbo[3].t = -h_h_tex;
-	glBufferSubData(GL_ARRAY_BUFFER, vbo_background_offset.first,
-		vbo_background_offset.count * (GLsizei)sizeof(struct Vertex), vbo + vbo_background_offset.first);
+	glBufferSubData(GL_ARRAY_BUFFER, vbo_info_bg.first,
+		vbo_info_bg.count * (GLsizei)sizeof(struct Vertex), vbo + vbo_info_bg.first);
 
 	/* the image may not cover the whole drawing area, so we may need a constant
 	 scaling; if it is so, the image will have to be linearly interpolated for

@@ -42,11 +42,11 @@
 #include "Sprite.h"
 
 /* M_PI is a widely accepted gnu standard, not C>=99 -- who knew? */
-#ifndef M_PI
-#define M_PI 3.141592653589793238462643383279502884197169399375105820974944
+#ifndef M_PI_F
+#define M_PI_F (3.141592653589793238462643383279502884197169399375105820974944f)
 #endif
-#ifndef M_2PI
-#define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
+#ifndef M_2PI_F
+#define M_2PI_F (6.283185307179586476925286766559005768394338798750211641949889f)
 #endif
 
 /* from Lore */
@@ -70,10 +70,10 @@ static const float deb_hit_per_mass         = 5.0f;
 static const float deb_maximum_speed_2      = 20.0f; /* 2000? */
 static const float deb_explosion_elasticity = 0.5f; /* < 1 */
 
-static const float deg_sec_to_rad_ms  = (float)(M_PI / (180.0 * 1000.0));
+static const float deg_sec_to_rad_ms  = (float)(M_PI_F / (180.0 * 1000.0));
 static const float px_s_to_px_ms      = 0.001f;
 static const float px_s_to_px2_ms2    = 0.000001f;
-static const float deg_to_rad         = (float)(M_PI / 180.0);
+static const float deg_to_rad         = (float)(M_PI_F / 180.0);
 
 static const float shp_ai_turn        = 0.2f;     /* rad/ms */
 static const float shp_ai_too_close   = 3200.0f;  /* pixel^(1/2) */
@@ -147,8 +147,8 @@ static struct Sprite {
 	int bin_x, bin_y;
 
 } sprites[8192], *first_x, *first_y, *first_x_window, *first_y_window, *window_iterator, *iterator = sprites;
-static const int sprites_capacity = sizeof sprites / sizeof(struct Sprite);
-static int       sprites_size;
+static const unsigned sprites_capacity = sizeof sprites / sizeof(struct Sprite);
+static unsigned       sprites_size;
 
 static int sprites_considered, sprites_onscreen; /* for stats */
 
@@ -302,7 +302,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			image              = (struct AutoImage *)wtype->image;
 			s->sp.wmd.expires  = TimerGetGameTime() + wtype->ms_range;
 			lenght = sqrtf(wtype->r*wtype->r + wtype->g*wtype->g + wtype->b*wtype->b);
-			one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0;
+			one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0f;
 			Light(&s->sp.wmd.light, lenght, wtype->r*one_lenght, wtype->g*one_lenght, wtype->b*one_lenght);
 			/* set the wmd's position as a function of the ship's position */
 			cs = cosf(s->sp.wmd.from->theta);
@@ -317,7 +317,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			image             = va_arg(args, struct AutoImage *);
 			s->x = s->x1      = va_arg(args, const int);
 			s->y = s->y1      = va_arg(args, const int);
-			s->theta          = va_arg(args, const double);
+			s->theta          = (float)va_arg(args, const double);
 			/* one has to set these up in a different fn */
 			s->sp.ethereal.callback      = 0;
 			s->sp.ethereal.to            = 0;
@@ -1029,7 +1029,7 @@ void SpriteUpdate(const int dt_ms) {
 
 void SpriteList(void) {
 	struct Sprite *s;
-	int i;
+	unsigned i;
 	int is_first = -1;
 	info("SpriteList" "{\n");
 	for(i = 0; i < sprites_size; i++) {
@@ -1045,7 +1045,8 @@ void SpriteList(void) {
 
 /* branch cut (-Pi,Pi] */
 static void branch_cut_pi_pi(float *theta_ptr) {
-	*theta_ptr -= M_2PI * floorf((*theta_ptr + M_PI) / M_2PI);
+	*theta_ptr -= M_2PI_F *
+		floorf((*theta_ptr + (float)M_PI_F) / M_2PI_F);
 }
 
 /** This is a private iteration which uses the same variable as Sprite::iterate.
@@ -1484,24 +1485,24 @@ static void do_ai(struct Sprite *const a, const int dt_ms) {
 	 disttoenemy = hypot(target.x - ship[SHIP_CPU].p.x, target.y - ship[SHIP_CPU].p.y);*/
 	/* t is the error of where wants vs where it's at */
 	t = theta - a->theta;
-	if(t >= (float)M_PI) { /* keep it in the branch cut */
-		t -= (float)M_2PI;
-	} else if(t < -M_PI) {
-		t += (float)M_2PI;
+	if(t >= M_PI_F) { /* keep it in the branch cut */
+		t -= M_2PI_F;
+	} else if(t < -M_PI_F) {
+		t += M_2PI_F;
 	}
 	/* too close; ai only does one thing at once, or else it would be hard */
 	if(d_2 < shp_ai_too_close) {
-		if(t < 0) t += (float)M_PI;
-		else      t -= (float)M_PI;
+		if(t < 0) t += (float)M_PI_F;
+		else      t -= (float)M_PI_F;
 	}
 	/* turn */
 	if(t < -shp_ai_turn || t > shp_ai_turn) {
 		turning = (int)(t * shp_ai_turn_constant);
 		/*if(turning * dt_s fixme */
 		/*if(t < 0) {
-		 t += (float)M_PI;
+		 t += (float)M_PI_F;
 		 } else {
-		 t -= (float)M_PI;
+		 t -= (float)M_PI_F;
 		 }*/
 	} else if(d_2 > shp_ai_too_close && d_2 < shp_ai_too_far) {
 		SpriteShoot(a);

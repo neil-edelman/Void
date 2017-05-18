@@ -301,8 +301,6 @@
 			<key>Layout</key>
 			<array>
 				<dict>
-					<key>BecomeActive</key>
-					<true/>
 					<key>ContentConfiguration</key>
 					<dict>
 						<key>PBXBottomSmartGroupGIDs</key>
@@ -694,7 +692,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>516772375.656703</real>
+	<real>516780586.00312698</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -713,8 +711,8 @@
 	<array>
 		<string>2883439F1ECCE4F000A451AC</string>
 		<string>288343A01ECCE4F000A451AC</string>
-		<string>288344681ECD4AB800A451AC</string>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
+		<string>288344681ECD4AB800A451AC</string>
 	</array>
 	<key>WindowString</key>
 	<string>429 50 851 728 0 0 1280 778 </string>

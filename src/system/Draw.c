@@ -176,7 +176,7 @@ int Draw(void) {
 	if(!auto_Phong(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Phong_shader.bmp_sprite, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Phong_shader.bmp_normal, TEX_CLASS_NORMAL);
-	glUniform2f(auto_Phong_shader.sun_position, -2.0f, -2.0f);
+	glUniform2f(auto_Phong_shader.sun_direction, -2.0f, -2.0f);
 	glUniform3fv(auto_Phong_shader.sun_colour, 1, sunshine);
 
 	{

@@ -10,33 +10,37 @@
 #define EPSILON 0.1
 
 uniform sampler2D bmp_sprite, bmp_normal;
-uniform vec2 sun_position;
+uniform vec2 sun_direction;
 uniform vec3 sun_colour;
 uniform int  points;
 uniform vec2 point_position[MAX_LIGHTS];
 uniform vec3 point_colour[MAX_LIGHTS];
 // passed these from vertex shader
-varying vec2 pass_texture, pass_light;
+varying vec2 pass_texture, pass_conserve;
 varying vec2 pass_position;
 
 float light_i(int i, float in_sprite, vec4 light);
 
 void main() {
 	vec4 texel  = texture2D(bmp_sprite, pass_texture);
-	// we actually don't use zw of the normal map :[
-	vec2 normal = texture2D(bmp_normal, pass_light).xy;
-	vec3 shade = vec3(AMBIENT);
+	vec3 normal = texture2D(bmp_normal, pass_texture).xyz;
+	normal.yz = vec2(0.0);
+	//vec3 shade = vec3(AMBIENT);
+	//shade += sun_colour * normal.z;
 	// \\cite{lambert1892photometrie}
-	shade += sun_colour * max(0.0, dot(normal, sun_position));
+	//shade += sun_colour * max(0.0, dot(normal, sun_direction)) * 100.0;
+/*
 	for(int i = 0; i < MAX_LIGHTS; i++) {
 		if(i >= points) {
 			break;
 		} else {
 			vec3 colour = point_colour[i];
 			vec2 incoming = point_position[i] - pass_position;
-			shade += colour * max(0.0, dot(normal, normalize(incoming)) / length(incoming));
+			shade += colour * max(0.0, dot(normal.xy, normalize(incoming))) / length(incoming);
 		}
 	}
+*/
 	// final colour
-	gl_FragColor = vec4(shade, 1.0) * texel;
+	//gl_FragColor = vec4(shade, 1.0) * texel;
+	gl_FragColor = vec4(normal, texel.w);
 }

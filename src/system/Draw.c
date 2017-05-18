@@ -176,8 +176,8 @@ int Draw(void) {
 	if(!auto_Phong(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Phong_shader.bmp_sprite, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Phong_shader.bmp_normal, TEX_CLASS_NORMAL);
-	glUniform1f(auto_Phong_shader.directional_angle, -2.0f);
-	glUniform3fv(auto_Phong_shader.directional_colour, 1, sunshine);
+	glUniform2f(auto_Phong_shader.sun_position, -2.0f, -2.0f);
+	glUniform3fv(auto_Phong_shader.sun_colour, 1, sunshine);
 
 	{
 		struct AutoImage *tex_image, *normals_image;
@@ -580,10 +580,10 @@ static void display(void) {
 	/* fixme: experiment */
 	glUseProgram(auto_Phong_shader.compiled);
 	glUniform2f(auto_Phong_shader.camera, camera_x, camera_y);
-	glUniform1i(auto_Phong_shader.lights, lights = LightGetArraySize());
+	glUniform1i(auto_Phong_shader.points, lights = LightGetArraySize());
 	if(lights) {
-		glUniform2fv(auto_Phong_shader.light_position, lights, (GLfloat *)LightGetPositionArray());
-		glUniform3fv(auto_Phong_shader.light_colour, lights, (GLfloat *)LightGetColourArray());
+		glUniform2fv(auto_Phong_shader.point_position, lights, (GLfloat *)LightGetPositionArray());
+		glUniform3fv(auto_Phong_shader.point_colour, lights, (GLfloat *)LightGetColourArray());
 	}
 	x = y = 0.0f;
 	t = 0.0001f * TimerGetGameTime();

@@ -996,7 +996,7 @@ void SpriteUpdate(const int dt_ms) {
 						break;
 				}
 				if(0 >= s->sp.ship.hit) {
-					info("SpriteUpdate", "%s destroyed.\n", SpriteToString(s));
+					info("SpriteUpdate: %s destroyed.\n", SpriteToString(s));
 					Sprite_(&s);
 					break;
 				}

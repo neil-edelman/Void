@@ -586,7 +586,7 @@ static void display(void) {
 		glUniform3fv(auto_Phong_shader.point_colour, lights, (GLfloat *)LightGetColourArray());
 	}
 	x = y = 0.0f;
-	t = 0.0001f * TimerGetGameTime();
+	t = SpriteGetTheta(GameGetPlayer());
 	size = 128;
 	glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
 	glBindTexture(GL_TEXTURE_2D, sphere_normals);
@@ -594,7 +594,7 @@ static void display(void) {
 	glBindTexture(GL_TEXTURE_2D, sphere_tex);
 	glUniform1f(auto_Phong_shader.size, (float)size);
 	glUniform1f(auto_Phong_shader.angle, t);
-	glUniform2f(auto_Phong_shader.position, x, y);
+	glUniform2f(auto_Phong_shader.object, x, y);
 	glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	WindowIsGlError("display");
 

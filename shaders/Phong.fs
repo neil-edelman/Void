@@ -16,15 +16,19 @@ uniform int  points;
 uniform vec2 point_position[MAX_LIGHTS];
 uniform vec3 point_colour[MAX_LIGHTS];
 // passed these from vertex shader
-varying vec2 pass_texture, pass_conserve;
-varying vec2 pass_position;
+varying vec2 pass_texture;/*, pass_conserve;
+varying vec2 pass_position;*/
+varying float c, s;
 
 float light_i(int i, float in_sprite, vec4 light);
 
 void main() {
 	vec4 texel  = texture2D(bmp_sprite, pass_texture);
 	vec3 normal = texture2D(bmp_normal, pass_texture).xyz;
-	normal.yz = vec2(0.0);
+	normal.xy = (normal.xy - 0.5) * 2.0;
+	mat2 trans = mat2(c, -s, s, c);
+	normal.xy *= trans;
+	normal.xy = (normal.xy + 1.0) * 0.5;
 	//vec3 shade = vec3(AMBIENT);
 	//shade += sun_colour * normal.z;
 	// \\cite{lambert1892photometrie}

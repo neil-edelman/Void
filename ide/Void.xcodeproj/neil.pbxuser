@@ -56,29 +56,12 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 516744280;
-			PBXWorkspaceStateSaveDate = 516744280;
-		};
-		perUserProjectItems = {
-			28483BD21ECC26D600E58555 = 28483BD21ECC26D600E58555 /* PBXTextBookmark */;
-			288343881ECCE45900A451AC /* PBXTextBookmark */ = 288343881ECCE45900A451AC /* PBXTextBookmark */;
-			288343971ECCE4F000A451AC /* PBXTextBookmark */ = 288343971ECCE4F000A451AC /* PBXTextBookmark */;
-			288343AD1ECCE5A500A451AC /* PBXTextBookmark */ = 288343AD1ECCE5A500A451AC /* PBXTextBookmark */;
-			289893081ECCE44E00B05F13 = 289893081ECCE44E00B05F13 /* PBXTextBookmark */;
+			PBXPerProjectTemplateStateSaveDate = 516812446;
+			PBXWorkspaceStateSaveDate = 516812446;
 		};
 		sourceControlManager = 2866766A1E8467300090EBDC /* Source Control */;
 		userBuildSettings = {
 		};
-	};
-	28483BD21ECC26D600E58555 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
-		name = "Draw.c: 665";
-		rLen = 0;
-		rLoc = 23473;
-		rType = 0;
-		vrLen = 0;
-		vrLoc = 0;
 	};
 	2866766A1E8467300090EBDC /* Source Control */ = {
 		isa = PBXSourceControlManager;
@@ -93,46 +76,6 @@
 	2866766B1E8467300090EBDC /* Code sense */ = {
 		isa = PBXCodeSenseManager;
 		indexTemplatePath = "";
-	};
-	288343881ECCE45900A451AC /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
-		name = "Draw.c: 665";
-		rLen = 0;
-		rLoc = 23473;
-		rType = 0;
-		vrLen = 0;
-		vrLoc = 0;
-	};
-	288343971ECCE4F000A451AC /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
-		name = "Draw.c: 665";
-		rLen = 0;
-		rLoc = 23473;
-		rType = 0;
-		vrLen = 0;
-		vrLoc = 0;
-	};
-	288343AD1ECCE5A500A451AC /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
-		name = "Draw.c: 665";
-		rLen = 0;
-		rLoc = 23473;
-		rType = 0;
-		vrLen = 0;
-		vrLoc = 0;
-	};
-	289893081ECCE44E00B05F13 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 28FB37061E8A0FE1003610DC /* Draw.c */;
-		name = "Draw.c: 665";
-		rLen = 0;
-		rLoc = 23473;
-		rType = 0;
-		vrLen = 0;
-		vrLoc = 0;
 	};
 	28FB36EC1E8A0FE1003610DC /* EntryPosix.c */ = {
 		uiCtxt = {
@@ -178,16 +121,16 @@
 	};
 	28FB36F31E8A0FE1003610DC /* Game.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2756}}";
-			sepNavSelRange = "{3541, 6}";
-			sepNavVisRange = "{2998, 1098}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2587}}";
+			sepNavSelRange = "{2166, 0}";
+			sepNavVisRange = "{1021, 1707}";
 		};
 	};
 	28FB36F41E8A0FE1003610DC /* Game.h */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 702}}";
-			sepNavSelRange = "{112, 6}";
-			sepNavVisRange = "{0, 141}";
+			sepNavSelRange = "{164, 0}";
+			sepNavVisRange = "{0, 165}";
 		};
 	};
 	28FB36F51E8A0FE1003610DC /* Light.c */ = {
@@ -206,9 +149,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 21333}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 22295}}";
 			sepNavSelRange = "{35641, 0}";
-			sepNavVisRange = "{35508, 1295}";
+			sepNavVisRange = "{18951, 1776}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
@@ -284,8 +227,8 @@
 	28FB37061E8A0FE1003610DC /* Draw.c */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 8996}}";
-			sepNavSelRange = "{20369, 0}";
-			sepNavVisRange = "{19177, 2148}";
+			sepNavSelRange = "{20475, 0}";
+			sepNavVisRange = "{19178, 2091}";
 		};
 	};
 	28FB37071E8A0FE1003610DC /* Draw.h */ = {
@@ -394,7 +337,7 @@
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 1560}}";
 			sepNavSelRange = "{0, 0}";
-			sepNavVisRange = "{655, 1124}";
+			sepNavVisRange = "{0, 1255}";
 		};
 	};
 	28FB37281E8A1031003610DC /* lodepng.c */ = {

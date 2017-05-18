@@ -1,16 +1,9 @@
-#define M_PI 3.1415926535897932384626433832795
-#define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
-#define M_1_PI 0.318309886183790671537767526745028724
-
 // must be the same as in Light.c
 #define MAX_LIGHTS 64
-// black stuff is hard to see
-#define AMBIENT 0.08
-// for avoiding singularity
-#define EPSILON 0.1
 
+// passed these from C
 uniform sampler2D bmp_sprite, bmp_normal;
-uniform vec2 sun_direction;
+uniform vec3 sun_direction;
 uniform vec3 sun_colour;
 uniform int  points;
 uniform vec2 point_position[MAX_LIGHTS];
@@ -18,29 +11,28 @@ uniform vec3 point_colour[MAX_LIGHTS];
 // passed these from vertex shader
 varying mat2 pass_rotation;
 varying vec2 pass_texture;
+varying vec2 pass_object;
 
 void main() {
+	// texture map
 	vec4 texel = texture2D(bmp_sprite, pass_texture);
-	vec3 normal = (texture2D(bmp_normal, pass_texture).xyz - 0.5) * 2.0;
+	// normal vectors are encoded as colours in excess-0.5, (viz. PNG -127, PNG does not use 255?)
+	vec3 normal = (texture2D(bmp_normal, pass_texture).rgb - 0.5) * 2.0;
+	// the texture is fixed, need to correct the inverse rotation by applying the opposite
 	normal.xy *= pass_rotation;
 
-	// \\cite{lambert1892photometrie}
-	vec3 sun_direction_3d = normalize(vec3(sun_direction, 1.0));
-	vec3 shade = sun_colour * max(0.0, dot(normal, sun_direction_3d));
-	//shade += sun_colour * max(0.0, dot(normal, sun_direction)) * 100.0;
-/*
+	// \\cite{lambert1892photometrie} -- sun directional light is modulated by length
+	vec3 shade = sun_colour * max(0.0, dot(normal, normalize(sun_direction))) * length(sun_direction);
+	// point lights are modulated by inverse distance, and z is in null-space
 	for(int i = 0; i < MAX_LIGHTS; i++) {
 		if(i >= points) {
 			break;
 		} else {
 			vec3 colour = point_colour[i];
-			vec2 incoming = point_position[i] - pass_position;
+			vec2 incoming = point_position[i] - pass_object;
 			shade += colour * max(0.0, dot(normal.xy, normalize(incoming))) / length(incoming);
 		}
 	}
-*/
-	//normal = (normal + 1.0) * 0.5;
-	// final colour
+	// with the lighting
 	gl_FragColor = vec4(shade * texel.xyz, texel.w);
-	//gl_FragColor = vec4(normal, texel.w);
 }

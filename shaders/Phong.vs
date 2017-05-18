@@ -10,6 +10,7 @@ uniform vec2 inv_screen;
 // pass these to fragment shader
 varying mat2 pass_rotation;
 varying vec2 pass_texture;
+varying vec2 pass_object;
 
 void main() {
 	// translate and rotate the sprite
@@ -19,5 +20,8 @@ void main() {
 	// texture unmolested, inv_inv_rotate to correct the normals
 	pass_rotation = mat2(c, -s, s, c);
 	pass_texture = attrib_texture;
-	gl_Position = vec4((object_camera + inv_rotate * attrib_centred * size) * inv_screen, 0.0, 1.0);
+	// needed for point lights
+	pass_object = object + inv_rotate * attrib_centred * size;
+	// not numerically stable :[
+	gl_Position = vec4((pass_object - camera) * inv_screen, 0.0, 1.0);
 }

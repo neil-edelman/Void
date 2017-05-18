@@ -121,9 +121,9 @@
 	};
 	28FB36F31E8A0FE1003610DC /* Game.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2587}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2535}}";
 			sepNavSelRange = "{2166, 0}";
-			sepNavVisRange = "{1021, 1707}";
+			sepNavVisRange = "{1091, 1636}";
 		};
 	};
 	28FB36F41E8A0FE1003610DC /* Game.h */ = {

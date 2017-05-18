@@ -22,9 +22,9 @@ varying vec2 pass_texture;
 void main() {
 	vec4 texel  = texture2D(bmp_sprite, pass_texture);
 	vec3 normal = texture2D(bmp_normal, pass_texture).xyz;
-	normal.xy = (normal.xy - 0.5) * 2.0;
+	normal = (normal - 0.5) * 2.0;
 	normal.xy *= pass_rotation;
-	normal.xy = (normal.xy + 1.0) * 0.5;
+	normal = (normal + 1.0) * 0.5;
 	//vec3 shade = vec3(AMBIENT);
 	//shade += sun_colour * normal.z;
 	// \\cite{lambert1892photometrie}

@@ -22,12 +22,10 @@ varying vec2 pass_position;
 float light_i(int i, float in_sprite, vec4 light);
 
 void main() {
-	float to_light, delta;
-	vec4 texel = texture2D(bmp_sprite, pass_texture);
-	vec4 light = texture2D(bmp_normal, pass_light);
-	float in_sprite = light.g * M_2PI;
+	vec4 texel  = texture2D(bmp_sprite, pass_texture);
+	vec4 normal = texture2D(bmp_normal, pass_light);
 	vec3 shade = vec3(AMBIENT);
-
+/*
 	// one directional light
 	to_light  = directional_angle;
 	delta     = abs(mod(in_sprite - to_light + M_PI, M_2PI) - M_PI);
@@ -41,9 +39,9 @@ void main() {
 			shade += light_colour[i] * light_i(i, in_sprite, light);
 		}
 	}
+*/
 	// final colour
-	//gl_FragColor = vec4(shade, 1.0) * texel;
-	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+	gl_FragColor = vec4(shade, 1.0) * texel;
 }
 
 float light_i(int i, float in_sprite, vec4 light) {

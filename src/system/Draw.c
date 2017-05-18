@@ -60,9 +60,11 @@ static GLuint TexClassTexture(const enum TexClass class) {
 	return class + GL_TEXTURE0;
 }
 
-/** Shader attribute assigment. */
-enum { /* vec2 */ VBO_ATTRIB_POSITION, /* vec2 */ VBO_ATTRIB_TEXTURE };
-/** Corresponds to {(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)}. */
+/** Shader attribute assignment. {VBO_ATTRIB_CENTERED} is the normalised centre
+ co-ordinates in which the sprite goes from [-1, 1]; {VBO_ATTRIB_TEXTURE} maps
+ that to [0, 1] for texture mapping the sprite. */
+enum { /* vec2 */ VBO_ATTRIB_CENTRED, /* vec2 */ VBO_ATTRIB_TEXTURE };
+/** Corresponds to {(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)}. */
 static const struct {
 	GLint size;
 	GLenum type;
@@ -138,9 +140,9 @@ int Draw(void) {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vbo), vbo, GL_STATIC_DRAW);
 	/* fixme: the texture should be the same as the vetices, half the data */
 	/* fixme: done per-frame, because apparently OpenGl does not keep track of the bindings per-buffer */
-	glEnableVertexAttribArray(VBO_ATTRIB_POSITION);
-	glVertexAttribPointer(VBO_ATTRIB_POSITION, vbo_attrib[VBO_ATTRIB_POSITION].size, vbo_attrib[VBO_ATTRIB_POSITION].type,
-		GL_FALSE, sizeof(struct Vertex), vbo_attrib[VBO_ATTRIB_POSITION].offset);
+	glEnableVertexAttribArray(VBO_ATTRIB_CENTRED);
+	glVertexAttribPointer(VBO_ATTRIB_CENTRED, vbo_attrib[VBO_ATTRIB_CENTRED].size, vbo_attrib[VBO_ATTRIB_CENTRED].type,
+		GL_FALSE, sizeof(struct Vertex), vbo_attrib[VBO_ATTRIB_CENTRED].offset);
     glEnableVertexAttribArray(VBO_ATTRIB_TEXTURE);
     glVertexAttribPointer(VBO_ATTRIB_TEXTURE, vbo_attrib[VBO_ATTRIB_TEXTURE].size, vbo_attrib[VBO_ATTRIB_TEXTURE].type, GL_FALSE,
 		sizeof(struct Vertex), vbo_attrib[VBO_ATTRIB_TEXTURE].offset);
@@ -156,22 +158,22 @@ int Draw(void) {
 	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
 	/* shader initialisation */
-	if(!auto_Background(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Background(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	/* these are constant; fixme: could they be declared as such? */
 	glUniform1i(auto_Background_shader.sampler, TEX_CLASS_BACKGROUND);
-	if(!auto_Far(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Far(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Far_shader.sampler, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Far_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Far_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Far_shader.directional_colour, 1, sunshine);
-	if(!auto_Hud(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Hud(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Hud_shader.sampler, TEX_CLASS_SPRITE);
-	if(!auto_Lighting(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Lighting(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Lighting_shader.sampler, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Lighting_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
-	if(!auto_Phong(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Phong(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Phong_shader.bmp_sprite, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Phong_shader.bmp_normal, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Phong_shader.directional_angle, -2.0f);

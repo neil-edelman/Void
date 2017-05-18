@@ -48,7 +48,7 @@ static const unsigned events_capacity = sizeof events / sizeof(struct Event);
 static unsigned       events_size;
 
 static struct Event *iterate(void);
-char *decode_fn_type(const enum FnType fn_type);
+const char *decode_fn_type(const enum FnType fn_type);
 
 /* public */
 
@@ -326,7 +326,7 @@ static struct Event *iterate(void) {
 	return iterator;
 }
 
-char *decode_fn_type(const enum FnType fn_type) {
+const char *decode_fn_type(const enum FnType fn_type) {
 	switch(fn_type) {
 		case FN_RUNNABLE:	return "<Runnable>";
 		case FN_CONSUMER:	return "<Consumer>";

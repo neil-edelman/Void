@@ -159,7 +159,7 @@ void LightSetNotify(int *const id_ptr) {
 }
 
 /** Volatile-ish: can only print 4 Lights at once. */
-char *LightToString(const int id) {
+const char *LightToString(const int id) {
 	if(!id) return "null light";
 	return to_string(id_to_light(id));
 }

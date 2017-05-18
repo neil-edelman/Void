@@ -199,7 +199,8 @@ int main(int argc, char **argv) {
 		printf("struct Auto%s *Auto%sSearch(%skey) {\n", name, name, "const char *const ");
 		if(!no_image_names) {
 			/* this file contains no records of this type; return zero always */
-			printf("\treturn 0; /* no lores available of \"%s\" */\n", name);
+			printf("\t(void)key;\n"
+				"\treturn 0; /* no lores available of \"%s\" */\n", name);
 		} else {
 			printf("\treturn bsearch(&key, auto_%s, max_auto_%s, sizeof(struct Auto%s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);
 		}

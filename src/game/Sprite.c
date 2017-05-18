@@ -189,7 +189,7 @@ static void wmd_shp(struct Sprite *, struct Sprite *, const float);
 static void shp_wmd(struct Sprite *, struct Sprite *, const float);
 static void shp_eth(struct Sprite *, struct Sprite *, const float);
 static void eth_shp(struct Sprite *, struct Sprite *, const float);
-static char *decode_sprite_type(const enum SpType sptype);
+static const char *decode_sprite_type(const enum SpType sptype);
 static void gate_travel(struct Sprite *const gate, struct Sprite *ship);
 static void do_ai(struct Sprite *const s, const int dt_ms);
 /*static void sprite_poll(void);*/
@@ -212,14 +212,13 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 
 /** Get a new sprite from the pool of unused.
 
- * Sprite(SP_DEBRIS, const struct Image *image, const int x, y,
- const float theta, const unsigned mass);
- * Sprite(SP_SHIP, const int x, y, const float theta,
+ * Sprite(SP_DEBRIS, const struct Image *image, const float x, y, theta,
+ const unsigned mass);
+ * Sprite(SP_SHIP, const float x, y, theta,
  const struct ShipClass *const class, const enum Behaviour behaviour,
  const struct Ship **notify);
  * Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
- * Sprite(SP_ETHEREAL, const struct Image *image, const int x, y,
- const float theta);
+ * Sprite(SP_ETHEREAL, const struct Image *image, const float x, y, theta);
 
  @param sp_type		Type of sprite.
  @param image		(SP_DEBRIS|SP_ETHEREAL) (const struct Image *) Image.
@@ -237,7 +236,7 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
  @fixme const float x, y */
 struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	va_list args;
-	struct AutoImage *image;
+	const struct AutoImage *image;
 	struct AutoShipClass *class;
 	struct AutoWmdType *wtype;
 	struct Sprite *s, *from;
@@ -266,18 +265,18 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	switch(sp_type) {
 		case SP_DEBRIS:
 			image            = va_arg(args, struct AutoImage *const);
-			s->x = s->x1     = va_arg(args, const int);
-			s->y = s->y1     = va_arg(args, const int);
+			s->x = s->x1     = (float)va_arg(args, const double);
+			s->y = s->y1     = (float)va_arg(args, const double);
 			s->theta         = (float)va_arg(args, const double);
 			s->mass          = (float)va_arg(args, const double);
 			s->sp.debris.hit = (int)(s->mass * deb_hit_per_mass);
 			break;
 		case SP_SHIP:
-			s->x = s->x1     = va_arg(args, const int);
-			s->y = s->y1     = va_arg(args, const int);
+			s->x = s->x1     = (float)va_arg(args, const double);
+			s->y = s->y1     = (float)va_arg(args, const double);
 			s->theta         = (float)va_arg(args, const double);
 			s->sp.ship.class = class = va_arg(args, struct AutoShipClass *const);
-			image                      = (struct AutoImage *)class->image; /*fixme*/
+			image                      = class->image;
 			s->mass                    = class->mass;
 			s->sp.ship.ms_recharge_wmd = TimerGetGameTime();
 			s->sp.ship.ms_recharge_hit = class->ms_recharge;
@@ -299,7 +298,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->sp.wmd.wmd_type = wtype = va_arg(args, struct AutoWmdType *const);
 			/* fixme: both those should be non-null! */
 			s->mass            = wtype->impact_mass;
-			image              = (struct AutoImage *)wtype->image;
+			image              = wtype->image;
 			s->sp.wmd.expires  = TimerGetGameTime() + wtype->ms_range;
 			lenght = sqrtf(wtype->r*wtype->r + wtype->g*wtype->g + wtype->b*wtype->b);
 			one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0f;
@@ -315,8 +314,8 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			break;
 		case SP_ETHEREAL:
 			image             = va_arg(args, struct AutoImage *);
-			s->x = s->x1      = va_arg(args, const int);
-			s->y = s->y1      = va_arg(args, const int);
+			s->x = s->x1      = (float)va_arg(args, const double);
+			s->y = s->y1      = (float)va_arg(args, const double);
 			s->theta          = (float)va_arg(args, const double);
 			/* one has to set these up in a different fn */
 			s->sp.ethereal.callback      = 0;
@@ -383,7 +382,7 @@ struct Sprite *SpriteGate(const struct AutoGate *g) {
 
 	if(!g) return 0;
 
-	if(!(s = Sprite(SP_ETHEREAL, AutoImageSearch("Gate.png"), g->x, g->y, g->theta * deg_to_rad))) return 0;
+	if(!(s = Sprite(SP_ETHEREAL, AutoImageSearch("Gate.png"), (float)g->x, (float)g->y, g->theta * deg_to_rad))) return 0;
 	s->sp.ethereal.callback = &gate_travel;
 	s->sp.ethereal.to       = g->to;
 	pedantic("SpriteGate: created from Sprite, %s.\n", SpriteToString(s));
@@ -727,7 +726,7 @@ void SpriteDestroy(struct Sprite *const s) {
 	
 	SpriteGetVelocity(deb->sprite, &vx, &vy);
 	if((speed_2 = vx * vx + vy * vy) > maximum_speed_2) {
-		debug("Debris::enforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
+		debug("DebrisEnforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
 		DebrisExplode(deb);
 	}
 }*/
@@ -742,7 +741,7 @@ void SpriteDebris(const struct Sprite *const s) {
 	pedantic("SpriteDebris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
 
 	/* break into pieces -- new debris */
-	sub = Sprite(SP_DEBRIS, small_image, (int)s->x, (int)s->y, s->theta, small_asteroid_mass);
+	sub = Sprite(SP_DEBRIS, small_image, (float)s->x, (float)s->y, s->theta * deg_to_rad, small_asteroid_mass);
 	SpriteSetVelocity(sub, deb_explosion_elasticity * s->vx, deb_explosion_elasticity * s->vy);
 }
 
@@ -1007,7 +1006,7 @@ void SpriteUpdate(const int dt_ms) {
 						SpriteRecharge(s, 1);
 						if(s->sp.ship.hit >= s->sp.ship.max_hit) break;
 						s->sp.ship.ms_recharge_event += s->sp.ship.ms_recharge_hit;
-						debug("Sprite::update: %s recharging.\n", SpriteToString(s));
+						debug("SpriteUpdate: %s recharging.\n", SpriteToString(s));
 					}
 				}*/
 				break;
@@ -1425,7 +1424,7 @@ static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
 }
 
 /** For debugging. */
-static char *decode_sprite_type(const enum SpType sp_type) {
+static const char *decode_sprite_type(const enum SpType sp_type) {
 	switch(sp_type) {
 		case SP_DEBRIS:		return "<Debris>";
 		case SP_SHIP:		return "<Ship>";
@@ -1452,7 +1451,7 @@ static void gate_travel(struct Sprite *const gtae, struct Sprite *ship) {
 	gate_norm_y = sinf(gtae->theta);
 	proj = x * gate_norm_x + y * gate_norm_y; /* proj is the new h */
 	if(ship->sp.ship.horizon > 0 && proj < 0) {
-		debug("gate_travel", "%s crossed into the event horizon of %s.\n",
+		debug("gate_travel: %s crossed into the event horizon of %s.\n",
 			SpriteToString(ship), SpriteToString(gtae));
 		if(ship == GameGetPlayer()) {
 			/* trasport to zone immediately */

@@ -76,9 +76,11 @@ small, (like 2?)
 
 <div><a name = "enum"><!-- --></a>
 <h3>enum</h3>
-<pre><b>enum</b> { /* vec2 */ VBO_ATTRIB_POSITION, /* vec2 */ VBO_ATTRIB_TEXTURE }</pre>
+<pre><b>enum</b> { /* vec2 */ VBO_ATTRIB_CENTRED, /* vec2 */ VBO_ATTRIB_TEXTURE }</pre>
 <p>
-Shader attribute assigment.
+Shader attribute assignment. <em>VBO_ATTRIB_CENTERED</em> is the normalised centre
+co-ordinates in which the sprite goes from [-1, 1]; <em>VBO_ATTRIB_TEXTURE</em> maps
+that to [0, 1] for texture mapping the sprite.
 </p>
 <dl>
 </dl>
@@ -92,7 +94,7 @@ Shader attribute assigment.
 	const GLvoid *offset;
 }</pre>
 <p>
-Corresponds to <em>(VBO_ATTRIB_POSITION, VBO_ATTRIB_TEXTURE)</em>.
+Corresponds to <em>(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)</em>.
 </p>
 <dl>
 </dl>

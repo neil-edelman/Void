@@ -241,11 +241,11 @@ Get a new sprite from the pool of unused.
 </p>
 <ul>
 	<li>
-Sprite(SP_DEBRIS, const struct Image *image, const int x, y,
-const float theta, const unsigned mass);
+Sprite(SP_DEBRIS, const struct Image *image, const float x, y, theta,
+const unsigned mass);
 	</li>
 	<li>
-Sprite(SP_SHIP, const int x, y, const float theta,
+Sprite(SP_SHIP, const float x, y, theta,
 const struct ShipClass *const class, const enum Behaviour behaviour,
 const struct Ship **notify);
 	</li>
@@ -253,8 +253,7 @@ const struct Ship **notify);
 Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
 	</li>
 	<li>
-Sprite(SP_ETHEREAL, const struct Image *image, const int x, y,
-const float theta);
+Sprite(SP_ETHEREAL, const struct Image *image, const float x, y, theta);
 	</li>
 </ul>
 <dl>

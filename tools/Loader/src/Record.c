@@ -231,7 +231,6 @@ void RecordPrintSearches(void) {
 
 	/* stdlib.h is included at the top in Loader.c */
 	printf("/* f'ns that we (might) need to compare basic types */\n\n");
-	/* fixme: only do it if it's actually used */
 	printf("static int cmp_float(const float f1, const float f2) {\n");
 	printf("\tconst float comp = f1 - f2;\n");
 	printf("\tif(comp < 0.0f) return -1;\n");
@@ -240,7 +239,16 @@ void RecordPrintSearches(void) {
 	printf("}\n\n");
 	printf("static int cmp_int(const int i1, const int i2) {\n");
 	printf("\treturn i1 - i2;\n");
-	printf("}\n\n");
+	printf("}\n\n"
+		"static void cmp_unused_coda(void);\n"
+		"static void cmp_unused(void) {\n"
+		"\tcmp_float(0.0f, 0.0f);\n"
+		"\tcmp_int(0, 0);\n"
+		"\tcmp_unused_coda();\n"
+		"}\n"
+		"static void cmp_unused_coda(void) {\n"
+		"\tcmp_unused();\n"
+		"}\n\n");
 	printf("/* comparison f'ns and public *Search() for compound Types; *Search can return\nzero if it didn't find it */\n\n");
 	for(i = 0; i < no_records; i++) {
 		record = &records[i];
@@ -257,7 +265,8 @@ void RecordPrintSearches(void) {
 		printf("struct Auto%s *Auto%sSearch(%skey) {\n", name, name, TypeGetTypeName(key_type));
 		if(LoreIsEmpty(record)) {
 			/* this file contains no records of this type; return zero always */
-			printf("\treturn 0; /* no lores available of \"%s\" */\n", name);
+			printf("\t(void)key;\n"
+				"\treturn 0; /* no lores available of \"%s\" */\n", name);
 		} else {
 			printf("\treturn bsearch(&key, auto_%s, max_auto_%s, sizeof(struct Auto%s), (int (*)(const void *, const void *))&%s_comp);\n", snake, snake, name, snake);
 		}

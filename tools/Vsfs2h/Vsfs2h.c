@@ -10,7 +10,7 @@
  @author Neil */
 
 #include <stdlib.h> /* malloc free */
-#include <stdio.h>  /* fprintf */
+#include <stdio.h>  /* printf */
 #include <string.h> /* strncpy, strrchr */
 #include <assert.h> /* assert */
 
@@ -239,7 +239,7 @@ static void source_process(const char *const fn, const int is_output) {
 					var[text_uniforms_max - 1] = '\0';
 				}
 				if((c = strchr(var, '['))) *c = '\0';
-				fprintf(stderr, "%s: <%s>\n", type == ATTRIB ? "attrib" : "uniform", var);
+				/* fprintf(stderr, "%s: <%s>\n", type == ATTRIB ? "attrib" : "uniform", var); */
 			}
 		} else {
 			if(is_output) printf("%s", read);

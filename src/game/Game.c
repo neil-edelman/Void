@@ -95,7 +95,7 @@ int Game(void) {
 
 	Zone(game.start);
 	Event(0, 2000, 1000, FN_RUNNABLE, &position);
-	game.player = Sprite(SP_SHIP, 0, 0, 0.0, game.nautilus, B_HUMAN);
+	game.player = Sprite(SP_SHIP, 0.0f, 0.0f, 0.0f, game.nautilus, B_HUMAN);
 	SpriteSetNotify(&game.player);
 
 	debug("Game: on.\n");

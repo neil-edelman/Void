@@ -297,7 +297,7 @@ int FarGetId(const struct Far *b) {
 	return iterator++;
 }*/
 
-/** Sorts the sprites; they're (hopefully) almost sorted already from last
+/* Sorts the sprites; they're (hopefully) almost sorted already from last
  frame, just freshens with insertion sort, O(n + m) where m is the
  related to the dynamicness of the scene
  @return	The number of equvalent-swaps (doesn't do this anymore.) */

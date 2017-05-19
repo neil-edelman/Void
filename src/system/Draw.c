@@ -304,6 +304,8 @@ static int texture(struct AutoImage *image) {
 	/* uncompress the image! */
 	switch(image->data_format) {
 		case IF_PNG:
+			/* fixme: this will force it to be 32-bit RGBA even if it doesn't
+			 have an alpha channel, extremely wasteful */
 			if((error = lodepng_decode32(&pic, &width, &height, image->data,
 				image->data_size))) {
 				warn("texture: lodepng error %u: %s\n", error,
@@ -311,7 +313,7 @@ static int texture(struct AutoImage *image) {
 				break;
 			}
 			is_alloc = -1;
-			depth    = 4; /* fixme: not all pngs have four? */
+			depth    = 4;
 			break;
 		case IF_JPEG:
 			if(njDecode(image->data, (int)image->data_size)) break;

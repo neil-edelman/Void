@@ -1,6 +1,64 @@
 Core Presets
 Neil
 ~
+# Sprite name, render, normals
+Sprite
+Asteroid
+Asteroid.png
+Sphere_normals.png
+Sprite
+AsteroidSmall
+AsteroidSmall.png
+Sphere_normals.png
+Sprite
+Mercury
+Mercury.png
+Sphere_normals.png
+Sprite
+Mercury
+Mercury.png
+Sphere_normals.png
+Sprite
+Venus
+Venus.png
+Sphere_normals.png
+Sprite
+Earth
+Earth.png
+Sphere_normals.png
+Sprite
+Mars
+Mars.png
+Sphere_normals.png
+Sprite
+Pluto
+Pluto.png
+Sphere_normals.png
+Sprite
+Gate
+Gate_render.png
+Gate_normals.png
+Sprite
+Fox
+Fox_render.png
+Fox_normals.png
+Sprite
+Blob
+Blob_render.png
+Blob_normals.png
+Sprite
+Shot
+Shot.png
+Sphere_normals.png
+# Debris
+Debris
+Asteroid
+Asteroid
+30
+Debris
+SmallAsteroid
+Asteroid
+10
 # Alignment name, likes, hates
 Alignment
 humans
@@ -10,28 +68,6 @@ Alignment
 aliens
 -
 humans
-# TypeOfObject name, image
-TypeOfObject
-asteroid
-Asteroid.png
-TypeOfObject
-Mercury
-Mercury.png
-TypeOfObject
-Venus
-Venus.png
-TypeOfObject
-Pluto
-Pluto.png
-TypeOfObject
-Mars
-Mars.png
-TypeOfObject
-Earth
-Earth.png
-TypeOfObject
-Gate
-Gate.png
 # ObjectsInSpace name, TypeOfObject, x, y
 ObjectInSpace
 Mars
@@ -60,7 +96,7 @@ Earth
 -600
 ObjectInSpace
 PartyRock
-asteroid
+Asteroid
 50
 50
 # Gate name, TypeOfObject, x, y
@@ -78,8 +114,8 @@ Earth
 90
 # ShipClass name, image, mass, shield, ms_recharge, speed, acceleration, turn, weapon
 ShipClass
-Nautilus
-Nautilus.png
+Fox
+Fox
 50
 520
 1024
@@ -88,8 +124,8 @@ Nautilus.png
 90
 lazer
 ShipClass
-Scorpion
-Scorpion.png
+Blob
+Blob
 20
 60
 16384
@@ -97,24 +133,14 @@ Scorpion.png
 0.0001
 30
 acid
-ShipClass
-Blob
-Blob.png
-300
-500
-4098
-20
-0.00005
-10
-acid
 # Specimen name, Alignment align, ShipClass ship1, ship2, ship3, ship4
 Specimen
 Crazy Aliens
 aliens
-Scorpion
-Scorpion
-Scorpion
-Nautilus
+Blob
+Blob
+Blob
+Blob
 # SpaceZone name, Alignment government, Gate gate1, ObjectsInSpace spob, spob2
 SpaceZone
 Earth
@@ -130,10 +156,10 @@ Homebound
 Mars
 Pluto
 PartyRock
-#WmdType string name, image, int ms_range, speed, ms_recharge, damage, impact_mass, int r,g,b
+#WmdType string name, Sprite, int ms_range, speed, ms_recharge, damage, impact_mass, int r,g,b
 WmdType
 lazer
-shot.png
+Shot
 768
 300
 256
@@ -144,7 +170,7 @@ shot.png
 20
 WmdType
 acid
-shot.png
+Shot
 768
 200
 2048

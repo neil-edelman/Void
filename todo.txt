@@ -32,6 +32,8 @@ Features
 
 relies on 1997 technology
 
+allow data types to be used as keys (ie, weak entity)
+
 circle bounding -> multiple circle (AI could decide?) gartner1999fast esa99_final
 
 need better Sprite selection then is_selected

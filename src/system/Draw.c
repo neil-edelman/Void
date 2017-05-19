@@ -32,7 +32,7 @@
 #include "../../build/shaders/Hud_vsfs.h"
 #include "../../build/shaders/Far_vsfs.h"
 #include "../../build/shaders/Lighting_vsfs.h"
-#include "../../build/shaders/Phong_vsfs.h"
+#include "../../build/shaders/Lambert_vsfs.h"
 
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
@@ -106,9 +106,6 @@ static int     screen_width = 300, screen_height = 200; /* shared? */
 static GLuint  vbo_geom, light_tex, background_tex, shield_tex;
 static float   camera_x, camera_y;
 
-/* fixme!! */
-static GLuint sphere_tex, sphere_normals;
-
 /** Gets all the graphics stuff started.
  @return All good to draw? */
 int Draw(void) {
@@ -173,19 +170,11 @@ int Draw(void) {
 	glUniform1i(auto_Lighting_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
-	if(!auto_Phong(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
-	glUniform1i(auto_Phong_shader.bmp_sprite, TEX_CLASS_SPRITE);
-	glUniform1i(auto_Phong_shader.bmp_normal, TEX_CLASS_NORMAL);
-	glUniform3f(auto_Phong_shader.sun_direction, -1.0f, -1.0f, 1.0f);
-	glUniform3fv(auto_Phong_shader.sun_colour, 1, sunshine);
-
-	{
-		struct AutoImage *tex_image, *normals_image;
-		tex_image = AutoImageSearch("sphere_render.png");
-		normals_image = AutoImageSearch("sphere_normals.png");
-		if(!tex_image || !normals_image) warn("What is this magic?\n"), exit(1);
-		sphere_tex = tex_image->texture, sphere_normals = normals_image->texture;
-	}
+	if(!auto_Lambert(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	glUniform1i(auto_Lambert_shader.bmp_sprite, TEX_CLASS_SPRITE);
+	glUniform1i(auto_Lambert_shader.bmp_normal, TEX_CLASS_NORMAL);
+	glUniform3f(auto_Lambert_shader.sun_direction, -0.2f, -0.2f, 0.1f);
+	glUniform3fv(auto_Lambert_shader.sun_colour, 1, sunshine);
 
 	WindowIsGlError("Draw");
 
@@ -199,7 +188,7 @@ void Draw_(void) {
 	int i;
 
 	/* erase the shaders */
-	auto_Phong_();
+	auto_Lambert_();
 	auto_Lighting_();
 	auto_Hud_();
 	auto_Far_();
@@ -474,7 +463,7 @@ static void display(void) {
 	int lights;
 	/* for SpriteIterate */
 	float x, y, t;
-	unsigned old_texture = 0, tex, size;
+	unsigned old_texture = 0, tex, nor, size;
 
 	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	 <- "The buffers should always be cleared. On much older hardware, there was
@@ -543,6 +532,7 @@ static void display(void) {
 	}
 	old_texture = 0;
 
+#if 0
 	/* turn on lighting */
 	glUseProgram(auto_Lighting_shader.compiled);
 	glUniform1i(auto_Lighting_shader.lights, lights = LightGetArraySize());
@@ -578,27 +568,37 @@ static void display(void) {
 	if(draw_is_print_sprites) {
 		draw_is_print_sprites = 0;
 	}
-
-	/* fixme: experiment */
-	glUseProgram(auto_Phong_shader.compiled);
-	glUniform2f(auto_Phong_shader.camera, camera_x, camera_y);
-	glUniform1i(auto_Phong_shader.points, lights = LightGetArraySize());
+#endif
+	glEnable(GL_BLEND);
+	glUseProgram(auto_Lambert_shader.compiled);
+	glUniform2f(auto_Lambert_shader.camera, camera_x, camera_y);
+	glUniform1i(auto_Lambert_shader.points, lights = LightGetArraySize());
 	if(lights) {
-		glUniform2fv(auto_Phong_shader.point_position, lights, (GLfloat *)LightGetPositionArray());
-		glUniform3fv(auto_Phong_shader.point_colour, lights, (GLfloat *)LightGetColourArray());
+		glUniform2fv(auto_Lambert_shader.point_position, lights, (GLfloat *)LightGetPositionArray());
+		glUniform3fv(auto_Lambert_shader.point_colour, lights, (GLfloat *)LightGetColourArray());
+	}
+	while(SpriteIterate(&x, &y, &t, &tex, &nor, &size)) {
+		if(draw_is_print_sprites) debug("\tTex%d normal Tex%d Size %d (%.1f,%.1f:%.1f)\n", tex, nor, size, x, y, t);
+		/* draw a sprite; fixme: minimise texture transitions? */
+		if(old_texture != tex) {
+			glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
+			glBindTexture(GL_TEXTURE_2D, nor);
+			glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
+			glBindTexture(GL_TEXTURE_2D, tex);
+			old_texture = tex;
+		}
+		glUniform1f(auto_Lambert_shader.size, (float)size);
+		glUniform1f(auto_Lambert_shader.angle, t);
+		glUniform2f(auto_Lambert_shader.object, x, y);
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
+	}
+	if(draw_is_print_sprites) {
+		draw_is_print_sprites = 0;
 	}
 	x = y = 0.0f;
 	t = SpriteGetTheta(GameGetPlayer());
 	size = 128;
-	glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
-	glBindTexture(GL_TEXTURE_2D, sphere_normals);
-	glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
-	glBindTexture(GL_TEXTURE_2D, sphere_tex);
-	glUniform1f(auto_Phong_shader.size, (float)size);
-	glUniform1f(auto_Phong_shader.angle, t);
-	glUniform2f(auto_Phong_shader.object, x, y);
-	glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
-	WindowIsGlError("display");
+	/*WindowIsGlError("display");*/
 
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {
@@ -680,6 +680,6 @@ static void resize(int width, int height) {
 	glUniform2f(auto_Far_shader.two_screen, two_width, two_height);
 	glUseProgram(auto_Lighting_shader.compiled);
 	glUniform2f(auto_Lighting_shader.two_screen, two_width, two_height);
-	glUseProgram(auto_Phong_shader.compiled);
-	glUniform2f(auto_Phong_shader.inv_screen, two_width, two_height);
+	glUseProgram(auto_Lambert_shader.compiled);
+	glUniform2f(auto_Lambert_shader.inv_screen, two_width, two_height);
 }

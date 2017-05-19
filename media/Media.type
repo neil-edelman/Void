@@ -1,13 +1,26 @@
 # resource, key, field*, ~
-TypeOfObject
+# Sprite name, render, normals
+Sprite
 string name
 image image
+image normals
 ~
 ObjectInSpace
 string name
-TypeOfObject type
+Sprite sprite
 int x
 int y
+~
+ShipClass
+string name
+Sprite sprite
+float mass		# t (ie Mg)
+int shield		# fixme: MJ?
+int ms_recharge		# ms
+int speed		# px/s \/ fixme: t/s^2
+float acceleration
+int turn		# fixme: deg/s, now it's rad/ms?
+WmdType weapon
 ~
 Gate
 string name
@@ -16,16 +29,10 @@ int x
 int y
 int theta
 ~
-ShipClass
+Debris
 string name
-image image
-float mass			# t (ie Mg)
-int shield			# fixme: MJ?
-int ms_recharge		# ms
-int speed			# px/s \/ fixme: t/s^2
-float acceleration
-int turn			# deg/s
-WmdType weapon
+Sprite sprite
+int mass
 ~
 Alignment
 string name
@@ -50,7 +57,7 @@ ObjectInSpace ois3
 ~
 WmdType
 string name
-image image
+Sprite sprite
 int ms_range
 int speed
 int ms_recharge
@@ -59,6 +66,3 @@ float impact_mass
 int r
 int g
 int b
-~
-Planetoid
-string name

@@ -38,8 +38,8 @@ struct Game {
 	struct Sprite *player; /* camera moves with this */
 	int ms_turning, ms_acceleration, ms_shoot; /* input per frame, ms */
 	/* defined in Lore.h (hopefully!) */
-	const struct AutoTypeOfObject *asteroid;
-	const struct AutoShipClass *nautilus, *scorpion, *blob;
+	const struct AutoDebris *asteroid;
+	const struct AutoShipClass *nautilus, *scorpion;
 	const struct AutoSpaceZone *start;
 } game;
 
@@ -81,10 +81,9 @@ int Game(void) {
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
 
 	/* game elements */
-	if(!(game.asteroid = AutoTypeOfObjectSearch("asteroid"))
-		|| !(game.nautilus = AutoShipClassSearch("Nautilus"))
-		|| !(game.scorpion = AutoShipClassSearch("Scorpion"))
-		|| !(game.blob     = AutoShipClassSearch("Blob"))
+	if(!(game.asteroid = AutoDebrisSearch("Asteroid"))
+		|| !(game.nautilus = AutoShipClassSearch("Fox"))
+		|| !(game.scorpion = AutoShipClassSearch("Blob"))
 		|| !(game.start    = AutoSpaceZoneSearch("Earth"))) {
 		debug("Game: couldn't find required game elements.\n");
 		return 0;
@@ -95,7 +94,7 @@ int Game(void) {
 
 	Zone(game.start);
 	Event(0, 2000, 1000, FN_RUNNABLE, &position);
-	game.player = Sprite(SP_SHIP, 0.0f, 0.0f, 0.0f, game.nautilus, B_HUMAN);
+	game.player = Sprite(SP_SHIP, game.nautilus, B_HUMAN, 0.0f, 0.0f, 0.0f);
 	SpriteSetNotify(&game.player);
 
 	debug("Game: on.\n");

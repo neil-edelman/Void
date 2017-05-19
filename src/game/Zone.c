@@ -28,8 +28,6 @@ extern const struct AutoObjectInSpace auto_object_in_space[];
 /* from Game */
 extern const float de_sitter;
 
-static const float big_asteroid_mass = 30.0f;
-
 /* public struct */
 /*struct Zone {
 	char *name;
@@ -51,7 +49,6 @@ static int remove_all_events_except(struct Event *const victim);
 void Zone(const struct AutoSpaceZone *const sz) {
 	struct Sprite *s;
 	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
-	const struct AutoShipClass *scorpion_class = AutoShipClassSearch("Scorpion");
 	const struct AutoShipClass *blob_class = AutoShipClassSearch("Blob");
 	int i;
 
@@ -77,17 +74,19 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 	/* some asteroids */
 	for(i = 0; i < /*7000*/1000; i++) {
-		s = Sprite(SP_DEBRIS, AutoImageSearch("Asteroid.png"), rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), big_asteroid_mass);
+		s = Sprite(SP_DEBRIS, AutoDebrisSearch("Asteroid"), rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), 30.0f);
 		SpriteSetVelocity(s, rnd(0.02f), rnd(0.02f));
 		SpriteSetOmega(s, rnd(10.0f));
 	}
 
 	/* sprinkle some ships */
+#if 0
 	for(i = 0; i < /*200*/50; i++) {
-		Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), scorpion_class, B_STUPID);
+		Sprite(SP_SHIP, scorpion_class, B_STUPID, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
+#endif
 	for(i = 0; i < 10; i++) {
-		Sprite(SP_SHIP, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), blob_class, B_STUPID);
+		Sprite(SP_SHIP, blob_class, B_STUPID, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
 
 }

@@ -74,8 +74,8 @@ struct Far *Far(const struct AutoObjectInSpace *ois) {
 	far->x       = (float)ois->x;
 	far->y       = (float)ois->y;
 	far->theta   = 0.0f;
-	far->size    = ois->type->image->width;
-	far->texture = ois->type->image->texture;
+	far->size    = ois->sprite->image->width;
+	far->texture = ois->sprite->image->texture;
 
 	far->prev_x                  = 0;
 	far->next_x                  = first_x;

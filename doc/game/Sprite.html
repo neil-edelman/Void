@@ -216,7 +216,7 @@ Sprite AI behaviour.
 <tr>
 	<td>int</td>
 	<td><a href = "#SpriteIterate">SpriteIterate</a></td>
-	<td>float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr</td>
+	<td>float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *image_ptr, unsigned *normals_ptr, unsigned *size_ptr</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -241,19 +241,16 @@ Get a new sprite from the pool of unused.
 </p>
 <ul>
 	<li>
-Sprite(SP_DEBRIS, const struct Image *image, const float x, y, theta,
-const unsigned mass);
+Sprite(SP_DEBRIS, const struct AutoDebris *debris, const float x, y, theta);
 	</li>
 	<li>
-Sprite(SP_SHIP, const float x, y, theta,
-const struct ShipClass *const class, const enum Behaviour behaviour,
-const struct Ship **notify);
+Sprite(SP_SHIP, const struct ShipClass *const class, const enum Behaviour behaviour, const float x, y, theta);
 	</li>
 	<li>
 Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
 	</li>
 	<li>
-Sprite(SP_ETHEREAL, const struct Image *image, const float x, y, theta);
+Sprite(SP_ETHEREAL, const float x, y, theta);
 	</li>
 </ul>
 <dl>
@@ -488,7 +485,7 @@ sprite; viz, the thing you want to do.
 
 <div><a name = "SpriteIterate"><!-- --></a>
 <h3>SpriteIterate</h3>
-<pre>int <b>SpriteIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr)</pre>
+<pre>int <b>SpriteIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *image_ptr, unsigned *normals_ptr, unsigned *size_ptr)</pre>
 <p>
 Returns true while there are more sprites in the window, sets the values.
 The pointers need to all be there or else there will surely be a segfault.

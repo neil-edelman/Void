@@ -64,7 +64,6 @@ static const float epsilon = 0.0005f;
 extern const float de_sitter;
 
 static const float minimum_mass        = 0.01f;
-static const float small_asteroid_mass = 10.0f;
 
 static const float deb_hit_per_mass         = 5.0f;
 static const float deb_maximum_speed_2      = 20.0f; /* 2000? */
@@ -96,7 +95,7 @@ static struct Sprite {
 	float    bounding;
 	float    mass;      /* t (ie Mg) */
 	unsigned size;		/* the (x, y) size; they are the same */
-	int      texture;	/* gpu texture */
+	int      image, normals; /* gpu textures */
 	/* if we store a Sprite, and the Sprite changes addresses, this will
 	 automatically change the pointer; should be passed a null on setNotify */
 	struct Sprite **notify;
@@ -167,10 +166,10 @@ static struct Sprite *iterate(void);
 static void sort_notify(struct Sprite *s);
 static void collide(struct Sprite *s);
 static int collide_circles(const float a_x, const float a_y,
-						   const float b_x, const float b_y,
-						   const float c_x, const float c_y,
-						   const float d_x, const float d_y,
-						   const float r, float *t0_ptr);
+	const float b_x, const float b_y,
+	const float c_x, const float c_y,
+	const float d_x, const float d_y,
+	const float r, float *t0_ptr); /* fixme */
 static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0);
 static void push(struct Sprite *a, const float angle, const float impulse);
 static int compare_x(const struct Sprite *a, const struct Sprite *b);
@@ -212,13 +211,10 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
 
 /** Get a new sprite from the pool of unused.
 
- * Sprite(SP_DEBRIS, const struct Image *image, const float x, y, theta,
- const unsigned mass);
- * Sprite(SP_SHIP, const float x, y, theta,
- const struct ShipClass *const class, const enum Behaviour behaviour,
- const struct Ship **notify);
+ * Sprite(SP_DEBRIS, const struct AutoDebris *debris, const float x, y, theta, mass);
+ * Sprite(SP_SHIP, const struct ShipClass *const class, const enum Behaviour behaviour, const float x, y, theta);
  * Sprite(SP_WMD, struct Sprite *const from, struct WmdType *const wmd_type);
- * Sprite(SP_ETHEREAL, const struct Image *image, const float x, y, theta);
+ * Sprite(SP_ETHEREAL, const float x, y, theta);
 
  @param sp_type		Type of sprite.
  @param image		(SP_DEBRIS|SP_ETHEREAL) (const struct Image *) Image.
@@ -236,11 +232,15 @@ static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(vo
  @fixme const float x, y */
 struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	va_list args;
-	const struct AutoImage *image;
+	const struct AutoImage *image = 0;
 	struct AutoShipClass *class;
 	struct AutoWmdType *wtype;
+	struct AutoDebris *auto_debris;
+	struct AutoSprite *auto_sprite;
 	struct Sprite *s, *from;
 	float lenght, one_lenght, cs, sn;
+	enum { E_NO, E_IMAGE, E_SPRITE, E_DEBRIS, E_SHIP, E_WMD } e = E_NO;
+	const char *e_strs[] = { "no", "image", "sprite", "debris", "ship", "wmd" };
 
 	if(sprites_size >= sprites_capacity) {
 		warn("Sprite: %s couldn't be created; reached maximum of %u.\n",
@@ -248,7 +248,7 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 		return 0;
 	}
 
-	s = &sprites[sprites_size++];
+	s = &sprites[sprites_size];
 
 	Orcish(s->label, sizeof s->label);
 	s->x = s->x1 = 0.0f;
@@ -259,12 +259,16 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	s->mass   = 1.0f;
 	s->notify = 0;
 
-	/* polymorphism */
+	/* polymorphism (eww, no) */
 	s->sp_type = sp_type;
 	va_start(args, sp_type);
 	switch(sp_type) {
 		case SP_DEBRIS:
-			image            = va_arg(args, struct AutoImage *const);
+			auto_debris      = va_arg(args, struct AutoDebris *const);
+			if(!auto_debris) { e = E_DEBRIS; break; }
+			if(!auto_debris->sprite) { e = E_SPRITE; break; }
+			if(!(s->image    = (image = auto_debris->sprite->image)->texture)
+			|| !(s->normals = auto_debris->sprite->normals->texture)) { e = E_IMAGE; break; };
 			s->x = s->x1     = (float)va_arg(args, const double);
 			s->y = s->y1     = (float)va_arg(args, const double);
 			s->theta         = (float)va_arg(args, const double);
@@ -276,7 +280,9 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->y = s->y1     = (float)va_arg(args, const double);
 			s->theta         = (float)va_arg(args, const double);
 			s->sp.ship.class = class = va_arg(args, struct AutoShipClass *const);
-			image                      = class->image;
+			if(!class) { e = E_SHIP; break; }
+			if(!(s->image              = (image = class->sprite->image)->texture)
+			|| !(s->normals   = class->sprite->normals->texture)) { e = E_IMAGE; break; };
 			s->mass                    = class->mass;
 			s->sp.ship.ms_recharge_wmd = TimerGetGameTime();
 			s->sp.ship.ms_recharge_hit = class->ms_recharge;
@@ -295,10 +301,14 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			/* fixme: 'from' could change! tie it with, I don't know, ship[]
 			 . . . not used now */
 			s->sp.wmd.from     = from  = va_arg(args, struct Sprite *const);
+			if(!from) { e = E_SHIP; break; }
 			s->sp.wmd.wmd_type = wtype = va_arg(args, struct AutoWmdType *const);
+			if(!wtype) { e = E_WMD; break; }
 			/* fixme: both those should be non-null! */
 			s->mass            = wtype->impact_mass;
-			image              = wtype->image;
+			if(!wtype->sprite) { e = E_SPRITE; break; }
+			if(!(s->image      = (image = wtype->sprite->image)->texture)
+			|| !(s->normals  = wtype->sprite->normals->texture)) { e = E_IMAGE; break; };
 			s->sp.wmd.expires  = TimerGetGameTime() + wtype->ms_range;
 			lenght = sqrtf(wtype->r*wtype->r + wtype->g*wtype->g + wtype->b*wtype->b);
 			one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0f;
@@ -313,7 +323,10 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 			s->vy = s->vy1 = s->sp.wmd.from->vy + sn*wtype->speed*px_s_to_px_ms;
 			break;
 		case SP_ETHEREAL:
-			image             = va_arg(args, struct AutoImage *);
+			auto_sprite = AutoSpriteSearch("Gate");
+			if(!auto_sprite) { e = E_SPRITE; break; }
+			if(!(s->image      = (image = auto_sprite->image)->texture)
+			|| !(s->normals  = auto_sprite->normals->texture)) { e = E_IMAGE; break; };
 			s->x = s->x1      = (float)va_arg(args, const double);
 			s->y = s->y1      = (float)va_arg(args, const double);
 			s->theta          = (float)va_arg(args, const double);
@@ -329,13 +342,9 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	}
 	va_end(args);
 
-	/* could be null was passed, eg, Sprite(ImageSearch("not there")); check!
-	this is after va_end because most things have resources that define image */
-	if(!image) {
-		warn("Sprite: couldn't create %s because image is null.\n", SpriteToString(s));
-		sprites_size--;
-		return 0;
-	}
+	if(e) { printf("Sprite: %s not found.\n", e_strs[e]); return 0; }
+
+	sprites_size++;
 
 	/* ensure pricipal branch */
 	branch_cut_pi_pi(&s->theta);
@@ -347,7 +356,6 @@ struct Sprite *Sprite(const enum SpType sp_type, ...) {
 	/* fixme: have a more sutble way; ie, examine the image? */
 	s->bounding = image->width * 0.5f;
 	s->size     = image->width;
-	s->texture  = image->texture;
 
 	s->is_selected   = 0;
 	s->no_collisions = 0;
@@ -382,7 +390,7 @@ struct Sprite *SpriteGate(const struct AutoGate *g) {
 
 	if(!g) return 0;
 
-	if(!(s = Sprite(SP_ETHEREAL, AutoImageSearch("Gate.png"), (float)g->x, (float)g->y, g->theta * deg_to_rad))) return 0;
+	if(!(s = Sprite(SP_ETHEREAL, (float)g->x, (float)g->y, g->theta * deg_to_rad))) return 0;
 	s->sp.ethereal.callback = &gate_travel;
 	s->sp.ethereal.to       = g->to;
 	pedantic("SpriteGate: created from Sprite, %s.\n", SpriteToString(s));
@@ -741,7 +749,7 @@ void SpriteDebris(const struct Sprite *const s) {
 	pedantic("SpriteDebris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
 
 	/* break into pieces -- new debris */
-	sub = Sprite(SP_DEBRIS, small_image, (float)s->x, (float)s->y, s->theta * deg_to_rad, small_asteroid_mass);
+	sub = Sprite(SP_DEBRIS, AutoDebrisSearch("SmallAsteroid"), (float)s->x, (float)s->y, s->theta * deg_to_rad, 10.0f);
 	SpriteSetVelocity(sub, deb_explosion_elasticity * s->vx, deb_explosion_elasticity * s->vy);
 }
 
@@ -847,7 +855,7 @@ extern int draw_is_print_sprites;
  @param texture_ptr: OpenGl texture unit.
  @param size_ptr: Size of the texture.
  @return True if the values have been set. */
-int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr) {
+int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *image_ptr, unsigned *normals_ptr, unsigned *size_ptr) {
 	static int is_reset = -1;
 	static int x_min_index, x_max_index, y_max_index, x_index, y_index;
 	static struct Sprite *s;
@@ -898,7 +906,8 @@ int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *textur
 	*x_ptr       = s->x;
 	*y_ptr       = s->y;
 	*theta_ptr   = s->theta;
-	*texture_ptr = s->texture;
+	*image_ptr   = s->image;
+	*normals_ptr = s->normals;
 	*size_ptr    = s->size;
 
 	s = s->next_bin;

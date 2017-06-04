@@ -1,28 +1,23 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
  Public License, see copying.txt.
 
- Sprites have a (world) position, a rotation, and a bitmap. They are sorted
- by bitmap and drawn by the gpu in {../system/Draw} based on the lighting.
- These are static; they have sprites_capacity maximum sprites. Sprites detect
- collisions. Sprites can be part of ships, asteroids, all sorts of gameplay
- elements, but this doesn't know that. However, background stuff is not
- sprites; ie, not collision detected, not lit. There are several types.
+ Sprites have an {Ortho} location and are lit by \cite{lambert1892photometrie}.
+ They are drawn by the gpu in {../system/Draw} as the main foreground. Sprites
+ detect collisions. To instatiate an abstract {Sprite}, one must:
 
- * SP_DEBRIS: is everything that doesn't have license, but moves around on a
+ * Debris: is everything that doesn't have license, but moves around on a
  linear path, can be damaged, killed, and moved. Astroids and stuff.
- * SP_SHIP: has license and is controlled by a player or an ai.
- * SP_WMD: cannons, bombs, and other cool stuff that has sprites and can hurt.
- * SP_ETHEREAL: are in the forground but poll collision detection instead of
- interacting; they do something in the game. For example, gates are devices
- that can magically transport you faster than light, or powerups.
-
- Sprites can change address. If you want to hold an address, use
- \see{SpriteSetUpdate} (only one address is updated.)
+ * Ship: has license and is controlled by a player or an ai.
+ * Wmd: cannons, bombs, and other cool stuff that has sprites and can hurt.
+ * Ethereal: are in the forground but poll collision detection instead of
+ interacting; they generally do something in the game. For example, gates are
+ devices that can magically transport you faster than light, or powerups.
 
  @title		Sprite
  @author	Neil
- @version	3.3, 2016-01
- @since		3.2, 2015-06 */
+ @version	3.4, 2017-05 generics
+ @since		3.3, 2016-01
+ 			3.2, 2015-06 */
 
 #include <stdarg.h> /* va_* */
 #include <math.h>   /* sqrtf, atan2f, cosf, sinf */
@@ -30,7 +25,7 @@
 #include <stdio.h>	/* snprintf */
 #include "../../build/Auto.h"
 #include "../Print.h"
-#include "../general/Sorting.h"
+#include "../general/Ortho.h"
 #include "../general/Orcish.h"
 #include "../system/Timer.h"
 #include "../system/Draw.h"
@@ -41,31 +36,14 @@
 #include "Event.h"
 #include "Sprite.h"
 
-/* M_PI is a widely accepted gnu standard, not C>=99 -- who knew? */
-#ifndef M_PI_F
-#define M_PI_F (3.141592653589793238462643383279502884197169399375105820974944f)
-#endif
-#ifndef M_2PI_F
-#define M_2PI_F (6.283185307179586476925286766559005768394338798750211641949889f)
-#endif
+/* dependancy from Lore
+extern const struct Gate gate; */
 
-/* from Lore */
-extern const struct Gate gate;
-
-/* hmm, 256 is a lot of pixel space for the front layer, should be enough?
- the larger you set this, the farther it has to go to determine whether there's
- a collision, for every sprite! however, this means that the maximum value for
- a sprite is 256x256 to be guaranteed to be without clipping and collision
- artifacts */
-static const int half_max_size = 128;
-/* log_2(half_max_size * 2.0f), used for bins */
-static const int max_size_pow  = 8;
-static const float epsilon = 0.0005f;
-extern const float de_sitter;
+/*static const float epsilon = 0.0005f;*/
 
 static const float minimum_mass        = 0.01f;
 
-static const float deb_hit_per_mass         = 5.0f;
+static const float debris_hit_per_mass      = 5.0f;
 static const float deb_maximum_speed_2      = 20.0f; /* 2000? */
 static const float deb_explosion_elasticity = 0.5f; /* < 1 */
 
@@ -85,7 +63,212 @@ static const int   shp_ms_sheild_uncertainty = 50;
 /* fixme: 1.415? */
 static const float wmd_distance_mod         = 1.3f; /* to clear ship */
 
-static struct Sprite {
+
+
+
+
+
+
+
+
+
+struct SpriteVt;
+struct Sprite {
+	const struct SpriteVt *vt;
+	struct Sprite *bin_prev, *bin_next;
+	struct Ortho r; /* position, orientation */
+	float mass; /* t (ie Mg) */
+	float bounding;
+	unsigned image, normals; /* gpu texture refs */
+	unsigned bin;
+};
+/** @implements <Sprite>Comparator */
+static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
+	return (b->r.x < a->r.x) - (a->r.x < b->r.x);
+}
+/** @implements <Sprite>Comparator */
+static int Sprite_y_cmp(const struct Sprite *a, const struct Sprite *b) {
+	return (b->r.x < a->r.x) - (a->r.x < b->r.x);
+}
+/** Every sprite has one {bin} based on their position. */
+static struct Sprite *bin[ORTHO_BIN_SIZE * ORTHO_BIN_SIZE];
+/** {vt} is left undefined; this is, if you will, an abstract struct (haha.)
+ Initialises {this} with {AutoSprite} resource, {as}. */
+static void Sprite_filler(struct Sprite *const this,
+	const struct AutoSprite *const as, struct Ortho *const r) {
+	assert(this);
+	assert(as);
+	assert(as->image->texture);
+	assert(as->normals->texture);
+	assert(r);
+	this->vt = 0;
+	this->bin_prev = this->bin_next = 0; /* no bin yet */
+	Ortho_clip_position(r);
+	Ortho_assign(&this->r, r);
+	this->mass = 1.0f;
+	this->bounding = as->image->width * 0.5f;
+	this->image = as->image->texture;
+	this->normals = as->normals->texture;
+	this->bin = ORTHO_BIN_SIZE * ORTHO_BIN_SIZE; /* out-of-bounds */
+}
+/* Awkward declarations for {List.h}. */
+struct ListMigrate;
+struct SpriteList;
+static void SpriteList_self_migrate(struct SpriteList *const this,
+	const struct ListMigrate *const migrate);
+/* Define {SpriteList} and {SpriteListNode}. */
+#define LIST_NAME Sprite
+#define LIST_TYPE struct Sprite
+#define LIST_SELF_MIGRATE &SpriteList_self_migrate
+#define LIST_UA_NAME X
+#define LIST_UA_COMPARATOR &Sprite_x_cmp
+#define LIST_UB_NAME Y
+#define LIST_UB_COMPARATOR &Sprite_y_cmp
+#include "../general/List.h"
+/* Master mega sprite list. */
+struct SpriteList sprites;
+/** User-specified {realloc} fix function for custom {bin} pointers.
+ @implements <Sprite>SelfMigrate
+ @order \Theta(n) */
+static void SpriteList_self_migrate(struct SpriteList *const this,
+	const struct ListMigrate *const migrate) {
+	size_t x, y;
+	struct Sprite **s_ptr, *s;
+	UNUSED(this);
+	for(y = 0; y < ortho_bin_size; y++) {
+		for(x = 0; x < ortho_bin_size; x++) {
+			if(!*(s_ptr = &bin[y * ortho_bin_size + x])) continue;
+			SpriteListMigrateSelf(migrate, s_ptr);
+			s = *s_ptr;
+			do {
+				SpriteListMigrateSelf(migrate, &s->bin_prev);
+				SpriteListMigrateSelf(migrate, &s->bin_next);
+	 		} while((s = s->bin_next));
+		}
+	}
+}
+static void Sprite_remove_from_bin(struct Sprite *const this) {
+	assert(this);
+	assert(this->bin < ORTHO_BIN_SIZE * ORTHO_BIN_SIZE);
+	if(this->bin_prev) {
+		this->bin_prev->bin_next = this->bin_next;
+	} else {
+		assert(bin[this->bin] == this);
+		bin[this->bin] = this->bin_next;
+	}
+	if(this->bin_next) {
+		this->bin_next->bin_prev = this->bin_prev;
+	}
+	this->bin = ORTHO_BIN_SIZE * ORTHO_BIN_SIZE;
+}
+static void Sprite_add_to_bin(struct Sprite *const this) {
+	assert(this);
+	assert(this->bin == ORTHO_BIN_SIZE * ORTHO_BIN_SIZE);
+	this->bin = Ortho_location_to_bin(this->r.x, this->r.y);
+	this->bin_prev = 0;
+	this->bin_next = bin[this->bin];
+	bin[this->bin] = this;
+}
+
+/** Define a {Debris} as a subclass of {Sprite}. */
+struct Debris {
+	struct SpriteListNode sprite;
+	struct Ortho v;
+	int hit;
+	/*void (*on_kill)(void); minerals? */
+};
+/* Define DebrisSet. */
+#define SET_NAME Debris
+#define SET_TYPE struct Debris
+#include "../general/Set.h"
+struct DebrisSet *debris;
+/** @implements <Debris>Action */
+static void debris_filler(struct Debris *const this,
+	const struct AutoDebris *const class,
+	struct Ortho *const r, const struct Ortho *const v) {
+	assert(this);
+	assert(class);
+	assert(r);
+	assert(v);
+	Sprite_filler(&this->sprite.data, class->sprite, r);
+	Ortho_assign(&this->v, v);
+	this->sprite.data.mass = class->mass;
+	this->hit = class->mass * debris_hit_per_mass;
+}
+/** @implements <Debris>Action */
+static void debris_delete(struct Debris *const this) {
+	assert(this);
+	SpriteListRemove(&sprites, &this->sprite);
+	DebrisSetRemove(debris, this);
+	/* fixme: explode */
+}
+
+/** Define a {Ship} as a subclass of {Sprite}. */
+struct Ship {
+	struct SpriteListNode sprite;
+	const struct AutoShipClass *class;
+	unsigned       ms_recharge_wmd; /* ms */
+	unsigned       ms_recharge_hit; /* ms */
+	struct Event   *event_recharge;
+	/*unsigned       ms_recharge_event;*/ /* ms */
+	int            hit, max_hit; /* GJ */
+	float          max_speed2;
+	float          acceleration;
+	float          turn; /* deg/s -> rad/ms */
+	float          turn_acceleration;
+	float          horizon;
+	enum Behaviour behaviour;
+};
+/* Define ShipSet. */
+#define SET_NAME Ship
+#define SET_TYPE struct Ship
+#include "../general/Set.h"
+struct ShipSet *ships;
+/** @implements <Ship>Action */
+static void ship_filler(struct Ship *const this,
+	const struct AutoShipClass *const class,
+	struct Ortho *const r, const struct Ortho *const v) {
+	assert(this);
+	assert(class);
+	assert(r);
+	assert(v);
+	Sprite_filler(&this->sprite.data, class->sprite, r);
+}
+/** @implements <Debris>Action */
+static void ship_delete(struct Debris *const this) {
+	assert(this);
+	SpriteListRemove(&sprites, &this->sprite);
+	DebrisSetRemove(debris, this);
+	/* fixme: explode */
+}
+
+
+
+
+
+struct {
+	struct Sprite  *from;
+	struct AutoWmdType *wmd_type;
+	unsigned       expires;
+	int            light;
+} wmd;
+struct {
+	void       (*callback)(struct Sprite *const, struct Sprite *const);
+	const struct AutoSpaceZone *to;
+	int        is_picked_up;
+} ethereal;
+
+
+
+
+static const struct SpriteVt {
+	void (*delete)(struct Sprite *const);
+	/*void (*death)(struct Sprite *const);*/ /* much more dramatic */
+} debris_vt = {
+	(SpriteAction)debris_delete
+};
+
+static struct SpriteXXX {
 	char     label[16];
 	float    x,  y;
 	float    x1, y1;	/* temp; the spot where you want to go */
@@ -100,39 +283,6 @@ static struct Sprite {
 	 automatically change the pointer; should be passed a null on setNotify */
 	struct Sprite **notify;
 
-	enum SpType  sp_type;
-	union {
-		struct {
-			int           hit;
-			/*void          (*on_kill)(void); minerals? */
-		} debris;
-		struct {
-			const struct AutoShipClass *class;
-			unsigned       ms_recharge_wmd; /* ms */
-			unsigned       ms_recharge_hit; /* ms */
-			struct Event   *event_recharge;
-			/*unsigned       ms_recharge_event;*/ /* ms */
-			int            hit, max_hit; /* GJ */
-			float          max_speed2;
-			float          acceleration;
-			float          turn; /* deg/s -> rad/ms */
-			float          turn_acceleration;
-			float          horizon;
-			enum Behaviour behaviour;
-		} ship;
-		struct {
-			struct Sprite  *from;
-			struct AutoWmdType *wmd_type;
-			unsigned       expires;
-			int            light;
-		} wmd;
-		struct {
-			void       (*callback)(struct Sprite *const, struct Sprite *const);
-			const struct AutoSpaceZone *to;
-			int        is_picked_up;
-		} ethereal;
-	} sp;
-
 	int           is_selected;   /* temp; per object per frame */
 	int           no_collisions; /* temp; per frame */
 	float         x_min, x_max, y_min, y_max; /* temp; bounding box */
@@ -145,17 +295,11 @@ static struct Sprite {
 	struct Sprite *next_bin;
 	int bin_x, bin_y;
 
-} sprites[8192], *first_x, *first_y, *first_x_window, *first_y_window, *window_iterator, *iterator = sprites;
+} *first_x, *first_y, *first_x_window, *first_y_window, *window_iterator, *iterator = sprites;
 static const unsigned sprites_capacity = sizeof sprites / sizeof(struct Sprite);
 static unsigned       sprites_size;
 
 static int sprites_considered, sprites_onscreen; /* for stats */
-
-/* should be updated once these values change!
- (int)de_sitter * 2 / max_size = 8192 * 2 / 256 = 64 (fixme) */
-static struct Sprite *bins[64][64];
-static const int bin_size = sizeof bins[0] / sizeof(struct Sprite *);
-static const int bin_half_size = sizeof bins[0] / sizeof(struct Sprite *) >> 1;
 
 /* private prototypes */
 
@@ -600,12 +744,6 @@ void SpriteSetNotify(struct Sprite **const s_ptr) {
 	s->notify = s_ptr;
 }
 
-/** Gets the Sprite type that was assigned at the beginning. */
-enum SpType SpriteGetType(const struct Sprite *const sprite) {
-	if(!sprite) return 0;
-	return sprite->sp_type;
-}
-
 /** Volatile-ish: can only print 4 Sprites at once. */
 char *SpriteToString(const struct Sprite *const s) {
 	static int b;
@@ -842,11 +980,6 @@ void SpriteRemoveIf(int (*const predicate)(struct Sprite *const)) {
 
 extern int draw_is_print_sprites;
 
-/************************************************************
- fixme: instead of marking, just do bins
- ************************************************************/
-
-
 /** Returns true while there are more sprites in the window, sets the values.
  The pointers need to all be there or else there will surely be a segfault.
  @param x_ptr: x
@@ -1066,37 +1199,6 @@ static struct Sprite *iterate(void) {
 		return 0;
 	}
 	return iterator++;
-}
-
-#if 0
-/** Sorts the sprites; they're (hopefully) almost sorted already from last
- frame, just freshens with insertion sort, O(n + m) where m is the
- related to the dynamicness of the scene
- @return	The number of equvalent-swaps (doesn't do this anymore.) */
-static void sort(void) {
-	isort((void **)&first_x,
-		  (int (*)(const void *, const void *))&compare_x,
-		  (void **(*)(void *const))&address_prev_x,
-		  (void **(*)(void *const))&address_next_x);
-	isort((void **)&first_y,
-		  (int (*)(const void *, const void *))&compare_y,
-		  (void **(*)(void *const))&address_prev_y,
-		  (void **(*)(void *const))&address_next_y);
-}
-#endif
-
-/** Keep it sorted when there is one element out-of-place. */
-static void sort_notify(struct Sprite *s) {
-	inotify((void **)&first_x,
-			(void *)s,
-			(int (*)(const void *, const void *))&compare_x,
-			(void **(*)(void *const))&address_prev_x,
-			(void **(*)(void *const))&address_next_x);
-	inotify((void **)&first_y,
-			(void *)s,
-			(int (*)(const void *, const void *))&compare_y,
-			(void **(*)(void *const))&address_prev_y,
-			(void **(*)(void *const))&address_next_y);
 }
 
 /** First it uses the Hahn–Banach separation theorem (viz, hyperplane
@@ -1339,34 +1441,8 @@ static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt
  @param impulse	tonne pixels / ms */
 static void push(struct Sprite *a, const float angle, const float impulse) {
 	const float deltav = a->mass ? impulse / a->mass : 1.0f; /* pixel / s */
-	a->vx += cosf(angle) * deltav;
-	a->vy += sinf(angle) * deltav;
-}
-
-/* for isort */
-
-static int compare_x(const struct Sprite *a, const struct Sprite *b) {
-	return a->x > b->x;
-}
-
-static int compare_y(const struct Sprite *a, const struct Sprite *b) {
-	return a->y > b->y;
-}
-
-static struct Sprite **address_prev_x(struct Sprite *const a) {
-	return &a->prev_x;
-}
-
-static struct Sprite **address_next_x(struct Sprite *const a) {
-	return &a->next_x;
-}
-
-static struct Sprite **address_prev_y(struct Sprite *const a) {
-	return &a->prev_y;
-}
-
-static struct Sprite **address_next_y(struct Sprite *const a) {
-	return &a->next_y;
+	a->v.x += cosf(angle) * deltav;
+	a->v.y += sinf(angle) * deltav;
 }
 
 /* type collisions; can not modify list of Sprites as it is in the middle of
@@ -1430,17 +1506,6 @@ static void shp_eth(struct Sprite *s, struct Sprite *e, const float d0) {
 
 static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
 	shp_eth(s, e, d0);
-}
-
-/** For debugging. */
-static const char *decode_sprite_type(const enum SpType sp_type) {
-	switch(sp_type) {
-		case SP_DEBRIS:		return "<Debris>";
-		case SP_SHIP:		return "<Ship>";
-		case SP_WMD:		return "<Wmd>";
-		case SP_ETHEREAL:	return "<Ethereal>";
-		default:			return "<not a sprite type>";
-	}
 }
 
 /** can be a callback for an Ethereal, whenever it collides with a Ship.

@@ -1,7 +1,7 @@
 # resource, key, field*, ~
 # Sprite name, render, normals
 Sprite
-string name
+string key
 image image
 image normals
 ~

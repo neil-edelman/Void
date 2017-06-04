@@ -301,8 +301,6 @@
 			<key>Layout</key>
 			<array>
 				<dict>
-					<key>BecomeActive</key>
-					<true/>
 					<key>ContentConfiguration</key>
 					<dict>
 						<key>PBXBottomSmartGroupGIDs</key>
@@ -349,14 +347,14 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>34</integer>
-									<integer>33</integer>
+									<integer>20</integer>
+									<integer>11</integer>
 									<integer>8</integer>
 									<integer>0</integer>
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
-							<string>{{0, 102}, {185, 669}}</string>
+							<string>{{0, 120}, {185, 669}}</string>
 						</dict>
 						<key>PBXTopSmartGroupGIDs</key>
 						<array/>
@@ -401,10 +399,10 @@
 										<key>_historyCapacity</key>
 										<integer>20</integer>
 										<key>bookmark</key>
-										<string>28A5ECEB1ECF8EAB00180A7E</string>
+										<string>28440D6A1EE3B15500C0A682</string>
 										<key>history</key>
 										<array>
-											<string>28517B371ECEFA5700EC217B</string>
+											<string>2865C4AA1ECFB570005C3696</string>
 										</array>
 									</dict>
 									<key>SplitCount</key>
@@ -527,11 +525,11 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>28A5ECCA1ECF8A7F00180A7E</string>
+				<string>28440CCB1EE3989800C0A682</string>
 				<string>1CA23ED40692098700951B8B</string>
-				<string>28A5ECCB1ECF8A7F00180A7E</string>
+				<string>28440CCC1EE3989800C0A682</string>
 				<string>2866766C1E8467350090EBDC</string>
-				<string>28A5ECCC1ECF8A7F00180A7E</string>
+				<string>28440CCD1EE3989800C0A682</string>
 				<string>1CA23EDF0692099D00951B8B</string>
 				<string>1CA23EE00692099D00951B8B</string>
 				<string>1CA23EE10692099D00951B8B</string>
@@ -704,7 +702,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>516918955.957645</real>
+	<real>518238549.52095902</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -721,10 +719,8 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>28A5ECE01ECF8C3400180A7E</string>
-		<string>28A5ECE11ECF8C3400180A7E</string>
+		<string>28440CE81EE39C4C00C0A682</string>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
-		<string>28A5ECEC1ECF8EAB00180A7E</string>
 	</array>
 	<key>WindowString</key>
 	<string>429 50 851 728 0 0 1280 778 </string>

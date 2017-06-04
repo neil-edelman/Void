@@ -91,7 +91,7 @@ JPEG_H := $(patsubst $(media)/%.jpeg,$(build)/%_jpeg.h,$(JPEG))
 TEXT   := $(wildcard $(media)/*.txt)
 
 # just guess
-CC    := gcc
+CC    := clang #gcc
 CDOC  := cdoc
 MAKE  := make
 MKDIR := mkdir -p

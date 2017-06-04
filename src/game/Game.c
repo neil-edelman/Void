@@ -9,7 +9,7 @@
  @since		1.0, 1999 */
 
 #include <stdlib.h> /* malloc free rand (fixme) */
-#include <math.h>   /* M_PI */
+#include <math.h>   /* M_PI (fixme: no, GNU) */
 #include <string.h> /* strcmp for bsearch */
 #include <stdio.h>  /* printf */
 #include "../../build/Auto.h"
@@ -48,7 +48,7 @@ static const float asteroid_max_speed = 0.03f;
 /* positions larger then this value will be looped around;
  used in Sprite and Zone; if you change, you should also change waypoints in
  Sprite */
-const float de_sitter = 8192.0f;
+/*const float de_sitter = 8192.0f; !!! */
 
 /* private */
 static void quit(void);
@@ -94,7 +94,7 @@ int Game(void) {
 
 	Zone(game.start);
 	Event(0, 2000, 1000, FN_RUNNABLE, &position);
-	game.player = Sprite(SP_SHIP, game.nautilus, B_HUMAN, 0.0f, 0.0f, 0.0f);
+	game.player = Ship(game.nautilus, B_HUMAN, 0.0f, 0.0f, 0.0f);
 	SpriteSetNotify(&game.player);
 
 	debug("Game: on.\n");

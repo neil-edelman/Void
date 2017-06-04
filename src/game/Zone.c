@@ -74,19 +74,14 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 	/* some asteroids */
 	for(i = 0; i < /*7000*/1000; i++) {
-		s = Sprite(SP_DEBRIS, AutoDebrisSearch("Asteroid"), rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), 30.0f);
+		s = Debris(AutoDebrisSearch("Asteroid"), rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), 30.0f);
 		SpriteSetVelocity(s, rnd(0.02f), rnd(0.02f));
 		SpriteSetOmega(s, rnd(10.0f));
 	}
 
 	/* sprinkle some ships */
-#if 0
-	for(i = 0; i < /*200*/50; i++) {
-		Sprite(SP_SHIP, scorpion_class, B_STUPID, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
-	}
-#endif
 	for(i = 0; i < 10; i++) {
-		Sprite(SP_SHIP, blob_class, B_STUPID, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
+		Ship(blob_class, B_STUPID, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
 	}
 
 }

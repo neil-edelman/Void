@@ -4,12 +4,9 @@ struct AutoSpaceZone;
 /** See \see{Sprite}. */
 struct Sprite;
 
-/** Sprite type. */
-enum SpType { SP_DEBRIS, SP_SHIP, SP_WMD, SP_ETHEREAL };
 /** Sprite AI behaviour. */
 enum Behaviour { B_NONE, B_HUMAN, B_STUPID };
 
-struct Sprite *Sprite(const enum SpType sp_type, ...);
 struct Sprite *SpriteGate(const struct AutoGate *gate);
 void Sprite_(struct Sprite **sprite_ptr);
 int SpriteGetConsidered(void);
@@ -27,7 +24,6 @@ float SpriteGetBounding(const struct Sprite *const sprite);
 float SpriteGetMass(const struct Sprite *const s);
 unsigned SpriteGetSize(const struct Sprite *const s);
 void SpriteSetNotify(struct Sprite **const s_ptr);
-enum SpType SpriteGetType(const struct Sprite *const sprite);
 char *SpriteToString(const struct Sprite *const s);
 const struct AutoSpaceZone *SpriteGetTo(const struct Sprite *const s);
 int SpriteGetDamage(const struct Sprite *const s);

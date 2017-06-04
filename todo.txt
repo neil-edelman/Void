@@ -32,8 +32,6 @@ Features
 
 relies on 1997 technology
 
-allow data types to be used as keys (ie, weak entity)
-
 circle bounding -> multiple circle (AI could decide?) gartner1999fast esa99_final
 
 need better Sprite selection then is_selected
@@ -41,6 +39,8 @@ need better Sprite selection then is_selected
 more rotational acceleration/friction
 
 I liked sort better than notify; it's always going to be uneven
+
+allow data types to be used as keys (ie, weak entity)
 
 add supporting resource for array resources, eg, (maybe opt it so it searches for repeat "strings")
 .type
@@ -77,7 +77,7 @@ things that you can buy that allow different things to be picked up, eg gold min
 
 have a sprite and normals, instead of all having a cone for normals -> automate making sprites, have different views instead of rotating -> create 3d models, create ray-tracer in tools
 
-order the lights by distance/brighness and take the head of the list, and ignore all that pass a certain threshold. This will scale way better.
+order the lights by distance/brightness and take the head of the list, and ignore all that pass a certain threshold. This will scale way better.
 
 look up how to get outlines (I think you just add a little bit to the size and then render it in one colour)
 

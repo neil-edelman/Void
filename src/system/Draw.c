@@ -459,7 +459,7 @@ int draw_is_print_sprites;
 
 /** Callback for glutDisplayFunc; this is where all of the drawing happens. */
 static void display(void) {
-	struct Sprite *player;
+	struct Ship *player;
 	int lights;
 	/* for SpriteIterate */
 	float x, y, t;
@@ -602,14 +602,14 @@ static void display(void) {
 
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {
-		SpriteGetPosition(player, &x, &y);
-		t = SpriteGetBounding(player);
+		struct Ortho2f z;
+		ShipGetPosition(player, &z);
 		glUseProgram(auto_Hud_shader.compiled);
 		glBindTexture(GL_TEXTURE_2D, shield_tex);
 		glUniform2f(auto_Hud_shader.camera, camera_x, camera_y);
 		glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
-		glUniform2f(auto_Hud_shader.position, x, y - t * 2.0f);
-		glUniform2i(auto_Hud_shader.shield, SpriteGetHit(player), SpriteGetMaxHit(player));
+		glUniform2f(auto_Hud_shader.position, x, y + 64.0f);
+		glUniform2i(auto_Hud_shader.shield, SpriteGetHit((struct Sprite *)player), ShipGetMaxHit(player));
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
 

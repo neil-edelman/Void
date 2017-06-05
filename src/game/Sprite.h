@@ -1,44 +1,40 @@
+#include "../general/Ortho.h"
+
 struct AutoGate;
 struct AutoSpaceZone;
 
-/** See \see{Sprite}. */
 struct Sprite;
+struct Debris;
+struct Ship;
+struct Wmd;
+struct Gate;
 
 /** Sprite AI behaviour. */
-enum Behaviour { B_NONE, B_HUMAN, B_STUPID };
+enum SpriteBehaviour { SB_NONE, SB_HUMAN, SB_STUPID };
 
-struct Sprite *SpriteGate(const struct AutoGate *gate);
-void Sprite_(struct Sprite **sprite_ptr);
-int SpriteGetConsidered(void);
-int SpriteGetOnscreen(void);
-void SpriteGetPosition(const struct Sprite *sprite, float *const x_ptr, float *const y_ptr);
-void SpriteSetPosition(struct Sprite *const sprite, const float x, const float y);
-float SpriteGetTheta(const struct Sprite *const sprite);
-void SpriteSetTheta(struct Sprite *const sprite, const float theta);
-void SpriteAddTheta(struct Sprite *sprite, const float theta);
-void SpriteGetVelocity(const struct Sprite *const sprite, float *vx_ptr, float *vy_ptr);
-void SpriteSetVelocity(struct Sprite *const sprite, const float vx, const float vy);
-float SpriteGetOmega(const struct Sprite *const sprite);
-void SpriteSetOmega(struct Sprite *const sprite, const float omega);
-float SpriteGetBounding(const struct Sprite *const sprite);
-float SpriteGetMass(const struct Sprite *const s);
-unsigned SpriteGetSize(const struct Sprite *const s);
-void SpriteSetNotify(struct Sprite **const s_ptr);
-char *SpriteToString(const struct Sprite *const s);
-const struct AutoSpaceZone *SpriteGetTo(const struct Sprite *const s);
-int SpriteGetDamage(const struct Sprite *const s);
-int SpriteGetHit(const struct Sprite *const s);
-int SpriteGetMaxHit(const struct Sprite *const s);
-struct Event *SpriteGetEventRecharge(const struct Sprite *const s);
-const struct AutoWmdType *SpriteGetWeapon(const struct Sprite *const s);
-void SpriteRecharge(struct Sprite *const s, const int recharge);
-int SpriteIsDestroyed(const struct Sprite *const s);
-void SpriteDestroy(struct Sprite *const s);
-void SpriteDebris(const struct Sprite *const s);
-void SpriteInput(struct Sprite *s, const int turning, const int acceleration, const int dt_ms);
-void SpriteUpdate(const int dt_ms);
-void SpriteShoot(struct Sprite *const s);
-struct Sprite *SpriteOutgoingGate(const struct AutoSpaceZone *to);
-void SpriteRemoveIf(int (*const predicate)(struct Sprite *const));
+struct Debris *Debris(const struct AutoDebris *const class,
+	struct Ortho *r, const struct Ortho *v);
+struct Ship *Ship(const struct AutoShipClass *const class,
+	struct Ortho *const r, const enum SpriteBehaviour behaviour);
+int Gate(const struct AutoGate *const class);
+
+int Sprite(void);
+void Sprite_(void);
+void SpriteOut(struct Sprite *const this);
+
+void ShipInput(struct Ship *const this, const int turning,
+	const int acceleration, const int dt_ms);
+void ShipShoot(struct Ship *const this);
+void ShipGetPosition(const struct Ship *this, struct Ortho2f *pos);
+void ShipSetPosition(struct Ship *const this, struct Ortho2f *const pos);
+unsigned ShipGetMaxHit(const struct Ship *const this);
+
+int WmdGetDamage(const struct Wmd *const this);
+
+const struct AutoSpaceZone *GateGetTo(const struct Gate *const this);
+
+
+
+/*void SpriteRemoveIf(int (*const predicate)(struct Sprite *const));
 int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *image_ptr, unsigned *normals_ptr, unsigned *size_ptr);
-void SpriteList(void);
+void SpriteList(void);*/

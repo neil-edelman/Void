@@ -7,6 +7,8 @@
 		addToTargets = (
 			8DD76FA90486AB0100D96B5E /* Void */,
 		);
+		breakpoints = (
+		);
 		codeSenseManager = 2866766B1E8467300090EBDC /* Code sense */;
 		executables = (
 			28FB37211E8A0FE1003610DC /* Void */,
@@ -56,36 +58,19 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 518232213;
-			PBXWorkspaceStateSaveDate = 518232213;
-		};
-		perUserProjectItems = {
-			28440D6A1EE3B15500C0A682 /* PBXTextBookmark */ = 28440D6A1EE3B15500C0A682 /* PBXTextBookmark */;
-			2865C4AA1ECFB570005C3696 /* PBXTextBookmark */ = 2865C4AA1ECFB570005C3696 /* PBXTextBookmark */;
+			PBXPerProjectTemplateStateSaveDate = 518296408;
+			PBXWorkspaceStateSaveDate = 518296408;
 		};
 		sourceControlManager = 2866766A1E8467300090EBDC /* Source Control */;
 		userBuildSettings = {
 		};
 	};
-	28440D6A1EE3B15500C0A682 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 28FB36F71E8A0FE1003610DC /* Sprite.c */;
-		name = "Sprite.c: 335";
-		rLen = 0;
-		rLoc = 11219;
-		rType = 0;
-		vrLen = 0;
-		vrLoc = 0;
-	};
-	2865C4AA1ECFB570005C3696 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 28FB36F71E8A0FE1003610DC /* Sprite.c */;
-		name = "Sprite.c: 284";
-		rLen = 0;
-		rLoc = 11219;
-		rType = 0;
-		vrLen = 0;
-		vrLoc = 0;
+	2806515F1EE4C6A40023DC21 /* Ortho.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {578, 1209}}";
+			sepNavSelRange = "{2792, 0}";
+			sepNavVisRange = "{1474, 1590}";
+		};
 	};
 	2866766A1E8467300090EBDC /* Source Control */ = {
 		isa = PBXSourceControlManager;
@@ -145,51 +130,51 @@
 	};
 	28FB36F31E8A0FE1003610DC /* Game.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2587}}";
-			sepNavSelRange = "{2796, 0}";
-			sepNavVisRange = "{2052, 1421}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2600}}";
+			sepNavSelRange = "{3655, 0}";
+			sepNavVisRange = "{2732, 1183}";
 		};
 	};
 	28FB36F41E8A0FE1003610DC /* Game.h */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 702}}";
-			sepNavSelRange = "{164, 0}";
-			sepNavVisRange = "{0, 165}";
+			sepNavSelRange = "{139, 0}";
+			sepNavVisRange = "{0, 163}";
 		};
 	};
 	28FB36F51E8A0FE1003610DC /* Light.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 3640}}";
-			sepNavSelRange = "{7734, 7}";
-			sepNavVisRange = "{6510, 1592}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 3393}}";
+			sepNavSelRange = "{2685, 0}";
+			sepNavVisRange = "{1262, 1669}";
 		};
 	};
 	28FB36F61E8A0FE1003610DC /* Light.h */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 702}}";
-			sepNavSelRange = "{489, 0}";
-			sepNavVisRange = "{0, 595}";
+			sepNavSelRange = "{251, 0}";
+			sepNavVisRange = "{0, 610}";
 		};
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {595, 22230}}";
-			sepNavSelRange = "{11219, 0}";
-			sepNavVisRange = "{0, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 20332}}";
+			sepNavSelRange = "{2899, 0}";
+			sepNavVisRange = "{20714, 1869}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 702}}";
-			sepNavSelRange = "{1195, 0}";
-			sepNavVisRange = "{0, 2280}";
+			sepNavSelRange = "{1038, 0}";
+			sepNavVisRange = "{0, 1263}";
 		};
 	};
 	28FB36F91E8A0FE1003610DC /* Zone.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2535}}";
-			sepNavSelRange = "{2098, 0}";
-			sepNavVisRange = "{1344, 1536}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2483}}";
+			sepNavSelRange = "{2912, 17}";
+			sepNavVisRange = "{3359, 1782}";
 		};
 	};
 	28FB36FA1E8A0FE1003610DC /* Zone.h */ = {
@@ -251,15 +236,15 @@
 	28FB37041E8A0FE1003610DC /* Print.h */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 858}}";
-			sepNavSelRange = "{332, 0}";
-			sepNavVisRange = "{246, 1086}";
+			sepNavSelRange = "{1344, 0}";
+			sepNavVisRange = "{246, 1104}";
 		};
 	};
 	28FB37061E8A0FE1003610DC /* Draw.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 8944}}";
-			sepNavSelRange = "{6836, 0}";
-			sepNavVisRange = "{4827, 2258}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 9126}}";
+			sepNavSelRange = "{21480, 13}";
+			sepNavVisRange = "{19985, 1847}";
 		};
 	};
 	28FB37071E8A0FE1003610DC /* Draw.h */ = {
@@ -332,7 +317,7 @@
 		argumentStrings = (
 		);
 		autoAttachOnCrash = 1;
-		breakpointsEnabled = 0;
+		breakpointsEnabled = 1;
 		configStateDict = {
 		};
 		customDataFormattersEnabled = 1;
@@ -359,16 +344,16 @@
 	};
 	28FB37221E8A100A003610DC /* Auto.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 4446}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 4433}}";
 			sepNavSelRange = "{11462, 0}";
-			sepNavVisRange = "{1018, 2223}";
+			sepNavVisRange = "{4883, 2183}";
 		};
 	};
 	28FB37231E8A100A003610DC /* Auto.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 1677}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 1703}}";
 			sepNavSelRange = "{0, 0}";
-			sepNavVisRange = "{467, 1137}";
+			sepNavVisRange = "{0, 1225}";
 		};
 	};
 	28FB37281E8A1031003610DC /* lodepng.c */ = {

@@ -33,7 +33,7 @@ struct Colour3f { float r, g, b; };
 
 static struct Vec2f    position[MAX_LIGHTS];
 static struct Colour3f colour[MAX_LIGHTS];
-static int             *notify[MAX_LIGHTS];
+static unsigned        *notify[MAX_LIGHTS];
 static char            label[MAX_LIGHTS][16];
 
 unsigned id_to_light(const int id);
@@ -47,7 +47,7 @@ char *to_string(const unsigned light);
  @param i		The intensity, i >= 0.
  @param r,g,b	The colours, [0, 1].
  @return		Boolean true on success; the id_ptr has (0, MAX_LIGHTS]. */
-int Light(int *const id_ptr, const float i, const float r, const float g, const float b) {
+int Light(unsigned *const id_ptr, const float i, const float r, const float g, const float b) {
 	unsigned light;
 
 	if(!id_ptr) {
@@ -79,7 +79,7 @@ int Light(int *const id_ptr, const float i, const float r, const float g, const 
 
 /** Destructor of light, will update with new particle at light.
  @param index	The light that's being destroyed. */
-void Light_(int *id_ptr) {
+void Light_(unsigned *id_ptr) {
 	unsigned light, replace;
 	int id;
 	unsigned characters;
@@ -145,7 +145,7 @@ void LightSetPosition(const int id, const float x, const float y) {
 }
 
 /** This is important because Sprites change places, as well. */
-void LightSetNotify(int *const id_ptr) {
+void LightSetNotify(unsigned *const id_ptr) {
 	int id;
 	unsigned light;
 

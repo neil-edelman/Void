@@ -40,6 +40,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2806515F1EE4C6A40023DC21 /* Ortho.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Ortho.h; sourceTree = "<group>"; };
 		28FB36EC1E8A0FE1003610DC /* EntryPosix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = EntryPosix.c; sourceTree = "<group>"; };
 		28FB36ED1E8A0FE1003610DC /* EntryPosix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EntryPosix.h; sourceTree = "<group>"; };
 		28FB36EF1E8A0FE1003610DC /* Event.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = Event.c; sourceTree = "<group>"; };
@@ -160,6 +161,7 @@
 				28FB36FC1E8A0FE1003610DC /* List.h */,
 				28FB36FD1E8A0FE1003610DC /* Orcish.c */,
 				28FB36FE1E8A0FE1003610DC /* Orcish.h */,
+				2806515F1EE4C6A40023DC21 /* Ortho.h */,
 				28FB36FF1E8A0FE1003610DC /* Random.c */,
 				28FB37001E8A0FE1003610DC /* Random.h */,
 				28FB37011E8A0FE1003610DC /* Sorting.c */,

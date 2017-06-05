@@ -52,14 +52,14 @@ static void info(const char *const fmt, ...) {
 	va_end(args);
 }
 
-static void unused_coda(void);
-static void unused_print(void) {
+static void print_unused_coda(void);
+static void print_unused(void) {
 	debug(0);
 	pedantic(0);
 	warn(0);
 	info(0);
-	unused_coda();
+	print_unused_coda();
 }
-static void unused_coda(void) {
-	unused_print();
+static void print_unused_coda(void) {
+	print_unused();
 }

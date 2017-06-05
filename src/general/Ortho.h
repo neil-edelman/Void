@@ -5,6 +5,9 @@
  @version	3.3; 2017-06
  @since		3.3; 2017-06 */
 
+#ifndef ORTHO_H
+#define ORTHO_H
+
 #include <assert.h>
 #include <math.h>	/* fmodf */
 
@@ -30,7 +33,12 @@ static const unsigned ortho_bin_half_space = 1 << (ORTHO_BIN_LOG_SPACE - 1);
 static const float ortho_de_sitter
 	= (float)(ORTHO_BIN_SIZE * (1 << (ORTHO_BIN_LOG_SPACE - 1)));
 
+/** Position, rotation, and position in the future. */
 struct Ortho { float x, y, theta, /* temp */ x1, y1; };
+/** 2-vector of floats. */
+struct Ortho2f { float x, y; };
+/** 3-vector of floats, usually normalised. */
+struct Ortho3f { float r, g, b; };
 
 static void Ortho_init(struct Ortho *const this) {
 	assert(this);
@@ -67,3 +75,17 @@ static unsigned Ortho_location_to_bin(const float x, const float y) {
 	else if((unsigned)bin_y >= ortho_bin_size) bin_y = ortho_bin_size - 1;
 	return (unsigned)((bin_y << ORTHO_BIN_LOG_SIZE) + bin_x);
 }
+
+static void ortho_unused_coda(void);
+static void ortho_unused(void) {
+	Ortho_init(0);
+	Ortho_assign(0, 0);
+	Ortho_clip_position(0);
+	Ortho_location_to_bin(0.0f, 0.0f);
+	ortho_unused_coda();
+}
+static void ortho_unused_coda(void) {
+	ortho_unused();
+}
+
+#endif /* ORTHO_H */

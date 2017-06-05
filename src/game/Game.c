@@ -35,7 +35,7 @@ static int is_started;
 
 /* public struct */
 struct Game {
-	struct Sprite *player; /* camera moves with this */
+	struct Ship *player; /* camera moves with this */
 	int ms_turning, ms_acceleration, ms_shoot; /* input per frame, ms */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
@@ -75,7 +75,7 @@ int Game(void) {
 	KeyRegister('a',  &position);
 	KeyRegister('t',  &gametime);
 	KeyRegister('l',  &LightList);
-	KeyRegister('s',  &SpriteList);
+	/*KeyRegister('s',  &SpriteList);*/
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
@@ -94,8 +94,7 @@ int Game(void) {
 
 	Zone(game.start);
 	Event(0, 2000, 1000, FN_RUNNABLE, &position);
-	game.player = Ship(game.nautilus, B_HUMAN, 0.0f, 0.0f, 0.0f);
-	SpriteSetNotify(&game.player);
+	game.player = Ship(game.nautilus, 0, SB_HUMAN);
 
 	debug("Game: on.\n");
 	is_started = -1;
@@ -125,12 +124,11 @@ void GameUpdate(const int dt_ms) {
 
 	/* apply to player */
 	if((game.player)) {
-		float x, y;
-
-		SpriteInput(game.player, game.ms_turning, game.ms_acceleration, dt_ms);
-		if(game.ms_shoot) SpriteShoot(game.player);
-		SpriteGetPosition(game.player, &x, &y);
-		DrawSetCamera(x, y);
+		struct Ortho2f x;
+		ShipInput(game.player, game.ms_turning, game.ms_acceleration, dt_ms);
+		if(game.ms_shoot) ShipShoot(game.player);
+		ShipGetPosition(game.player, &x);
+		DrawSetCamera(x.x, x.y);
 	}
 
 	/* O(n) + O(n + m); collision detect + move sprites; a lot of work */
@@ -140,7 +138,7 @@ void GameUpdate(const int dt_ms) {
 	EventDispatch();
 }
 
-struct Sprite *GameGetPlayer(void) {
+struct Ship *GameGetPlayer(void) {
 	return game.player;
 }
 
@@ -191,12 +189,9 @@ static void gametime(void) {
 }*/
 
 static void position(void) {
-	float x, y, t;
 	if(!game.player) {
 		info("You are scattered across space.\n");
 		return;
 	}
-	SpriteGetPosition(game.player, &x, &y);
-	t = SpriteGetTheta(game.player);
-	info("You are %s at position (%.1f,%.1f:%.1f) with %dGJ/%dGJ.\n", SpriteToString(game.player), x, y, t, SpriteGetHit(game.player), SpriteGetMaxHit(game.player));
+	SpriteOut((struct Sprite *)game.player);
 }

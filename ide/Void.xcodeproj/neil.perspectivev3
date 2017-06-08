@@ -347,14 +347,14 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>38</integer>
-									<integer>34</integer>
+									<integer>25</integer>
+									<integer>24</integer>
 									<integer>8</integer>
 									<integer>0</integer>
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
-							<string>{{0, 114}, {185, 669}}</string>
+							<string>{{0, 0}, {185, 669}}</string>
 						</dict>
 						<key>PBXTopSmartGroupGIDs</key>
 						<array/>
@@ -517,11 +517,11 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>2806509B1EE4A6C30023DC21</string>
+				<string>285CE1111EE76C0400E1E5D1</string>
 				<string>1CA23ED40692098700951B8B</string>
-				<string>2806509C1EE4A6C30023DC21</string>
+				<string>285CE1121EE76C0400E1E5D1</string>
 				<string>2866766C1E8467350090EBDC</string>
-				<string>2806509D1EE4A6C30023DC21</string>
+				<string>285CE1131EE76C0400E1E5D1</string>
 				<string>1CA23EDF0692099D00951B8B</string>
 				<string>1CA23EE00692099D00951B8B</string>
 				<string>1CA23EE10692099D00951B8B</string>
@@ -670,14 +670,14 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>280651301EE4C0E30023DC21</string>
+				<string>285CE1D01EE7E5CE00E1E5D1</string>
 				<string>1CCC7628064C1048000F2A68</string>
 				<string>1CCC7629064C1048000F2A68</string>
-				<string>280651311EE4C0E30023DC21</string>
-				<string>280651321EE4C0E30023DC21</string>
-				<string>280651331EE4C0E30023DC21</string>
-				<string>280651341EE4C0E30023DC21</string>
-				<string>280651351EE4C0E30023DC21</string>
+				<string>285CE1D11EE7E5CE00E1E5D1</string>
+				<string>285CE1D21EE7E5CE00E1E5D1</string>
+				<string>285CE1D31EE7E5CE00E1E5D1</string>
+				<string>285CE1D41EE7E5CE00E1E5D1</string>
+				<string>285CE1D51EE7E5CE00E1E5D1</string>
 			</array>
 			<key>ToolbarConfigUserDefaultsMinorVersion</key>
 			<string>2</string>
@@ -694,7 +694,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>518324168.179039</real>
+	<real>518514126.10317701</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -711,12 +711,9 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>2806521E1EE4EF740023DC21</string>
-		<string>2806521F1EE4EF740023DC21</string>
-		<string>2806528B1EE4FBEC0023DC21</string>
-		<string>280652801EE4FADF0023DC21</string>
-		<string>280652821EE4FADF0023DC21</string>
+		<string>285CE1141EE76C0400E1E5D1</string>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
+		<string>285CE15F1EE77B5B00E1E5D1</string>
 	</array>
 	<key>WindowString</key>
 	<string>429 50 851 728 0 0 1280 778 </string>

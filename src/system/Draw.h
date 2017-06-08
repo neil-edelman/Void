@@ -1,7 +1,9 @@
+#include "../general/OrthoMath.h"
+
 int Draw(void);
 void Draw_(void);
-void DrawSetCamera(const float x, const float y);
-void DrawGetCamera(float *x_ptr, float *y_ptr);
-void DrawGetScreen(unsigned *width_ptr, unsigned *height_ptr);
-void DrawSetBackground(const char *const str);
-void DrawSetShield(const char *const str);
+void DrawSetCamera(const struct Vec2f x);
+void DrawGetCamera(struct Vec2f *const x);
+void DrawGetScreen(struct Vec2u *const x);
+void DrawSetBackground(const char *const key);
+void DrawSetShield(const char *const key);

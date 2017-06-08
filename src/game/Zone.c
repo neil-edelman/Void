@@ -37,10 +37,26 @@ extern const float de_sitter;
 
 const struct AutoSpaceZone *current_zone;
 
-/* private prototypes */
-static float rnd(const float limit);
-static int remove_all_except_player(struct Sprite *const victim);
-static int remove_all_events_except(struct Event *const victim);
+/** "Random" -- used for initialising.
+ @return A uniformly distributed random variable in the range [-limit, limit].
+ @fixme This will be used a lot! have Rando.c include all sorts of random
+ fuctions. */
+static float rnd(const float limit) {
+	return limit * (2.0f * rand() / RAND_MAX - 1.0f);
+}
+
+/** @fixme Player should be on it's own. */
+static int remove_all_except_player(struct Sprite *const this) {
+	const struct Ship *const player = GameGetPlayer();
+	return !player || (struct Sprite *)player != this;
+}
+
+static int remove_all_events_except(struct Event *const victim) {
+	/* we don't erase the player's recharge event nor any (one?) event that uses
+	 ZoneChange because it's probably happening right now */
+	return SpriteGetEventRecharge(GameGetPlayer()) != victim
+	&& EventGetConsumerAccept(victim) != (void (*)(void *))&ZoneChange;
+}
 
 /* public */
 
@@ -67,7 +83,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	Far(sz->ois2);
 	Far(sz->ois3);
 
-	SpriteGate(sz->gate1);
+	Gate(sz->gate1);
 
 	/* update the current zone */
 	current_zone = sz;
@@ -155,24 +171,4 @@ void ZoneChange(const struct Sprite *const gate) {
 	SpriteSetPosition(player, player_x, player_y);
 	SpriteSetTheta(player, player_theta);
 	SpriteSetVelocity(player, player_vx, player_vy);
-}
-
-/** "Random" -- used for initialising.
- @return A uniformly distributed random variable in the range [-limit, limit].
- @fixme This will be used a lot! have Rando.c include all sorts of random
- fuctions. */
-static float rnd(const float limit) {
-	return limit * (2.0f * rand() / RAND_MAX - 1.0f);
-}
-
-static int remove_all_except_player(struct Sprite *const victim) {
-	const struct Sprite *const player = GameGetPlayer();
-	return !player || player != victim;
-}
-
-static int remove_all_events_except(struct Event *const victim) {
-	/* we don't erase the player's recharge event nor any (one?) event that uses
-	 ZoneChange because it's probably happening right now */
-	return SpriteGetEventRecharge(GameGetPlayer()) != victim
-	    && EventGetConsumerAccept(victim) != (void (*)(void *))&ZoneChange;
 }

@@ -27,7 +27,7 @@
 #include <stdio.h>	/* snprintf */
 #include "../../build/Auto.h"
 #include "../Print.h"
-#include "../general/Ortho.h"
+#include "../general/OrthoMath.h"
 #include "../general/Orcish.h"
 #include "../system/Timer.h"
 #include "../system/Draw.h"
@@ -72,16 +72,20 @@ static const float wmd_distance_mod         = 1.3f; /* to clear ship */
 
 
 
-
+/* Define class {Sprite}. */
 
 struct SpriteVt;
 struct Sprite {
 	const struct SpriteVt *vt;
 	struct Sprite *bin_prev, *bin_next;
-	struct Ortho r; /* position, orientation */
+	struct Ortho3f r, v; /* position, orientation, velocity, angular velocity */
+	struct Vec2f r1; /* temp position on the next frame */
+	struct Rectangle4f box; /* temp bounding box */
+	float t0_dt_collide; /* temp time to collide over frame time */
 	float mass; /* t (ie Mg) */
 	float bounding;
 	unsigned image, normals; /* gpu texture refs */
+	struct Vec2u size;
 	unsigned bin;
 };
 /** @implements <Sprite>Comparator */
@@ -92,12 +96,13 @@ static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
 static int Sprite_y_cmp(const struct Sprite *a, const struct Sprite *b) {
 	return (b->r.x < a->r.x) - (a->r.x < b->r.x);
 }
-/** Every sprite has one {bin} based on their position. */
-static struct Sprite *bin[ORTHO_BIN_SIZE * ORTHO_BIN_SIZE];
+/** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
+static struct Sprite *bin[BIN_SIZE * BIN_SIZE];
 /** {vt} is left undefined; this is, if you will, an abstract struct (haha.)
  Initialises {this} with {AutoSprite} resource, {as}. */
 static void Sprite_filler(struct Sprite *const this,
-	const struct AutoSprite *const as, struct Ortho *const r) {
+	const struct AutoSprite *const as,
+	struct Ortho3f *const r, const struct Ortho3f *const v) {
 	assert(this);
 	assert(as);
 	assert(as->image->texture);
@@ -105,13 +110,20 @@ static void Sprite_filler(struct Sprite *const this,
 	assert(r);
 	this->vt = 0;
 	this->bin_prev = this->bin_next = 0; /* no bin yet */
-	Ortho_clip_position(r);
-	Ortho_assign(&this->r, r);
+	Ortho3f_clip_position(r);
+	Ortho3f_assign(&this->r, r);
+	Ortho3f_assign(&this->v, v);
+	this->r1.x = r->x;
+	this->r1.y = r->y;
+	Rectangle4f_init(&this->box);
+	this->t0_dt_collide = 0.0f;
 	this->mass = 1.0f;
 	this->bounding = as->image->width * 0.5f;
 	this->image = as->image->texture;
 	this->normals = as->normals->texture;
-	this->bin = ORTHO_BIN_SIZE * ORTHO_BIN_SIZE; /* out-of-bounds */
+	this->size.x = as->image->width;
+	this->size.y = as->image->height;
+	this->bin = BIN_SIZE * BIN_SIZE; /* out-of-bounds */
 }
 /* Awkward declarations for {List.h}. */
 struct ListMigrate;
@@ -137,9 +149,9 @@ static void SpriteList_self_migrate(struct SpriteList *const this,
 	size_t x, y;
 	struct Sprite **s_ptr, *s;
 	UNUSED(this);
-	for(y = 0; y < ortho_bin_size; y++) {
-		for(x = 0; x < ortho_bin_size; x++) {
-			if(!*(s_ptr = &bin[y * ortho_bin_size + x])) continue;
+	for(y = 0; y < bin_size; y++) { /* \see{OrthoMath.h} */
+		for(x = 0; x < bin_size; x++) {
+			if(!*(s_ptr = &bin[y * bin_size + x])) continue;
 			SpriteListMigrateSelf(migrate, s_ptr);
 			s = *s_ptr;
 			do {
@@ -151,7 +163,7 @@ static void SpriteList_self_migrate(struct SpriteList *const this,
 }
 static void Sprite_remove_from_bin(struct Sprite *const this) {
 	assert(this);
-	assert(this->bin < ORTHO_BIN_SIZE * ORTHO_BIN_SIZE);
+	assert(this->bin < BIN_SIZE * BIN_SIZE);
 	if(this->bin_prev) {
 		this->bin_prev->bin_next = this->bin_next;
 	} else {
@@ -161,23 +173,22 @@ static void Sprite_remove_from_bin(struct Sprite *const this) {
 	if(this->bin_next) {
 		this->bin_next->bin_prev = this->bin_prev;
 	}
-	this->bin = ORTHO_BIN_SIZE * ORTHO_BIN_SIZE;
+	this->bin = BIN_SIZE * BIN_SIZE;
 }
 static void Sprite_add_to_bin(struct Sprite *const this) {
+	struct Vec2f x;
 	assert(this);
-	assert(this->bin == ORTHO_BIN_SIZE * ORTHO_BIN_SIZE);
-	this->bin = Ortho_location_to_bin(this->r.x, this->r.y);
+	assert(this->bin == BIN_SIZE * BIN_SIZE);
+	x.x = this->r.x, x.y = this->r.y;
+	this->bin = location_to_bin(x); /* \see{OrthoMath.h} */
 	this->bin_prev = 0;
 	this->bin_next = bin[this->bin];
 	bin[this->bin] = this;
 }
 
-/* Define classes of {Sprite}. */
-
 /** Define {Debris} as a subclass of {Sprite}. */
 struct Debris {
 	struct SpriteListNode sprite;
-	struct Ortho v;
 	int hit;
 	/*void (*on_kill)(void); minerals? */
 };
@@ -189,7 +200,6 @@ struct Debris {
 /** Define {Ship} as a subclass of {Sprite}. */
 struct Ship {
 	struct SpriteListNode sprite;
-	struct Ortho v;
 	const struct AutoShipClass *class;
 	unsigned     ms_recharge_wmd; /* ms */
 	unsigned     ms_recharge_hit; /* ms */
@@ -201,6 +211,7 @@ struct Ship {
 	float        turn_acceleration;
 	float        horizon;
 	enum SpriteBehaviour behaviour;
+	char         name[16];
 };
 /* Define ShipSet. */
 #define SET_NAME Ship
@@ -210,7 +221,6 @@ struct Ship {
 /** Define {Wmd} as a subclass of {Sprite}. */
 struct Wmd {
 	struct SpriteListNode sprite;
-	struct Ortho v;
 	const struct AutoWmdType *class;
 	const struct Sprite *from;
 	float mass;
@@ -238,18 +248,90 @@ struct ShipSet *ships;
 struct WmdSet *wmds;
 struct GateSet *gates;
 
+/** Changes the window parameters so all of them don't point to {this} and
+ deletes {this} from the sprite list.
+ @implements <Sprite>Action */
+static void sprite_remove(struct SpriteListNode *const this) {
+	/* fixme: window parameters */
+	SpriteListRemove(&sprites, this);
+}
+
 /** @implements <Debris>Action */
 static void debris_out(struct Debris *const this) {
 	assert(this);
 	printf("Debris at (%f, %f) in %u integrity %u.\n", this->sprite.data.r.x,
 		this->sprite.data.r.y, this->sprite.data.bin, this->hit);
 }
+/** @implements <Debris>Action */
+static void debris_delete(struct Debris *const this) {
+	assert(this);
+	sprite_remove(&this->sprite);
+	DebrisSetRemove(debris, this);
+	/* fixme: explode */
+}
+/** @implements <Debris>Action */
+static void debris_death(struct Debris *const this) {
+	this->hit = 0;
+#if 0
+	/** Spawns smaller Debris (fixme: stub.) */
+	void SpriteDebris(const struct Sprite *const s) {
+		struct AutoImage *small_image;
+		struct Sprite *sub;
+		
+		if(!s || !(small_image = AutoImageSearch("AsteroidSmall.png")) || s->size <= small_image->width) return;
+		
+		pedantic("SpriteDebris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
+		
+		/* break into pieces -- new debris */
+		sub = Sprite(SP_DEBRIS, AutoDebrisSearch("SmallAsteroid"), (float)s->x, (float)s->y, s->theta * deg_to_rad, 10.0f);
+		SpriteSetVelocity(sub, deb_explosion_elasticity * s->vx, deb_explosion_elasticity * s->vy);
+	}
+	/** Enforces the maximum speed by breaking the debris into smaller chunks; the
+	 process is not elastic, so it loses energy (speed.) */
+	/*void DebrisEnforce(struct Debris *deb) {
+	 float vx, vy;
+	 float speed_2;
+	 
+	 if(!deb || !deb->sprite) return;
+	 
+	 SpriteGetVelocity(deb->sprite, &vx, &vy);
+	 if((speed_2 = vx * vx + vy * vy) > maximum_speed_2) {
+	 debug("DebrisEnforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
+	 DebrisExplode(deb);
+	 }
+	 }*/	
+#endif
+}
+/** @implements <Debris>Predicate */
+static int debris_is_destroyed(struct Debris *const this, void *const param) {
+	UNUSED(param);
+	return this->hit <= 0;
+}
+
 /** @implements <Ship>Action */
 static void ship_out(struct Ship *const this) {
 	assert(this);
 	printf("Ship at (%f, %f) in %u integrity %u/%u.\n", this->sprite.data.r.x,
 		this->sprite.data.r.y, this->sprite.data.bin, this->hit, this->max_hit);
 }
+/** @implements <Ship>Action */
+static void ship_delete(struct Ship *const this) {
+	assert(this);
+	Event_(&this->event_recharge);
+	sprite_remove(&this->sprite);
+	ShipSetRemove(ships, this);
+}
+/** @implements <Ship>Action */
+static void ship_death(struct Ship *const this) {
+	this->hit = 0;
+	/* fixme: explode */
+}
+/** @implements <Ship>Predicate */
+static int ship_is_destroyed(struct Ship *const this, void *const param) {
+	UNUSED(param);
+	return this->hit <= 0;
+}
+
 /** @implements <Wmd>Action */
 static void wmd_out(struct Wmd *const this) {
 	assert(this);
@@ -257,87 +339,91 @@ static void wmd_out(struct Wmd *const this) {
 		this->sprite.data.r.y, this->sprite.data.bin);
 }
 /** @implements <Wmd>Action */
+static void wmd_delete(struct Wmd *const this) {
+	assert(this);
+	Light_(&this->light);
+	sprite_remove(&this->sprite);
+	WmdSetRemove(wmds, this);
+	/* fixme: explode */
+}
+/** @implements <Wmd>Action */
+static void wmd_death(struct Wmd *const this) {
+	this->expires = 0;
+}
+/** @implements <Wmd>Predicate */
+static int wmd_is_destroyed(struct Wmd *const this, void *const param) {
+	UNUSED(param);
+	return TimerIsTime(this->expires);
+}
+
+/** @implements <Gate>Action */
 static void gate_out(struct Gate *const this) {
 	assert(this);
 	printf("Gate at (%f, %f) in %u goes to %s.\n", this->sprite.data.r.x,
 		this->sprite.data.r.y, this->sprite.data.bin, this->to->name);
 }
-
-/** Changes the window parameters so all of them don't point to {this}.
- @implements <Sprite>Action */
-static void sprite_remove(const struct Sprite *const this) {
-}
-/** @implements <Debris>Action */
-static void debris_delete(struct Debris *const this) {
-	assert(this);
-	sprite_remove(&this->sprite.data);
-	SpriteListRemove(&sprites, &this->sprite);
-	DebrisSetRemove(debris, this);
-	/* fixme: explode */
-}
-/** @implements <Ship>Action */
-static void ship_delete(struct Ship *const this) {
-	assert(this);
-	Event_(&this->event_recharge);
-	sprite_remove(&this->sprite.data);
-	SpriteListRemove(&sprites, &this->sprite);
-	ShipSetRemove(ships, this);
-	/* fixme: explode */
-}
-/** @implements <Wmd>Action */
-static void wmd_delete(struct Wmd *const this) {
-	assert(this);
-	Light_(&this->light);
-	sprite_remove(&this->sprite.data);
-	SpriteListRemove(&sprites, &this->sprite);
-	WmdSetRemove(wmds, this);
-	/* fixme: explode */
-}
-/** @implements <Wmd>Action */
+/** @implements <Gate>Action */
 static void gate_delete(struct Gate *const this) {
 	assert(this);
-	sprite_remove(&this->sprite.data);
-	SpriteListRemove(&sprites, &this->sprite);
+	sprite_remove(&this->sprite);
 	GateSetRemove(gates, this);
 	/* fixme: explode */
+}
+/** @implements <Gate>Action */
+static void gate_death(struct Gate *const this) {
+	fprintf(stderr, "Trying to destroy gate to %s.\n", this->to->name);
+}
+/** @implements <Gate>Predicate */
+static int gate_is_destroyed(struct Gate *const this, void *const param) {
+	UNUSED(this);
+	UNUSED(param);
+	return 0;
 }
 
 /* define the virtual table */
 static const struct SpriteVt {
-	const SpriteAction out, delete;
-	/*void (*death)(struct Sprite *const);*/ /* much more dramatic */
+	const SpriteAction out, delete, death;
+	const SpritePredicate is_destroyed;
 } debris_vt = {
 	(SpriteAction)&debris_out,
-	(SpriteAction)&debris_delete
+	(SpriteAction)&debris_delete,
+	(SpriteAction)&debris_death,
+	(SpritePredicate)&debris_is_destroyed
 }, ship_vt = {
 	(SpriteAction)&ship_out,
-	(SpriteAction)&ship_delete
+	(SpriteAction)&ship_delete,
+	(SpriteAction)&ship_death,
+	(SpritePredicate)&ship_is_destroyed
 }, wmd_vt = {
 	(SpriteAction)&wmd_out,
-	(SpriteAction)&wmd_delete
+	(SpriteAction)&wmd_delete,
+	(SpriteAction)&wmd_death,
+	(SpritePredicate)&wmd_is_destroyed
 }, gate_vt = {
 	(SpriteAction)&gate_out,
-	(SpriteAction)&gate_delete
+	(SpriteAction)&gate_delete,
+	(SpriteAction)&gate_death,
+	(SpritePredicate)&gate_is_destroyed
 };
 
 /** @implements <Debris>Action */
 static void debris_filler(struct Debris *const this,
 	const struct AutoDebris *const class,
-	struct Ortho *const r, const struct Ortho *const v) {
+	struct Ortho3f *const r, const struct Ortho3f *const v) {
 	assert(this);
 	assert(class);
 	assert(r);
 	assert(v);
-	Sprite_filler(&this->sprite.data, class->sprite, r);
+	Sprite_filler(&this->sprite.data, class->sprite, r, v);
 	this->sprite.data.vt = &debris_vt;
-	Ortho_assign(&this->v, v);
 	this->sprite.data.mass = class->mass;
 	this->hit = class->mass * debris_hit_per_mass;
 }
-
-struct Debris *Debris(const struct AutoDebris *const class,
-	struct Ortho *r, const struct Ortho *v) {
-	struct Ortho zero = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+/** Constructor.
+ @return Success. */
+int Debris(const struct AutoDebris *const class,
+	struct Ortho3f *r, const struct Ortho3f *v) {
+	struct Ortho3f zero = { 0.0f, 0.0f, 0.0f };
 	struct Debris *d;
 	if(!class) return 0;
 	if(!r) r = &zero;
@@ -346,19 +432,20 @@ struct Debris *Debris(const struct AutoDebris *const class,
 		{ fprintf(stderr, "Debris: %s.\n", DebrisSetGetError(debris));return 0;}
 	debris_filler(d, class, r, v);
 	SpriteListAdd(&sprites, &d->sprite);
-	return d;
+	return 1;
 }
 
 /** @implements <Ship>Action */
 static void ship_filler(struct Ship *const this,
 	const struct AutoShipClass *const class,
-	struct Ortho *const r, const enum SpriteBehaviour behaviour) {
+	struct Ortho3f *const r, const enum SpriteBehaviour behaviour) {
+	/* all ships start off stationary */
+	const struct Ortho3f v = { 0.0f, 0.0f, 0.0f };
 	assert(this);
 	assert(class);
 	assert(r);
-	Sprite_filler(&this->sprite.data, class->sprite, r);
+	Sprite_filler(&this->sprite.data, class->sprite, r, &v);
 	this->sprite.data.vt = &ship_vt;
-	Ortho_init(&this->v);
 	this->class = class;
 	this->ms_recharge_wmd = TimerGetGameTime();
 	this->ms_recharge_hit = class->ms_recharge;
@@ -373,10 +460,12 @@ static void ship_filler(struct Ship *const this,
 	/* fixme: horizon is broken w/o a way to reset (for gate effect?) */
 	this->horizon         = 0.0f;
 	this->behaviour       = behaviour;
+	Orcish(this->name, sizeof this->name);
 }
-
+/** Constructor.
+ @return Newly created ship or null. */
 struct Ship *Ship(const struct AutoShipClass *const class,
-	struct Ortho *const r, const enum SpriteBehaviour behaviour) {
+	struct Ortho3f *const r, const enum SpriteBehaviour behaviour) {
 	struct Ship *ship;
 	if(!class || !r) return 0;
 	if(!(ship = ShipSetNew(ships)))
@@ -391,7 +480,7 @@ struct Ship *Ship(const struct AutoShipClass *const class,
 static void wmd_filler(struct Wmd *const this,
 	const struct AutoWmdType *const class,
 	const struct Ship *const from) {
-	struct Ortho r;
+	struct Ortho3f r, v;
 	float cosine, sine, lenght, one_lenght;
 	assert(this);
 	assert(class);
@@ -404,11 +493,11 @@ static void wmd_filler(struct Wmd *const this,
 	r.y = from->sprite.data.r.y + sine   * from->class->sprite->image->width
 	* 0.5f * wmd_distance_mod;
 	r.theta = from->sprite.data.r.theta;
-	Sprite_filler(&this->sprite.data, class->sprite, &r);
+	v.x = from->sprite.data.v.x + cosine * class->speed * px_s_to_px_ms;
+	v.y = from->sprite.data.v.y + sine   * class->speed * px_s_to_px_ms;
+	v.theta = 0.0f; /* \omega */
+	Sprite_filler(&this->sprite.data, class->sprite, &r, &v);
 	this->sprite.data.vt = &wmd_vt;
-	this->v.x = from->v.x + cosine * class->speed * px_s_to_px_ms;
-	this->v.y = from->v.y + sine   * class->speed * px_s_to_px_ms;
-	this->v.theta = 0.0f; /* \omega */
 	this->class = class;
 	this->from = &from->sprite.data;
 	this->mass = class->impact_mass;
@@ -423,8 +512,10 @@ static void wmd_filler(struct Wmd *const this,
 /** @implements <Gate>Action */
 static void gate_filler(struct Gate *const this,
 	const struct AutoGate *const class) {
+	/* all gates (start off) stationary */
+	const struct Ortho3f v = { 0.0f, 0.0f, 0.0f };
 	const struct AutoSprite *const gate_sprite = AutoSpriteSearch("Gate");
-	struct Ortho r;
+	struct Ortho3f r;
 	assert(this);
 	assert(class);
 	assert(gate_sprite);
@@ -432,11 +523,12 @@ static void gate_filler(struct Gate *const this,
 	r.x     = class->x;
 	r.y     = class->y;
 	r.theta = class->theta;
-	Sprite_filler(&this->sprite.data, gate_sprite, &r);
+	Sprite_filler(&this->sprite.data, gate_sprite, &r, &v);
 	this->sprite.data.vt = &gate_vt;
 	this->to = class->to;
 }
-
+/** Constructor.
+ @return Success. */
 int Gate(const struct AutoGate *const class) {
 	struct Gate *gate;
 	if(!class) return 0;
@@ -446,8 +538,6 @@ int Gate(const struct AutoGate *const class) {
 	SpriteListAdd(&sprites, &gate->sprite);
 	return 1;
 }
-
-/* public functions */
 
 /** Initailises all sprite buffers.
  @return Success. */
@@ -470,9 +560,172 @@ void Sprite_(void) {
 	DebrisSet_(&debris);
 }
 
+/** Prints out debug info. */
 void SpriteOut(struct Sprite *const this) {
 	if(!this) return;
 	this->vt->out(this);
+}
+
+/* Compute bounding boxes of where the sprite wants to go this frame,
+ containing the projected circle along a vector {x -> x + v*dt}. This is the
+ first step in collision detection. */
+static void collide_extrapolate(struct Sprite *const this, const float dt_ms) {
+	/* where they should be if there's no collision */
+	this->r1.x = this->r.x + this->v.x * dt_ms;
+	this->r1.y = this->r.y + this->v.y * dt_ms;
+	/* clamp */
+	if(this->r1.x > de_sitter)       this->r1.x = de_sitter;
+	else if(this->r1.x < -de_sitter) this->r1.x = -de_sitter;
+	if(this->r1.y > de_sitter)       this->r1.y = de_sitter;
+	else if(this->r1.y < -de_sitter) this->r1.y = -de_sitter;
+	/* extend the bounding box along the circle's trajectory */
+	if(this->r.x <= this->r1.x) {
+		this->box.x_min = this->r.x  - this->bounding - bin_half_space;
+		this->box.x_max = this->r1.x + this->bounding + bin_half_space;
+	} else {
+		this->box.x_min = this->r1.x - this->bounding - bin_half_space;
+		this->box.x_max = this->r.x  + this->bounding + bin_half_space;
+	}
+	if(this->r.y <= this->r1.y) {
+		this->box.y_min = this->r.y  - this->bounding - bin_half_space;
+		this->box.y_max = this->r1.y + this->bounding + bin_half_space;
+	} else {
+		this->box.y_min = this->r1.y - this->bounding - bin_half_space;
+		this->box.y_max = this->r.y  + this->bounding + bin_half_space;
+	}
+}
+
+#if 0
+/** Used after \see{collide_extrapolate} on all the sprites you want to check.
+ Uses Hahn–Banach separation theorem and the ordered list of projections on the
+ {x} and {y} axis to build up a list of possible colliders based on their
+ bounding box of where it moved this frame. Calls \see{collide_circles} for any
+ candidites. */
+static void collide_boxes(struct Sprite *const this) {
+	struct Sprite *b, *b_adj_y;
+	float t0;
+	if(!this) return;
+	/* assume it can be in a maximum of four bins at once as it travels */
+	
+
+	/* mark x */
+	for(b = this->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
+		if(this < b && this->x_min < b->x_max) b->is_selected = -1;
+	}
+	for(b = this->next_x; b && b->x <= explore_x_max; b = b->next_x) {
+		if(this < b && this->x_max > b->x_min) b->is_selected = -1;
+	}
+	
+	/* consider y and maybe add it to the list of colliders */
+	for(b = this->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
+		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
+		if(b->is_selected
+		   && this->y_min < b->y_max
+		   && (response = collision_matrix[b->sp_type][this->sp_type])
+		   && collide_circles(this->x, this->y, this->x1, this->y1, b->x, b->y, b->x1,
+							  b->y1, this->bounding + b->bounding, &t0))
+			response(this, b, t0);
+		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
+	}
+	for(b = this->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
+		b_adj_y = b->next_y;
+		if(b->is_selected
+		   && this->y_max > b->y_min
+		   && (response = collision_matrix[b->sp_type][this->sp_type])
+		   && collide_circles(this->x, this->y, this->x1, this->y1, b->x, b->y, b->x1,
+							  b->y1, this->bounding + b->bounding, &t0))
+			response(this, b, t0);
+		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
+	}
+}
+#endif
+
+/** Called from \see{collide_boxes}.
+ @param a, b: Point {u} moves from {a} to {b}.
+ @param c, d: Point {v} moves from {c} to {d}.
+ @param r: Combined radius.
+ @param t0_ptr: If true, sets the time of collision, normalised to the frame
+ time, {[0, 1]}.
+ @return If they collided. */
+static int collide_circles(const struct Vec2f a, const struct Vec2f b,
+	const struct Vec2f c, const struct Vec2f d, const float r, float *t0_ptr) {
+	/* t \in [0,1]
+	             u = b - a
+	             v = d - c
+	 if(v-u ~= 0) t = doesn't matter, parallel-ish
+	          p(t) = a + (b-a)t
+	          q(t) = c + (d-c)t
+	 distance(t)   = |q(t) - p(t)|
+	 distance^2(t) = (q(t) - p(t))^2
+	               = ((c+vt) - (a+ut))^2
+	               = ((c-a) + (v-u)t)^2
+	               = (v-u)*(v-u)t^2 + 2(c-a)*(v-u)t + (c-a)*(c-a)
+	             0 = 2(v-u)*(v-u)t_min + 2(c-a)*(v-u)
+	         t_min = -(c-a)*(v-u)/(v-u)*(v-u)
+	 this is an optimisation, if t \notin [0,1] then pick the closest; if
+	 distance^2(t_min) < r^2 then we have a collision, which happened at t0,
+	           r^2 = (v-u)*(v-u)t0^2 + 2(c-a)*(v-u)t0 + (c-a)*(c-a)
+	            t0 = [-2(c-a)*(v-u) - sqrt((2(c-a)*(v-u))^2
+	                 - 4((v-u)*(v-u))((c-a)*(c-a) - r^2))] / 2(v-u)*(v-u)
+	            t0 = [-(c-a)*(v-u) - sqrt(((c-a)*(v-u))^2
+	                 - ((v-u)*(v-u))((c-a)*(c-a) - r^2))] / (v-u)*(v-u) */
+	const struct Vec2f
+		u = { b.x - a.x, b.y - a.y }, v = { d.x - c.x, d.y - c.y },
+		vu = { v.x - u.x, v.y - u.y }, ca = { c.x - a.x, c.y - a.y };
+	const float
+		vu_2  = vu.x * vu.x + vu.y * vu.y,
+		ca_vu = ca.x * vu.x + ca.y * vu.y;
+	struct Vec2f dist;
+	float t, dist_2, ca_2, det;
+	/* fixme: float stored in memory? can this be more performant? */
+	assert(t0_ptr);
+	/* time (t_min) of closest approach; we want the first contact */
+	if(vu_2 < epsilon) {
+		t = 0.0f;
+	} else {
+		t = -ca_vu / vu_2;
+		if(     t < 0.0f) t = 0.0f;
+		else if(t > 1.0f) t = 1.0f;
+	}
+	/* distance(t_min) of closest approach */
+	dist.x = ca.x + vu.x * t; dist.y = ca.y + vu.y * t;
+	dist_2 = dist.x * dist.x + dist.y * dist.y;
+	/* not colliding */
+	if(dist_2 >= r * r) return 0;
+	/* collision time, t_0 */
+	ca_2  = ca.x * ca.x + ca.y * ca.y;
+	det   = (ca_vu * ca_vu - vu_2 * (ca_2 - r * r));
+	t = (det <= 0.0f) ? 0.0f : (-ca_vu - sqrtf(det)) / vu_2;
+	if(t < 0.0f) t = 0.0f; /* it can not be > 1 because dist < r^2 */
+	*t0_ptr = t;
+	return 1;
+}
+
+/** @fixme C99
+ @return The first sprite in the {bin2}. */
+const struct Sprite *SpriteBinGetFirst(const struct Vec2u bin2) {
+	assert(bin2.x < bin_size && bin2.y < bin_size);
+	return bin[bin2_to_bin(bin2)];
+}
+
+/** Returns true while there are more sprites in the bin, sets the values.
+ @fixme C99
+ @return True if the values have been set. */
+inline const struct Sprite *SpriteBinIterate(const struct Sprite *this) {
+	assert(this);
+	return this->bin_next;
+}
+
+/** @fixme C99 */
+inline void SpriteExtractDrawing(const struct Sprite *const this,
+	const struct Ortho3f **const r_ptr, unsigned *const image_ptr,
+	unsigned *const normals_ptr, const struct Vec2u **const size_ptr) {
+	assert(this);
+	assert(r_ptr && image_ptr && normals_ptr && size_ptr);
+	*r_ptr       = (struct Ortho3f *)&this->r;
+	*image_ptr   = this->image;
+	*normals_ptr = this->normals;
+	*size_ptr    = &this->size;
 }
 
 /** Gets input to a Ship.
@@ -497,20 +750,20 @@ void ShipInput(struct Ship *const this, const int turning,
 		this->sprite.data.r.y = vy;
 	}
 	if(turning) {
-		this->v.theta += this->turn_acceleration * turning * dt_ms;
-		if(this->v.theta < -this->turn) {
-			this->v.theta = -this->turn;
-		} else if(this->v.theta > this->turn) {
-			this->v.theta = this->turn;
+		this->sprite.data.v.theta += this->turn_acceleration * turning * dt_ms;
+		if(this->sprite.data.v.theta < -this->turn) {
+			this->sprite.data.v.theta = -this->turn;
+		} else if(this->sprite.data.v.theta > this->turn) {
+			this->sprite.data.v.theta = this->turn;
 		}
 	} else {
 		const float damping = this->turn_acceleration * dt_ms;
-		if(this->v.theta > damping) {
-			this->v.theta -= damping;
-		} else if(this->v.theta < -damping) {
-			this->v.theta += damping;
+		if(this->sprite.data.v.theta > damping) {
+			this->sprite.data.v.theta -= damping;
+		} else if(this->sprite.data.v.theta < -damping) {
+			this->sprite.data.v.theta += damping;
 		} else {
-			this->v.theta = 0;
+			this->sprite.data.v.theta = 0;
 		}
 	}
 	/* fixme: this should be gone! instead have it for all sprites and get rid
@@ -529,25 +782,71 @@ void ShipShoot(struct Ship *const this) {
 		+ this->class->weapon->ms_recharge;
 }
 
-void ShipGetPosition(const struct Ship *this, struct Ortho2f *pos) {
+void ShipGetPosition(const struct Ship *this, struct Vec2f *pos) {
 	if(!this || !pos) return;
 	pos->x = this->sprite.data.r.x;
 	pos->y = this->sprite.data.r.y;
 }
 
-void ShipSetPosition(struct Ship *const this, struct Ortho2f *const pos) {
+void ShipSetPosition(struct Ship *const this, struct Vec2f *const pos) {
 	if(!this || !pos) return;
 	this->sprite.data.r.x = pos->x;
 	this->sprite.data.r.y = pos->y;
 	/* fixme: update bin */
 }
 
-/** In {Draw}. */
-unsigned ShipGetMaxHit(const struct Ship *const this) {
-	if(!this) return 0;
-	return this->max_hit;
+/** @implements <Ship>Action */
+static void ship_recharge(struct Ship *const this) {
+	if(!this) return;
+	debug("ship_recharge: %s %uGJ/%uGJ\n", this->name, this->hit,this->max_hit);
+	if(this->hit >= this->max_hit) return;
+	this->hit++;
+	/* this checks if an Event is associated to the sprite, we momentarily don't
+	 have an event, even though we are getting one soon! alternately, we could
+	 call Sprite::recharge and not stick the event down there.
+	 SpriteRecharge(a, 1);*/
+	if(this->hit >= this->max_hit) {
+		debug("ship_recharge: %s shields full %uGJ/%uGJ.\n",
+			this->name, this->hit, this->max_hit);
+		return;
+	}
+	Event(&this->event_recharge, this->ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &ship_recharge, this);
+}
+void ShipRechage(struct Ship *const this, const int recharge) {
+	if(recharge + this->hit >= this->max_hit) {
+		this->hit = this->max_hit; /* cap off */
+	} else if(-recharge < this->hit) {
+		this->hit += (unsigned)recharge; /* recharge */
+		if(!this->event_recharge
+		   && this->hit < this->max_hit) {
+			pedantic("SpriteRecharge: %s beginning charging cycle %d/%d.\n", this->name, this->hit, this->max_hit);
+			Event(&this->event_recharge, this->ms_recharge_hit, 0, FN_CONSUMER, &ship_recharge, this);
+		}
+	} else {
+		this->hit = 0; /* killed */
+	}
 }
 
+/** {hit} will be filled with {x} hit, {y} max hit. */
+void ShipGetHit(const struct Ship *const this, struct Vec2u *const hit) {
+	if(!hit) return;
+	if(!this) {
+		hit->x = hit->y = 0;
+	} else {
+		hit->x = this->hit, hit->y = this->max_hit;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+/** Accessor. */
 int WmdGetDamage(const struct Wmd *const this) {
 	if(!this) return 0;
 	return this->class->damage;
@@ -559,6 +858,18 @@ const struct AutoSpaceZone *GateGetTo(const struct Gate *const this) {
 	return this->to;
 }
 
+/** See \see{GateFind}.
+ @implements <Gate>Predicate */
+static int find_gate(struct Gate *const this, void *const vgate) {
+	struct Gate *const gate = vgate;
+	return this != gate;
+}
+/** Linear search for {gates} that go to a specific place. */
+struct Gate *GateFind(struct AutoSpaceZone *const to) {
+	pedantic("GateIncoming: SpaceZone to: #%p %s.\n", to, to->name);
+	GateSetSetParam(gates, to);
+	return GateSetShortCircuit(gates, &find_gate);
+}
 
 
 
@@ -569,372 +880,23 @@ const struct AutoSpaceZone *GateGetTo(const struct Gate *const this) {
 
 
 
-struct SpriteXXX {
-	char     label[16];
-	float    x,  y;
-	float    x1, y1;	/* temp; the spot where you want to go */
-	float    theta, omega;
-	float    vx,  vy;
-	float    vx1, vy1;	/* temp; the velocity after colliding */
-	float    bounding;
-	float    mass;      /* t (ie Mg) */
-	unsigned size;		/* the (x, y) size; they are the same */
-	int      image, normals; /* gpu textures */
-	/* if we store a Sprite, and the Sprite changes addresses, this will
-	 automatically change the pointer; should be passed a null on setNotify */
-	struct Sprite **notify;
 
-	int           is_selected;   /* temp; per object per frame */
-	int           no_collisions; /* temp; per frame */
-	float         x_min, x_max, y_min, y_max; /* temp; bounding box */
-	float         t0_dt_collide; /* temp; time to collide over frame time */
 
-	/* sort by axes in doubly-linked list */
-	struct Sprite *prev_x, *next_x, *prev_y, *next_y;
 
-	/* linked list in bin, and the bin */
-	struct Sprite *next_bin;
-	int bin_x, bin_y;
 
-};
+
+
+
+
+
+
+
+
 
 /* branch cut (-Pi,Pi] */
-static void branch_cut_pi_pi(float *theta_ptr);
-static struct Sprite *iterate(void);
-/*static void sort(void);*/
-static void sort_notify(struct Sprite *s);
-static void collide(struct Sprite *s);
-static int collide_circles(const float a_x, const float a_y,
-	const float b_x, const float b_y,
-	const float c_x, const float c_y,
-	const float d_x, const float d_y,
-	const float r, float *t0_ptr); /* fixme */
-static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0);
-static void push(struct Sprite *a, const float angle, const float impulse);
-static int compare_x(const struct Sprite *a, const struct Sprite *b);
-static int compare_y(const struct Sprite *a, const struct Sprite *b);
-static struct Sprite **address_prev_x(struct Sprite *const a);
-static struct Sprite **address_next_x(struct Sprite *const a);
-static struct Sprite **address_prev_y(struct Sprite *const a);
-static struct Sprite **address_next_y(struct Sprite *const a);
-static void shp_shp(struct Sprite *, struct Sprite *, const float);
-static void deb_deb(struct Sprite *, struct Sprite *, const float);
-static void shp_deb(struct Sprite *, struct Sprite *, const float);
-static void deb_shp(struct Sprite *, struct Sprite *, const float);
-static void wmd_deb(struct Sprite *, struct Sprite *, const float);
-static void deb_wmd(struct Sprite *, struct Sprite *, const float);
-static void wmd_shp(struct Sprite *, struct Sprite *, const float);
-static void shp_wmd(struct Sprite *, struct Sprite *, const float);
-static void shp_eth(struct Sprite *, struct Sprite *, const float);
-static void eth_shp(struct Sprite *, struct Sprite *, const float);
-static void do_ai(struct Sprite *const s, const int dt_ms);
-/*static void sprite_poll(void);*/
-static void ship_recharge(struct Sprite *const a);
-static void bin_add(struct Sprite *const s);
-static void bin_change(struct Sprite *const s);
-static void bin_remove(struct Sprite *const s);
-static int clip(const int c, const int min, const int max);
-
-/* fixme: this assumes SP_DEBRIS = 0, ..., SP_ETHEREAL = 3 */
-static void (*const collision_matrix[4][4])(struct Sprite *, struct Sprite *, const float) = {
-	{ &deb_deb, &shp_deb, &wmd_deb, 0 },
-	{ &deb_shp, &shp_shp, &wmd_shp, &eth_shp },
-	{ &deb_wmd, &shp_wmd, 0,        0 },
-	{ 0,        &shp_eth, 0,        0 }
-};
-static const int collision_matrix_size = sizeof(collision_matrix[0]) / sizeof(void *);
-
-/* public */
-
-#if 0
-/** Erase a sprite from the pool (array of static sprites.)
- @param sprite_ptr	A pointer to the sprite; gets set null on success. */
-void Sprite_(struct Sprite **sprite_ptr) {
-	struct Sprite *sprite, *replace;
-	unsigned idx;
-	unsigned characters;
-	char buffer[128];
-
-	if(!sprite_ptr || !(sprite = *sprite_ptr)) return;
-	idx = (unsigned)(sprite - sprites);
-	if(idx >= sprites_size) {
-		warn("~Sprite: %s, %u not in range %u.\n", SpriteToString(sprite), idx + 1, sprites_size);
-		return;
-	}
-
-	/* store the string for debug info */
-	characters = snprintf(buffer, sizeof buffer, "%s", SpriteToString(sprite));
-
-	/* take it out of the bin */
-	bin_remove(sprite);
-
-	/* update notify */
-	if(sprite->notify) *sprite->notify = 0;
-
-	/* deal with deleting it while iterating */
-	if(sprite <= iterator) iterator--;
-
-	/* take it out of the lists */
-	if(first_x_window == sprite) first_x_window = sprite->next_x;
-	if(first_x        == sprite) first_x        = sprite->next_x;
-	if(first_y_window == sprite) first_y_window = sprite->next_y;
-	if(first_y        == sprite) first_y        = sprite->next_y;
-	if(sprite->prev_x) sprite->prev_x->next_x = sprite->next_x;
-	else               first_x                = sprite->next_x;
-	if(sprite->next_x) sprite->next_x->prev_x = sprite->prev_x;
-	if(sprite->prev_y) sprite->prev_y->next_y = sprite->next_y;
-	else               first_y                = sprite->next_y;
-	if(sprite->next_y) sprite->next_y->prev_y = sprite->prev_y;
-
-	/* move the terminal sprite to replace this one */
-	if(idx < --sprites_size) {
-
-		replace = &sprites[sprites_size];
-		memcpy(sprite, replace, sizeof(struct Sprite));
-
-		/* update the neighbours */
-		if(sprite->prev_x) sprite->prev_x->next_x = sprite;
-		else               first_x                = sprite;
-		if(sprite->next_x) sprite->next_x->prev_x = sprite;
-		if(sprite->prev_y) sprite->prev_y->next_y = sprite;
-		else               first_y                = sprite;
-		if(sprite->next_y) sprite->next_y->prev_y = sprite;
-
-		/* may need to update pointers to list; iterator doesn't use
-		 linked-list, rather, uses array; dealt with above */
-		if(replace == first_x)        first_x        = sprite;
-		if(replace == first_x_window) first_x_window = sprite;
-		if(replace == first_y)        first_y        = sprite;
-		if(replace == first_y_window) first_y_window = sprite;
-		if(replace == window_iterator)window_iterator= sprite;
-
-		/* replace bin pointer */
-		bin_remove(replace);
-		bin_add(sprite);
-
-		/* update notify */
-		if(sprite->notify) *sprite->notify = sprite;
-
-		/* move the resouces associated from replace to sprite */
-		switch(sprite->sp_type) {
-			case SP_SHIP:
-				pedantic("~Sprite: replacing arguments of Event associated with %s, %s.\n", SpriteToString(sprite), EventToString(sprite->sp.ship.event_recharge));
-				EventSetNotify(&sprite->sp.ship.event_recharge);
-				EventReplaceArguments(sprite->sp.ship.event_recharge, sprite);
-				break;
-			case SP_WMD:
-				LightSetNotify(&sprite->sp.wmd.light);
-				break;
-			default:
-				break;
-		}
-
-		if(characters < sizeof buffer) snprintf(buffer + characters, sizeof buffer - characters, "; replaced by %s", SpriteToString(sprite));
-	}
-
-	pedantic("~Sprite: erase %s.\n", buffer);
-	*sprite_ptr = sprite = 0;
-
-}
-#endif
-
-#if 0
-/** This mostly does damage, (recharge is negative.) This also sets an Event for
- recharge. */
-void SpriteRecharge(struct Sprite *const s, const int recharge) {
-	if(!s) return;
-	switch(s->sp_type) {
-		case SP_DEBRIS:
-			if(-recharge < s->sp.debris.hit) {
-				s->sp.debris.hit += recharge;
-			} else {
-				s->sp.debris.hit = 0;
-			}
-			break;
-		case SP_SHIP:
-			if(recharge + s->sp.ship.hit >= s->sp.ship.max_hit) {
-				/* cap off */
-				s->sp.ship.hit = s->sp.ship.max_hit;
-			} else if(-recharge < s->sp.ship.hit) {
-				s->sp.ship.hit += (unsigned)recharge;
-				/* rechage */
-				if(!s->sp.ship.event_recharge
-				   && s->sp.ship.hit < s->sp.ship.max_hit) {
-					pedantic("SpriteRecharge: %s beginning charging cycle %d/%d.\n", SpriteToString(s), s->sp.ship.hit, s->sp.ship.max_hit);
-					Event(&s->sp.ship.event_recharge, s->sp.ship.ms_recharge_hit, 0, FN_CONSUMER, &ship_recharge, s);
-				}
-			} else {
-				/* killed */
-				s->sp.ship.hit = 0;
-			}
-			break;
-		case SP_WMD:
-			if(recharge < 0) s->sp.wmd.expires = 0;
-			break;
-		case SP_ETHEREAL:
-			if(recharge < 0) s->sp.ethereal.is_picked_up = -1;
-			break;
-	}
-}
-
-int SpriteIsDestroyed(const struct Sprite *const s) {
-	if(!s) return -1;
-	switch(s->sp_type) {
-		case SP_DEBRIS:		return s->sp.debris.hit <= 0;
-		case SP_SHIP:		return s->sp.ship.hit <= 0;
-		case SP_WMD:		return TimerIsTime(s->sp.wmd.expires);
-		case SP_ETHEREAL:	return 0;
-	}
-	return -1;
-}
-
-void SpriteDestroy(struct Sprite *const s) {
-	if(!s) return;
-	switch(s->sp_type) {
-		case SP_DEBRIS:		s->sp.debris.hit = 0; break;
-		case SP_SHIP:		s->sp.ship.hit = 0; break;
-		case SP_WMD:		s->sp.wmd.expires = 0; break;
-		case SP_ETHEREAL:	break;
-	}
-}
-#endif
-
-/** Enforces the maximum speed by breaking the debris into smaller chunks; the
- process is not elastic, so it loses energy (speed.) */
-/*void DebrisEnforce(struct Debris *deb) {
-	float vx, vy;
-	float speed_2;
-	
-	if(!deb || !deb->sprite) return;
-	
-	SpriteGetVelocity(deb->sprite, &vx, &vy);
-	if((speed_2 = vx * vx + vy * vy) > maximum_speed_2) {
-		debug("DebrisEnforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
-		DebrisExplode(deb);
-	}
-}*/
-
-/** Spawns smaller Debris (fixme: stub.) */
-void SpriteDebris(const struct Sprite *const s) {
-	struct AutoImage *small_image;
-	struct Sprite *sub;
-
-	if(!s || !(small_image = AutoImageSearch("AsteroidSmall.png")) || s->size <= small_image->width) return;
-
-	pedantic("SpriteDebris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
-
-	/* break into pieces -- new debris */
-	sub = Sprite(SP_DEBRIS, AutoDebrisSearch("SmallAsteroid"), (float)s->x, (float)s->y, s->theta * deg_to_rad, 10.0f);
-	SpriteSetVelocity(sub, deb_explosion_elasticity * s->vx, deb_explosion_elasticity * s->vy);
-}
-
-/** Linear search for Sprites that are gates that go to to. */
-struct Sprite *SpriteOutgoingGate(const struct AutoSpaceZone *to) {
-	struct Sprite *s;
-
-	pedantic("SpriteOutgoingGate: SpaceZone to: #%p %s.\n", to, to->name);
-	while((s = iterate())) {
-		pedantic("SpriteOutgoingGate: Sprite: #%p %s.\n", (void *)s,
-			SpriteToString(s));
-		if(s->sp_type == SP_ETHEREAL)
-			info("SpriteOutgoingGate: Ethreal to: #%p %s.\n", s->sp.ethereal.to,s->sp.ethereal.to->name);
-		if(s->sp_type != SP_ETHEREAL || s->sp.ethereal.to != to) continue;
-		iterator = sprites; /* reset */
-		break;
-	}
-	return s;
-}
-
-/** Removes all of the Sprites for which predicate is true; if predicate is
- null, than it removes all sprites.
- <p>
- Fixme: Is really slow copying memory in large scenes where delete nearly all
- sprite; viz, the thing you want to do. */
-void SpriteRemoveIf(int (*const predicate)(struct Sprite *const)) {
-	struct Sprite *s;
-
-	/* we may be doing a double-iteration
-	 (ie SpriteUpdate->iterate->collide->shp_eth->callback->SpriteRemoveIf),
-	 so push the iterator; fixed! pushed in the event queue with 0ms, don't
-	 need to wory about it anymore */
-	while((s = iterate())) {
-		pedantic("SpriteRemoveIf: consdering %s.\n", SpriteToString(s));
-		if(!predicate || predicate(s)) Sprite_(&s);
-	}
-}
-
-extern int draw_is_print_sprites;
-
-/** Returns true while there are more sprites in the window, sets the values.
- The pointers need to all be there or else there will surely be a segfault.
- @param x_ptr: x
- @param y_ptr: y
- @param t_ptr: \theta
- @param texture_ptr: OpenGl texture unit.
- @param size_ptr: Size of the texture.
- @return True if the values have been set. */
-int SpriteIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *image_ptr, unsigned *normals_ptr, unsigned *size_ptr) {
-	static int is_reset = -1;
-	static int x_min_index, x_max_index, y_max_index, x_index, y_index;
-	static struct Sprite *s;
-
-	/* reset */
-	if(is_reset) {
-		float camera_x, camera_y;
-		unsigned screen_width, screen_height;
-		/* this does not need to be static, top-down */
-		int y_min_index;
-		int x_min_bin, x_max_bin, y_min_bin, y_max_bin;
-
-		DrawGetScreen(&screen_width, &screen_height);
-		DrawGetCamera(&camera_x, &camera_y);
-
-		x_min_bin = (int)(camera_x - (0.5f * screen_width))  >> (max_size_pow);
-		x_max_bin = (int)(camera_x + (0.5f * screen_width))  >> (max_size_pow);
-		y_min_bin = (int)(camera_y - (0.5f * screen_height)) >> (max_size_pow);
-		y_max_bin = (int)(camera_y + (0.5f * screen_height)) >> (max_size_pow);
-
-		x_min_index = clip(x_min_bin, -bin_half_size, bin_half_size - 1) + bin_half_size;
-		x_max_index = clip(x_max_bin, -bin_half_size, bin_half_size - 1) + bin_half_size;
-		y_min_index = clip(y_min_bin, -bin_half_size, bin_half_size - 1) + bin_half_size;
-		y_max_index = clip(y_max_bin, -bin_half_size, bin_half_size - 1) + bin_half_size;
-
-		x_index = x_min_index;
-		y_index = y_min_index;
-
-		s = bins[y_index][x_index];
-
-		is_reset = 0;
-	}
-
-	/* proceed to the next bin */
-	while(!s) {
-		if(x_max_index < ++x_index) {
-			/* all done with the sprites on-screen */
-			if(y_max_index < ++y_index) {
-				is_reset = -1;
-				return 0;
-			}
-			x_index = x_min_index;
-		}
-		s = bins[y_index][x_index];
-	}
-
-	/* fixme */
-	*x_ptr       = s->x;
-	*y_ptr       = s->y;
-	*theta_ptr   = s->theta;
-	*image_ptr   = s->image;
-	*normals_ptr = s->normals;
-	*size_ptr    = s->size;
-
-	s = s->next_bin;
-
-	return -1;
-}
 
 /** This is where most of the work gets done. Called every frame, O(n).
- @param dt_ms	Milliseconds since the last frame. */
+ @param dt_ms Milliseconds since the last frame. */
 void SpriteUpdate(const int dt_ms) {
 	struct Sprite *s;
 
@@ -944,22 +906,6 @@ void SpriteUpdate(const int dt_ms) {
 	 Nah, I changed it so they're always in order; probably change it back; it's
 	 slightly more correct this way, but slower? */
 	/*sort();*/
-
-	/* pre-compute bounding boxes of where the sprite wants to go this frame,
-	 containing the projected circle along a vector x -> x + v*dt */
-	while((s = iterate())) {
-		/* where they should be if there's no collision */
-		s->x1 = s->x + s->vx * dt_ms;
-		s->y1 = s->y + s->vy * dt_ms;
-		/*if(s == GameGetPlayer()) {
-			Info("Player (%.1f, %.1f) + %d*(%.1f, %.1f) = (%.1f, %.1f)\n", s->x, s->y, dt_ms, s->vx, s->vy, s->x1, s->y1);
-		}*/
-		/* extend the bounding box along the circle's trajectory */
-		s->x_min = ((s->x <= s->x1) ? s->x  : s->x1) - s->bounding;
-		s->x_max = ((s->x <= s->x1) ? s->x1 : s->x)  + s->bounding;
-		s->y_min = ((s->y <= s->y1) ? s->y  : s->y1) - s->bounding;
-		s->y_max = ((s->y <= s->y1) ? s->y1 : s->y)  + s->bounding;
-	}
 
 	/* dynamic; move the sprites around */
 	while((s = iterate())) {
@@ -1052,175 +998,7 @@ void SpriteUpdate(const int dt_ms) {
 	}
 }
 
-void SpriteList(void) {
-	struct Sprite *s;
-	unsigned i;
-	int is_first = -1;
-	info("SpriteList" "{\n");
-	for(i = 0; i < sprites_size; i++) {
-		/*while((s = iterate())) {*/
-		s = &sprites[i];
-		info("SpriteList", "\t%s\n", /*is_first ? "\n" : ",\n",*/ SpriteToString(s));
-		is_first = 0;
-	}
-	info("SpriteList", "}\n");
-}
-
-/* private */
-
 /* branch cut (-Pi,Pi] */
-static void branch_cut_pi_pi(float *theta_ptr) {
-	*theta_ptr -= M_2PI_F *
-		floorf((*theta_ptr + (float)M_PI_F) / M_2PI_F);
-}
-
-/** This is a private iteration which uses the same variable as Sprite::iterate.
- This actually returns a Sprite. Supports deleting Sprites (see @see{Sprite_}.)
- This iterates over the whole Sprite list, not only the ones in the window. */
-static struct Sprite *iterate(void) {
-	if(iterator >= sprites + sprites_size) {
-		iterator = sprites;
-		return 0;
-	}
-	return iterator++;
-}
-
-/** First it uses the Hahn–Banach separation theorem (viz, hyperplane
- separation theorem) and the ordered list of projections on the x and y axis
- that we have been keeping, to build up a list of possible colliders based on
- their bounding circles. Calls {@see collide_circles}, and if it passed,
- {@see elastic_bounce}. Calls the items in the collision matrix.
- @return	False if the sprite has been destroyed. */
-void collide(struct Sprite *a) {
-	struct Sprite *b, *b_adj_y;
-	void (*response)(struct Sprite *, struct Sprite *, const float);
-	float explore_x_min, explore_x_max, explore_y_min, explore_y_max;
-	float t0;
-
-	if(!a) return;
-
-	/* extend the bounds to check all of this space for collisions */
-	explore_x_min = a->x_min - half_max_size;
-	explore_x_max = a->x_max + half_max_size;
-	explore_y_min = a->y_min - half_max_size;
-	explore_y_max = a->y_max + half_max_size;
-
-	/* mark x */
-	for(b = a->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
-		if(a < b && a->x_min < b->x_max) b->is_selected = -1;
-	}
-	for(b = a->next_x; b && b->x <= explore_x_max; b = b->next_x) {
-		if(a < b && a->x_max > b->x_min) b->is_selected = -1;
-	}
-
-	/* consider y and maybe add it to the list of colliders */
-	for(b = a->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
-		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
-		if(b->is_selected
-		   && a->y_min < b->y_max
-		   && (response = collision_matrix[b->sp_type][a->sp_type])
-		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
-							  b->y1, a->bounding + b->bounding, &t0))
-			response(a, b, t0);
-			/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
-	}
-	for(b = a->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
-		b_adj_y = b->next_y;
-		if(b->is_selected
-		   && a->y_max > b->y_min
-		   && (response = collision_matrix[b->sp_type][a->sp_type])
-		   && collide_circles(a->x, a->y, a->x1, a->y1, b->x, b->y, b->x1,
-							  b->y1, a->bounding + b->bounding, &t0))
-			response(a, b, t0);
-			/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
-	}
-
-	/* reset for next time; fixme: ugly */
-	for(b = a->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
-		b->is_selected = 0;
-	}
-	for(b = a->next_x; b && b->x <= explore_x_max; b = b->next_x) {
-		b->is_selected = 0;
-	}
-}
-
-/** Given two seqments, u: a->b and v: c->d, and their combined radius, r,
- returns false if they do not collide, or true if they did, and in that case,
- t0_ptr will be assigned a time of collision.
- <p>
- This is called from {@see collide} as a more detailed check.
- @param a_x
- @param a_y
- @param b_x
- @param b_y		Point u moves from a to b.
- @param c_x
- @param c_y
- @param d_x
- @param d_y		Point v moves from c to d.
- @param r		The distance to test.
- @param t0_ptr	If collision is true, sets this to the intersecting time in
-				[0, 1]. If it is 0, (u, v) is at (a, c), and 1, (c, d).
- @return		If they collided. */
-static int collide_circles(const float a_x, const float a_y,
-						   const float b_x, const float b_y,
-						   const float c_x, const float c_y,
-						   const float d_x, const float d_y,
-						   const float r, float *t0_ptr) {
-	/* t \in [0,1]
-	             u = b - a
-	             v = d - c
-	 if(v-u ~= 0) t = doesn't matter, parallel-ish
-	          p(t) = a + (b-a)t
-	          q(t) = c + (d-c)t
-	 distance(t)   = |q(t) - p(t)|
-	 distance^2(t) = (q(t) - p(t))^2
-	               = ((c+vt) - (a+ut))^2
-	               = ((c-a) + (v-u)t)^2
-	               = (v-u)*(v-u)t^2 + 2(c-a)*(v-u)t + (c-a)*(c-a)
-	             0 = 2(v-u)*(v-u)t_min + 2(c-a)*(v-u)
-	         t_min = -(c-a)*(v-u)/(v-u)*(v-u)
-	 this is an optimisation, if t \notin [0,1] then pick the closest; if
-	 distance^2(t_min) < r^2 then we have a collision, which happened at t0,
-	           r^2 = (v-u)*(v-u)t0^2 + 2(c-a)*(v-u)t0 + (c-a)*(c-a)
-	            t0 = [-2(c-a)*(v-u) - sqrt((2(c-a)*(v-u))^2
-	                 - 4((v-u)*(v-u))((c-a)*(c-a) - r^2))] / 2(v-u)*(v-u)
-	            t0 = [-(c-a)*(v-u) - sqrt(((c-a)*(v-u))^2
-	                 - ((v-u)*(v-u))((c-a)*(c-a) - r^2))] / (v-u)*(v-u) */
-	const float u_x   = b_x - a_x, u_y  = b_y - a_y;
-	const float v_x   = d_x - c_x, v_y  = d_y - c_y;
-	const float vu_x  = v_x - u_x, vu_y = v_y - u_y; /* vu = v - u */
-	const float vu_2  = vu_x * vu_x + vu_y * vu_y;
-	const float ca_x  = c_x - a_x, ca_y = c_y - a_y;
-	const float ca_vu = ca_x * vu_x + ca_y * vu_y;
-	float       t, dist_x, dist_y, dist_2, ca_2, det;
-	/* fixme: float stored in memory? can this be more performant? */
-
-	/* time (t_min) of closest approach; we want the first contact */
-	if(vu_2 < epsilon) {
-		t = 0.0f;
-	} else {
-		t = -ca_vu / vu_2;
-		if(     t < 0.0f) t = 0.0f;
-		else if(t > 1.0f) t = 1.0f;
-	}
-
-	/* distance(t_min) of closest approach */
-	dist_x = ca_x + vu_x * t;
-	dist_y = ca_y + vu_y * t;
-	dist_2 = dist_x * dist_x + dist_y * dist_y;
-
-	/* not colliding */
-	if(dist_2 >= r * r) return 0;
-
-	/* collision time, t_0 */
-	ca_2  = ca_x * ca_x + ca_y * ca_y;
-	det   = (ca_vu * ca_vu - vu_2 * (ca_2 - r * r));
-	t = (det <= 0.0f) ? 0.0f : (-ca_vu - sqrtf(det)) / vu_2;
-	if(t < 0.0f) t = 0.0f; /* it can not be > 1 because dist < r^2 */
-	*t0_ptr = t;
-
-	return -1;
-}
 
 /** Elastic collision between circles; called from {@see collide} with
  {@code t0_dt} from {@see collide_circles}. Use this when we've determined that
@@ -1467,28 +1245,6 @@ static void do_ai(struct Sprite *const a, const int dt_ms) {
 		acceleration = shp_ai_speed;
 	}
 	SpriteInput(a, turning, acceleration, dt_ms);
-}
-
-/** can be used as an Event */
-static void ship_recharge(struct Sprite *const a) {
-	if(!a || SpriteGetType(a) != SP_SHIP) {
-		warn("ship_recharge: called on %s.\n", SpriteToString(a));
-		return;
-	}
-	debug("ship_recharge: %s %uGJ/%uGJ\n", SpriteToString(a), a->sp.ship.hit,
-		a->sp.ship.max_hit);
-	if(a->sp.ship.hit >= a->sp.ship.max_hit) return;
-	a->sp.ship.hit++;
-	/* this checks if an Event is associated to the sprite, we momentarily don't
-	 have an event, even though we are getting one soon! alternately, we could
-	 call Sprite::recharge and not stick the event down there.
-	 SpriteRecharge(a, 1);*/
-	if(a->sp.ship.hit >= a->sp.ship.max_hit) {
-		debug("ship_recharge: %s shields full %uGJ/%uGJ.\n",
-			SpriteToString(a), a->sp.ship.hit, a->sp.ship.max_hit);
-		return;
-	}
-	Event(&a->sp.ship.event_recharge, a->sp.ship.ms_recharge_hit, shp_ms_sheild_uncertainty, FN_CONSUMER, &ship_recharge, a);
 }
 
 /** Clips c to [min, max]. */

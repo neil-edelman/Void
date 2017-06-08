@@ -143,58 +143,29 @@ void FarClear(void) {
 	backgrounds_size = 0;
 }
 
-#if 0
-/** Returns true while there are more, sets the values. The pointers need to
- all be there or else there will surely be a segfault.
- <p>
- Called in ../system/Draw to draw backgrounds.
- <p>
- Supports deleting.
- <p>
- Fixme: have a sliding window that's updated based on camera, as opposed to
- having to send all the geometry at every frame!
- @param x_ptr		x
- @param y_ptr		y
- @param t_ptr		\theta
- @param texture_ptr	OpenGl texture unit.
- @param size_ptr	Size of the texture.
- @return			True if the values have been set. */
-int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr) {
-	if(iterator >= backgrounds + backgrounds_size) {
-		iterator = backgrounds;
-		return 0;
-	}
-	*x_ptr       = iterator->x * foreshortening;
-	*y_ptr       = iterator->y * foreshortening;
-	*theta_ptr   = iterator->theta;
-	*texture_ptr = iterator->texture;
-	*size_ptr    = iterator->size;
-	iterator++;
-	return -1;
-}
-#else
-/** This is the exact copy of SpriteIterate. */
-int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr) {
+/** @return True while there are more Fars, sets the values. */
+int FarIterate(struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *size_ptr) {
 	static int x_min_window, x_max_window, y_min_window, y_max_window;
 	static int x_min, x_max, y_min, y_max; /* these are more expansive */
 	static int is_reset = -1; /* oy, static */
 	struct Far *b, *feeler;
-	float camera_x, camera_y;
+	struct Vec2f camera;
 
 	/* go to the first spot in the window */
 	if(is_reset) {
-		unsigned w, h, screen_width, screen_height;
-		DrawGetScreen(&screen_width, &screen_height);
-		w = (screen_width  >> 1) + (screen_width & 1);
-		h = (screen_height >> 1) + (screen_height & 1);
+		unsigned w, h;
+		struct Vec2u screen;
+		DrawGetScreen(&screen);
+		w = (screen.x  >> 1) + (screen.x & 1);
+		h = (screen.y >> 1) + (screen.y & 1);
 		/* determine the window */
-		DrawGetCamera(&camera_x, &camera_y);
-		camera_x *= foreshortening;
-		camera_y *= foreshortening;
-		x_min_window = (int)camera_x - w;
-		x_max_window = (int)camera_x + w;
-		y_min_window = (int)camera_y - h;
-		y_max_window = (int)camera_y + h;
+		DrawGetCamera(&camera);
+		camera.x *= foreshortening;
+		camera.y *= foreshortening;
+		x_min_window = (int)camera.x - w;
+		x_max_window = (int)camera.x + w;
+		y_min_window = (int)camera.y - h;
+		y_max_window = (int)camera.y + h;
 		x_min = x_min_window - half_max_size;
 		x_max = x_max_window + half_max_size;
 		y_min = y_min_window - half_max_size;
@@ -242,9 +213,7 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_p
 			   && window_iterator->y > y_min_window - extent
 			   && window_iterator->y < y_max_window + extent) {
 				/*debug("Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
-				*x_ptr       = window_iterator->x;
-				*y_ptr       = window_iterator->y;
-				*theta_ptr   = window_iterator->theta;
+				/**r_ptr       = window_iterator->r;*/
 				*texture_ptr = window_iterator->texture;
 				*size_ptr    = window_iterator->size;
 				window_iterator = window_iterator->next_y;
@@ -262,7 +231,6 @@ int FarIterate(float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_p
 	is_reset = -1;
 	return 0;
 }
-#endif
 
 /** Sets the orientation with respect to the screen, pixels and (0, 0) is at
  the centre.

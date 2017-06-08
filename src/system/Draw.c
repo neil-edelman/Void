@@ -102,9 +102,8 @@ static void display(void); /* callback for odisplay */
 static void resize(int width, int height); /* callback  */
 
 /* globals */
-static int     screen_width = 300, screen_height = 200; /* shared? */
-static GLuint  vbo_geom, light_tex, background_tex, shield_tex;
-static float   camera_x, camera_y;
+static GLuint vbo_geom, light_tex, background_tex, shield_tex;
+static struct Vec2f camera, camera_extent;
 
 /** Gets all the graphics stuff started.
  @return All good to draw? */
@@ -217,42 +216,25 @@ void Draw_(void) {
 }
 
 /** Sets the camera location.
- @param x, y: (x, y) in pixels. */
-void DrawSetCamera(const float x, const float y) {
-	if(!is_started) return;
-	camera_x = x;
-	camera_y = y;
-}
+ @param x: (x, y) in pixels. */
+void DrawSetCamera(const struct Vec2f x) { camera.x = x.x, camera.y = x.y; }
 
-/** Gets the camera position and stores it in (*x_ptr, *y_ptr). */
-void DrawGetCamera(float *x_ptr, float *y_ptr) {
-	/* just set it to last \/ if(!is_started) return;*/
-	*x_ptr = camera_x;
-	*y_ptr = camera_y;
-}
-
-/** Gets the width and height. */
-void DrawGetScreen(unsigned *width_ptr, unsigned *height_ptr) {
-	/*if(!is_started) return; no, easier to guarantee valid */
-	if(width_ptr)  *width_ptr  = screen_width;
-	if(height_ptr) *height_ptr = screen_height;
-}
-
-/** Sets background to the image with key key. Fixme: allows you to set not
- TexClassTexture(TEX_CLASS_BACKGROUND) textures, which probably don't work, maybe? (oh, they do) */
-void DrawSetBackground(const char *const str) {
+/** Sets background to the image with key key.
+ @fixme allows you to set not {TexClassTexture(TEX_CLASS_BACKGROUND)} textures,
+ which probably don't work, maybe? (oh, they do.) */
+void DrawSetBackground(const char *const key) {
 	struct AutoImage *image;
 
 	/* clear the backgruoud; fixme: test, it isn't used at all */
-	if(!str) {
+	if(!key) {
 		background_tex = 0;
 		glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
 		glBindTexture(GL_TEXTURE_2D, 0);
 		debug("DrawSetBackground: image desktop cleared.\n");
 		return;
 	}
-	if(!(image = AutoImageSearch(str))) {
-		warn("DrawSetBackground: image \"%s\" not found.\n", str);
+	if(!(image = AutoImageSearch(key))) {
+		warn("DrawSetBackground: image \"%s\" not found.\n", key);
 		return;
 	}
 	/* background_tex is a global; the witdh/height of the image can be found with background_tex */
@@ -264,10 +246,10 @@ void DrawSetBackground(const char *const str) {
 }
 
 /** @param str: Resource name to set the shield indicator. */
-void DrawSetShield(const char *const str) {
+void DrawSetShield(const char *const key) {
 	struct AutoImage *image;
-	if(!(image = AutoImageSearch(str))) {
-		warn("DrawSetShield: image \"%s\" not found.\n", str);
+	if(!(image = AutoImageSearch(key))) {
+		warn("DrawSetShield: image \"%s\" not found.\n", key);
 		return;
 	}
 	shield_tex = image->texture;
@@ -459,17 +441,20 @@ int draw_is_print_sprites;
 
 /** Callback for glutDisplayFunc; this is where all of the drawing happens. */
 static void display(void) {
+	struct Sprite *sprite;
 	struct Ship *player;
 	int lights;
 	/* for SpriteIterate */
-	float x, y, t;
+	struct Ortho3f r;
+	struct Vec2u bin_neg, bin_pos, bin;
 	unsigned old_texture = 0, tex, nor, size;
 
 	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	 <- "The buffers should always be cleared. On much older hardware, there was
+	 <- https://www.khronos.org/opengl/wiki/Common_Mistakes
+	 "The buffers should always be cleared. On much older hardware, there was
 	 a technique to get away without clearing the scene, but on even semi-recent
 	 hardware, this will actually make things slower. So always do the clear."
-	 I'm not using those features, though! and the screen cover is complete, I
+	 I'm not using those features, thought! and the screen cover is complete, I
 	 don't see how doing extra work for nothing is going to make it faster.
 	 "A technique," haha, it was pretty ubiquitous; only newbies cleared the
 	 screen. */
@@ -519,97 +504,72 @@ static void display(void) {
 
 	/* background sprites */
 	/*const->glUniform1i(far_texture_location, TEX_CLASS_SPRITE); */
-	glUniform2f(auto_Far_shader.camera, camera_x, camera_y);
-	while(FarIterate(&x, &y, &t, &tex, &size)) {
+	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
+	while(FarIterate(&r, &tex, &size)) {
 		if(old_texture != tex) {
 			glBindTexture(GL_TEXTURE_2D, tex);
 			old_texture = tex;
 		}
 		glUniform1f(auto_Far_shader.size, (float)size);
-		glUniform1f(auto_Far_shader.angle, t);
-		glUniform2f(auto_Far_shader.position, x, y);
+		glUniform1f(auto_Far_shader.angle, r.theta);
+		glUniform2f(auto_Far_shader.position, r.x, r.y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
 	old_texture = 0;
 
-#if 0
-	/* turn on lighting */
-	glUseProgram(auto_Lighting_shader.compiled);
-	glUniform1i(auto_Lighting_shader.lights, lights = LightGetArraySize());
-	if(lights) {
-		glUniform2fv(auto_Lighting_shader.light_position, lights, (GLfloat *)LightGetPositionArray());
-		glUniform3fv(auto_Lighting_shader.light_colour, lights, (GLfloat *)LightGetColourArray());
-	}
+	/* \see{OrthoMath.h} */
+	rectangle_to_bin(camera, camera_extent, &bin_neg, &bin_pos);
+	if(draw_is_print_sprites) debug("\tCamera: (%.1f, %.1f) extent (%.1f, %.1f) -> neg(%u,%u) pos(%u,%u)\n", camera.x, camera.y, camera_extent.x, camera_extent.y, bin_neg.x, bin_neg.y, bin_pos.x, bin_pos.y);
 
-	/* sprites:
-	 turn on transperency
-	 sprite vbo
-	 for @ sprite:
-	 -calculate matrix
-	 -upload to card
-	 -draw */
-	/*glEnable(GL_BLEND);*/
-	/* fixme: have different indices to textures; keep track with texture manager; have to worry about how many tex units there are */
-	/*glUniform1i(light_texture_location, TEX_CLASS_SPRITE); <- constant, now */
-	glUniform2f(auto_Lighting_shader.camera, camera_x, camera_y);
-	if(draw_is_print_sprites) debug("display: dump:\n");
-	while(SpriteIterate(&x, &y, &t, &tex, &size)) {
-		if(draw_is_print_sprites) debug("\tTex%d Size %d (%.1f,%.1f:%.1f)\n", tex, size, x, y, t);
-		/* draw a sprite; fixme: minimise texture transitions? */
-		if(old_texture != tex) {
-			glBindTexture(GL_TEXTURE_2D, tex);
-			old_texture = tex;
-		}
-		glUniform1f(auto_Lighting_shader.size, (float)size);
-		glUniform1f(auto_Lighting_shader.angle, t);
-		glUniform2f(auto_Lighting_shader.position, x, y);
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
-	}
-	if(draw_is_print_sprites) {
-		draw_is_print_sprites = 0;
-	}
-#endif
 	glEnable(GL_BLEND);
 	glUseProgram(auto_Lambert_shader.compiled);
-	glUniform2f(auto_Lambert_shader.camera, camera_x, camera_y);
+	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
 	glUniform1i(auto_Lambert_shader.points, lights = LightGetArraySize());
 	if(lights) {
 		glUniform2fv(auto_Lambert_shader.point_position, lights, (GLfloat *)LightGetPositionArray());
 		glUniform3fv(auto_Lambert_shader.point_colour, lights, (GLfloat *)LightGetColourArray());
 	}
-	while(SpriteIterate(&x, &y, &t, &tex, &nor, &size)) {
-		if(draw_is_print_sprites) debug("\tTex%d normal Tex%d Size %d (%.1f,%.1f:%.1f)\n", tex, nor, size, x, y, t);
-		/* draw a sprite; fixme: minimise texture transitions? */
-		if(old_texture != tex) {
-			glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
-			glBindTexture(GL_TEXTURE_2D, nor);
-			glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
-			glBindTexture(GL_TEXTURE_2D, tex);
-			old_texture = tex;
+	/* draw bins going from upper left, (-,+), to lower right, (+,-) to match
+	 memory. */
+	old_texture = 0;
+	for(bin.y = bin_pos.y; bin.y >= bin_neg.y; bin.y--) {
+		for(bin.x = bin_neg.x; bin.x <= bin_pos.y; bin.x++) {
+			/* draw a sprite; fixme: minimise texture transitions? */
+			for(sprite = SpriteBinGetFirst(bin); sprite, sprite = SpriteBinGetNext(sprite)) {
+				if(draw_is_print_sprites) debug("\tTex%d normal Tex%d Size %d (%.1f,%.1f:%.1f)\n", tex, nor, size, r.x, r.y, r.theta);
+				if(old_texture != tex) {
+					glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
+					glBindTexture(GL_TEXTURE_2D, nor);
+					glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
+					glBindTexture(GL_TEXTURE_2D, tex);
+					old_texture = tex;
+				}
+				glUniform1f(auto_Lambert_shader.size, (float)size);
+				glUniform1f(auto_Lambert_shader.angle, r.theta);
+				glUniform2f(auto_Lambert_shader.object, r.x, r.y);
+				glDrawArrays(GL_TRIANGLE_STRIP,
+					vbo_info_square.first, vbo_info_square.count);
+			}
 		}
-		glUniform1f(auto_Lambert_shader.size, (float)size);
-		glUniform1f(auto_Lambert_shader.angle, t);
-		glUniform2f(auto_Lambert_shader.object, x, y);
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
-	if(draw_is_print_sprites) {
-		draw_is_print_sprites = 0;
-	}
-	x = y = 0.0f;
+	if(draw_is_print_sprites) draw_is_print_sprites = 0;
+	/*x = y = 0.0f;
 	t = SpriteGetTheta(GameGetPlayer());
-	size = 128;
+	size = 128;*/
 	/*WindowIsGlError("display");*/
 
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {
-		struct Ortho2f z;
-		ShipGetPosition(player, &z);
+		struct Vec2f x;
+		struct Vec2u hit;
+		ShipGetPosition(player, &x);
 		glUseProgram(auto_Hud_shader.compiled);
 		glBindTexture(GL_TEXTURE_2D, shield_tex);
-		glUniform2f(auto_Hud_shader.camera, camera_x, camera_y);
+		glUniform2f(auto_Hud_shader.camera, camera.x, camera.y);
 		glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
-		glUniform2f(auto_Hud_shader.position, x, y + 64.0f);
-		glUniform2i(auto_Hud_shader.shield, SpriteGetHit((struct Sprite *)player), ShipGetMaxHit(player));
+		glUniform2f(auto_Hud_shader.position, x.x, x.y + 64.0f);
+		ShipGetHit(player, &hit);
+		glUniform2i(auto_Hud_shader.shield, hit.x, hit.y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
 
@@ -624,19 +584,14 @@ static void display(void) {
  @fixme not guaranteed to have a background! this will crash.
  @param width, height: The size of the client area. */
 static void resize(int width, int height) {
-	GLfloat two_width, two_height;
+	struct Vec2f two_screen;
 	int w_tex, h_tex;
 	float w_w_tex, h_h_tex;
 
 	debug("resize: %dx%d.\n", width, height);
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
-	screen_width  = width; /* global shared with drawing */
-	screen_height = height;
-
-	/* update the inverse screen on the card */
-	two_width  = 2.0f / width;
-	two_height = 2.0f / height;
+	camera_extent.x = width / 2.0f, camera_extent.y = height / 2.0f; /* global*/
 
 	/* resize the background */
 	/* glActiveTexture(TEX_CLASS_BACKGROUND); this does nothing? */
@@ -674,12 +629,15 @@ static void resize(int width, int height) {
 
 	/* update the shaders; YOU MUST CALL THIS IF THE PROGRAMME HAS ANY
 	 DEPENDENCE ON SCREEN SIZE */
+	/* update the inverse screen on the card */
+	two_screen.x = 2.0f / width;
+	two_screen.y = 2.0f / height;	
 	glUseProgram(auto_Hud_shader.compiled);
-	glUniform2f(auto_Hud_shader.two_screen, two_width, two_height);
+	glUniform2f(auto_Hud_shader.two_screen, two_screen.x, two_screen.y);
 	glUseProgram(auto_Far_shader.compiled);
-	glUniform2f(auto_Far_shader.two_screen, two_width, two_height);
+	glUniform2f(auto_Far_shader.two_screen, two_screen.x, two_screen.y);
 	glUseProgram(auto_Lighting_shader.compiled);
-	glUniform2f(auto_Lighting_shader.two_screen, two_width, two_height);
+	glUniform2f(auto_Lighting_shader.two_screen, two_screen.x, two_screen.y);
 	glUseProgram(auto_Lambert_shader.compiled);
-	glUniform2f(auto_Lambert_shader.inv_screen, two_width, two_height);
+	glUniform2f(auto_Lambert_shader.inv_screen, two_screen.x, two_screen.y);
 }

@@ -171,7 +171,10 @@ typedef void (*SetMigrate)(void *const param, void *const fresh,
 
 
 /** Operates by side-effects only. */
-typedef void (*T_(Action))(T *const);
+typedef void (*T_(Action))(T *const element);
+
+/** Returns (non-zero) true or (zero) false. See \see{<T>SetSetParam}. */
+typedef int  (*T_(Predicate))(T *const element, void *const param);
 
 #ifdef SET_TO_STRING /* <-- string */
 
@@ -202,7 +205,7 @@ struct T_(Set) {
 	enum SetError error; /* errors defined by enum SetError */
 	int errno_copy; /* copy of errno when when error == E_ERRNO */
 	SetMigrate migrate;
-	void *migrate_param;
+	void *migrate_param, *param;
 };
 
 
@@ -356,6 +359,7 @@ static struct T_(Set) *T_(Set)(void) {
 	this->errno_copy   = 0;
 	this->migrate      = 0;
 	this->migrate_param= 0;
+	this->param        = 0;
 	if(!(this->array = malloc(this->capacity[0] * sizeof *this->array))) {
 		T_(Set_)(&this);
 		set_global_error = SET_ERRNO;
@@ -412,6 +416,15 @@ static void T_(SetSetMigrate)(struct T_(Set) *const this,
 	if(!this) return;
 	this->migrate = migrate;
 	this->migrate_param = param;
+}
+
+/** Sets the {param} of the set, see \see{<T>SetShortCircuit}.
+ @order \Theta(1)
+ @fixme Untested.
+ @allow */
+static void T_(SetSetParam)(struct T_(Set) *const this, void *const param) {
+	if(!this) return;
+	this->param = param;
 }
 
 /** Increases the capacity of this Set to ensure that it can hold at least the
@@ -507,8 +520,8 @@ static void T_(SetClear)(struct T_(Set) *const this) {
 }
 
 /** For each element.
- @order \Theta({size}) \times O({action}) where {size} is the current plus
- removed elements minus the removed elements at the end
+ @order \Theta({this}.n) \times O({action}) where
+ |{this}| <= {this}.n <= |{this}+{this}.deleted|.
  @allow */
 static void T_(SetForEach)(struct T_(Set) *const this, const T_(Action) action){
 	size_t i;
@@ -517,6 +530,25 @@ static void T_(SetForEach)(struct T_(Set) *const this, const T_(Action) action){
 		if(this->array[i].prev != set_not_part) continue;
 		action(&this->array[i].data);
 	}
+}
+
+/** @return A {<T>} in the {Set} that causes the {predicate} to return false,
+ or null if the {predicate} is true for every case. If {this} or {predicate} is
+ null, returns null.
+ @order ~ O({this}.n) \times O({predicate}) where
+ |{this}| <= {this}.n <= |{this}+{this}.deleted|.
+ @fixme Untested.
+ @allow */
+static T *T_(SetShortCircuit)(struct T_(Set) *const this,
+	const T_(Predicate) predicate) {
+	struct PRIVATE_T_(Element) *elem;
+	size_t i;
+	for(i = 0; i < this->size; i++) {
+		elem = this->array + i;
+		if(elem->prev != set_not_part) continue;
+		if(predicate(&elem->data, this->param)) return &elem->data;
+	}
+	return 0;
 }
 
 #ifdef SET_TO_STRING /* <-- print */
@@ -610,6 +642,7 @@ static void PRIVATE_T_(unused_set)(void) {
 	T_(SetIsEmpty)(0);
 	T_(SetIsElement)(0, 0);
 	T_(SetSetMigrate)(0, 0, 0);
+	T_(SetSetParam)(0, 0);
 	T_(SetReserve)(0, 0);
 	T_(SetNew)(0);
 	T_(SetRemove)(0, 0);
@@ -617,6 +650,7 @@ static void PRIVATE_T_(unused_set)(void) {
 	T_(SetGetIndex)(0, 0);
 	T_(SetClear)(0);
 	T_(SetForEach)(0, 0);
+	T_(SetShortCircuit)(0, 0);
 #ifdef SET_TO_STRING
 	T_(SetToString)(0);
 #endif

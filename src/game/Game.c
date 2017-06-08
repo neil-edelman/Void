@@ -113,27 +113,23 @@ void Game_(void) {
 
 /** updates the gameplay */
 void GameUpdate(const int dt_ms) {
-
 	if(!is_started) return;
-
 	/* in-game */
 	game.ms_turning      = KeyTime(k_left) - KeyTime(k_right);
 	game.ms_acceleration = KeyTime(k_up)   - KeyTime(k_down);
+	if(game.ms_acceleration < 0) game.ms_acceleration = 0; /* not a forklift */
 	game.ms_shoot        = KeyTime(32);
-	if(game.ms_acceleration < 0) game.ms_acceleration = 0;
 
 	/* apply to player */
 	if((game.player)) {
-		struct Ortho2f x;
+		struct Vec2f x;
 		ShipInput(game.player, game.ms_turning, game.ms_acceleration, dt_ms);
 		if(game.ms_shoot) ShipShoot(game.player);
 		ShipGetPosition(game.player, &x);
-		DrawSetCamera(x.x, x.y);
+		DrawSetCamera(x);
 	}
-
 	/* O(n) + O(n + m); collision detect + move sprites; a lot of work */
 	SpriteUpdate(dt_ms);
-
 	/* check events */
 	EventDispatch();
 }

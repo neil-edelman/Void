@@ -68,6 +68,15 @@ static const float wmd_distance_mod         = 1.3f; /* to clear ship */
 
 
 
+/* global variable: frame time */
+static float frame_dt_ms;
+
+/** Sets a frame {dt_ms} for all functions that involve time evolition. */
+void SpriteSetFrameTime(const float dt_ms) {
+	frame_dt_ms = dt_ms;
+}
+
+
 
 
 
@@ -77,7 +86,7 @@ static const float wmd_distance_mod         = 1.3f; /* to clear ship */
 struct SpriteVt;
 struct Sprite {
 	const struct SpriteVt *vt;
-	struct Sprite *bin_prev, *bin_next;
+	unsigned bin;
 	struct Ortho3f r, v; /* position, orientation, velocity, angular velocity */
 	struct Vec2f r1; /* temp position on the next frame */
 	struct Rectangle4f box; /* temp bounding box */
@@ -86,7 +95,6 @@ struct Sprite {
 	float bounding;
 	unsigned image, normals; /* gpu texture refs */
 	struct Vec2u size;
-	unsigned bin;
 };
 /** @implements <Sprite>Comparator */
 static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
@@ -96,20 +104,19 @@ static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
 static int Sprite_y_cmp(const struct Sprite *a, const struct Sprite *b) {
 	return (b->r.x < a->r.x) - (a->r.x < b->r.x);
 }
-/** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
-static struct Sprite *bin[BIN_SIZE * BIN_SIZE];
 /** {vt} is left undefined; this is, if you will, an abstract struct (haha.)
  Initialises {this} with {AutoSprite} resource, {as}. */
 static void Sprite_filler(struct Sprite *const this,
-	const struct AutoSprite *const as,
+	const struct AutoSprite *const as, const unsigned bin,
 	struct Ortho3f *const r, const struct Ortho3f *const v) {
 	assert(this);
 	assert(as);
 	assert(as->image->texture);
 	assert(as->normals->texture);
+	assert(bin < BIN_BIN_SIZE);
 	assert(r);
 	this->vt = 0;
-	this->bin_prev = this->bin_next = 0; /* no bin yet */
+	this->bin = bin;
 	Ortho3f_clip_position(r);
 	Ortho3f_assign(&this->r, r);
 	Ortho3f_assign(&this->v, v);
@@ -123,7 +130,6 @@ static void Sprite_filler(struct Sprite *const this,
 	this->normals = as->normals->texture;
 	this->size.x = as->image->width;
 	this->size.y = as->image->height;
-	this->bin = BIN_SIZE * BIN_SIZE; /* out-of-bounds */
 }
 /* Awkward declarations for {List.h}. */
 struct ListMigrate;
@@ -133,58 +139,13 @@ static void SpriteList_self_migrate(struct SpriteList *const this,
 /* Define {SpriteList} and {SpriteListNode}. */
 #define LIST_NAME Sprite
 #define LIST_TYPE struct Sprite
-#define LIST_SELF_MIGRATE &SpriteList_self_migrate
 #define LIST_UA_NAME X
 #define LIST_UA_COMPARATOR &Sprite_x_cmp
 #define LIST_UB_NAME Y
 #define LIST_UB_COMPARATOR &Sprite_y_cmp
 #include "../general/List.h"
-/* Master mega sprite list. */
-struct SpriteList sprites;
-/** User-specified {realloc} fix function for custom {bin} pointers.
- @implements <Sprite>SelfMigrate
- @order \Theta(n) */
-static void SpriteList_self_migrate(struct SpriteList *const this,
-	const struct ListMigrate *const migrate) {
-	size_t x, y;
-	struct Sprite **s_ptr, *s;
-	UNUSED(this);
-	for(y = 0; y < bin_size; y++) { /* \see{OrthoMath.h} */
-		for(x = 0; x < bin_size; x++) {
-			if(!*(s_ptr = &bin[y * bin_size + x])) continue;
-			SpriteListMigrateSelf(migrate, s_ptr);
-			s = *s_ptr;
-			do {
-				SpriteListMigrateSelf(migrate, &s->bin_prev);
-				SpriteListMigrateSelf(migrate, &s->bin_next);
-	 		} while((s = s->bin_next));
-		}
-	}
-}
-static void Sprite_remove_from_bin(struct Sprite *const this) {
-	assert(this);
-	assert(this->bin < BIN_SIZE * BIN_SIZE);
-	if(this->bin_prev) {
-		this->bin_prev->bin_next = this->bin_next;
-	} else {
-		assert(bin[this->bin] == this);
-		bin[this->bin] = this->bin_next;
-	}
-	if(this->bin_next) {
-		this->bin_next->bin_prev = this->bin_prev;
-	}
-	this->bin = BIN_SIZE * BIN_SIZE;
-}
-static void Sprite_add_to_bin(struct Sprite *const this) {
-	struct Vec2f x;
-	assert(this);
-	assert(this->bin == BIN_SIZE * BIN_SIZE);
-	x.x = this->r.x, x.y = this->r.y;
-	this->bin = location_to_bin(x); /* \see{OrthoMath.h} */
-	this->bin_prev = 0;
-	this->bin_next = bin[this->bin];
-	bin[this->bin] = this;
-}
+/** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
+static struct SpriteList sprites[BIN_BIN_SIZE];
 
 /** Define {Debris} as a subclass of {Sprite}. */
 struct Debris {
@@ -253,7 +214,7 @@ struct GateSet *gates;
  @implements <Sprite>Action */
 static void sprite_remove(struct SpriteListNode *const this) {
 	/* fixme: window parameters */
-	SpriteListRemove(&sprites, this);
+	SpriteListRemove(sprites + this->data.bin, this);
 }
 
 /** @implements <Debris>Action */
@@ -410,14 +371,17 @@ static const struct SpriteVt {
 static void debris_filler(struct Debris *const this,
 	const struct AutoDebris *const class,
 	struct Ortho3f *const r, const struct Ortho3f *const v) {
+	unsigned bin;
 	assert(this);
 	assert(class);
 	assert(r);
 	assert(v);
-	Sprite_filler(&this->sprite.data, class->sprite, r, v);
+	bin = location_to_bin(*(struct Vec2f *)r);
+	Sprite_filler(&this->sprite.data, class->sprite, bin, r, v);
 	this->sprite.data.vt = &debris_vt;
 	this->sprite.data.mass = class->mass;
 	this->hit = class->mass * debris_hit_per_mass;
+	SpriteListAdd(sprites + bin, &this->sprite);
 }
 /** Constructor.
  @return Success. */
@@ -431,7 +395,6 @@ int Debris(const struct AutoDebris *const class,
 	if(!(d = DebrisSetNew(debris)))
 		{ fprintf(stderr, "Debris: %s.\n", DebrisSetGetError(debris));return 0;}
 	debris_filler(d, class, r, v);
-	SpriteListAdd(&sprites, &d->sprite);
 	return 1;
 }
 
@@ -439,12 +402,15 @@ int Debris(const struct AutoDebris *const class,
 static void ship_filler(struct Ship *const this,
 	const struct AutoShipClass *const class,
 	struct Ortho3f *const r, const enum SpriteBehaviour behaviour) {
+	unsigned bin;
 	/* all ships start off stationary */
 	const struct Ortho3f v = { 0.0f, 0.0f, 0.0f };
 	assert(this);
 	assert(class);
+	assert(bin < BIN_BIN_SIZE);
 	assert(r);
-	Sprite_filler(&this->sprite.data, class->sprite, r, &v);
+	bin = location_to_bin(*(struct Vec2f *)r);
+	Sprite_filler(&this->sprite.data, class->sprite, bin, r, &v);
 	this->sprite.data.vt = &ship_vt;
 	this->class = class;
 	this->ms_recharge_wmd = TimerGetGameTime();
@@ -461,18 +427,21 @@ static void ship_filler(struct Ship *const this,
 	this->horizon         = 0.0f;
 	this->behaviour       = behaviour;
 	Orcish(this->name, sizeof this->name);
+	SpriteListAdd(sprites + bin, &this->sprite);
 }
 /** Constructor.
  @return Newly created ship or null. */
 struct Ship *Ship(const struct AutoShipClass *const class,
 	struct Ortho3f *const r, const enum SpriteBehaviour behaviour) {
 	struct Ship *ship;
+	unsigned bin;
 	if(!class || !r) return 0;
 	if(!(ship = ShipSetNew(ships)))
 		{ fprintf(stderr, "Ship: %s.\n", ShipSetGetError(ships)); return 0; }
+	bin = location_to_bin(*(struct Vec2f *)r);
 	ship_filler(ship, class, r, behaviour);
 	/* fixme: add to temp list, sort, merge */
-	SpriteListAdd(&sprites, &ship->sprite);
+	SpriteListAdd(&sprites[bin], &ship->sprite);
 	return ship;
 }
 
@@ -482,6 +451,7 @@ static void wmd_filler(struct Wmd *const this,
 	const struct Ship *const from) {
 	struct Ortho3f r, v;
 	float cosine, sine, lenght, one_lenght;
+	unsigned bin;
 	assert(this);
 	assert(class);
 	assert(from);
@@ -489,14 +459,15 @@ static void wmd_filler(struct Wmd *const this,
 	cosine = cosf(from->sprite.data.r.theta);
 	sine   = sinf(from->sprite.data.r.theta);
 	r.x = from->sprite.data.r.x + cosine * from->class->sprite->image->width
-	* 0.5f * wmd_distance_mod;
+		* 0.5f * wmd_distance_mod;
 	r.y = from->sprite.data.r.y + sine   * from->class->sprite->image->width
-	* 0.5f * wmd_distance_mod;
+		* 0.5f * wmd_distance_mod;
 	r.theta = from->sprite.data.r.theta;
 	v.x = from->sprite.data.v.x + cosine * class->speed * px_s_to_px_ms;
 	v.y = from->sprite.data.v.y + sine   * class->speed * px_s_to_px_ms;
 	v.theta = 0.0f; /* \omega */
-	Sprite_filler(&this->sprite.data, class->sprite, &r, &v);
+	{ struct Vec2f x; x.x = r.x, x.y = r.y; bin = location_to_bin(x); }
+	Sprite_filler(&this->sprite.data, class->sprite, bin, &r, &v);
 	this->sprite.data.vt = &wmd_vt;
 	this->class = class;
 	this->from = &from->sprite.data;
@@ -505,6 +476,7 @@ static void wmd_filler(struct Wmd *const this,
 	lenght = sqrtf(class->r * class->r + class->g * class->g
 		+ class->b * class->b);
 	one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0f;
+	SpriteListAdd(sprites + bin, &this->sprite);
 	Light(&this->light, lenght, class->r * one_lenght, class->g * one_lenght,
 		class->b * one_lenght);
 }
@@ -516,16 +488,19 @@ static void gate_filler(struct Gate *const this,
 	const struct Ortho3f v = { 0.0f, 0.0f, 0.0f };
 	const struct AutoSprite *const gate_sprite = AutoSpriteSearch("Gate");
 	struct Ortho3f r;
+	unsigned bin;
 	assert(this);
 	assert(class);
 	assert(gate_sprite);
+	{ struct Vec2f x; x.x = class->x, x.y = class->y; bin = location_to_bin(x);}
 	/* Set the wmd's position as a function of the {from} position. */
 	r.x     = class->x;
 	r.y     = class->y;
 	r.theta = class->theta;
-	Sprite_filler(&this->sprite.data, gate_sprite, &r, &v);
+	Sprite_filler(&this->sprite.data, gate_sprite, bin, &r, &v);
 	this->sprite.data.vt = &gate_vt;
 	this->to = class->to;
+	SpriteListAdd(sprites + bin, &this->sprite);
 }
 /** Constructor.
  @return Success. */
@@ -535,25 +510,26 @@ int Gate(const struct AutoGate *const class) {
 	if(!(gate = GateSetNew(gates)))
 		{ fprintf(stderr, "Gate: %s.\n", GateSetGetError(gates)); return 0; }
 	gate_filler(gate, class);
-	SpriteListAdd(&sprites, &gate->sprite);
 	return 1;
 }
 
 /** Initailises all sprite buffers.
  @return Success. */
 int Sprite(void) {
+	unsigned i;
 	if(!(debris = DebrisSet())
 		|| !(ships = ShipSet())
 		|| !(wmds = WmdSet())
 		|| !(gates = GateSet()))
 		return Sprite_(), 0;
-	SpriteListClear(&sprites);
+	for(i = 0; i < BIN_BIN_SIZE; i++) SpriteListClear(sprites + i);
 	return 1;
 }
 
 /** Erases all sprite buffers. */
 void Sprite_(void) {
-	SpriteListClear(&sprites);
+	unsigned i;
+	for(i = 0; i < BIN_BIN_SIZE; i++) SpriteListClear(sprites + i);
 	GateSet_(&gates);
 	WmdSet_(&wmds);
 	ShipSet_(&ships);
@@ -703,17 +679,8 @@ static int collide_circles(const struct Vec2f a, const struct Vec2f b,
 
 /** @fixme C99
  @return The first sprite in the {bin2}. */
-const struct Sprite *SpriteBinGetFirst(const struct Vec2u bin2) {
-	assert(bin2.x < bin_size && bin2.y < bin_size);
-	return bin[bin2_to_bin(bin2)];
-}
-
-/** Returns true while there are more sprites in the bin, sets the values.
- @fixme C99
- @return True if the values have been set. */
-inline const struct Sprite *SpriteBinIterate(const struct Sprite *this) {
-	assert(this);
-	return this->bin_next;
+inline const struct SpriteList *SpriteListBin(struct Vec2u bin2) {
+	return sprites + bin2_to_bin(bin2);
 }
 
 /** @fixme C99 */
@@ -870,6 +837,14 @@ struct Gate *GateFind(struct AutoSpaceZone *const to) {
 	GateSetSetParam(gates, to);
 	return GateSetShortCircuit(gates, &find_gate);
 }
+
+
+
+
+
+
+
+
 
 
 

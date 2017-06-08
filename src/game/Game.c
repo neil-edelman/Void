@@ -128,7 +128,7 @@ void GameUpdate(const int dt_ms) {
 		ShipGetPosition(game.player, &x);
 		DrawSetCamera(x);
 	}
-	/* O(n) + O(n + m); collision detect + move sprites; a lot of work */
+	/* collision detect, move sprites; a lot of work */
 	SpriteUpdate(dt_ms);
 	/* check events */
 	EventDispatch();

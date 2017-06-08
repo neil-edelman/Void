@@ -54,7 +54,7 @@ static int remove_all_except_player(struct Sprite *const this) {
 static int remove_all_events_except(struct Event *const victim) {
 	/* we don't erase the player's recharge event nor any (one?) event that uses
 	 ZoneChange because it's probably happening right now */
-	return SpriteGetEventRecharge(GameGetPlayer()) != victim
+	return ShipGetEventRecharge(GameGetPlayer()) != victim
 	&& EventGetConsumerAccept(victim) != (void (*)(void *))&ZoneChange;
 }
 

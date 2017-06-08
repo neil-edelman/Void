@@ -535,7 +535,9 @@ static void display(void) {
 	for(bin.y = bin_pos.y; bin.y >= bin_neg.y; bin.y--) {
 		for(bin.x = bin_neg.x; bin.x <= bin_pos.y; bin.x++) {
 			/* draw a sprite; fixme: minimise texture transitions? */
-			for(sprite = SpriteBinGetFirst(bin); sprite, sprite = SpriteBinGetNext(sprite)) {
+			for(sprite = SpriteBinGetFirst(bin);
+				sprite;
+				sprite = SpriteBinGetNext(sprite)) {
 				if(draw_is_print_sprites) debug("\tTex%d normal Tex%d Size %d (%.1f,%.1f:%.1f)\n", tex, nor, size, r.x, r.y, r.theta);
 				if(old_texture != tex) {
 					glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));

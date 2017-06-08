@@ -20,8 +20,7 @@
 	(6.283185307179586476925286766559005768394338798750211641949889f)
 #endif
 
-/** {Ortho5f} must be able to be reinterpreted as {Ortho3f}. */
-/*struct Ortho5f { float x, y, theta, x1, y1; };*/
+/** {Ortho3f} must be able to be reinterpreted as {Vec3f}. */
 struct Ortho3f { float x, y, theta; };
 struct Vec2f { float x, y; };
 struct Vec2i { int x, y; };
@@ -36,9 +35,10 @@ struct Rectangle4f { float x_min, x_max, y_min, y_max; };
  sprite. There are 2 parameters that control everything. */
 #define BIN_LOG_SPACE (8) /* log_2 bin space in pixels */
 #define BIN_LOG_SIZE (6) /* log_2 number of bins across/vertically */
-#define BIN_SIZE (1 << BIN_LOG_SIZE) /* size of array of bins */
+#define BIN_SIZE (1 << BIN_LOG_SIZE) /* size of array of bins (64) */
+#define BIN_BIN_SIZE (BIN_SIZE * BIN_SIZE) /* size of 2d array (4096) */
 static const unsigned bin_size       = BIN_SIZE;
-static const unsigned bin_space      = 1 << BIN_LOG_SPACE;
+static const unsigned bin_space      = 1 << BIN_LOG_SPACE; /* 256 pixels */
 static const unsigned bin_half_space = 1 << (BIN_LOG_SPACE - 1);
 /* signed maximum value on either side of zero */
 static const float de_sitter

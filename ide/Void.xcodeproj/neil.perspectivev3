@@ -347,7 +347,7 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>16</integer>
+									<integer>20</integer>
 									<integer>11</integer>
 									<integer>8</integer>
 									<integer>0</integer>
@@ -439,8 +439,6 @@
 									<string>XCDetailModule</string>
 								</dict>
 								<dict>
-									<key>BecomeActive</key>
-									<true/>
 									<key>ContentConfiguration</key>
 									<dict>
 										<key>PBXProjectModuleGUID</key>
@@ -452,8 +450,6 @@
 									<dict>
 										<key>Frame</key>
 										<string>{{10, 27}, {644, 655}}</string>
-										<key>RubberWindowFrame</key>
-										<string>429 50 851 728 0 0 1280 778 </string>
 									</dict>
 									<key>Module</key>
 									<string>PBXProjectFindModule</string>
@@ -492,6 +488,8 @@
 									<dict>
 										<key>Frame</key>
 										<string>{{10, 27}, {644, 655}}</string>
+										<key>RubberWindowFrame</key>
+										<string>429 50 851 728 0 0 1280 778 </string>
 									</dict>
 									<key>Module</key>
 									<string>PBXBuildResultsModule</string>
@@ -519,11 +517,11 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>28B373D91EE9F498003E5B58</string>
+				<string>286AA2ED1EEC972300AE92B2</string>
 				<string>1CA23ED40692098700951B8B</string>
-				<string>28B373DA1EE9F498003E5B58</string>
+				<string>286AA2EE1EEC972300AE92B2</string>
 				<string>2866766C1E8467350090EBDC</string>
-				<string>28B373DB1EE9F498003E5B58</string>
+				<string>286AA2EF1EEC972300AE92B2</string>
 				<string>1CA23EDF0692099D00951B8B</string>
 				<string>1CA23EE00692099D00951B8B</string>
 				<string>1CA23EE10692099D00951B8B</string>
@@ -696,7 +694,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>518648984.458722</real>
+	<real>518826062.28982002</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -714,8 +712,6 @@
 	<key>WindowOrderList</key>
 	<array>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
-		<string>28B373E21EE9F498003E5B58</string>
-		<string>28B373E31EE9F498003E5B58</string>
 	</array>
 	<key>WindowString</key>
 	<string>429 50 851 728 0 0 1280 778 </string>

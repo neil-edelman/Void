@@ -218,6 +218,14 @@ void Draw_(void) {
 /** Sets the camera location.
  @param x: (x, y) in pixels. */
 void DrawSetCamera(const struct Vec2f x) { camera.x = x.x, camera.y = x.y; }
+/** Gets the visible part of the screen. */
+void DrawGetScreen(struct Rectangle4f *const rect) {
+	if(!rect) return;
+	rect->x_min = camera.x - camera_extent.x;
+	rect->x_max = camera.x + camera_extent.x;
+	rect->y_min = camera.y - camera_extent.y;
+	rect->y_max = camera.y + camera_extent.y;
+}
 
 /** Sets background to the image with key key.
  @fixme allows you to set not {TexClassTexture(TEX_CLASS_BACKGROUND)} textures,
@@ -446,8 +454,7 @@ static void display(void) {
 	int lights;
 	/* for SpriteIterate */
 	struct Ortho3f r;
-	struct Vec2u bin_neg, bin_pos, bin;
-	unsigned old_texture = 0, tex, nor, size;
+	unsigned old_texture = 0, texture, normal, size;
 
 	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	 <- https://www.khronos.org/opengl/wiki/Common_Mistakes
@@ -505,10 +512,10 @@ static void display(void) {
 	/* background sprites */
 	/*const->glUniform1i(far_texture_location, TEX_CLASS_SPRITE); */
 	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
-	while(FarIterate(&r, &tex, &size)) {
-		if(old_texture != tex) {
-			glBindTexture(GL_TEXTURE_2D, tex);
-			old_texture = tex;
+	while(FarIterate(&r, &texture, &size)) {
+		if(old_texture != texture) {
+			glBindTexture(GL_TEXTURE_2D, texture);
+			old_texture = texture;
 		}
 		glUniform1f(auto_Far_shader.size, (float)size);
 		glUniform1f(auto_Far_shader.angle, r.theta);
@@ -516,10 +523,6 @@ static void display(void) {
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
 	old_texture = 0;
-
-	/* \see{OrthoMath.h} */
-	rectangle_to_bin(camera, camera_extent, &bin_neg, &bin_pos);
-	if(draw_is_print_sprites) debug("\tCamera: (%.1f, %.1f) extent (%.1f, %.1f) -> neg(%u,%u) pos(%u,%u)\n", camera.x, camera.y, camera_extent.x, camera_extent.y, bin_neg.x, bin_neg.y, bin_pos.x, bin_pos.y);
 
 	glEnable(GL_BLEND);
 	glUseProgram(auto_Lambert_shader.compiled);

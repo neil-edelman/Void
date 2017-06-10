@@ -155,11 +155,11 @@ int FarIterate(struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *siz
 	if(is_reset) {
 		unsigned w, h;
 		struct Vec2u screen;
-		DrawGetScreen(&screen);
+		/*DrawGetScreen(&screen);*/
 		w = (screen.x  >> 1) + (screen.x & 1);
 		h = (screen.y >> 1) + (screen.y & 1);
 		/* determine the window */
-		DrawGetCamera(&camera);
+		/*DrawGetCamera(&camera);*/
 		camera.x *= foreshortening;
 		camera.y *= foreshortening;
 		x_min_window = (int)camera.x - w;

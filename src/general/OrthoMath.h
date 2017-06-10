@@ -27,6 +27,7 @@ struct Vec2i { int x, y; };
 struct Vec2u { unsigned x, y; };
 struct Colour3f { float r, g, b; };
 struct Rectangle4f { float x_min, x_max, y_min, y_max; };
+struct Rectangle4i { int x_min, x_max, y_min, y_max; };
 
 /* Break space in pixels up into bins. A {ortho_size} sprite is the maximum
  theoretical sprite size without clipping artifacts. It is also the range of a
@@ -103,30 +104,34 @@ static unsigned location_to_bin(const struct Vec2f x) {
 	return bin2_to_bin(bin2u);
 }
 
-/** Maps a recangle with centre {center} and radius {extent}, to an area in bin
- space, {neg} -- {pos}. */
-static void rectangle_to_bin(const struct Vec2f centre,
-	const struct Vec2f extent,
-	struct Vec2u *const neg, struct Vec2u *const pos) {
+/** Maps a recangle from pixel space, {pixel}, to bin2 space, {bin}. */
+static void rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
+	struct Rectangle4i *const bin) {
 	int temp;
-	assert(neg);
-	assert(pos);
-	temp = ((int)(centre.x - extent.x) >> BIN_LOG_SPACE) +bin_half_space;
+	assert(pixel);
+	assert(pixel->x_min <= pixel->x_max);
+	assert(pixel->y_min <= pixel->y_max);
+	assert(bin);
+
+	temp = (int)(pixel->x_min) >> BIN_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if(((unsigned)(temp)) >= bin_size) temp = (int)bin_size - 1;
-	neg->x = (unsigned)temp;
-	temp = ((int)(centre.y - extent.y) >> BIN_LOG_SPACE) + bin_half_space;
+	bin->x_min = temp;
+
+	temp = ((int)(pixel->x_max) + 1) >> BIN_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= bin_size) temp = (int)bin_size - 1;
-	neg->y = (unsigned)temp;
-	temp = ((int)(centre.x + extent.x + 1) >> BIN_LOG_SPACE) + bin_half_space;
+	bin->x_max = temp;
+
+	temp = (int)(pixel->y_min) >> BIN_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= bin_size) temp = (int)bin_size - 1;
-	pos->x = (unsigned)temp;
-	temp = ((int)(centre.y + extent.y + 1) >> BIN_LOG_SPACE) + bin_half_space;
+	bin->y_min = temp;
+
+	temp = ((int)(pixel->y_max) + 1) >> BIN_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= bin_size) temp = (int)bin_size - 1;
-	pos->y = (unsigned)temp;
+	bin->y_max = temp;
 }
 
 static void orthomath_unused_coda(void);
@@ -138,7 +143,7 @@ static void orthomath_unused(void) {
 	Ortho3f_clip_position(0);
 	Rectangle4f_init(0);
 	location_to_bin(v);
-	rectangle_to_bin(v, v, 0, 0);
+	rectangle4f_to_bin4(0, 0);
 	orthomath_unused_coda();
 }
 static void orthomath_unused_coda(void) {

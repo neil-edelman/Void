@@ -67,17 +67,22 @@ static const float wmd_distance_mod         = 1.3f; /* to clear ship */
 
 
 
-
 /* global variable: frame time */
-static float frame_dt_ms;
-
-/** Sets a frame {dt_ms} for all functions that involve time evolition. */
-void SpriteSetFrameTime(const float dt_ms) {
-	frame_dt_ms = dt_ms;
-}
+static float dt_ms;
 
 
 
+/* Define the bins that each frame will concern itself with; these are erased
+ and updated every frame. See \see{SpriteUpdate}. */
+#define LIST_NAME Bin
+#define LIST_TYPE unsigned
+#define LIST_UA_NAME Order
+#include "../general/List.h"
+static struct BinList draw_bins, update_bins;
+#define SET_NAME BinList
+#define SET_TYPE struct BinListNode
+#include "../general/Set.h"
+static struct BinListSet *bins;
 
 
 
@@ -232,8 +237,8 @@ static void debris_delete(struct Debris *const this) {
 }
 /** @implements <Debris>Action */
 static void debris_death(struct Debris *const this) {
-	this->hit = 0;
 #if 0
+	this->hit = 0;
 	/** Spawns smaller Debris (fixme: stub.) */
 	void SpriteDebris(const struct Sprite *const s) {
 		struct AutoImage *small_image;
@@ -262,11 +267,11 @@ static void debris_death(struct Debris *const this) {
 	 }
 	 }*/	
 #endif
+	debris_delete(this);
 }
-/** @implements <Debris>Predicate */
-static int debris_is_destroyed(struct Debris *const this, void *const param) {
-	UNUSED(param);
-	return this->hit <= 0;
+/** @implements <Debris>Action */
+static void debris_action(struct Debris *const this) {
+	if(this->hit <= 0) debris_death(this);
 }
 
 /** @implements <Ship>Action */
@@ -288,9 +293,52 @@ static void ship_death(struct Ship *const this) {
 	/* fixme: explode */
 }
 /** @implements <Ship>Predicate */
-static int ship_is_destroyed(struct Ship *const this, void *const param) {
-	UNUSED(param);
-	return this->hit <= 0;
+static void ship_action(struct Ship *const this) {
+	if(this->hit <= 0) ship_death(this);
+}
+static void ship_action_ai(struct Ship *const this) {
+	const struct Sprite *const b = GameGetPlayer();
+	float c_x, c_y;
+	float d_2, theta, t;
+	int turning = 0, acceleration = 0;
+	
+	if(!b) return; /* fixme */
+	c_x = b->x - this->x;
+	c_y = b->y - this->y;
+	d_2   = c_x * c_x + c_y * c_y;
+	theta = atan2f(c_y, c_x);
+	/* the ai ship aims where it thinks the player will be when it's shot gets
+	 there, approx - too hard to beat! */
+	/*target.x = ship[SHIP_PLAYER].p.x - Sin[ship[SHIP_PLAYER].r] * ship[SHIP_PLAYER].inertia.x * (disttoenemy / WEPSPEED) - ship[1].inertia.x;
+	 target.y = ship[SHIP_PLAYER].p.y + Cos[ship[SHIP_PLAYER].r] * ship[SHIP_PLAYER].inertia.y * (disttoenemy / WEPSPEED) - ship[1].inertia.y;
+	 disttoenemy = hypot(target.x - ship[SHIP_CPU].p.x, target.y - ship[SHIP_CPU].p.y);*/
+	/* t is the error of where wants vs where it's at */
+	t = theta - this->theta;
+	if(t >= M_PI_F) { /* keep it in the branch cut */
+		t -= M_2PI_F;
+	} else if(t < -M_PI_F) {
+		t += M_2PI_F;
+	}
+	/* too close; ai only does one thing at once, or else it would be hard */
+	if(d_2 < shp_ai_too_close) {
+		if(t < 0) t += (float)M_PI_F;
+		else      t -= (float)M_PI_F;
+	}
+	/* turn */
+	if(t < -shp_ai_turn || t > shp_ai_turn) {
+		turning = (int)(t * shp_ai_turn_constant);
+		/*if(turning * dt_s fixme */
+		/*if(t < 0) {
+		 t += (float)M_PI_F;
+		 } else {
+		 t -= (float)M_PI_F;
+		 }*/
+	} else if(d_2 > shp_ai_too_close && d_2 < shp_ai_too_far) {
+		SpriteShoot(this);
+	} else if(t > -shp_ai_turn_sloppy && t < shp_ai_turn_sloppy) {
+		acceleration = shp_ai_speed;
+	}
+	SpriteInput(this, turning, acceleration, dt_ms);
 }
 
 /** @implements <Wmd>Action */
@@ -305,16 +353,15 @@ static void wmd_delete(struct Wmd *const this) {
 	Light_(&this->light);
 	sprite_remove(&this->sprite);
 	WmdSetRemove(wmds, this);
-	/* fixme: explode */
 }
 /** @implements <Wmd>Action */
 static void wmd_death(struct Wmd *const this) {
-	this->expires = 0;
+	/* fixme: explode */
+	wmd_delete(this);
 }
-/** @implements <Wmd>Predicate */
-static int wmd_is_destroyed(struct Wmd *const this, void *const param) {
-	UNUSED(param);
-	return TimerIsTime(this->expires);
+/** @implements <Wmd>Action */
+static void wmd_action(struct Wmd *const this) {
+	if(TimerIsTime(this->expires)) wmd_death(this);
 }
 
 /** @implements <Gate>Action */
@@ -334,38 +381,40 @@ static void gate_delete(struct Gate *const this) {
 static void gate_death(struct Gate *const this) {
 	fprintf(stderr, "Trying to destroy gate to %s.\n", this->to->name);
 }
-/** @implements <Gate>Predicate */
-static int gate_is_destroyed(struct Gate *const this, void *const param) {
+/** @implements <Gate>Action */
+static void gate_action(struct Gate *const this) {
 	UNUSED(this);
-	UNUSED(param);
-	return 0;
 }
 
 /* define the virtual table */
 static const struct SpriteVt {
-	const SpriteAction out, delete, death;
-	const SpritePredicate is_destroyed;
+	const SpriteAction out, update, delete;
 } debris_vt = {
 	(SpriteAction)&debris_out,
-	(SpriteAction)&debris_delete,
-	(SpriteAction)&debris_death,
-	(SpritePredicate)&debris_is_destroyed
+	(SpriteAction)&debris_action,
+	(SpriteAction)&debris_delete
 }, ship_vt = {
 	(SpriteAction)&ship_out,
-	(SpriteAction)&ship_delete,
-	(SpriteAction)&ship_death,
-	(SpritePredicate)&ship_is_destroyed
+	(SpriteAction)&ship_action_ai,
+	(SpriteAction)&ship_delete
+}, human_ship_vt = {
+	(SpriteAction)&ship_out,
+	(SpriteAction)&ship_action,
+	(SpriteAction)&ship_delete
 }, wmd_vt = {
 	(SpriteAction)&wmd_out,
-	(SpriteAction)&wmd_delete,
-	(SpriteAction)&wmd_death,
-	(SpritePredicate)&wmd_is_destroyed
+	(SpriteAction)&wmd_action,
+	(SpriteAction)&wmd_delete
 }, gate_vt = {
 	(SpriteAction)&gate_out,
-	(SpriteAction)&gate_delete,
-	(SpriteAction)&gate_death,
-	(SpritePredicate)&gate_is_destroyed
+	(SpriteAction)&gate_action,
+	(SpriteAction)&gate_delete
 };
+
+/** @implements <Sprite>Action */
+static void sprite_update(struct Sprite *const this) {
+	this->vt->update(this);
+}
 
 /** @implements <Debris>Action */
 static void debris_filler(struct Debris *const this,
@@ -381,7 +430,7 @@ static void debris_filler(struct Debris *const this,
 	this->sprite.data.vt = &debris_vt;
 	this->sprite.data.mass = class->mass;
 	this->hit = class->mass * debris_hit_per_mass;
-	SpriteListAdd(sprites + bin, &this->sprite);
+	SpriteListPush(sprites + bin, &this->sprite);
 }
 /** Constructor.
  @return Success. */
@@ -403,6 +452,7 @@ static void ship_filler(struct Ship *const this,
 	const struct AutoShipClass *const class,
 	struct Ortho3f *const r, const enum SpriteBehaviour behaviour) {
 	unsigned bin;
+	const struct SpriteVt *vt;
 	/* all ships start off stationary */
 	const struct Ortho3f v = { 0.0f, 0.0f, 0.0f };
 	assert(this);
@@ -411,7 +461,13 @@ static void ship_filler(struct Ship *const this,
 	assert(r);
 	bin = location_to_bin(*(struct Vec2f *)r);
 	Sprite_filler(&this->sprite.data, class->sprite, bin, r, &v);
-	this->sprite.data.vt = &ship_vt;
+	switch(behaviour) {
+		case SB_HUMAN: vt = &human_ship_vt; break;
+		case SB_NONE:
+		case SB_STUPID:
+		default: vt = &ship_vt; break;
+	}
+	this->sprite.data.vt = vt;
 	this->class = class;
 	this->ms_recharge_wmd = TimerGetGameTime();
 	this->ms_recharge_hit = class->ms_recharge;
@@ -427,7 +483,7 @@ static void ship_filler(struct Ship *const this,
 	this->horizon         = 0.0f;
 	this->behaviour       = behaviour;
 	Orcish(this->name, sizeof this->name);
-	SpriteListAdd(sprites + bin, &this->sprite);
+	SpriteListPush(sprites + bin, &this->sprite);
 }
 /** Constructor.
  @return Newly created ship or null. */
@@ -441,7 +497,7 @@ struct Ship *Ship(const struct AutoShipClass *const class,
 	bin = location_to_bin(*(struct Vec2f *)r);
 	ship_filler(ship, class, r, behaviour);
 	/* fixme: add to temp list, sort, merge */
-	SpriteListAdd(&sprites[bin], &ship->sprite);
+	SpriteListPush(&sprites[bin], &ship->sprite);
 	return ship;
 }
 
@@ -476,7 +532,7 @@ static void wmd_filler(struct Wmd *const this,
 	lenght = sqrtf(class->r * class->r + class->g * class->g
 		+ class->b * class->b);
 	one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0f;
-	SpriteListAdd(sprites + bin, &this->sprite);
+	SpriteListPush(sprites + bin, &this->sprite);
 	Light(&this->light, lenght, class->r * one_lenght, class->g * one_lenght,
 		class->b * one_lenght);
 }
@@ -500,7 +556,7 @@ static void gate_filler(struct Gate *const this,
 	Sprite_filler(&this->sprite.data, gate_sprite, bin, &r, &v);
 	this->sprite.data.vt = &gate_vt;
 	this->to = class->to;
-	SpriteListAdd(sprites + bin, &this->sprite);
+	SpriteListPush(sprites + bin, &this->sprite);
 }
 /** Constructor.
  @return Success. */
@@ -517,7 +573,8 @@ int Gate(const struct AutoGate *const class) {
  @return Success. */
 int Sprite(void) {
 	unsigned i;
-	if(!(debris = DebrisSet())
+	if(!(bins = BinListSet())
+		|| !(debris = DebrisSet())
 		|| !(ships = ShipSet())
 		|| !(wmds = WmdSet())
 		|| !(gates = GateSet()))
@@ -534,6 +591,7 @@ void Sprite_(void) {
 	WmdSet_(&wmds);
 	ShipSet_(&ships);
 	DebrisSet_(&debris);
+	BinListSet_(&bins);
 }
 
 /** Prints out debug info. */
@@ -542,10 +600,50 @@ void SpriteOut(struct Sprite *const this) {
 	this->vt->out(this);
 }
 
+/** Choose which bins we will update this frame. */
+static void new_bins(void) {
+	struct Rectangle4f rect;
+	struct Rectangle4i bin4;
+	struct Vec2i bin2;
+	struct BinListNode *bin_list;
+	BinListClear(&draw_bins), BinListClear(&update_bins), BinListSetClear(bins);
+	DrawGetScreen(&rect);
+	rectangle4f_to_bin4(&rect, &bin4);
+	for(bin2.y = bin4.y_max; bin2.y >= bin4.y_min; bin2.y--) {
+		for(bin2.x = bin4.x_min; bin2.x <= bin4.y_max; bin2.x++) {
+			if(!(bin_list = BinListSetNew(bins))) return;
+			BinListPush(&draw_bins, bin_list);
+		}
+	}
+}
+/** {{act} \in { Draw }}. */
+static void for_each_draw(const SpriteAction act) {
+	struct BinListNode *iter;
+	unsigned bin;
+	assert(act);
+	for(iter = BinListOrderGetFirst(&draw_bins); iter;
+		iter = BinListNodeOrderGetNext(iter)) {
+		bin = iter->data;
+		SpriteListXForEach(sprites + bin, act);
+	}
+}
+/** {{act} \in { Update, Draw }}. */
+static void for_each_update(const SpriteAction act) {
+	struct BinListNode *iter;
+	unsigned bin;
+	assert(act);
+	for(iter = BinListOrderGetFirst(&update_bins); iter;
+		iter = BinListNodeOrderGetNext(iter)) {
+		bin = iter->data;
+		SpriteListXForEach(sprites + bin, act);
+	}
+	for_each_draw(act);
+}
+
 /* Compute bounding boxes of where the sprite wants to go this frame,
  containing the projected circle along a vector {x -> x + v*dt}. This is the
  first step in collision detection. */
-static void collide_extrapolate(struct Sprite *const this, const float dt_ms) {
+static void collide_extrapolate(struct Sprite *const this) {
 	/* where they should be if there's no collision */
 	this->r1.x = this->r.x + this->v.x * dt_ms;
 	this->r1.y = this->r.y + this->v.y * dt_ms;
@@ -571,19 +669,18 @@ static void collide_extrapolate(struct Sprite *const this, const float dt_ms) {
 	}
 }
 
-#if 0
 /** Used after \see{collide_extrapolate} on all the sprites you want to check.
  Uses Hahn–Banach separation theorem and the ordered list of projections on the
  {x} and {y} axis to build up a list of possible colliders based on their
  bounding box of where it moved this frame. Calls \see{collide_circles} for any
  candidites. */
 static void collide_boxes(struct Sprite *const this) {
+	/* assume it can be in a maximum of four bins at once as it travels? */
+	/*...*/
+#if 0
 	struct Sprite *b, *b_adj_y;
 	float t0;
 	if(!this) return;
-	/* assume it can be in a maximum of four bins at once as it travels */
-	
-
 	/* mark x */
 	for(b = this->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
 		if(this < b && this->x_min < b->x_max) b->is_selected = -1;
@@ -591,7 +688,6 @@ static void collide_boxes(struct Sprite *const this) {
 	for(b = this->next_x; b && b->x <= explore_x_max; b = b->next_x) {
 		if(this < b && this->x_max > b->x_min) b->is_selected = -1;
 	}
-	
 	/* consider y and maybe add it to the list of colliders */
 	for(b = this->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
 		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
@@ -613,8 +709,32 @@ static void collide_boxes(struct Sprite *const this) {
 			response(this, b, t0);
 		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
 	}
-}
+	/* uhh, yes? I took this code from SpriteUpdate */
+	if(!s->no_collisions) {
+		/* no collisions; apply position change, calculated above */
+		s->x = s->x1;
+		s->y = s->y1;
+	} else {
+		/* if you skip this step, it's unstable on multiple collisions */
+		const float one_collide = 1.0f / s->no_collisions;
+		const float s_vx1 = s->vx1 * one_collide;
+		const float s_vy1 = s->vy1 * one_collide;
+		/* before and after collision;  */
+		s->x += (s->vx * s->t0_dt_collide + s_vx1 * (1.0f - s->t0_dt_collide)) * dt_ms;
+		s->y += (s->vy * s->t0_dt_collide + s_vy1 * (1.0f - s->t0_dt_collide)) * dt_ms;
+		s->vx = s_vx1;
+		s->vy = s_vy1;	
+		/* unmark for next frame */
+		s->no_collisions = 0;
+		/* apply De Sitter spacetime? already done? */
+		if(s->x      < -de_sitter) s->x =  de_sitter - 20.0f;
+		else if(s->x >  de_sitter) s->x = -de_sitter + 20.0f;
+		if(s->y      < -de_sitter) s->y =  de_sitter - 20.0f;
+		else if(s->y >  de_sitter) s->y = -de_sitter + 20.0f;
+	}
+	/* bin change */
 #endif
+}
 
 /** Called from \see{collide_boxes}.
  @param a, b: Point {u} moves from {a} to {b}.
@@ -677,6 +797,22 @@ static int collide_circles(const struct Vec2f a, const struct Vec2f b,
 	return 1;
 }
 
+
+/** This is where most of the work gets done. Called every frame, O(n).
+ @param frame_ms: Milliseconds since the last frame. */
+void SpriteUpdate(const int frame_ms) {
+	/* going to use it a lot to scale the time evolution: put in in a static */
+	dt_ms = frame_ms;
+	/* set up the bins; this fixes the camera */
+	new_bins();
+	/* collision detection */
+	for_each_update(&collide_extrapolate);
+	for_each_update(&collide_boxes);
+	/* sort the sprites */
+	/* do some stuff */
+	for_each_update(&sprite_update);
+}
+
 /** @fixme C99
  @return The first sprite in the {bin2}. */
 inline const struct SpriteList *SpriteListBin(struct Vec2u bin2) {
@@ -701,7 +837,7 @@ inline void SpriteExtractDrawing(const struct Sprite *const this,
  @param acceleration	How many {ms} was this pressed?
  @param dt_ms			Frame time in milliseconds. */
 void ShipInput(struct Ship *const this, const int turning,
-	const int acceleration, const int dt_ms) {
+	const int acceleration) {
 	if(!this) return;
 	if(acceleration != 0) {
 		float vx = this->sprite.data.r.x, vy = this->sprite.data.r.y;
@@ -867,112 +1003,7 @@ struct Gate *GateFind(struct AutoSpaceZone *const to) {
 
 
 
-
 /* branch cut (-Pi,Pi] */
-
-/** This is where most of the work gets done. Called every frame, O(n).
- @param dt_ms Milliseconds since the last frame. */
-void SpriteUpdate(const int dt_ms) {
-	struct Sprite *s;
-
-	/* sorts the sprites; they're (hopefully) almost sorted already from last
-	 frame, just freshens with insertion sort, O(n + m) where m is the
-	 related to the dynamicness of the scene.
-	 Nah, I changed it so they're always in order; probably change it back; it's
-	 slightly more correct this way, but slower? */
-	/*sort();*/
-
-	/* dynamic; move the sprites around */
-	while((s = iterate())) {
-
-		/* this sets no_collision and if no_collision > 0 sets v[xy]1 */
-		collide(s);
-
-		if(!s->no_collisions) {
-			/* no collisions; apply position change, calculated above */
-			s->x = s->x1;
-			s->y = s->y1;
-		} else {
-			/* if you skip this step, it's unstable on multiple collisions */
-			const float one_collide = 1.0f / s->no_collisions;
-			const float s_vx1 = s->vx1 * one_collide;
-			const float s_vy1 = s->vy1 * one_collide;
-
-			/* before and after collision;  */
-			s->x += (s->vx * s->t0_dt_collide + s_vx1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-			s->y += (s->vy * s->t0_dt_collide + s_vy1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-			s->vx = s_vx1;
-			s->vy = s_vy1;
-
-			/* unmark for next frame */
-			s->no_collisions = 0;
-		}
-
-		/* apply De Sitter spacetime */
-		if(s->x      < -de_sitter) s->x =  de_sitter - 20.0f;
-		else if(s->x >  de_sitter) s->x = -de_sitter + 20.0f;
-		if(s->y      < -de_sitter) s->y =  de_sitter - 20.0f;
-		else if(s->y >  de_sitter) s->y = -de_sitter + 20.0f;
-
-		/* keep it sorted (fixme: no?) */
-		sort_notify(s);
-		bin_change(s);
-	}
-
-	/* do some stuff that is unique to each sprite type */
-	while((s = iterate())) {
-		switch(s->sp_type) {
-			/* fixme: have more drama then just deleting */
-			case SP_DEBRIS:
-				if(0 < s->sp.debris.hit) break;
-				SpriteDebris(s);
-				Sprite_(&s);
-				break;
-			case SP_SHIP:
-				switch(s->sp.ship.behaviour) {
-					case SB_STUPID:
-						/* they are really stupid */
-						do_ai(s, dt_ms);
-						break;
-					case SB_HUMAN:
-						/* do nothing; Game::update has game.player, which it takes
-						 care of; this would be like, network code for multiple human-
-						 controlled pieces */
-						break;
-					case SB_NONE:
-						break;
-				}
-				if(0 >= s->sp.ship.hit) {
-					info("SpriteUpdate: %s destroyed.\n", SpriteToString(s));
-					Sprite_(&s);
-					break;
-				}
-				/* left over from polling */
-				/*if(s->sp.ship.hit < s->sp.ship.max_hit) {
-					while(TimerIsTime(s->sp.ship.ms_recharge_event)) {
-						SpriteRecharge(s, 1);
-						if(s->sp.ship.hit >= s->sp.ship.max_hit) break;
-						s->sp.ship.ms_recharge_event += s->sp.ship.ms_recharge_hit;
-						debug("SpriteUpdate: %s recharging.\n", SpriteToString(s));
-					}
-				}*/
-				break;
-			case SP_WMD:
-				if(TimerIsTime(s->sp.wmd.expires)) { Sprite_(&s); break; }
-				/* update light */
-				LightSetPosition(s->sp.wmd.light, s->x, s->y);
-				break;
-			case SP_ETHEREAL:
-				if(!s->sp.ethereal.is_picked_up) break;
-				Sprite_(&s);
-				break;
-			default:
-				warn("SpriteUpdate: unknown type.\n");
-		}
-		/* s is possibly invalid! don't do anything here */
-	}
-}
-
 /* branch cut (-Pi,Pi] */
 
 /** Elastic collision between circles; called from {@see collide} with
@@ -1175,51 +1206,6 @@ static void gate_travel(struct Gate *const gate, struct Ship *ship) {
 	}/* else*/
 	/* fixme: unreliable */
 	ship->sp.ship.horizon = proj;
-}
-
-static void do_ai(struct Sprite *const a, const int dt_ms) {
-	const struct Sprite *const b = GameGetPlayer();
-	float c_x, c_y;
-	float d_2, theta, t;
-	int turning = 0, acceleration = 0;
-	
-	if(!b) return; /* fixme */
-	c_x = b->x - a->x;
-	c_y = b->y - a->y;
-	d_2   = c_x * c_x + c_y * c_y;
-	theta = atan2f(c_y, c_x);
-	/* the ai ship aims where it thinks the player will be when it's shot gets
-	 there, approx - too hard to beat! */
-	/*target.x = ship[SHIP_PLAYER].p.x - Sin[ship[SHIP_PLAYER].r] * ship[SHIP_PLAYER].inertia.x * (disttoenemy / WEPSPEED) - ship[1].inertia.x;
-	 target.y = ship[SHIP_PLAYER].p.y + Cos[ship[SHIP_PLAYER].r] * ship[SHIP_PLAYER].inertia.y * (disttoenemy / WEPSPEED) - ship[1].inertia.y;
-	 disttoenemy = hypot(target.x - ship[SHIP_CPU].p.x, target.y - ship[SHIP_CPU].p.y);*/
-	/* t is the error of where wants vs where it's at */
-	t = theta - a->theta;
-	if(t >= M_PI_F) { /* keep it in the branch cut */
-		t -= M_2PI_F;
-	} else if(t < -M_PI_F) {
-		t += M_2PI_F;
-	}
-	/* too close; ai only does one thing at once, or else it would be hard */
-	if(d_2 < shp_ai_too_close) {
-		if(t < 0) t += (float)M_PI_F;
-		else      t -= (float)M_PI_F;
-	}
-	/* turn */
-	if(t < -shp_ai_turn || t > shp_ai_turn) {
-		turning = (int)(t * shp_ai_turn_constant);
-		/*if(turning * dt_s fixme */
-		/*if(t < 0) {
-		 t += (float)M_PI_F;
-		 } else {
-		 t -= (float)M_PI_F;
-		 }*/
-	} else if(d_2 > shp_ai_too_close && d_2 < shp_ai_too_far) {
-		SpriteShoot(a);
-	} else if(t > -shp_ai_turn_sloppy && t < shp_ai_turn_sloppy) {
-		acceleration = shp_ai_speed;
-	}
-	SpriteInput(a, turning, acceleration, dt_ms);
 }
 
 /** Clips c to [min, max]. */

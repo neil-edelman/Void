@@ -36,7 +36,6 @@ static int is_started;
 /* public struct */
 struct Game {
 	struct Ship *player; /* camera moves with this */
-	int ms_turning, ms_acceleration, ms_shoot; /* input per frame, ms */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
 	const struct AutoShipClass *nautilus, *scorpion;
@@ -114,17 +113,18 @@ void Game_(void) {
 /** updates the gameplay */
 void GameUpdate(const int dt_ms) {
 	if(!is_started) return;
-	/* in-game */
-	game.ms_turning      = KeyTime(k_left) - KeyTime(k_right);
-	game.ms_acceleration = KeyTime(k_up)   - KeyTime(k_down);
-	if(game.ms_acceleration < 0) game.ms_acceleration = 0; /* not a forklift */
-	game.ms_shoot        = KeyTime(32);
-
-	/* apply to player */
+	/* \see{SpriteUpdate} has a fixed camera position; apply input before the
+	 update so we can predict what the camera is going to do; when collisions
+	 occur, this causes the camera to jerk, but it's better than always
+	 lagging? */
 	if((game.player)) {
+		const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
+		int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
+		const int ms_shoot = KeyTime(32); /* fixme */
 		struct Vec2f x;
-		ShipInput(game.player, game.ms_turning, game.ms_acceleration, dt_ms);
-		if(game.ms_shoot) ShipShoot(game.player);
+		if(ms_acceleration < 0) ms_acceleration = 0; /* not a forklift */
+		ShipInput(game.player, ms_turning, ms_acceleration);
+		if(ms_shoot) ShipShoot(game.player);
 		ShipGetPosition(game.player, &x);
 		DrawSetCamera(x);
 	}

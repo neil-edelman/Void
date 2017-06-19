@@ -38,9 +38,10 @@ struct Rectangle4i { int x_min, x_max, y_min, y_max; };
 #define BIN_LOG_SIZE (6) /* log_2 number of bins across/vertically */
 #define BIN_SIZE (1 << BIN_LOG_SIZE) /* size of array of bins (64) */
 #define BIN_BIN_SIZE (BIN_SIZE * BIN_SIZE) /* size of 2d array (4096) */
-static const unsigned bin_size       = BIN_SIZE;
-static const unsigned bin_space      = 1 << BIN_LOG_SPACE; /* 256 pixels */
-static const unsigned bin_half_space = 1 << (BIN_LOG_SPACE - 1);
+static const unsigned bin_size      = BIN_SIZE;
+static const unsigned bin_space     = 1 << BIN_LOG_SPACE; /* 256 pixels */
+static const unsigned bin_half_size = 1 << (BIN_LOG_SIZE - 1);
+static const unsigned bin_half_space = 1 << (BIN_LOG_SPACE - 1); /* fixme: no, this is bad */
 /* signed maximum value on either side of zero */
 static const float de_sitter
 	= (float)(BIN_SIZE * (1 << (BIN_LOG_SPACE - 1)));
@@ -92,8 +93,8 @@ static unsigned bin2_to_bin(const struct Vec2u bin2) {
 
 /** Maps a location component into a bin. */
 static unsigned location_to_bin(const struct Vec2f x) {
-	struct Vec2i bin2 = { (int)x.x / bin_space + bin_half_space,
-		(int)x.y / bin_space + bin_half_space };
+	struct Vec2i bin2 = { (int)x.x / bin_space + bin_half_size,
+		(int)x.y / bin_space + bin_half_size };
 	struct Vec2u bin2u;
 	if(bin2.x < 0) bin2u.x = 0;
 	else if((unsigned)bin2.x >= bin_size) bin2u.x = bin_size - 1;
@@ -113,22 +114,22 @@ static void rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
 	assert(pixel->y_min <= pixel->y_max);
 	assert(bin);
 
-	temp = (int)(pixel->x_min) >> BIN_LOG_SPACE;
+	temp = ((int)pixel->x_min >> BIN_LOG_SPACE) + bin_half_size;
 	if(temp < 0) temp = 0;
 	else if(((unsigned)(temp)) >= bin_size) temp = (int)bin_size - 1;
 	bin->x_min = temp;
 
-	temp = ((int)(pixel->x_max) + 1) >> BIN_LOG_SPACE;
+	temp = (((int)pixel->x_max + 1) >> BIN_LOG_SPACE) + bin_half_size;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= bin_size) temp = (int)bin_size - 1;
 	bin->x_max = temp;
 
-	temp = (int)(pixel->y_min) >> BIN_LOG_SPACE;
+	temp = ((int)pixel->y_min >> BIN_LOG_SPACE) + bin_half_size;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= bin_size) temp = (int)bin_size - 1;
 	bin->y_min = temp;
 
-	temp = ((int)(pixel->y_max) + 1) >> BIN_LOG_SPACE;
+	temp = (((int)pixel->y_max + 1) >> BIN_LOG_SPACE) + bin_half_size;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= bin_size) temp = (int)bin_size - 1;
 	bin->y_max = temp;

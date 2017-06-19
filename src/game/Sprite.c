@@ -609,8 +609,9 @@ void SpriteOut(struct Sprite *const this) {
 }*/
 
 
-/** Choose which bins we will update this frame. */
+/** Choose which bins we will update/draw this frame. */
 static void new_bins(void) {
+	static int count;
 	struct Rectangle4f rect;
 	struct Rectangle4i bin4;
 	struct Vec2i bin2;
@@ -618,12 +619,17 @@ static void new_bins(void) {
 	BinListClear(&draw_bins), BinListClear(&update_bins), BinListSetClear(bins);
 	DrawGetScreen(&rect);
 	rectangle4f_to_bin4(&rect, &bin4);
+	if(!count) {
+		printf("*** get screen: (x:%.3f, %.3f)(y:%.3f, %.3f).\n", rect.x_min, rect.x_max, rect.y_min, rect.y_max);
+		printf("*** get bin: (x:%d, %d)(y:%d, %d).\n", bin4.x_min, bin4.x_max, bin4.y_min, bin4.y_max);
+	}
 	for(bin2.y = bin4.y_max; bin2.y >= bin4.y_min; bin2.y--) {
 		for(bin2.x = bin4.x_min; bin2.x <= bin4.y_max; bin2.x++) {
 			if(!(bin_list = BinListSetNew(bins))) return;
 			BinListPush(&draw_bins, bin_list);
 		}
 	}
+	count++, count %= 300;
 }
 /** {{act} \in { Draw }}. */
 static void for_each_draw(const SpriteAction act) {
@@ -812,11 +818,12 @@ static int collide_circles(const struct Vec2f a, const struct Vec2f b,
 void SpriteUpdate(const int frame_ms) {
 	/* going to use it a lot to scale the time evolution: put in in a static */
 	dt_ms = frame_ms;
-	/* set up the bins; this fixes the camera */
+	/* set up the bins according to the camera; do not move the camera after
+	 this in the frame */
 	new_bins();
 	/* collision detection */
-	for_each_update(&collide_extrapolate);
-	for_each_update(&collide_boxes);
+	/*for_each_update(&collide_extrapolate);
+	for_each_update(&collide_boxes);*/
 	/* sort the sprites */
 	/* do some stuff */
 	for_each_update(&sprite_update);

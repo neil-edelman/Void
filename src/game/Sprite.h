@@ -21,6 +21,7 @@ int Gate(const struct AutoGate *const class);
 int Sprite(void);
 void Sprite_(void);
 void SpriteOut(struct Sprite *const this);
+/*void SpriteGetOrtho(const struct Sprite *const this, const struct Ortho3f *ortho);*/
 void SpriteUpdate(const int dt_ms);
 const struct SpriteList *SpriteListBin(struct Vec2u bin2);
 const struct Sprite *SpriteBinIterate(const struct Sprite *this);
@@ -34,6 +35,8 @@ void ShipGetPosition(const struct Ship *this, struct Vec2f *pos);
 void ShipSetPosition(struct Ship *const this, struct Vec2f *const pos);
 void ShipRechage(struct Ship *const this, const int recharge);
 void ShipGetHit(const struct Ship *const this, struct Vec2u *const hit);
+const struct Event *ShipGetEventRecharge(const struct Ship *const this);
+
 
 int WmdGetDamage(const struct Wmd *const this);
 

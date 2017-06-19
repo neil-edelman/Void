@@ -93,9 +93,10 @@ struct Sprite {
 	const struct SpriteVt *vt;
 	unsigned bin;
 	struct Ortho3f r, v; /* position, orientation, velocity, angular velocity */
-	struct Vec2f r1; /* temp position on the next frame */
+	struct Vec2f r1, v1; /* temp position on the next frame */
 	struct Rectangle4f box; /* temp bounding box */
 	float t0_dt_collide; /* temp time to collide over frame time */
+	unsigned no_collisions; /* temp number of collisions */
 	float mass; /* t (ie Mg) */
 	float bounding;
 	unsigned image, normals; /* gpu texture refs */
@@ -127,8 +128,11 @@ static void Sprite_filler(struct Sprite *const this,
 	Ortho3f_assign(&this->v, v);
 	this->r1.x = r->x;
 	this->r1.y = r->y;
+	this->v1.x = v->x;
+	this->v1.y = v->y;
 	Rectangle4f_init(&this->box);
 	this->t0_dt_collide = 0.0f;
+	this->no_collisions = 0;
 	this->mass = 1.0f;
 	this->bounding = as->image->width * 0.5f;
 	this->image = as->image->texture;
@@ -139,8 +143,6 @@ static void Sprite_filler(struct Sprite *const this,
 /* Awkward declarations for {List.h}. */
 struct ListMigrate;
 struct SpriteList;
-static void SpriteList_self_migrate(struct SpriteList *const this,
-	const struct ListMigrate *const migrate);
 /* Define {SpriteList} and {SpriteListNode}. */
 #define LIST_NAME Sprite
 #define LIST_TYPE struct Sprite
@@ -297,23 +299,23 @@ static void ship_action(struct Ship *const this) {
 	if(this->hit <= 0) ship_death(this);
 }
 static void ship_action_ai(struct Ship *const this) {
-	const struct Sprite *const b = GameGetPlayer();
-	float c_x, c_y;
+	const struct Ship *const b = GameGetPlayer();
+	struct Vec2f c;
 	float d_2, theta, t;
 	int turning = 0, acceleration = 0;
 	
 	if(!b) return; /* fixme */
-	c_x = b->x - this->x;
-	c_y = b->y - this->y;
-	d_2   = c_x * c_x + c_y * c_y;
-	theta = atan2f(c_y, c_x);
+	c.x = b->sprite.data.r.x - this->sprite.data.r.x;
+	c.y = b->sprite.data.r.y - this->sprite.data.r.y;
+	d_2   = c.x * c.x + c.y * c.y;
+	theta = atan2f(c.y, c.x);
 	/* the ai ship aims where it thinks the player will be when it's shot gets
 	 there, approx - too hard to beat! */
 	/*target.x = ship[SHIP_PLAYER].p.x - Sin[ship[SHIP_PLAYER].r] * ship[SHIP_PLAYER].inertia.x * (disttoenemy / WEPSPEED) - ship[1].inertia.x;
 	 target.y = ship[SHIP_PLAYER].p.y + Cos[ship[SHIP_PLAYER].r] * ship[SHIP_PLAYER].inertia.y * (disttoenemy / WEPSPEED) - ship[1].inertia.y;
 	 disttoenemy = hypot(target.x - ship[SHIP_CPU].p.x, target.y - ship[SHIP_CPU].p.y);*/
 	/* t is the error of where wants vs where it's at */
-	t = theta - this->theta;
+	t = theta - this->sprite.data.r.theta;
 	if(t >= M_PI_F) { /* keep it in the branch cut */
 		t -= M_2PI_F;
 	} else if(t < -M_PI_F) {
@@ -334,11 +336,11 @@ static void ship_action_ai(struct Ship *const this) {
 		 t -= (float)M_PI_F;
 		 }*/
 	} else if(d_2 > shp_ai_too_close && d_2 < shp_ai_too_far) {
-		SpriteShoot(this);
+		ShipShoot(this);
 	} else if(t > -shp_ai_turn_sloppy && t < shp_ai_turn_sloppy) {
 		acceleration = shp_ai_speed;
 	}
-	SpriteInput(this, turning, acceleration, dt_ms);
+	ShipInput(this, turning, acceleration);
 }
 
 /** @implements <Wmd>Action */
@@ -599,6 +601,13 @@ void SpriteOut(struct Sprite *const this) {
 	if(!this) return;
 	this->vt->out(this);
 }
+
+/** Gets a read-only copy of the position. */
+/*void SpriteGetOrtho(const struct Sprite *const this, const struct Ortho3f *ortho) {
+	if(!this) return;
+	ortho = &this->r;
+}*/
+
 
 /** Choose which bins we will update this frame. */
 static void new_bins(void) {
@@ -940,7 +949,10 @@ void ShipGetHit(const struct Ship *const this, struct Vec2u *const hit) {
 	}
 }
 
-
+const struct Event *ShipGetEventRecharge(const struct Ship *const this) {
+	if(!this) return 0;
+	return this->event_recharge;
+}
 
 
 
@@ -1016,89 +1028,108 @@ struct Gate *GateFind(struct AutoSpaceZone *const to) {
  @param a		Sprite a.
  @param b		Sprite b.
  @param t0_dt	The fraction of the frame that the collision occurs, [0, 1]. */
-static void elastic_bounce(struct Sprite *a, struct Sprite *b, const float t0_dt) {
+static void elastic_bounce(struct Sprite *u, struct Sprite *v, const float t0_dt) {
 	/* interpolate position of collision */
-	const float a_x = a->x * t0_dt + a->x1 * (1.0f - t0_dt);
-	const float a_y = a->y * t0_dt + a->y1 * (1.0f - t0_dt);
-	const float b_x = b->x * t0_dt + b->x1 * (1.0f - t0_dt);
-	const float b_y = b->y * t0_dt + b->y1 * (1.0f - t0_dt);
+	const struct Vec2f a = {
+		u->r.x * t0_dt + u->r1.x * (1.0f - t0_dt),
+		u->r.y * t0_dt + u->r1.y * (1.0f - t0_dt)
+	}, b = {
+		v->r.x * t0_dt + v->r1.x * (1.0f - t0_dt),
+		v->r.y * t0_dt + v->r1.y * (1.0f - t0_dt)
+	},
 	/* delta */
-	const float d_x = b_x - a_x;
-	const float d_y = b_y - a_y;
+	d = {
+		b.x - a.x,
+		b.y - a.y
+	};
 	/* normal at point of impact; fixme: iffy infinities */
-	const float n_d2 = d_x * d_x + d_y * d_y;
+	const float n_d2 = d.x * d.x + d.y * d.y;
 	const float n_n  = (n_d2 < epsilon) ? 1.0f / epsilon : 1.0f / sqrtf(n_d2);
-	const float n_x  = d_x * n_n;
-	const float n_y  = d_y * n_n;
+	const struct Vec2f n = {
+		d.x * n_n,
+		d.y * n_n
+	};
 	/* a's velocity, normal direction */
-	const float a_nrm_s = a->vx * n_x + a->vy * n_y;
-	const float a_nrm_x = a_nrm_s * n_x;
-	const float a_nrm_y = a_nrm_s * n_y;
+	const float a_nrm_s = u->v.x * n.x + u->v.y * n.y;
+	const struct Vec2f a_nrm = {
+		a_nrm_s * n.x,
+		a_nrm_s * n.y
+	},
 	/* a's velocity, tangent direction */
-	const float a_tan_x = a->vx - a_nrm_x;
-	const float a_tan_y = a->vy - a_nrm_y;
+	a_tan = {
+		u->v.x - a_nrm.x,
+		u->v.y - a_nrm.y
+	};
 	/* b's velocity, normal direction */
-	const float b_nrm_s = b->vx * n_x + b->vy * n_y;
-	const float b_nrm_x = b_nrm_s * n_x;
-	const float b_nrm_y = b_nrm_s * n_y;
+	const float b_nrm_s = v->v.x * n.x + v->v.y * n.y;
+	const struct Vec2f b_nrm = {
+		b_nrm_s * n.x,
+		b_nrm_s * n.y
+	},
 	/* b's velocity, tangent direction */
-	const float b_tan_x = b->vx - b_nrm_x;
-	const float b_tan_y = b->vy - b_nrm_y;
+	b_tan = {
+		v->v.x - b_nrm.x,
+		v->v.y - b_nrm.y
+	};
 	/* mass (assume all mass is positive!) */
-	const float a_m = a->mass, b_m = b->mass;
+	const float a_m = u->mass, b_m = v->mass;
 	const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
 	/* elastic collision */
-	const float a_vx = a_tan_x + (a_nrm_x*diff_m + 2*b_m*b_nrm_x) * invsum_m;
-	const float a_vy = a_tan_y + (a_nrm_y*diff_m + 2*b_m*b_nrm_y) * invsum_m;
-	const float b_vx = (-b_nrm_x*diff_m + 2*a_m*a_nrm_x) * invsum_m + b_tan_x;
-	const float b_vy = (-b_nrm_y*diff_m + 2*a_m*a_nrm_y) * invsum_m + b_tan_y;
+	const struct Vec2f a_v = {
+		a_tan.x + (a_nrm.x*diff_m + 2*b_m*b_nrm.x) * invsum_m,
+		a_tan.y + (a_nrm.y*diff_m + 2*b_m*b_nrm.y) * invsum_m
+	}, b_v = {
+		(-b_nrm.x*diff_m + 2*a_m*a_nrm.x) * invsum_m + b_tan.x,
+		(-b_nrm.y*diff_m + 2*a_m*a_nrm.y) * invsum_m + b_tan.y
+	};
 	/* check for sanity */
-	const float bounding = a->bounding + b->bounding;
+	const float bounding = u->bounding + v->bounding;
 	/* fixme: float stored in memory? */
 
-	pedantic("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f, %f--%ft\n",
-		SpriteToString(a), SpriteToString(b), sqrtf(n_d2), bounding, a_m, b_m);
+	/*pedantic("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f, %f--%ft\n",
+		SpriteToString(u), SpriteToString(v), sqrtf(n_d2), bounding, a_m, b_m);*/
 
 	/* interpenetation; happens about half the time because of IEEE754 numerics,
 	 which could be on one side or the other; also, sprites that just appear,
 	 multiple collisions interfering, and gremlins; you absolutely do not want
 	 objects to get stuck orbiting each other (fixme: this happens) */
 	if(n_d2 < bounding * bounding) {
-		const float psuh = (bounding - sqrtf(n_d2)) * 0.5f;
+		const float push = (bounding - sqrtf(n_d2)) * 0.5f;
 		pedantic("elastic_bounce: \\pushing sprites %f distance apart\n", push);
-		a->x -= n_x * psuh;
-		a->y -= n_y * psuh;
-		b->x += n_x * psuh;
-		b->y += n_y * psuh;
+		u->r.x -= n.x * push;
+		u->r.y -= n.y * push;
+		v->r.x += n.x * push;
+		v->r.y += n.y * push;
 	}
 
-	if(!a->no_collisions) {
+	if(!u->no_collisions) {
 		/* first collision */
-		a->no_collisions = 1;
-		a->t0_dt_collide = t0_dt;
-		a->vx1           = a_vx;
-		a->vy1           = a_vy;
+		u->no_collisions = 1;
+		u->t0_dt_collide = t0_dt;
+		u->v1.x = a_v.x;
+		u->v1.y = a_v.y;
 	} else {
 		/* there are multiple collisions, rebound from the 1st one and add */
-		if(t0_dt < a->t0_dt_collide) a->t0_dt_collide = t0_dt;
-		a->vx1           += a_vx;
-		a->vy1           += a_vy;
-		a->no_collisions++;
-		pedantic(" \\%u collisions %s (%s.)\n", a->no_collisions, SpriteToString(a), SpriteToString(b));
+		/* fixme: shouldn't it be all inside? */
+		if(t0_dt < u->t0_dt_collide) u->t0_dt_collide = t0_dt;
+		u->v1.x += a_v.x;
+		u->v1.y += a_v.y;
+		u->no_collisions++;
+		/*pedantic(" \\%u collisions %s (%s.)\n", u->no_collisions, SpriteToString(u), SpriteToString(v));*/
 	}
-	if(!b->no_collisions) {
+	if(!v->no_collisions) {
 		/* first collision */
-		b->no_collisions = 1;
-		b->t0_dt_collide = t0_dt;
-		b->vx1           = b_vx;
-		b->vy1           = b_vy;
+		v->no_collisions = 1;
+		v->t0_dt_collide = t0_dt;
+		v->v1.x          = b_v.x;
+		v->v1.y          = b_v.y;
 	} else {
 		/* there are multiple collisions, rebound from the 1st one and add */
-		if(t0_dt < b->t0_dt_collide) b->t0_dt_collide = t0_dt;
-		b->vx1           += b_vx;
-		b->vy1           += b_vy;
-		b->no_collisions++;
-		pedantic(" \\%u collisions %s (%s.)\n", b->no_collisions, SpriteToString(b), SpriteToString(a));
+		if(t0_dt < v->t0_dt_collide) v->t0_dt_collide = t0_dt;
+		v->v1.x          += b_v.x;
+		v->v1.y          += b_v.y;
+		v->no_collisions++;
+		/*pedantic(" \\%u collisions %s (%s.)\n", v->no_collisions, SpriteToString(v), SpriteToString(u));*/
 	}
 
 }
@@ -1115,6 +1146,8 @@ static void push(struct Sprite *a, const float angle, const float impulse) {
 
 /* type collisions; can not modify list of Sprites as it is in the middle of
  x/ylist or delete! */
+
+#if 0
 
 static void shp_shp(struct Sprite *a, struct Sprite *b, const float d0) {
 	elastic_bounce(a, b, d0);
@@ -1136,7 +1169,7 @@ static void deb_shp(struct Sprite *d, struct Sprite *s, const float d0) {
 }
 
 static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
-	pedantic("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));
+	/*pedantic("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));*/
 	/* avoid inifinite destruction loop */
 	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
@@ -1179,13 +1212,11 @@ static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
 /** can be a callback for an Ethereal, whenever it collides with a Ship.
  IT CAN'T MODIFY THE LIST */
 static void gate_travel(struct Gate *const gate, struct Ship *ship) {
-	/* this doesn't help!!! */
-	float x, y, /*vx, vy,*/ gate_norm_x, gate_norm_y, proj/*, h*/;
-
-	if(!gate || gate->sp_type != SP_ETHEREAL
-	   || !ship || ship->sp_type != SP_SHIP) return; /* will never be true */
-	x = ship->x - gate->x;
-	y = ship->y - gate->y;
+	struct Vec2f diff, gate_norm;
+	float proj;
+	if(!gate || !ship) return;
+	diff.x = ship->sprite.r.x - gate->sprite.data.r.x;
+	diff.y = ship->sprite.r.y - gate->sprite.r.y;
 	/* unneccesary?
 	 vx = ship_vx - gate_vx;
 	 vy = ship_vy - gate_vy;*/
@@ -1208,7 +1239,4 @@ static void gate_travel(struct Gate *const gate, struct Ship *ship) {
 	ship->sp.ship.horizon = proj;
 }
 
-/** Clips c to [min, max]. */
-static int clip(const int c, const int min, const int max) {
-	return c <= min ? min : c >= max ? max : c;
-}
+#endif

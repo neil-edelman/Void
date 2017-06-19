@@ -63,7 +63,6 @@ static int remove_all_events_except(struct Event *const victim) {
 /** Clears, then sets up a new zone.
  @return		Success. */
 void Zone(const struct AutoSpaceZone *const sz) {
-	struct Sprite *s;
 	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
 	const struct AutoShipClass *blob_class = AutoShipClassSearch("Blob");
 	int i;
@@ -71,7 +70,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name, sz->ois1->name, sz->ois2->name);
 
 	/* clear all objects */
-	SpriteRemoveIf(&remove_all_except_player);
+	/*SpriteRemoveIf(&remove_all_except_player);*/
 	EventRemoveIf(&remove_all_events_except);
 	FarClear();
 
@@ -90,23 +89,31 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 	/* some asteroids */
 	for(i = 0; i < /*7000*/1000; i++) {
-		s = Debris(AutoDebrisSearch("Asteroid"), rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), 30.0f);
-		SpriteSetVelocity(s, rnd(0.02f), rnd(0.02f));
-		SpriteSetOmega(s, rnd(10.0f));
+		struct Ortho3f r = {
+			rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI)
+		}, v = {
+			rnd(0.02f), rnd(0.02f), rnd(10.0f)
+		};
+		Debris(AutoDebrisSearch("Asteroid"), &r, &v);
 	}
 
 	/* sprinkle some ships */
 	for(i = 0; i < 10; i++) {
-		Ship(blob_class, B_STUPID, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI));
+		struct Ortho3f r = {
+			rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI)
+		};
+		Ship(blob_class, &r, SB_STUPID);
 	}
 
 }
 
 /** Zone change with the {gate}. */
-void ZoneChange(const struct Sprite *const gate) {
-	const struct AutoSpaceZone *const new_zone = SpriteGetTo(gate), *old_zone = current_zone;
+void ZoneChange(const struct Gate *const gate) {
+#if 0
+	const struct AutoSpaceZone *const new_zone = GateGetTo(gate), *old_zone = current_zone;
 	struct Sprite *new_gate;
 	struct Sprite *player;
+	const struct Ortho3f oldg;
 	float oldg_x,   oldg_y,   oldg_theta,   oldg_vx,   oldg_vy;
 	float newg_x,   newg_y,   newg_theta,   newg_vx,   newg_vy;
 	float dg_x,     dg_y,     dg_theta,     dg_vx,     dg_vy;
@@ -115,7 +122,7 @@ void ZoneChange(const struct Sprite *const gate) {
 	float dp_x,     dp_y,     /*dp_theta,*/ dp_vx,     dp_vy;
 
 	/* get old gate parametres */
-	SpriteGetPosition(gate, &oldg_x, &oldg_y);
+	SpriteGetOrtho(&gate->sprite, &oldg);
 	oldg_theta = SpriteGetTheta(gate);
 	SpriteGetVelocity(gate, &oldg_vx, &oldg_vy);
 
@@ -171,4 +178,5 @@ void ZoneChange(const struct Sprite *const gate) {
 	SpriteSetPosition(player, player_x, player_y);
 	SpriteSetTheta(player, player_theta);
 	SpriteSetVelocity(player, player_vx, player_vy);
+#endif
 }

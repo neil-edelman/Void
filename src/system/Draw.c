@@ -451,10 +451,11 @@ int draw_is_print_sprites;
 static void display(void) {
 	struct Sprite *sprite;
 	struct Ship *player;
+	struct Vec2u bin;
 	int lights;
 	/* for SpriteIterate */
 	struct Ortho3f r;
-	unsigned old_texture = 0, texture, normal, size;
+	unsigned old_tex = 0, tex, normal, size;
 
 	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	 <- https://www.khronos.org/opengl/wiki/Common_Mistakes
@@ -512,17 +513,17 @@ static void display(void) {
 	/* background sprites */
 	/*const->glUniform1i(far_texture_location, TEX_CLASS_SPRITE); */
 	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
-	while(FarIterate(&r, &texture, &size)) {
-		if(old_texture != texture) {
-			glBindTexture(GL_TEXTURE_2D, texture);
-			old_texture = texture;
+	while(FarIterate(&r, &tex, &size)) {
+		if(old_tex != tex) {
+			glBindTexture(GL_TEXTURE_2D, tex);
+			old_tex = tex;
 		}
 		glUniform1f(auto_Far_shader.size, (float)size);
 		glUniform1f(auto_Far_shader.angle, r.theta);
 		glUniform2f(auto_Far_shader.position, r.x, r.y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
-	old_texture = 0;
+	old_tex = 0;
 
 	glEnable(GL_BLEND);
 	glUseProgram(auto_Lambert_shader.compiled);
@@ -534,7 +535,8 @@ static void display(void) {
 	}
 	/* draw bins going from upper left, (-,+), to lower right, (+,-) to match
 	 memory. */
-	old_texture = 0;
+	old_tex = 0;
+#if 0
 	for(bin.y = bin_pos.y; bin.y >= bin_neg.y; bin.y--) {
 		for(bin.x = bin_neg.x; bin.x <= bin_pos.y; bin.x++) {
 			/* draw a sprite; fixme: minimise texture transitions? */
@@ -557,6 +559,7 @@ static void display(void) {
 			}
 		}
 	}
+#endif
 	if(draw_is_print_sprites) draw_is_print_sprites = 0;
 	/*x = y = 0.0f;
 	t = SpriteGetTheta(GameGetPlayer());

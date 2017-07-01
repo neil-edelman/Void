@@ -106,12 +106,12 @@ See <a href = "#Light">Light</a>.
 <tr>
 	<td>int</td>
 	<td><a href = "#Light">Light</a></td>
-	<td>int *const id_ptr, const float i, const float r, const float g, const float b</td>
+	<td>unsigned *const id_ptr, const float i, const float r, const float g, const float b</td>
 </tr>
 <tr>
 	<td>void</td>
 	<td><a href = "#Light_">Light_</a></td>
-	<td>int *id_ptr</td>
+	<td>unsigned *id_ptr</td>
 </tr>
 <tr>
 	<td>unsigned</td>
@@ -131,7 +131,7 @@ See <a href = "#Light">Light</a>.
 <tr>
 	<td>void</td>
 	<td><a href = "#LightSetNotify">LightSetNotify</a></td>
-	<td>int *const id_ptr</td>
+	<td>unsigned *const id_ptr</td>
 </tr>
 <tr>
 	<td>const char *</td>
@@ -145,7 +145,7 @@ See <a href = "#Light">Light</a>.
 
 <div><a name = "Light"><!-- --></a>
 <h3>Light</h3>
-<pre>int <b>Light</b> (int *const id_ptr, const float i, const float r, const float g, const float b)</pre>
+<pre>int <b>Light</b> (unsigned *const id_ptr, const float i, const float r, const float g, const float b)</pre>
 <p>
 Constructor.
 </p>
@@ -163,7 +163,7 @@ Constructor.
 
 <div><a name = "Light_"><!-- --></a>
 <h3>Light_</h3>
-<pre>void <b>Light_</b> (int *id_ptr)</pre>
+<pre>void <b>Light_</b> (unsigned *id_ptr)</pre>
 <p>
 Destructor of light, will update with new particle at light.
 </p>
@@ -202,7 +202,7 @@ Destructor of light, will update with new particle at light.
 
 <div><a name = "LightSetNotify"><!-- --></a>
 <h3>LightSetNotify</h3>
-<pre>void <b>LightSetNotify</b> (int *const id_ptr)</pre>
+<pre>void <b>LightSetNotify</b> (unsigned *const id_ptr)</pre>
 <p>
 This is important because Sprites change places, as well.
 </p>

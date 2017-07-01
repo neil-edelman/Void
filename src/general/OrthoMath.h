@@ -61,13 +61,6 @@ static void Ortho3f_assign(struct Ortho3f *const this,
 	this->theta = that->theta;
 }
 
-/*static void Ortho5f_assign3f(struct Ortho5f *const this,
-	const struct Ortho3f *const that) {
-	Ortho3f_assign3f((struct Ortho3f *)this, that);
-	this->x1    = that->x;
-	this->y1    = that->y;
-}*/
-
 static void Ortho3f_clip_position(struct Ortho3f *const this) {
 	assert(this);
 	if(this->x < -de_sitter) this->x = -de_sitter;
@@ -83,11 +76,31 @@ static void Rectangle4f_init(struct Rectangle4f *const this) {
 	this->x_min = this->x_max = this->y_min = this->y_max = 0;
 }
 
+static void Rectangle4i_assign(struct Rectangle4i *const this,
+	const struct Rectangle4i *const that) {
+	assert(this);
+	assert(that);
+	this->x_min = that->x_min;
+	this->x_max = that->x_max;
+	this->y_min = that->y_min;
+	this->y_max = that->y_max;
+}
+
 /** Maps a {bin2} to a {bin}. Doesn't check for overflow.
  @return Success. */
 static unsigned bin2_to_bin(const struct Vec2u bin2) {
 	assert(bin2.x < bin_size);
 	assert(bin2.y < bin_size);
+	return (bin2.y << BIN_LOG_SIZE) + bin2.x;
+}
+
+/** Maps a {bin2i} to a {bin}. Doesn't check for overflow.
+ @return Success. */
+static unsigned bin2i_to_bin(const struct Vec2i bin2) {
+	assert(bin2.x >= 0);
+	assert(bin2.y >= 0);
+	assert(bin2.x < (int)bin_size);
+	assert(bin2.y < (int)bin_size);
 	return (bin2.y << BIN_LOG_SIZE) + bin2.x;
 }
 
@@ -106,7 +119,7 @@ static unsigned location_to_bin(const struct Vec2f x) {
 }
 
 /** Maps a recangle from pixel space, {pixel}, to bin2 space, {bin}. */
-static void rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
+static void Rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
 	struct Rectangle4i *const bin) {
 	int temp;
 	assert(pixel);
@@ -138,13 +151,17 @@ static void rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
 static void orthomath_unused_coda(void);
 static void orthomath_unused(void) {
 	struct Vec2f v = { 0.0f, 0.0f };
+	struct Vec2u u = { 0, 0 };
+	struct Vec2i w = { 0, 0 };
 	Ortho3f_init(0);
 	Ortho3f_assign(0, 0);
-	/*Ortho5f_assign3f(0, 0);*/
 	Ortho3f_clip_position(0);
 	Rectangle4f_init(0);
+	Rectangle4i_assign(0, 0);
+	bin2_to_bin(u);
+	bin2i_to_bin(w);
 	location_to_bin(v);
-	rectangle4f_to_bin4(0, 0);
+	Rectangle4f_to_bin4(0, 0);
 	orthomath_unused_coda();
 }
 static void orthomath_unused_coda(void) {

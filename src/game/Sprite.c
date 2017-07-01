@@ -27,7 +27,6 @@
 #include <stdio.h>	/* snprintf */
 #include "../../build/Auto.h"
 #include "../Print.h"
-#include "../general/OrthoMath.h"
 #include "../general/Orcish.h"
 #include "../system/Timer.h"
 #include "../system/Draw.h"
@@ -77,11 +76,11 @@ static float dt_ms;
 #define LIST_NAME Bin
 #define LIST_TYPE unsigned
 #define LIST_UA_NAME Order
-#include "../general/List.h"
+#include "../general/List.h" /* defines BinList, BinListNode */
 static struct BinList draw_bins, update_bins;
 #define SET_NAME BinList
 #define SET_TYPE struct BinListNode
-#include "../general/Set.h"
+#include "../general/Set.h" /* defines BinListSet, BinListSetNode */
 static struct BinListSet *bins;
 
 
@@ -565,6 +564,7 @@ static void gate_filler(struct Gate *const this,
 int Gate(const struct AutoGate *const class) {
 	struct Gate *gate;
 	if(!class) return 0;
+	assert(gates);
 	if(!(gate = GateSetNew(gates)))
 		{ fprintf(stderr, "Gate: %s.\n", GateSetGetError(gates)); return 0; }
 	gate_filler(gate, class);
@@ -581,6 +581,8 @@ int Sprite(void) {
 		|| !(wmds = WmdSet())
 		|| !(gates = GateSet()))
 		return Sprite_(), 0;
+	BinListClear(&draw_bins);
+	BinListClear(&update_bins);
 	for(i = 0; i < BIN_BIN_SIZE; i++) SpriteListClear(sprites + i);
 	return 1;
 }
@@ -589,6 +591,8 @@ int Sprite(void) {
 void Sprite_(void) {
 	unsigned i;
 	for(i = 0; i < BIN_BIN_SIZE; i++) SpriteListClear(sprites + i);
+	BinListClear(&update_bins);
+	BinListClear(&draw_bins);
 	GateSet_(&gates);
 	WmdSet_(&wmds);
 	ShipSet_(&ships);
@@ -608,28 +612,102 @@ void SpriteOut(struct Sprite *const this) {
 	ortho = &this->r;
 }*/
 
+/** @implements BinAction */
+static void print_bin(unsigned *bin) {
+	printf("(bin:%u)", *bin);
+}
 
-/** Choose which bins we will update/draw this frame. */
+/** Choose which bins we will update/draw this frame.
+ @order {O(n^2)} where {n} is the screen size */
 static void new_bins(void) {
 	static int count;
 	struct Rectangle4f rect;
-	struct Rectangle4i bin4;
-	struct Vec2i bin2;
-	struct BinListNode *bin_list;
+	struct Rectangle4i bin4, grow4;
+	struct Vec2i bin2i;
+	struct BinListNode *bin_node;
 	BinListClear(&draw_bins), BinListClear(&update_bins), BinListSetClear(bins);
 	DrawGetScreen(&rect);
-	rectangle4f_to_bin4(&rect, &bin4);
+	Rectangle4f_to_bin4(&rect, &bin4);
+	/* the updating region extends past the drawing region */
+	Rectangle4i_assign(&grow4, &bin4);
+	if(grow4.x_min > 0)                 grow4.x_min--;
+	if(grow4.x_max + 1 < (int)bin_size) grow4.x_max++;
+	if(grow4.y_min > 0)                 grow4.y_min--;
+	if(grow4.y_max + 1 < (int)bin_size) grow4.y_max++;
+	/* draw in the centre */
+	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
+		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.y_max; bin2i.x++) {
+			if(!(bin_node = BinListSetNew(bins))){ perror("new_bins"); return; }
+			bin_node->data = bin2i_to_bin(bin2i);
+			BinListPush(&draw_bins, bin_node);
+		}
+	}
+	printf("draw in centre:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");
+#if 0
+	/* update along the outside (fixme: ugh) */
+	/*if(!(bin_node = BinListSetNew(bins))) { perror("new_bins"); return; }
+	bin_node->data = rand() / (1.0f + RAND_MAX / BIN_BIN_SIZE);
+	assert(bin_node->data < BIN_BIN_SIZE);
+	printf("*********%u\n", bin_node->data);
+	bin_node->data = 42;
+	BinListPush(&update_bins, bin_node);*/
+	if(!(bin_node = BinListSetNew(bins))){ perror("new_bins"); return; }
+	bin_node->data = 42;
+	BinListPush(&update_bins, bin_node);
+	printf("Ddraw:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");
+	if(!(bin_node = BinListSetNew(bins))){ perror("new_bins"); return; }
+	bin_node->data = 1024;
+	BinListPush(&update_bins, bin_node);
+	printf("Edraw:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");
+	if(!(bin_node = BinListSetNew(bins))){ perror("new_bins"); return; }
+	bin_node->data = 1100;
+	BinListPush(&update_bins, bin_node);
+	printf("0draw:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");
+	if((bin2i.y = grow4.y_min) < bin4.y_min) {
+		for(bin2i.x = grow4.x_min; bin2i.x <= grow4.x_max; bin2i.x++) {
+			printf("1draw:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");
+			if(!(bin_node = BinListSetNew(bins))){ perror("new_bins"); return; }
+			printf("2draw:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");
+			bin_node->data = bin2i_to_bin(bin2i);
+			printf("fyou update %u\n", bin_node->data);
+			printf("3draw:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");
+			BinListPush(&update_bins, bin_node);
+			printf("4draw:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");
+		}
+	}
+	/*printf("5draw:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");*/
+	/*printf("5update:"), BinListOrderForEach(&update_bins, &print_bin), printf("\n");*/
+#endif
+#if 0
+	if((bin2i.y = grow4.y_max) > bin4.y_max) {
+		for(bin2i.x = grow4.x_min; bin2i.x <= grow4.x_max; bin2i.x++) {
+			if(!(bin_node = BinListSetNew(bins))){ perror("new_bins"); return; }
+			bin_node->data = bin2i_to_bin(bin2i);
+			BinListPush(&update_bins, bin_node);
+		}
+	}
+	if((bin2i.x = grow4.x_min) < bin4.x_min) {
+		for(bin2i.y = bin4.y_min; bin2i.y <= bin4.y_max; bin2i.y++) {
+			if(!(bin_node = BinListSetNew(bins))){ perror("new_bins"); return; }
+			bin_node->data = bin2i_to_bin(bin2i);
+			BinListPush(&update_bins, bin_node);
+		}
+	}
+	if((bin2i.x = grow4.x_max) > bin4.x_max) {
+		for(bin2i.y = bin4.y_min; bin2i.y <= bin4.y_max; bin2i.y++) {
+			if(!(bin_node = BinListSetNew(bins))){ perror("new_bins"); return; }
+			bin_node->data = bin2i_to_bin(bin2i);
+			BinListPush(&update_bins, bin_node);
+		}
+	}
+#endif
 	if(!count) {
 		printf("*** get screen: (x:%.3f, %.3f)(y:%.3f, %.3f).\n", rect.x_min, rect.x_max, rect.y_min, rect.y_max);
 		printf("*** get bin: (x:%d, %d)(y:%d, %d).\n", bin4.x_min, bin4.x_max, bin4.y_min, bin4.y_max);
+		printf("draw:"), BinListOrderForEach(&draw_bins, &print_bin), printf("\n");
+		printf("update:"), BinListOrderForEach(&update_bins, &print_bin), printf("\n");
 	}
-	for(bin2.y = bin4.y_max; bin2.y >= bin4.y_min; bin2.y--) {
-		for(bin2.x = bin4.x_min; bin2.x <= bin4.y_max; bin2.x++) {
-			if(!(bin_list = BinListSetNew(bins))) return;
-			BinListPush(&draw_bins, bin_list);
-		}
-	}
-	count++, count %= 300;
+	count++, count &= 65535;
 }
 /** {{act} \in { Draw }}. */
 static void for_each_draw(const SpriteAction act) {

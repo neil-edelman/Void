@@ -19,6 +19,7 @@
 #include "system/Draw.h"
 #include "system/Timer.h"
 #include "system/Key.h"
+#include "game/Sprite.h"
 #include "game/Game.h"
 
 /* constants */
@@ -51,6 +52,7 @@ int main(int argc, char **argv) {
 	/* start up subsystems; window has to be first; timer ms */
 	if(!Window(programme, argc, argv)
 		|| !Key()
+		|| !Sprite()
 		|| !Draw()
 	    || !Game()) return EXIT_FAILURE;
 
@@ -68,6 +70,7 @@ static void main_(void) {
 	TimerPause();
 	Game_();
 	Draw_();
+	Sprite_();
 }
 
 /** Help screen. */

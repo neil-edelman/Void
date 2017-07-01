@@ -132,27 +132,22 @@ geometry, uploaded into video memory. Fixme: not fully variablised!?
 <tr>
 	<td>void</td>
 	<td><a href = "#DrawSetCamera">DrawSetCamera</a></td>
-	<td>const float x, const float y</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#DrawGetCamera">DrawGetCamera</a></td>
-	<td>float *x_ptr, float *y_ptr</td>
+	<td>const struct Vec2f x</td>
 </tr>
 <tr>
 	<td>void</td>
 	<td><a href = "#DrawGetScreen">DrawGetScreen</a></td>
-	<td>unsigned *width_ptr, unsigned *height_ptr</td>
+	<td>struct Rectangle4f *const rect</td>
 </tr>
 <tr>
 	<td>void</td>
 	<td><a href = "#DrawSetBackground">DrawSetBackground</a></td>
-	<td>const char *const str</td>
+	<td>const char *const key</td>
 </tr>
 <tr>
 	<td>void</td>
 	<td><a href = "#DrawSetShield">DrawSetShield</a></td>
-	<td>const char *const str</td>
+	<td>const char *const key</td>
 </tr>
 </table>
 
@@ -183,31 +178,21 @@ Destructor.
 
 <div><a name = "DrawSetCamera"><!-- --></a>
 <h3>DrawSetCamera</h3>
-<pre>void <b>DrawSetCamera</b> (const float x, const float y)</pre>
+<pre>void <b>DrawSetCamera</b> (const struct Vec2f x)</pre>
 <p>
 Sets the camera location.
 </p>
 <dl>
-	<dt>parameter: x, y</dt>
+	<dt>parameter: x</dt>
 	<dd>(x, y) in pixels.</dd>
-</dl>
-</div>
-
-<div><a name = "DrawGetCamera"><!-- --></a>
-<h3>DrawGetCamera</h3>
-<pre>void <b>DrawGetCamera</b> (float *x_ptr, float *y_ptr)</pre>
-<p>
-Gets the camera position and stores it in (*x_ptr, *y_ptr).
-</p>
-<dl>
 </dl>
 </div>
 
 <div><a name = "DrawGetScreen"><!-- --></a>
 <h3>DrawGetScreen</h3>
-<pre>void <b>DrawGetScreen</b> (unsigned *width_ptr, unsigned *height_ptr)</pre>
+<pre>void <b>DrawGetScreen</b> (struct Rectangle4f *const rect)</pre>
 <p>
-Gets the width and height.
+Gets the visible part of the screen.
 </p>
 <dl>
 </dl>
@@ -215,18 +200,20 @@ Gets the width and height.
 
 <div><a name = "DrawSetBackground"><!-- --></a>
 <h3>DrawSetBackground</h3>
-<pre>void <b>DrawSetBackground</b> (const char *const str)</pre>
+<pre>void <b>DrawSetBackground</b> (const char *const key)</pre>
 <p>
-Sets background to the image with key key. Fixme: allows you to set not
-TexClassTexture(TEX_CLASS_BACKGROUND) textures, which probably don't work, maybe? (oh, they do)
+Sets background to the image with key key.
 </p>
 <dl>
+	<dt>fixme</dt>
+	<dd>allows you to set not <em>TexClassTexture(TEX_CLASS_BACKGROUND)</em> textures,
+ which probably don't work, maybe? (oh, they do.)</dd>
 </dl>
 </div>
 
 <div><a name = "DrawSetShield"><!-- --></a>
 <h3>DrawSetShield</h3>
-<pre>void <b>DrawSetShield</b> (const char *const str)</pre>
+<pre>void <b>DrawSetShield</b> (const char *const key)</pre>
 <dl>
 	<dt>parameter: str</dt>
 	<dd>Resource name to set the shield indicator.</dd>

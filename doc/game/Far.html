@@ -97,12 +97,7 @@ See <a href = "#Far">Far</a>.
 <tr>
 	<td>int</td>
 	<td><a href = "#FarIterate">FarIterate</a></td>
-	<td>float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr</td>
-</tr>
-<tr>
-	<td>int</td>
-	<td><a href = "#FarIterate">FarIterate</a></td>
-	<td>float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr</td>
+	<td>struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *size_ptr</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -154,41 +149,10 @@ Sets the size to zero; very fast.
 
 <div><a name = "FarIterate"><!-- --></a>
 <h3>FarIterate</h3>
-<pre>int <b>FarIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr)</pre>
-<p>
-Returns true while there are more, sets the values. The pointers need to
-all be there or else there will surely be a segfault.
-&lt;p&gt;
-Called in ../system/Draw to draw backgrounds.
-&lt;p&gt;
-Supports deleting.
-&lt;p&gt;
-Fixme: have a sliding window that's updated based on camera, as opposed to
-having to send all the geometry at every frame!
-</p>
+<pre>int <b>FarIterate</b> (struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *size_ptr)</pre>
 <dl>
-	<dt>parameter: x_ptr</dt>
-	<dd>x</dd>
-	<dt>parameter: y_ptr</dt>
-	<dd>y</dd>
-	<dt>parameter: t_ptr</dt>
-	<dd>&theta;</dd>
-	<dt>parameter: texture_ptr</dt>
-	<dd>OpenGl texture unit.</dd>
-	<dt>parameter: size_ptr</dt>
-	<dd>Size of the texture.</dd>
 	<dt>return</dt>
-	<dd>True if the values have been set.</dd>
-</dl>
-</div>
-
-<div><a name = "FarIterate"><!-- --></a>
-<h3>FarIterate</h3>
-<pre>int <b>FarIterate</b> (float *x_ptr, float *y_ptr, float *theta_ptr, unsigned *texture_ptr, unsigned *size_ptr)</pre>
-<p>
-This is the exact copy of SpriteIterate.
-</p>
-<dl>
+	<dd>True while there are more Fars, sets the values.</dd>
 </dl>
 </div>
 

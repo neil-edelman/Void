@@ -546,7 +546,7 @@ static T *T_(SetShortCircuit)(struct T_(Set) *const this,
 	for(i = 0; i < this->size; i++) {
 		elem = this->array + i;
 		if(elem->prev != set_not_part) continue;
-		if(predicate(&elem->data, this->param)) return &elem->data;
+		if(!predicate(&elem->data, this->param)) return &elem->data;
 	}
 	return 0;
 }
@@ -640,13 +640,13 @@ static void PRIVATE_T_(unused_set)(void) {
 	T_(Set)();
 	T_(SetGetError)(0);
 	T_(SetIsEmpty)(0);
-	T_(SetIsElement)(0, 0);
+	T_(SetIsElement)(0, (size_t)0);
 	T_(SetSetMigrate)(0, 0, 0);
 	T_(SetSetParam)(0, 0);
-	T_(SetReserve)(0, 0);
+	T_(SetReserve)(0, (size_t)0);
 	T_(SetNew)(0);
 	T_(SetRemove)(0, 0);
-	T_(SetGetElement)(0, 0);
+	T_(SetGetElement)(0, (size_t)0);
 	T_(SetGetIndex)(0, 0);
 	T_(SetClear)(0);
 	T_(SetForEach)(0, 0);

@@ -81,14 +81,11 @@ static void Ortho3f_to_bin(const struct Ortho3f *const r, unsigned *const bin) {
 	assert(r);
 	assert(bin);
 	b.x = ((int)r->x + BIN_HALF_SPACE) >> BIN_FG_LOG_SPACE;
-	printf("(%.1f)->(%d)\n", r->x, b.x);
 	if(b.x < 0) b.x = 0; else if(b.x >= BIN_FG_SIZE) b.x = BIN_FG_SIZE - 1;
 	b.y = ((int)r->y + BIN_HALF_SPACE) >> BIN_FG_LOG_SPACE;
-	printf("(%.1f)->(%d)\n", r->y, b.y);
 	if(b.y < 0) b.y = 0; else if(b.y >= BIN_FG_SIZE) b.y = BIN_FG_SIZE - 1;
-	printf("(%.1f)->(%d)\n", r->x, b.x);
 	*bin = (b.y << BIN_FG_LOG_SIZE) + b.x;
-	printf("(%.1f,%.1f)->(%d,%d)->%u\n", r->x, r->y, b.x, b.y, *bin);
+	/*printf("(%.1f,%.1f)->(%d,%d)->%u\n", r->x, r->y, b.x, b.y, *bin);*/
 }
 static void bin_to_Vec2i(const unsigned bin, struct Vec2i *const r) {
 	assert(bin < BIN_BIN_FG_SIZE);
@@ -143,25 +140,28 @@ static void test(FILE *data, FILE *gnu) {
 	struct SpriteListNode *snode;
 	int i;
 
-	for(i = 0; i < 100; i++) {
+	for(i = 0; i < 300; i++) {
 		if(!(snode = SpriteEntrySetNew(sprites))) {
 			fprintf(stderr, "test: %s.\n", SpriteEntrySetGetError(sprites));
 			return;
 		}
 		Sprite_filler(snode);
-		fprintf(data, "%f\t%f\t%f\n", snode->data.r.x, snode->data.r.y,
-			snode->data.bounding);
+		fprintf(data, "%f\t%f\t%f\t%d\n", snode->data.r.x, snode->data.r.y,
+			snode->data.bounding, i);
 	}
 	fprintf(gnu, "set term postscript eps enhanced size 20cm, 20cm\n"
 		"set output \"Bin.eps\"\n"
 		"set size square;\n"
-		"set palette defined (1 \"#00FF00\", 2 \"#0000FF\")\n"
+		"set palette defined (1 \"#0000FF\", 2 \"#00FF00\", 3 \"#FF0000\")\n"
 		"set xtics 256 rotate; set ytics 256;\n"
 		"set grid;\n");
 	SpriteEntrySetSetParam(sprites, gnu);
 	SpriteEntrySetShortCircuit(sprites, &gnu_print);
-	fprintf(gnu, "plot \"Bin.data\" using 1:2:(0.5*$3) with circles \\\nlc rgb "
-		"\"blue\" fs transparent solid 0.3 noborder title \"Sprites\";\n");
+	/*fprintf(gnu, "plot \"Bin.data\" using 1:2:(0.5*$3) with circles \\\nlc rgb "
+		"\"blue\" fs transparent solid 0.3 noborder title \"Sprites\";\n");*/
+	fprintf(gnu, "plot \"Bin.data\" using 1:2:(0.5*$3):4 with circles \\\n"
+		"linecolor palette fillstyle transparent solid 0.3 noborder \\\n"
+		"title \"Sprites\";");
 }
 
 int main(void) {

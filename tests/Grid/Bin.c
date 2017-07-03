@@ -1,6 +1,7 @@
 #include <stdlib.h>	/* rand */
 #include <stdio.h>  /* fprintf */
 #include <time.h>	/* clock */
+#include <assert.h>	/* assert */
 
 /* M_PI is a widely accepted gnu standard, not C<=99 -- who knew? */
 #ifndef M_PI_F
@@ -32,6 +33,8 @@
  smaller: ratio of fg:bg distance. */
 static const float foreshortening = 0.2f, one_foreshortening = 5.0f;
 
+#if 0
+/* fixme: unsigned -> (struct SpriteList *)? */
 /* Define the bins that each frame will concern itself with; these are erased
  and updated every frame. See \see{SpriteUpdate}. These are just ints. */
 #define LIST_NAME Bin
@@ -44,7 +47,7 @@ static struct BinList draw_bins, update_bins;
 #define SET_TYPE struct BinListNode
 #include "../../src/general/Set.h" /* defines BinEntrySet, BinEntrySetNode */
 static struct BinEntrySet *bins;
-
+#endif
 
 
 
@@ -65,8 +68,15 @@ static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
 static int Sprite_y_cmp(const struct Sprite *a, const struct Sprite *b) {
 	return (b->r.x < a->r.x) - (a->r.x < b->r.x);
 }
+/** @implements <Sprite>ToString */
+static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]) {
+	sprintf(*a, "%.1f", this->r.x);
+}
 
 static void Ortho3f_filler_fg(struct Ortho3f *const this) {
+	/* static int thing;
+	this->x = -8191.9f + 256.0f * thing++;
+	this->y = -8191.9f; */
 	this->x = 1.0f * rand() / RAND_MAX * BIN_SPACE - BIN_HALF_SPACE;
 	this->y = 1.0f * rand() / RAND_MAX * BIN_SPACE - BIN_HALF_SPACE;
 	this->theta = M_2PI_F * rand() / RAND_MAX - M_PI_F;
@@ -100,6 +110,7 @@ static void bin_to_Vec2i(const unsigned bin, struct Vec2i *const r) {
 #define LIST_UA_COMPARATOR &Sprite_x_cmp
 #define LIST_UB_NAME Y
 #define LIST_UB_COMPARATOR &Sprite_y_cmp
+#define LIST_TO_STRING &Sprite_to_string
 #include "../../src/general/List.h"
 /** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
 static struct SpriteList sprite_bins[BIN_BIN_FG_SIZE];
@@ -123,6 +134,7 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	/* put into bin */
 	bin = sprite_bins + sprite->bin;
 	SpriteListPush(bin, this);
+	printf("x: %f\n", this->data.r.x);
 }
 
 /** @implements <Sprite>Predicate */
@@ -137,20 +149,35 @@ static int gnu_print(struct SpriteListNode *const this, void *const void_gnu) {
 }
 
 /** @implements <Sprite>Predicate */
-/*static int print_data(struct SpriteListNode *const this, void *const void_gnu) {
+/*static int print_sprite(struct Sprite *const this, void *const void_gnu) {
 	FILE *const gnu = (FILE *)void_gnu;
-	fprintf(data, "%f\t%f\t%f\t%d\n", snode->data.r.x, snode->data.r.y,
-		snode->data.bounding, i);
+	fprintf(gnu, "%f\t%f\t%f\n", this->r.x, this->r.y, this->bounding);
+	return 1;
 }*/
+
+static void print_space(void) {
+	struct SpriteList *sl;
+	int i;
+	printf("Space:\n");
+	for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
+		sl = sprite_bins + i;
+		if(!SpriteListXGetFirst(sl)) continue;
+		printf("%d: %s\n", i, SpriteListXToString(sl));
+		/*fprintf(stderr, "Sprite bin %u:\n", i);
+		 SpriteListSetParam(sl, stderr);
+		 SpriteListXShortCircuit(sl, &print_sprite);*/
+	}
+	printf("done.\n");
+}
 
 static void test(FILE *data, FILE *gnu) {
 	struct SpriteListNode *snode;
-	struct SpriteList *sl;
-	struct Sprite *s;
+	/*struct Sprite *s;*/
 	int i;
-	const int n = 1000;
+	const int n = 2000;
 
 	/* populate */
+	print_space();
 	for(i = 0; i < n; i++) {
 		if(!(snode = SpriteEntrySetNew(sprites))) {
 			fprintf(stderr, "test: %s.\n", SpriteEntrySetGetError(sprites));
@@ -160,6 +187,7 @@ static void test(FILE *data, FILE *gnu) {
 		fprintf(data, "%f\t%f\t%f\t%f\n", snode->data.r.x, snode->data.r.y,
 			snode->data.bounding, (double)i / n);
 	}
+	print_space();
 	/*for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
 		sl = sprite_bins + i;
 		for(snode = SpriteListXGetFirst(sl); snode;
@@ -179,6 +207,8 @@ static void test(FILE *data, FILE *gnu) {
 		"set palette defined (1 \"#0000FF\", 2 \"#00FF00\", 3 \"#FF0000\")\n"
 		"set xtics 256 rotate; set ytics 256;\n"
 		"set grid;\n"
+		"set xrange [-8192:8192];\n"
+		"set yrange [-8192:8192];\n"
 		"set cbrange [0.0:1.0];\n");
 	SpriteEntrySetSetParam(sprites, gnu);
 	SpriteEntrySetShortCircuit(sprites, &gnu_print);
@@ -199,12 +229,14 @@ int main(void) {
 #endif
 		;
 	char buff[128];
+	unsigned i;
 
 	srand((unsigned)clock());
 
-	if(!(bins = BinEntrySet())) return
-		fprintf(stderr, "Bin: %s.\n", BinEntrySetGetError(bins)), EXIT_FAILURE;
-	if(!(sprites = SpriteEntrySet())) return fprintf(stderr, "Spirte: %s.\n",
+	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(sprite_bins + i);
+	/*if(!(bins = BinEntrySet())) return
+		fprintf(stderr, "Bin: %s.\n", BinEntrySetGetError(bins)), EXIT_FAILURE;*/
+	if(!(sprites = SpriteEntrySet())) return fprintf(stderr, "Sprite: %s.\n",
 		SpriteEntrySetGetError(sprites)), EXIT_FAILURE;
 
 	if(!(data = fopen(data_fn, "w"))) {
@@ -218,6 +250,9 @@ int main(void) {
 	}
 
 	test(data, gnu);
+
+	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(sprite_bins + i);
+	SpriteEntrySet_(&sprites);
 
 	if(fclose(data) == EOF) perror(data_fn);
 	if(fclose(gnu) == EOF)  perror(gnu_fn);

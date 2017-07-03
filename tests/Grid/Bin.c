@@ -135,7 +135,8 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	bin = sprite_bins + sprite->bin;
 	SpriteListPush(bin, this);
 #if 1
-	/* this line is ESSENTIAL; I want to take it out, but it crashes */
+	/* this line is ESSENTIAL; I want to take it out, but it then corrupts the
+	 data and crashes */
 	printf("x: %f\n", this->data.r.x);
 #endif
 }

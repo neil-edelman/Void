@@ -136,29 +136,52 @@ static int gnu_print(struct SpriteListNode *const this, void *const void_gnu) {
 	return 1;
 }
 
+/** @implements <Sprite>Predicate */
+/*static int print_data(struct SpriteListNode *const this, void *const void_gnu) {
+	FILE *const gnu = (FILE *)void_gnu;
+	fprintf(data, "%f\t%f\t%f\t%d\n", snode->data.r.x, snode->data.r.y,
+		snode->data.bounding, i);
+}*/
+
 static void test(FILE *data, FILE *gnu) {
 	struct SpriteListNode *snode;
+	struct SpriteList *sl;
+	struct Sprite *s;
 	int i;
+	const int n = 1000;
 
-	for(i = 0; i < 300; i++) {
+	/* populate */
+	for(i = 0; i < n; i++) {
 		if(!(snode = SpriteEntrySetNew(sprites))) {
 			fprintf(stderr, "test: %s.\n", SpriteEntrySetGetError(sprites));
 			return;
 		}
 		Sprite_filler(snode);
-		fprintf(data, "%f\t%f\t%f\t%d\n", snode->data.r.x, snode->data.r.y,
-			snode->data.bounding, i);
+		fprintf(data, "%f\t%f\t%f\t%f\n", snode->data.r.x, snode->data.r.y,
+			snode->data.bounding, (double)i / n);
 	}
+	/*for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
+		sl = sprite_bins + i;
+		for(snode = SpriteListXGetFirst(sl); snode;
+			snode = SpriteListNodeXGetNext(snode)) {
+			if(!(s = &snode->data)) {
+				fprintf(stderr, "wtf bin %u.\n", i);
+				continue;
+			}
+			if(i > 100) break;
+			fprintf(data, "%f\t%f\t%f\t%d\n", snode->data.r.x, snode->data.r.y,
+				snode->data.bounding, i);
+		}
+	}*/
 	fprintf(gnu, "set term postscript eps enhanced size 20cm, 20cm\n"
 		"set output \"Bin.eps\"\n"
 		"set size square;\n"
 		"set palette defined (1 \"#0000FF\", 2 \"#00FF00\", 3 \"#FF0000\")\n"
 		"set xtics 256 rotate; set ytics 256;\n"
-		"set grid;\n");
+		"set grid;\n"
+		"set cbrange [0.0:1.0];\n");
 	SpriteEntrySetSetParam(sprites, gnu);
 	SpriteEntrySetShortCircuit(sprites, &gnu_print);
-	/*fprintf(gnu, "plot \"Bin.data\" using 1:2:(0.5*$3) with circles \\\nlc rgb "
-		"\"blue\" fs transparent solid 0.3 noborder title \"Sprites\";\n");*/
 	fprintf(gnu, "plot \"Bin.data\" using 1:2:(0.5*$3):4 with circles \\\n"
 		"linecolor palette fillstyle transparent solid 0.3 noborder \\\n"
 		"title \"Sprites\";");

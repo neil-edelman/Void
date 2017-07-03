@@ -134,7 +134,10 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	/* put into bin */
 	bin = sprite_bins + sprite->bin;
 	SpriteListPush(bin, this);
+#if 1
+	/* this line is ESSENTIAL; I want to take it out, but it crashes */
 	printf("x: %f\n", this->data.r.x);
+#endif
 }
 
 /** @implements <Sprite>Predicate */

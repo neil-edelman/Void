@@ -210,6 +210,21 @@ struct T_(Set) {
 
 
 
+/** Debug messages from set functions; turn on using {SET_DEBUG}. */
+static void PRIVATE_T_(debug)(struct T_(Set) *const this,
+	const char *const fn, const char *const fmt, ...) {
+#ifdef SET_DEBUG
+	/* \url{ http://c-faq.com/varargs/vprintf.html } */
+	va_list argp;
+	fprintf(stderr, "Set<" T_NAME ">#%p.%s: ", (void *)this, fn);
+	va_start(argp, fmt);
+	vfprintf(stderr, fmt, argp);
+	va_end(argp);
+#else
+	UNUSED(this); UNUSED(fn); UNUSED(fmt);
+#endif
+}
+
 /** Ensures capacity.
  @return	Success.
  @throws	SET_OVERFLOW, SET_ERRNO */
@@ -233,6 +248,9 @@ static int PRIVATE_T_(reserve)(struct T_(Set) *const this,
 	}
 	if(!(array = realloc(this->array, c0 * sizeof *this->array)))
 		return this->error = SET_ERRNO, this->errno_copy = errno, 0;
+	PRIVATE_T_(debug)(this, "reserve", "array#%p[%lu] -> #%p[%lu].\n",
+		(void *)this->array, (unsigned long)this->capacity[0], (void *)array,
+		(unsigned long)c0);
 	if(this->migrate) this->migrate(this->migrate_param, array,
 		this->size * sizeof *array, this->array);
 	this->array = array;
@@ -307,21 +325,6 @@ static void PRIVATE_T_(trim_removed)(struct T_(Set) *const this) {
 		}
 		this->size--;
 	}
-}
-
-/** Debug messages from set functions; turn on using {SET_DEBUG}. */
-static void PRIVATE_T_(debug)(struct T_(Set) *const this,
-	const char *const fn, const char *const fmt, ...) {
-#ifdef SET_DEBUG
-	/* \url{ http://c-faq.com/varargs/vprintf.html } */
-	va_list argp;
-	fprintf(stderr, "Set<" T_NAME ">#%p.%s: ", (void *)this, fn);
-	va_start(argp, fmt);
-	vfprintf(stderr, fmt, argp);
-	va_end(argp);
-#else
-	UNUSED(this); UNUSED(fn); UNUSED(fmt);
-#endif
 }
 
 /** Destructor for Set.

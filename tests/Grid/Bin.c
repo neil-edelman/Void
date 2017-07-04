@@ -40,11 +40,13 @@ static const float foreshortening = 0.2f, one_foreshortening = 5.0f;
 #define LIST_NAME Bin
 #define LIST_TYPE unsigned
 #define LIST_UA_NAME Order
+#define LIST_DEBUG
 #include "../../src/general/List.h" /* defines BinList, BinListNode */
 static struct BinList draw_bins, update_bins;
 /* The backing for {draw_bins} and {update_bins}. */
 #define SET_NAME BinEntry
 #define SET_TYPE struct BinListNode
+#define SET_DEBUG
 #include "../../src/general/Set.h" /* defines BinEntrySet, BinEntrySetNode */
 static struct BinEntrySet *bins;
 #endif

@@ -81,6 +81,7 @@
 #include <assert.h>	/* assert */
 #ifdef LIST_TO_STRING /* <-- print */
 #include <stdio.h>	/* sprintf */
+#include <string.h>	/* strlen */
 #endif /* print --> */
 
 /* unused macro */
@@ -830,6 +831,9 @@ static void PRIVATE_T_(unused_coda)(void) { PRIVATE_T_(unused_list)(); }
 #ifdef LIST_TEST
 #undef LIST_TEST
 #endif
+#ifdef LIST_DEBUG
+#undef LIST_DEBUG
+#endif
 #ifdef LIST_NDEBUG
 #undef LIST_NDEBUG
 #undef NDEBUG
@@ -952,6 +956,10 @@ static void PRIVATE_T_U_(list, migrate)(struct T_(List) *const this,
 	struct T_(ListNode) *const node) {
 	assert(this);
 	assert(node);
+#ifdef LIST_DEBUG
+	fprintf(stderr, "List<" QUOTE(LIST_NAME) "#%p: moved entry at #%p.\n",
+		(void *)this, (void *)node);
+#endif
 	if(node->U_(prev)) {
 		node->U_(prev)->U_(next) = node;
 	} else {
@@ -976,6 +984,11 @@ static void PRIVATE_T_U_(block, migrate)(struct T_(List) *const this,
 	assert(migrate->begin < migrate->end);
 	assert(migrate->delta);
 	assert(!this->U_(first) == !this->U_(last));
+#ifdef LIST_DEBUG
+	fprintf(stderr, "List<" QUOTE(LIST_NAME)
+		"#%p: moved entries at #%p-#%p by %lu.\n", migrate->begin, migrate->end,
+		(void *)migrate->delta);
+#endif
 	/* empty -- done */
 	if(!this->U_(first)) return;
 	/* first and last pointer of {<T>List} */

@@ -33,13 +33,15 @@
  @title		Set.h
  @std		C89/90
  @author	Neil
- @version	1.3; 2017-05 split {List} from {Set}; much simpler
- @since		1.2; 2017-01 almost-redundant functions simplified
- 			1.1; 2016-11 multi-index
-			1.0; 2016-08 one index, permute */
+ @version	1.4; 2017-07 made migrate simpler
+ @since		1.3; 2017-05 split {List} from {Set}; much simpler
+			1.2; 2017-01 almost-redundant functions simplified
+			1.1; 2016-11 multi-index
+			1.0; 2016-08 permute */
 
 
 
+#include <stddef.h>	/* ptrdiff_t */
 #include <stdlib.h>	/* malloc free qsort */
 #include <assert.h>	/* assert */
 #include <string.h>	/* memcpy (memmove strerror strcpy memcmp in SetTest.h) */
@@ -162,9 +164,18 @@ static const char *const set_error_explination[] = {
 static enum SetError set_global_error;
 static int           set_global_errno_copy;
 
+#ifndef MIGRATE /* <-- migrate */
+#define MIGRATE
+/** Contains information about a {realloc}. */
+struct Migrate;
+struct Migrate {
+	const void *begin, *end; /* old pointers */
+	ptrdiff_t delta;
+};
+#endif /* migrate --> */
+
 /** Calls on {realloc} with \see{<T>SetSetMigrate}. */
-typedef void (*SetMigrate)(void *const param, void *const fresh,
-	const size_t bytes, const void *const old);
+typedef void (*Migrate)(const struct Migrate *const info);
 
 #endif /* SET_H --> */
 
@@ -173,8 +184,8 @@ typedef void (*SetMigrate)(void *const param, void *const fresh,
 /** Operates by side-effects only. */
 typedef void (*T_(Action))(T *const element);
 
-/** Returns (non-zero) true or (zero) false. See \see{<T>SetSetParam}. */
-typedef int  (*T_(Predicate))(T *const element, void *const param);
+/** Returns (non-zero) true or (zero) false. */
+typedef int  (*T_(Predicate))(T *const element);
 
 #ifdef SET_TO_STRING /* <-- string */
 
@@ -204,8 +215,7 @@ struct T_(Set) {
 	size_t head, tail; /* removed queue */
 	enum SetError error; /* errors defined by enum SetError */
 	int errno_copy; /* copy of errno when when error == E_ERRNO */
-	SetMigrate migrate;
-	void *migrate_param, *param;
+	Migrate migrate; /* called when change memory addresses if present */
 };
 
 
@@ -226,8 +236,8 @@ static void PRIVATE_T_(debug)(struct T_(Set) *const this,
 }
 
 /** Ensures capacity.
- @return	Success.
- @throws	SET_OVERFLOW, SET_ERRNO */
+ @return Success.
+ @throws SET_OVERFLOW, SET_ERRNO */
 static int PRIVATE_T_(reserve)(struct T_(Set) *const this,
 	const size_t min_capacity) {
 	size_t c0, c1;
@@ -251,8 +261,14 @@ static int PRIVATE_T_(reserve)(struct T_(Set) *const this,
 	PRIVATE_T_(debug)(this, "reserve", "array#%p[%lu] -> #%p[%lu].\n",
 		(void *)this->array, (unsigned long)this->capacity[0], (void *)array,
 		(unsigned long)c0);
-	if(this->migrate) this->migrate(this->migrate_param, array,
-		this->size * sizeof *array, this->array);
+	/* Migrate function, if it is defined and it changed memory locations. */
+	if(this->migrate && this->array != array) {
+		struct Migrate migrate;
+		migrate.begin = this->array;
+		migrate.end   = (const char *)this->array + this->size * sizeof *array;
+		migrate.delta = (const char *)array - (const char *)this->array;
+		this->migrate(&migrate);
+	}
 	this->array = array;
 	this->capacity[0] = c0;
 	this->capacity[1] = c1;
@@ -361,8 +377,6 @@ static struct T_(Set) *T_(Set)(void) {
 	this->error        = SET_NO_ERROR;
 	this->errno_copy   = 0;
 	this->migrate      = 0;
-	this->migrate_param= 0;
-	this->param        = 0;
 	if(!(this->array = malloc(this->capacity[0] * sizeof *this->array))) {
 		T_(Set_)(&this);
 		set_global_error = SET_ERRNO;
@@ -411,23 +425,12 @@ static int T_(SetIsElement)(struct T_(Set) *const this, const size_t idx) {
 
 /** Sets a callback when the position of the set changes internally.
  @param migrate: Set to null to turn off.
- @param param: First argument to the function.
  @order \Theta(1)
  @allow */
 static void T_(SetSetMigrate)(struct T_(Set) *const this,
-	const SetMigrate migrate, void *const param) {
+	const Migrate migrate) {
 	if(!this) return;
 	this->migrate = migrate;
-	this->migrate_param = param;
-}
-
-/** Sets the {param} of the set, see \see{<T>SetShortCircuit}.
- @order \Theta(1)
- @fixme Untested.
- @allow */
-static void T_(SetSetParam)(struct T_(Set) *const this, void *const param) {
-	if(!this) return;
-	this->param = param;
 }
 
 /** Increases the capacity of this Set to ensure that it can hold at least the
@@ -475,7 +478,7 @@ static int T_(SetRemove)(struct T_(Set) *const this, T *const data) {
 	struct PRIVATE_T_(Element) *elem;
 	size_t e;
 	if(!this || !data) return 0;
-	elem = (struct PRIVATE_T_(Element) *)data;
+	elem = (struct PRIVATE_T_(Element) *)(void *)data;
 	if(elem < this->array
 		|| this->array + this->size <= elem
 		|| elem->prev != set_not_part)
@@ -509,7 +512,43 @@ static T *T_(SetGetElement)(struct T_(Set) *const this, const size_t idx) {
  @allow */
 static size_t T_(SetGetIndex)(struct T_(Set) *const this,
 	const T *const element) {
-	return (const struct PRIVATE_T_(Element) *)element - this->array;
+	return (const struct PRIVATE_T_(Element) *)(void *)element - this->array;
+}
+
+/** General iterator is a {size_t}.
+ @param iterator_ptr: Set it to zero; this gets incremented. To delete in-place,
+ call {<T>SetGetNext} first, then call \see{<T>SetRemove} with the first.
+ @return The next {T} or null if there are none left.
+ @allow */
+static T *T_(SetGetNext)(struct T_(Set) *const this,
+	size_t *const iterator_ptr) {
+	struct PRIVATE_T_(Element) *elem = 0;
+	if(!iterator_ptr || !this) return 0;
+	for( ; ; ) {
+		if(*iterator_ptr >= this->size) { *iterator_ptr = 0; return 0; }
+		elem = this->array + (*iterator_ptr)++;
+		if(elem->prev != set_not_part) break;
+	}
+	return &elem->data;
+}
+
+/** Reverse iterator.
+ @param iterator_ptr: Set it to zero initially; this gets decremented.
+ @return The previous {T} or null if there are no more.
+ @allow */
+static T *T_(SetGetPrevious)(struct T_(Set) *const this,
+	size_t *const iterator_ptr) {
+	struct PRIVATE_T_(Element) *elem = 0;
+	if(!iterator_ptr || !this || !this->size) return 0;
+	for( ; ; ) {
+		/* this will not go into an infinite loop because all size > 0 have at
+		 least one element */
+		if(!*iterator_ptr || *iterator_ptr >= this->size)
+			*iterator_ptr = this->size;
+			elem = this->array + --(*iterator_ptr);
+			if(elem->prev != set_not_part) break;
+	}
+	return &elem->data;
 }
 
 /** Removes all data from {this}.
@@ -546,10 +585,11 @@ static T *T_(SetShortCircuit)(struct T_(Set) *const this,
 	const T_(Predicate) predicate) {
 	struct PRIVATE_T_(Element) *elem;
 	size_t i;
+	if(!this || !predicate) return 0;
 	for(i = 0; i < this->size; i++) {
 		elem = this->array + i;
 		if(elem->prev != set_not_part) continue;
-		if(!predicate(&elem->data, this->param)) return &elem->data;
+		if(!predicate(&elem->data)) return &elem->data;
 	}
 	return 0;
 }
@@ -644,13 +684,14 @@ static void PRIVATE_T_(unused_set)(void) {
 	T_(SetGetError)(0);
 	T_(SetIsEmpty)(0);
 	T_(SetIsElement)(0, (size_t)0);
-	T_(SetSetMigrate)(0, 0, 0);
-	T_(SetSetParam)(0, 0);
+	T_(SetSetMigrate)(0, 0);
 	T_(SetReserve)(0, (size_t)0);
 	T_(SetNew)(0);
 	T_(SetRemove)(0, 0);
 	T_(SetGetElement)(0, (size_t)0);
 	T_(SetGetIndex)(0, 0);
+	T_(SetGetPrevious)(0, 0);
+	T_(SetGetNext)(0, 0);
 	T_(SetClear)(0);
 	T_(SetForEach)(0, 0);
 	T_(SetShortCircuit)(0, 0);

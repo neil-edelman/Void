@@ -14,7 +14,7 @@
 #endif
 
 /* 16384px de sitter (8192px on each quadrant) */
-#define BIN_LOG_SPACE 10/*14*/
+#define BIN_LOG_SPACE 14
 #define BIN_SPACE (1 << BIN_LOG_SPACE)
 /* divided between positive and negative for greater floating point accuracy */
 #define BIN_HALF_SPACE (1 << (BIN_LOG_SPACE - 1))
@@ -242,7 +242,7 @@ int main(void) {
 		;
 	char buff[128];
 	unsigned i;
-	const unsigned seed = (unsigned)clock(), sprite_no = 10;
+	const unsigned seed = (unsigned)clock(), sprite_no = 10000;
 	enum { E_NO, E_DATA, E_GNU, E_SHIP } e = E_NO;
 
 	srand(seed), rand(), printf("Seed %u.\n", seed);

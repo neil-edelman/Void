@@ -184,8 +184,15 @@ typedef void (*Migrate)(const struct Migrate *const info);
 /** Operates by side-effects only. */
 typedef void (*T_(Action))(T *const element);
 
+/** Takes along a param. */
+typedef void (*T_(BiAction))(T *const, void *const);
+
 /** Returns (non-zero) true or (zero) false. */
 typedef int  (*T_(Predicate))(T *const element);
+
+/** Passed {T} and a user-defined pointer value, returns (non-zero) true or
+ (zero) false. */
+typedef int (*T_(BiPredicate))(T *const, void *const);
 
 #ifdef SET_TO_STRING /* <-- string */
 
@@ -574,6 +581,21 @@ static void T_(SetForEach)(struct T_(Set) *const this, const T_(Action) action){
 	}
 }
 
+/** Performs {biaction} for each element in the list.
+ @param param: The argument.
+ @order ~ \Theta({this}.n) \times O({action})
+ @fixme Untested.
+ @allow */
+static void T_(SetBiForEach)(struct T_(Set) *const this,
+	const T_(BiAction) biaction, void *const param) {
+	size_t i;
+	if(!this || !biaction) return;
+	for(i = 0; i < this->size; i++) {
+		if(this->array[i].prev != set_not_part) continue;
+		biaction(&this->array[i].data, param);
+	}
+}
+
 /** @return A {<T>} in the {Set} that causes the {predicate} to return false,
  or null if the {predicate} is true for every case. If {this} or {predicate} is
  null, returns null.
@@ -590,6 +612,26 @@ static T *T_(SetShortCircuit)(struct T_(Set) *const this,
 		elem = this->array + i;
 		if(elem->prev != set_not_part) continue;
 		if(!predicate(&elem->data)) return &elem->data;
+	}
+	return 0;
+}
+
+/** @return A {<T>} in the {Set} that causes the {predicate} to return false,
+ or null if the {bipredicate} is true for every case. If {this} or
+ {bipredicate} is null, returns null.
+ @order ~ O({this}.n) \times O({predicate}) where
+ |{this}| <= {this}.n <= |{this}+{this}.deleted|.
+ @fixme Untested.
+ @allow */
+static T *T_(SetBiShortCircuit)(struct T_(Set) *const this,
+	const T_(BiPredicate) bipredicate, void *const param) {
+	struct PRIVATE_T_(Element) *elem;
+	size_t i;
+	if(!this || !bipredicate) return 0;
+	for(i = 0; i < this->size; i++) {
+		elem = this->array + i;
+		if(elem->prev != set_not_part) continue;
+		if(!bipredicate(&elem->data, param)) return &elem->data;
 	}
 	return 0;
 }
@@ -694,7 +736,9 @@ static void PRIVATE_T_(unused_set)(void) {
 	T_(SetGetNext)(0, 0);
 	T_(SetClear)(0);
 	T_(SetForEach)(0, 0);
+	T_(SetBiForEach)(0, 0, 0);
 	T_(SetShortCircuit)(0, 0);
+	T_(SetBiShortCircuit)(0, 0, 0);
 #ifdef SET_TO_STRING
 	T_(SetToString)(0);
 #endif

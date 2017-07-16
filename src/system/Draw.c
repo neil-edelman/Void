@@ -218,6 +218,7 @@ void Draw_(void) {
 /** Sets the camera location.
  @param x: (x, y) in pixels. */
 void DrawSetCamera(const struct Vec2f x) { camera.x = x.x, camera.y = x.y; }
+
 /** Gets the visible part of the screen. */
 void DrawGetScreen(struct Rectangle4f *const rect) {
 	if(!rect) return;

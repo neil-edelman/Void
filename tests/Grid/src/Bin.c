@@ -53,18 +53,13 @@ static void DrawSetCamera(const struct Vec2f x) { camera.x = x.x, camera.y = x.y
 /** Gets the visible part of the screen. */
 static void DrawGetScreen(struct Rectangle4f *const rect) {
 	if(!rect) return;
-	printf("%f\n", camera.x - camera_extent.x);
 	rect->x_min = camera.x - camera_extent.x;
 	rect->x_max = camera.x + camera_extent.x;
 	rect->y_min = camera.y - camera_extent.y;
 	rect->y_max = camera.y + camera_extent.y;
-	printf("ymin %f\n", rect->y_min);
 }
 
 static void Ortho3f_filler_fg(struct Ortho3f *const this) {
-	/* static int thing;
-	 this->x = -8191.9f + 256.0f * thing++;
-	 this->y = -8191.9f; */
 	this->x = 1.0f * rand() / RAND_MAX * BIN_SPACE - BIN_HALF_ENTIRE;
 	this->y = 1.0f * rand() / RAND_MAX * BIN_SPACE - BIN_HALF_ENTIRE;
 	this->theta = M_2PI_F * rand() / RAND_MAX - M_PI_F;
@@ -83,7 +78,6 @@ static void Ortho3f_to_bin(const struct Ortho3f *const r, unsigned *const bin) {
 	b.y = ((int)r->y + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
 	if(b.y < 0) b.y = 0; else if(b.y >= BIN_FG_SIZE) b.y = BIN_FG_SIZE - 1;
 	*bin = (b.y << BIN_FG_LOG_SIZE) + b.x;
-	/*printf("(%.1f,%.1f)->(%d,%d)->%u\n", r->x, r->y, b.x, b.y, *bin);*/
 }
 static void bin_to_Vec2i(const unsigned bin, struct Vec2i *const r) {
 	assert(bin < BIN_BIN_FG_SIZE);
@@ -156,6 +150,7 @@ struct Sprite {
 	unsigned bin;
 	struct Ortho3f r, v;
 	float bounding;
+	int is_glowing;
 };
 /** @implements <Bin>Comparator */
 static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
@@ -187,6 +182,7 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	Ortho3f_filler_fg(&s->r);
 	Ortho3f_filler_v(&s->v);
 	s->bounding = 246.0f * rand() / RAND_MAX + 10.0f;
+	s->is_glowing = 0;
 	Ortho3f_to_bin(&s->r, &s->bin);
 	SpriteListPush(bins + s->bin, this);
 }
@@ -256,6 +252,32 @@ static void new_bins(void) {
 	}
 }
 
+/** @implements <Sprite>Action */
+static void draw_sprite(struct Sprite *this) {
+	assert(this);
+	printf("Sprite at %f, %f.\n", this->r.x, this->r.y);
+	this->is_glowing = 1;
+}
+
+/** @implements <SpriteList *, SpriteAction *>DiAction */
+static void act_bins(struct SpriteList **const pthis, void *const param) {
+	struct SpriteList *const this = *pthis;
+	const SpriteAction *const pact = param, act = *pact;
+	assert(pthis && this && act);
+	SpriteListXForEach(this, act);
+}
+
+/** {{act} \in { Draw }}.
+ @implements <Bin>Action */
+static void for_each_draw(SpriteAction act) {
+	BinSetBiForEach(draw_bins, &act_bins, &act);
+}
+/** {{act} \in { Update, Draw }}. */
+static void for_each_update(SpriteAction act) {
+	BinSetBiForEach(update_bins, &act_bins, &act);
+	for_each_draw(act);
+}
+
 /* Forward references for {SpriteVt}. */
 struct Ship;
 static void ship_delete(struct Ship *const this);
@@ -318,17 +340,19 @@ static void sprite_arrow(struct Sprite *this, void *const void_out) {
 	struct OutputData *const out = void_out;
 	struct Vec2i b;
 	bin_to_Vec2i(this->bin, &b);
-	fprintf(out->fp, "set arrow from %f,%f to %d,%d # %u\n", this->r.x,
-		this->r.y, b.x, b.y, this->bin);
+	fprintf(out->fp, "set arrow from %f,%f to %d,%d%s # %u\n", this->r.x,
+		this->r.y, b.x, b.y, this->is_glowing ? " lw 3 lc rgb \"red\"" : "",
+		this->bin);
 }
 
 /** For communication. */
 struct ColourData {
 	FILE *fp;
-	char *colour;
+	const char *colour;
 };
 
-/** @implements <Bin>DiAction */
+/** Draws squares.
+ @implements <Bin>DiAction */
 static void gnu_draw_bins(struct SpriteList **this, void *const void_col) {
 	static object = 1;
 	const struct ColourData *const col = void_col;
@@ -378,6 +402,9 @@ int main(void) {
 		}
 		if(e) break;
 
+		new_bins();
+		/* switch these sprites glowing */
+		for_each_update(&draw_sprite);
 		/* output data file */
 		out.fp = data, out.i = 0, out.n = sprite_no;
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
@@ -395,19 +422,21 @@ int main(void) {
 			"set xrange [-8192:8192];\n"
 			"set yrange [-8192:8192];\n"
 			"set cbrange [0.0:1.0];\n");
+		/* draw bins as squares behind */
 		fprintf(gnu, "set style fill transparent solid 0.3 noborder;\n");
-		new_bins();
 		col.fp = gnu, col.colour = "#ADD8E6";
 		BinSetBiForEach(draw_bins, &gnu_draw_bins, &col);
 		col.fp = gnu, col.colour = "#D3D3D3";
 		BinSetBiForEach(update_bins, &gnu_draw_bins, &col);
 		out.fp = gnu, out.i = 0, out.n = sprite_no;
+		/* draw arrows from each of the sprites to their bins */
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
 			SpriteListXBiForEach(bins + i, &sprite_arrow, &out);
 		}
+		/* draw the sprites */
 		fprintf(gnu, "plot \"Bin.data\" using 1:2:(0.5*$3):4 with circles \\\n"
 			"linecolor palette fillstyle transparent solid 0.3 noborder \\\n"
-			"title \"Sprites\";");
+			"title \"Sprites\";\n");
 	} while(0); switch(e) {
 		case E_NO: break;
 		case E_DATA: perror(data_fn); break;

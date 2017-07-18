@@ -149,16 +149,17 @@ struct Sprite {
 	const struct SpriteVt *vt;
 	unsigned bin;
 	struct Ortho3f r, v;
-	float bounding;
+	struct Vec2f r_5, r1;
+	float bounding, bounding1;
 	int is_glowing;
 };
 /** @implements <Bin>Comparator */
 static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
-	return (b->r.x < a->r.x) - (a->r.x < b->r.x);
+	return (b->r_5.x < a->r_5.x) - (a->r_5.x < b->r_5.x);
 }
 /** @implements <Bin>Comparator */
 static int Sprite_y_cmp(const struct Sprite *a, const struct Sprite *b) {
-	return (b->r.x < a->r.x) - (a->r.x < b->r.x);
+	return (b->r_5.x < a->r_5.x) - (a->r_5.x < b->r_5.x);
 }
 /* declare */
 static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]);
@@ -180,8 +181,10 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	assert(this);
 	s->vt = 0; /* abstract */
 	Ortho3f_filler_fg(&s->r);
+	s->r_5.x = s->r1.x = s->r.x;
+	s->r_5.y = s->r1.y = s->r.y;
 	Ortho3f_filler_v(&s->v);
-	s->bounding = 246.0f * rand() / RAND_MAX + 10.0f;
+	s->bounding = s->bounding1 = 246.0f * rand() / RAND_MAX + 10.0f;
 	s->is_glowing = 0;
 	Ortho3f_to_bin(&s->r, &s->bin);
 	SpriteListPush(bins + s->bin, this);
@@ -202,6 +205,9 @@ static void Sprite_migrate(const struct Migrate *const migrate) {
 #include "../../../src/general/Set.h" /* defines BinSet, BinSetNode */
 static struct BinSet *draw_bins, *update_bins;
 
+/** New bins calculates which bins are at all visible and which we should
+ update, (around the visible,) every frame.
+ @order The screen area. */
 static void new_bins(void) {
 	struct Rectangle4f rect;
 	struct Rectangle4i bin4, grow4;
@@ -267,6 +273,15 @@ static void act_bins(struct SpriteList **const pthis, void *const param) {
 	SpriteListXForEach(this, act);
 }
 
+/** @implements <SpriteList *, SpriteAction *>DiAction */
+static void act_bins_and_sort(struct SpriteList **const pthis, void *const param) {
+	struct SpriteList *const this = *pthis;
+	const SpriteAction *const pact = param, act = *pact;
+	assert(pthis && this && act);
+	SpriteListXForEach(this, act);
+	SpriteListSort(this);
+}
+
 /** {{act} \in { Draw }}.
  @implements <Bin>Action */
 static void for_each_draw(SpriteAction act) {
@@ -276,6 +291,11 @@ static void for_each_draw(SpriteAction act) {
 static void for_each_update(SpriteAction act) {
 	BinSetBiForEach(update_bins, &act_bins, &act);
 	for_each_draw(act);
+}
+/** {{act} \in { Update, Draw }}. */
+static void for_each_update_and_sort(SpriteAction act) {
+	BinSetBiForEach(update_bins, &act_bins_and_sort, &act);
+	BinSetBiForEach(draw_bins,   &act_bins_and_sort, &act);
 }
 
 /* Forward references for {SpriteVt}. */
@@ -367,6 +387,122 @@ static void gnu_draw_bins(struct SpriteList **this, void *const void_col) {
 		bin2i.x + 256, bin2i.y + 256, col->colour);
 }
 
+static float dt_ms;
+
+/** Calculates temporary values, v_5, v1, and bounding1, in preparation for
+ sorting. */
+static void update_where(struct Sprite *const this) {
+	struct Vec2f dx;
+	dx.x = this->v.x * dt_ms, dx.y = this->v.y * dt_ms;
+	/* sort on this */
+	this->r_5.x = this->r.x + 0.5f * dx.x;
+	this->r_5.y = this->r.y + 0.5f * dx.y;
+	/* where they should be if there's no collision */
+	this->r1.x = this->r.x + dx.x;
+	this->r1.y = this->r.y + dx.y;
+	/* expanded bounding circle; sqrt? overestimate bounded by {Sqrt[2]} */
+	/* this->bounding1 = this->bounding + sqrtf(dx.x * dx.x + dx.y * dx.y); */
+	this->bounding1 = this->bounding + dx.x + dx.y;
+}
+
+#if 0
+/* Compute bounding boxes of where the sprite wants to go this frame,
+ containing the projected circle along a vector {x -> x + v*dt}. This is the
+ first step in collision detection.
+ @implements <Sprite>Action */
+static void collide_extrapolate(struct Sprite *const this) {
+	const float de_sitter = BIN_HALF_ENTIRE;
+	/* where they should be if there's no collision */
+	this->r1.x = this->r.x + this->v.x * dt_ms;
+	this->r1.y = this->r.y + this->v.y * dt_ms;
+	/* clamp */
+	if(this->r1.x > de_sitter)       this->r1.x = de_sitter;
+	else if(this->r1.x < -de_sitter) this->r1.x = -de_sitter;
+	if(this->r1.y > de_sitter)       this->r1.y = de_sitter;
+	else if(this->r1.y < -de_sitter) this->r1.y = -de_sitter;
+	/* extend the bounding box along the circle's trajectory */
+	if(this->r.x <= this->r1.x) {
+		this->box.x_min = this->r.x  - this->bounding;
+		this->box.x_max = this->r1.x + this->bounding;
+	} else {
+		this->box.x_min = this->r1.x - this->bounding;
+		this->box.x_max = this->r.x  + this->bounding;
+	}
+	if(this->r.y <= this->r1.y) {
+		this->box.y_min = this->r.y  - this->bounding;
+		this->box.y_max = this->r1.y + this->bounding;
+	} else {
+		this->box.y_min = this->r1.y - this->bounding;
+		this->box.y_max = this->r.y  + this->bounding;
+	}
+}
+
+/** Used after \see{collide_extrapolate} on all the sprites you want to check.
+ Uses Hahn–Banach separation theorem and the ordered list of projections on the
+ {x} and {y} axis to build up a list of possible colliders based on their
+ bounding box of where it moved this frame. Calls \see{collide_circles} for any
+ candidates. */
+static void collide_boxes(struct Sprite *const this) {
+	/* assume it can be in a maximum of four bins at once as it travels? */
+	/*...*/
+	struct Sprite *b, *b_adj_y;
+	float t0;
+	if(!this) return;
+	/* mark x */
+	for(b = this->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
+		if(this < b && this->x_min < b->x_max) b->is_selected = -1;
+	}
+	for(b = this->next_x; b && b->x <= explore_x_max; b = b->next_x) {
+		if(this < b && this->x_max > b->x_min) b->is_selected = -1;
+	}
+	/* consider y and maybe add it to the list of colliders */
+	for(b = this->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
+		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
+		if(b->is_selected
+		   && this->y_min < b->y_max
+		   && (response = collision_matrix[b->sp_type][this->sp_type])
+		   && collide_circles(this->x, this->y, this->x1, this->y1, b->x, b->y, b->x1,
+							  b->y1, this->bounding + b->bounding, &t0))
+			response(this, b, t0);
+		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
+	}
+	for(b = this->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
+		b_adj_y = b->next_y;
+		if(b->is_selected
+		   && this->y_max > b->y_min
+		   && (response = collision_matrix[b->sp_type][this->sp_type])
+		   && collide_circles(this->x, this->y, this->x1, this->y1, b->x, b->y, b->x1,
+							  b->y1, this->bounding + b->bounding, &t0))
+			response(this, b, t0);
+		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
+	}
+	/* uhh, yes? I took this code from SpriteUpdate */
+	if(!s->no_collisions) {
+		/* no collisions; apply position change, calculated above */
+		s->x = s->x1;
+		s->y = s->y1;
+	} else {
+		/* if you skip this step, it's unstable on multiple collisions */
+		const float one_collide = 1.0f / s->no_collisions;
+		const float s_vx1 = s->vx1 * one_collide;
+		const float s_vy1 = s->vy1 * one_collide;
+		/* before and after collision;  */
+		s->x += (s->vx * s->t0_dt_collide + s_vx1 * (1.0f - s->t0_dt_collide)) * dt_ms;
+		s->y += (s->vy * s->t0_dt_collide + s_vy1 * (1.0f - s->t0_dt_collide)) * dt_ms;
+		s->vx = s_vx1;
+		s->vy = s_vy1;	
+		/* unmark for next frame */
+		s->no_collisions = 0;
+		/* apply De Sitter spacetime? already done? */
+		if(s->x      < -de_sitter) s->x =  de_sitter - 20.0f;
+		else if(s->x >  de_sitter) s->x = -de_sitter + 20.0f;
+		if(s->y      < -de_sitter) s->y =  de_sitter - 20.0f;
+		else if(s->y >  de_sitter) s->y = -de_sitter + 20.0f;
+	}
+	/* bin change */
+}
+#endif
+
 int main(void) {
 	FILE *data = 0, *gnu = 0;
 	static const char *const data_fn = "Bin.data", *const gnu_fn = "Bin.gnu",
@@ -405,6 +541,8 @@ int main(void) {
 		new_bins();
 		/* switch these sprites glowing */
 		for_each_update(&draw_sprite);
+		for_each_update_and_sort(&update_where);
+		/*fixme! for_each_update(&collision_detection_and_response);*/
 		/* output data file */
 		out.fp = data, out.i = 0, out.n = sprite_no;
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) {

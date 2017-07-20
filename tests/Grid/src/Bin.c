@@ -60,7 +60,8 @@ struct Ortho3f { float x, y, theta; };
 struct Rectangle4f { float x_min, x_max, y_min, y_max; };
 struct Rectangle4i { int x_min, x_max, y_min, y_max; };
 
-static struct Vec2f camera = { 0.0f, 0.0f }, camera_extent = { 320.0f, 240.0f };
+static struct Vec2f camera = { 0.0f, 0.0f },
+	camera_extent = { 640.0f, 480.0f /*320.0f, 240.0f*/ };
 
 /** Sets the camera location.
  @param x: (x, y) in pixels. */
@@ -85,8 +86,8 @@ static void Ortho3f_filler_fg(struct Ortho3f *const this) {
 	this->theta = M_2PI_F * rand() / RAND_MAX - M_PI_F;
 }
 static void Ortho3f_filler_v(struct Ortho3f *const this) {
-	this->x = 1.0f * rand() / RAND_MAX * 10.0f - 5.0f;
-	this->y = 1.0f * rand() / RAND_MAX * 10.0f - 5.0f;
+	this->x = 30.0f * rand() / RAND_MAX - 15.0f;
+	this->y = 30.0f * rand() / RAND_MAX - 15.0f;
 	this->theta = 0.01f * rand() / RAND_MAX - 0.005f;
 }
 /** Maps a recangle from pixel space, {pixel}, to bin2 space, {bin}. */
@@ -216,7 +217,7 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	s->r_5.x = s->r1.x = s->r.x;
 	s->r_5.y = s->r1.y = s->r.y;
 	Ortho3f_filler_v(&s->v);
-	s->bounding = s->bounding1 = (246.0f * rand() / RAND_MAX + 10.0f) /* 0.5f*/;
+	s->bounding = s->bounding1 = (246.0f * rand() / RAND_MAX + 10.0f) * 0.5f;
 	s->is_glowing = 0;
 	Vec2f_to_bin(&s->r_5, &s->bin);
 	SpriteListPush(bins + s->bin, this);
@@ -422,14 +423,14 @@ static void sprite_data(struct Sprite *this, void *const void_out) {
 }
 
 /** @implements <Sprite>DiAction */
-static void sprite_arrow(struct Sprite *this, void *const void_out) {
+/*static void sprite_arrow(struct Sprite *this, void *const void_out) {
 	struct OutputData *const out = void_out;
 	struct Vec2i b;
 	bin_to_Vec2i(this->bin, &b);
 	fprintf(out->fp, "set arrow from %f,%f to %d,%d%s # %u\n", this->r.x,
 		this->r.y, b.x, b.y, this->is_glowing ? " lw 3 lc rgb \"red\"" : "",
 		this->bin);
-}
+}*/
 
 static float dt_ms;
 
@@ -476,8 +477,12 @@ static void update_where(struct Sprite *const this) {
 	this->r1.x = this->r.x + dx.x;
 	this->r1.y = this->r.y + dx.y;
 	/* expanded bounding circle; sqrt? overestimate bounded by {Sqrt[2]} */
-	/* this->bounding1 = this->bounding + sqrtf(dx.x * dx.x + dx.y * dx.y); */
+#define PRECISE
+#ifdef PRECISE
+	this->bounding1 = this->bounding + sqrtf(dx.x * dx.x + dx.y * dx.y);
+#else
 	this->bounding1 = this->bounding + dx.x + dx.y;
+#endif
 	/* wandered out of the bin? */
 	Vec2f_to_bin(&this->r_5, &bin);
 	if(bin != this->bin) {
@@ -616,14 +621,14 @@ int main(void) {
 		out.fp = gnu, out.i = 0, out.n = sprite_no;
 		/* draw arrows from each of the sprites to their bins */
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
-			SpriteListXBiForEach(bins + i, &sprite_arrow, &out);
+			/*SpriteListXBiForEach(bins + i, &sprite_arrow, &out);*/
 			SpriteListXBiForEach(bins + i, &sprite_velocity, &out);
 		}
 		/* draw the sprites */
 		fprintf(gnu, "plot \"Bin.data\" using 5:6:7 with circles \\\n"
-			"linecolor rgb(\"grey\") fillstyle transparent solid 0.3 noborder "
-			"title \"Velocity\", \\\n"
-			"\"Bin.data\" using 1:2:(0.5*$3):4 with circles \\\n"
+			"linecolor rgb(\"#00FF00\") fillstyle transparent "
+			"solid 1.0 noborder title \"Velocity\", \\\n"
+			"\"Bin.data\" using 1:2:3:4 with circles \\\n"
 			"linecolor palette fillstyle transparent solid 0.3 noborder \\\n"
 			"title \"Sprites\";\n");
 	} while(0); switch(e) {

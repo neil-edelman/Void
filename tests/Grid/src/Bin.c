@@ -13,13 +13,14 @@
 (6.283185307179586476925286766559005768394338798750211641949889f)
 #endif
 
-/* 16384px de sitter (8192px on each quadrant) */
+/* 16384px de sitter (8192px on each quadrant,) divided between positive and
+ negative for greater floating point accuracy */
 #define BIN_LOG_ENTIRE 14
-#define BIN_SPACE (1 << BIN_LOG_ENTIRE)
-/* divided between positive and negative for greater floating point accuracy */
+#define BIN_ENTIRE (1 << BIN_LOG_ENTIRE)
 #define BIN_HALF_ENTIRE (1 << (BIN_LOG_ENTIRE - 1))
 /* 256px bins in the foreground, (ships, etc.) */
 #define BIN_FG_LOG_SPACE 8
+#define BIN_FG_SPACE (1 << BIN_FG_LOG_SPACE)
 #define BIN_FG_LOG_SIZE (BIN_LOG_ENTIRE - BIN_FG_LOG_SPACE)
 #define BIN_FG_SIZE (1 << BIN_FG_LOG_SIZE)
 #define BIN_BIN_FG_SIZE (BIN_FG_SIZE * BIN_FG_SIZE)
@@ -33,6 +34,8 @@
  big! too slow to get anywhere, so fudge it; basically, this makes space much
  smaller: ratio of fg:bg distance. */
 static const float foreshortening = 0.2f, one_foreshortening = 5.0f;
+
+
 
 
 
@@ -59,31 +62,19 @@ static void DrawGetScreen(struct Rectangle4f *const rect) {
 	rect->y_max = camera.y + camera_extent.y;
 }
 
+static void Vec2f_filler_fg(struct Vec2f *const this) {
+	this->x = 1.0f * rand() / RAND_MAX * BIN_ENTIRE - BIN_HALF_ENTIRE;
+	this->y = 1.0f * rand() / RAND_MAX * BIN_ENTIRE - BIN_HALF_ENTIRE;
+}
+
 static void Ortho3f_filler_fg(struct Ortho3f *const this) {
-	this->x = 1.0f * rand() / RAND_MAX * BIN_SPACE - BIN_HALF_ENTIRE;
-	this->y = 1.0f * rand() / RAND_MAX * BIN_SPACE - BIN_HALF_ENTIRE;
+	Vec2f_filler_fg((struct Vec2f *)this);
 	this->theta = M_2PI_F * rand() / RAND_MAX - M_PI_F;
 }
 static void Ortho3f_filler_v(struct Ortho3f *const this) {
 	this->x = 1.0f * rand() / RAND_MAX * 10.0f - 5.0f;
 	this->y = 1.0f * rand() / RAND_MAX * 10.0f - 5.0f;
 	this->theta = 0.01f * rand() / RAND_MAX - 0.005f;
-}
-static void Ortho3f_to_bin(const struct Ortho3f *const r, unsigned *const bin) {
-	struct Vec2i b;
-	assert(r);
-	assert(bin);
-	b.x = ((int)r->x + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
-	if(b.x < 0) b.x = 0; else if(b.x >= BIN_FG_SIZE) b.x = BIN_FG_SIZE - 1;
-	b.y = ((int)r->y + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
-	if(b.y < 0) b.y = 0; else if(b.y >= BIN_FG_SIZE) b.y = BIN_FG_SIZE - 1;
-	*bin = (b.y << BIN_FG_LOG_SIZE) + b.x;
-}
-static void bin_to_Vec2i(const unsigned bin, struct Vec2i *const r) {
-	assert(bin < BIN_BIN_FG_SIZE);
-	assert(r);
-	r->x = ((bin & (BIN_FG_SIZE - 1)) << BIN_FG_LOG_SPACE) - BIN_HALF_ENTIRE;
-	r->y = ((bin >> BIN_FG_LOG_SIZE) << BIN_FG_LOG_SPACE) - BIN_HALF_ENTIRE;
 }
 /** Maps a recangle from pixel space, {pixel}, to bin2 space, {bin}. */
 static void Rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
@@ -93,13 +84,13 @@ static void Rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
 	assert(pixel->x_min <= pixel->x_max);
 	assert(pixel->y_min <= pixel->y_max);
 	assert(bin);
-	printf("camera(%f, %f) extent(%f %f) %f -- %f, %f -- %f\n", camera.x, camera.y, camera_extent.x, camera_extent.y, pixel->x_min, pixel->x_max, pixel->y_min, pixel->y_max);
-	printf("x_min %f + HALF %u >> LOG %u\n", pixel->x_min, BIN_HALF_ENTIRE, BIN_FG_LOG_SPACE);
+	/*printf("camera(%f, %f) extent(%f %f) %f -- %f, %f -- %f\n", camera.x, camera.y, camera_extent.x, camera_extent.y, pixel->x_min, pixel->x_max, pixel->y_min, pixel->y_max);
+	printf("x_min %f + HALF %u >> LOG %u\n", pixel->x_min, BIN_HALF_ENTIRE, BIN_FG_LOG_SPACE);*/
 	temp = ((int)pixel->x_min + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= BIN_FG_SIZE) temp = BIN_FG_SIZE - 1;
 	bin->x_min = temp;
-	printf("x_min %f -> %d\n", pixel->x_min, temp);
+	/*printf("x_min %f -> %d\n", pixel->x_min, temp);*/
 	temp = ((int)pixel->x_max + 1 + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= BIN_FG_SIZE) temp = BIN_FG_SIZE - 1;
@@ -112,7 +103,7 @@ static void Rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= BIN_FG_SIZE) temp = BIN_FG_SIZE - 1;
 	bin->y_max = temp;
-	printf("y_max %f + HALF %u >> LOG %u\n", pixel->y_max, BIN_HALF_ENTIRE, BIN_FG_LOG_SPACE);
+	/*printf("y_max %f + HALF %u >> LOG %u\n", pixel->y_max, BIN_HALF_ENTIRE, BIN_FG_LOG_SPACE);*/
 }
 
 static void Rectangle4i_assign(struct Rectangle4i *const this,
@@ -134,13 +125,41 @@ static unsigned bin2i_to_bin(const struct Vec2i bin2) {
 	assert(bin2.y < BIN_FG_SIZE);
 	return (bin2.y << BIN_FG_LOG_SIZE) + bin2.x;
 }
+static void bin_to_bin2i(const unsigned bin, struct Vec2i *const bin2) {
+	assert(bin < BIN_BIN_FG_SIZE);
+	assert(bin2);
+	bin2->x = bin & (BIN_FG_SIZE - 1);
+	bin2->y = bin >> BIN_FG_LOG_SIZE;
+}
+static void Vec2f_to_bin(const struct Vec2f *const r, unsigned *const bin) {
+	struct Vec2i b;
+	assert(r);
+	assert(bin);
+	b.x = ((int)r->x + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
+	if(b.x < 0) b.x = 0; else if(b.x >= BIN_FG_SIZE) b.x = BIN_FG_SIZE - 1;
+	b.y = ((int)r->y + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
+	if(b.y < 0) b.y = 0; else if(b.y >= BIN_FG_SIZE) b.y = BIN_FG_SIZE - 1;
+	*bin = (b.y << BIN_FG_LOG_SIZE) + b.x;
+}
+static void bin_to_Vec2i(const unsigned bin, struct Vec2i *const r) {
+	assert(bin < BIN_BIN_FG_SIZE);
+	assert(r);
+	r->x = ((bin & (BIN_FG_SIZE - 1)) << BIN_FG_LOG_SPACE) - BIN_HALF_ENTIRE;
+	r->y = ((bin >> BIN_FG_LOG_SIZE) << BIN_FG_LOG_SPACE) - BIN_HALF_ENTIRE;
+}
 
-static void rect4i_print(const struct Rectangle4i *rect) {
-	printf("%d -- %d, %d -- %d\n", rect->x_min, rect->x_max, rect->y_min, rect->y_max);
+static void rect4i_print(const char *const why, const struct Rectangle4i *rect){
+	printf("%s: %d -- %d, %d -- %d\n", why, rect->x_min, rect->x_max, rect->y_min, rect->y_max);
 }
-static void rect4f_print(const struct Rectangle4f *rect) {
-	printf("%.1f -- %.1f, %.1f -- %.1f\n", rect->x_min, rect->x_max, rect->y_min, rect->y_max);
+static void rect4f_print(const char *const why, const struct Rectangle4f *rect){
+	printf("%s: %.1f -- %.1f, %.1f -- %.1f\n", why, rect->x_min, rect->x_max, rect->y_min, rect->y_max);
 }
+
+
+
+
+
+/* Sprites */
 
 /** {Sprite} virtual table. */
 struct SpriteVt;
@@ -186,7 +205,7 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	Ortho3f_filler_v(&s->v);
 	s->bounding = s->bounding1 = 246.0f * rand() / RAND_MAX + 10.0f;
 	s->is_glowing = 0;
-	Ortho3f_to_bin(&s->r, &s->bin);
+	Vec2f_to_bin(&s->r_5, &s->bin);
 	SpriteListPush(bins + s->bin, this);
 }
 /** Stale pointers from {Set}'s {realloc} are taken care of by this callback.
@@ -199,11 +218,17 @@ static void Sprite_migrate(const struct Migrate *const migrate) {
 	}
 }
 
+
+
+
+
+/* Bins. */
+
 /* Temporary pointers a subset of {bins}. */
 #define SET_NAME Bin
 #define SET_TYPE struct SpriteList *
 #include "../../../src/general/Set.h" /* defines BinSet, BinSetNode */
-static struct BinSet *draw_bins, *update_bins;
+static struct BinSet *draw_bins, *update_bins, *sprite_bins;
 
 /** New bins calculates which bins are at all visible and which we should
  update, (around the visible,) every frame.
@@ -214,19 +239,18 @@ static void new_bins(void) {
 	struct Vec2i bin2i;
 	struct SpriteList **bin;
 	BinSetClear(draw_bins), BinSetClear(update_bins);
-	DrawGetScreen(&rect); rect4f_print(&rect);
-	Rectangle4f_to_bin4(&rect, &bin4); rect4i_print(&bin4);
+	DrawGetScreen(&rect); rect4f_print("new_bins screen", &rect);
+	Rectangle4f_to_bin4(&rect, &bin4); rect4i_print("new_bins bins", &bin4);
 	/* the updating region extends past the drawing region */
 	Rectangle4i_assign(&grow4, &bin4);
 	if(grow4.x_min > 0)               grow4.x_min--;
 	if(grow4.x_max + 1 < BIN_FG_SIZE) grow4.x_max++;
 	if(grow4.y_min > 0)               grow4.y_min--;
 	if(grow4.y_max + 1 < BIN_FG_SIZE) grow4.y_max++;
-	rect4i_print(&grow4);
+	rect4i_print("new_bins grow", &grow4);
 	/* draw in the centre */
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
-			printf("bin2i(%u, %u)\n", bin2i.x, bin2i.y);
 			if(!(bin = BinSetNew(draw_bins))) { perror("draw_bins"); return; }
 			*bin = bins + bin2i_to_bin(bin2i);
 		}
@@ -258,7 +282,34 @@ static void new_bins(void) {
 	}
 }
 
-/** @implements <Sprite>Action */
+static void sprite_new_bins(const struct Sprite *const this) {
+	struct Rectangle4f extent;
+	struct Rectangle4i bin4;
+	struct Vec2i bin2i;
+	struct SpriteList **bin;
+	assert(this && sprite_bins);
+	BinSetClear(sprite_bins);
+	extent.x_min = this->r.x - 0.5f * (BIN_FG_SPACE - this->bounding);
+	extent.x_max = this->r.x + 0.5f * (BIN_FG_SPACE + this->bounding);
+	extent.y_min = this->r.y - 0.5f * (BIN_FG_SPACE - this->bounding);
+	extent.y_max = this->r.y + 0.5f * (BIN_FG_SPACE + this->bounding);
+	Rectangle4f_to_bin4(&extent, &bin4);
+	/* draw in the centre */
+	printf("sprite_new_bins(%f, %f)\n", this->r.x, this->r.y);
+	rect4f_print("sprite px", &extent);
+	rect4i_print("sprite bin", &bin4);
+	/* fixme: only put bins in update of draw! */
+	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
+		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
+			printf("sprite bin2i(%u, %u)\n", bin2i.x, bin2i.y);
+			if(!(bin = BinSetNew(sprite_bins))) { perror("bins"); return; }
+			*bin = bins + bin2i_to_bin(bin2i);
+		}
+	}
+}
+
+/** Temporary action.
+ @implements <Sprite>Action */
 static void draw_sprite(struct Sprite *this) {
 	assert(this);
 	printf("Sprite at %f, %f.\n", this->r.x, this->r.y);
@@ -266,21 +317,32 @@ static void draw_sprite(struct Sprite *this) {
 }
 
 /** @implements <SpriteList *, SpriteAction *>DiAction */
-static void act_bins(struct SpriteList **const pthis, void *const param) {
+static void act_bins(struct SpriteList **const pthis, void *const pact_void) {
 	struct SpriteList *const this = *pthis;
-	const SpriteAction *const pact = param, act = *pact;
+	const SpriteAction *const pact = pact_void, act = *pact;
 	assert(pthis && this && act);
 	SpriteListXForEach(this, act);
 }
 
 /** @implements <SpriteList *, SpriteAction *>DiAction */
-static void act_bins_and_sort(struct SpriteList **const pthis, void *const param) {
+static void act_bins_and_sort(struct SpriteList **const pthis, void *const pact_void) {
 	struct SpriteList *const this = *pthis;
-	const SpriteAction *const pact = param, act = *pact;
+	const SpriteAction *const pact = pact_void, act = *pact;
 	assert(pthis && this && act);
 	SpriteListXForEach(this, act);
 	SpriteListSort(this);
 }
+
+#if 0
+/** I don't even know. */
+static void biact_bins(struct SpriteList **const pthis, void *const pbiact_void,
+	void *const param) {
+	struct SpriteList *const this = *pthis;
+	const SpriteBiAction *const pbiact = pbiact_void, biact = *pbiact;
+	assert(pthis && this && biact);
+	SpriteListXBiForEach(this, biact, param);
+}
+#endif
 
 /** {{act} \in { Draw }}.
  @implements <Bin>Action */
@@ -389,10 +451,11 @@ static void gnu_draw_bins(struct SpriteList **this, void *const void_col) {
 
 static float dt_ms;
 
-/** Calculates temporary values, v_5, v1, and bounding1, in preparation for
- sorting. */
+/** Calculates temporary values, {r_5}, {r1}, and {bounding1}, in preparation
+ for sorting and \see{collision_detection_and_response}. */
 static void update_where(struct Sprite *const this) {
 	struct Vec2f dx;
+	unsigned bin;
 	dx.x = this->v.x * dt_ms, dx.y = this->v.y * dt_ms;
 	/* sort on this */
 	this->r_5.x = this->r.x + 0.5f * dx.x;
@@ -403,105 +466,70 @@ static void update_where(struct Sprite *const this) {
 	/* expanded bounding circle; sqrt? overestimate bounded by {Sqrt[2]} */
 	/* this->bounding1 = this->bounding + sqrtf(dx.x * dx.x + dx.y * dx.y); */
 	this->bounding1 = this->bounding + dx.x + dx.y;
+	/* wandered out of the bin? */
+	Vec2f_to_bin(&this->r_5, &bin);
 }
+
+/*****************************************************************/
 
 #if 0
-/* Compute bounding boxes of where the sprite wants to go this frame,
- containing the projected circle along a vector {x -> x + v*dt}. This is the
- first step in collision detection.
- @implements <Sprite>Action */
-static void collide_extrapolate(struct Sprite *const this) {
-	const float de_sitter = BIN_HALF_ENTIRE;
-	/* where they should be if there's no collision */
-	this->r1.x = this->r.x + this->v.x * dt_ms;
-	this->r1.y = this->r.y + this->v.y * dt_ms;
-	/* clamp */
-	if(this->r1.x > de_sitter)       this->r1.x = de_sitter;
-	else if(this->r1.x < -de_sitter) this->r1.x = -de_sitter;
-	if(this->r1.y > de_sitter)       this->r1.y = de_sitter;
-	else if(this->r1.y < -de_sitter) this->r1.y = -de_sitter;
-	/* extend the bounding box along the circle's trajectory */
-	if(this->r.x <= this->r1.x) {
-		this->box.x_min = this->r.x  - this->bounding;
-		this->box.x_max = this->r1.x + this->bounding;
-	} else {
-		this->box.x_min = this->r1.x - this->bounding;
-		this->box.x_max = this->r.x  + this->bounding;
-	}
-	if(this->r.y <= this->r1.y) {
-		this->box.y_min = this->r.y  - this->bounding;
-		this->box.y_max = this->r1.y + this->bounding;
-	} else {
-		this->box.y_min = this->r1.y - this->bounding;
-		this->box.y_max = this->r.y  + this->bounding;
-	}
-}
-
-/** Used after \see{collide_extrapolate} on all the sprites you want to check.
- Uses Hahn–Banach separation theorem and the ordered list of projections on the
- {x} and {y} axis to build up a list of possible colliders based on their
- bounding box of where it moved this frame. Calls \see{collide_circles} for any
- candidates. */
-static void collide_boxes(struct Sprite *const this) {
-	/* assume it can be in a maximum of four bins at once as it travels? */
-	/*...*/
-	struct Sprite *b, *b_adj_y;
-	float t0;
-	if(!this) return;
-	/* mark x */
-	for(b = this->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
-		if(this < b && this->x_min < b->x_max) b->is_selected = -1;
-	}
-	for(b = this->next_x; b && b->x <= explore_x_max; b = b->next_x) {
-		if(this < b && this->x_max > b->x_min) b->is_selected = -1;
-	}
-	/* consider y and maybe add it to the list of colliders */
-	for(b = this->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
-		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
-		if(b->is_selected
-		   && this->y_min < b->y_max
-		   && (response = collision_matrix[b->sp_type][this->sp_type])
-		   && collide_circles(this->x, this->y, this->x1, this->y1, b->x, b->y, b->x1,
-							  b->y1, this->bounding + b->bounding, &t0))
-			response(this, b, t0);
-		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
-	}
-	for(b = this->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
-		b_adj_y = b->next_y;
-		if(b->is_selected
-		   && this->y_max > b->y_min
-		   && (response = collision_matrix[b->sp_type][this->sp_type])
-		   && collide_circles(this->x, this->y, this->x1, this->y1, b->x, b->y, b->x1,
-							  b->y1, this->bounding + b->bounding, &t0))
-			response(this, b, t0);
-		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
-	}
-	/* uhh, yes? I took this code from SpriteUpdate */
-	if(!s->no_collisions) {
-		/* no collisions; apply position change, calculated above */
-		s->x = s->x1;
-		s->y = s->y1;
-	} else {
-		/* if you skip this step, it's unstable on multiple collisions */
-		const float one_collide = 1.0f / s->no_collisions;
-		const float s_vx1 = s->vx1 * one_collide;
-		const float s_vy1 = s->vy1 * one_collide;
-		/* before and after collision;  */
-		s->x += (s->vx * s->t0_dt_collide + s_vx1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-		s->y += (s->vy * s->t0_dt_collide + s_vy1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-		s->vx = s_vx1;
-		s->vy = s_vy1;	
-		/* unmark for next frame */
-		s->no_collisions = 0;
-		/* apply De Sitter spacetime? already done? */
-		if(s->x      < -de_sitter) s->x =  de_sitter - 20.0f;
-		else if(s->x >  de_sitter) s->x = -de_sitter + 20.0f;
-		if(s->y      < -de_sitter) s->y =  de_sitter - 20.0f;
-		else if(s->y >  de_sitter) s->y = -de_sitter + 20.0f;
-	}
-	/* bin change */
+/** @implements <Sprite, Sprite>BiAction */
+static void collision_detection_and_response(struct Sprite *const this,
+	void *const target_void) {
+	struct Sprite *const target = target_void;
+	printf("hi!! %s\n", this == target ? "same" : "diff");
+	printf("Sprite at %f, %f target %%f, %%f.\n", this->r.x, this->r.y/*, target->r.x, target->r.y*/);
 }
 #endif
+
+/** @implements <Sprite, Sprite>BiAction */
+static void sprite_sprite_timeless_collide(struct Sprite *const this,
+	void *const void_that) {
+	struct Sprite *const that = void_that;
+	struct Vec2f diff;
+	float bounding1;
+	/* Break symmetry -- if two objects are near, we only need to report it
+	 once. */
+	if(this >= that) return;
+	printf("this %f, %f that %f, %f.\n", this->r.x, this->r.y, that->r.x, that->r.y);
+	/* Calculate the distance between; the sum of {bounding1}, viz, {bounding}
+	 projected on time for easy discard. */
+	diff.x = this->r_5.x - that->r_5.x, diff.y = this->r_5.y - that->r_5.y;
+	bounding1 = this->bounding1 + that->bounding1;
+	/* Square approximation for speed, then circle. */
+	if(diff.x + diff.y >= bounding1
+		|| diff.x * diff.x + diff.y * diff.y >= bounding1 * bounding1) return;
+	/* We know that they are kind of close. */
+	printf("(this and that are kind of close.)\n");
+}
+/** @implements <Bin, Sprite *>BiAction */
+static void bin_sprite_collide(struct SpriteList **const pthis,
+	void *const target_param) {
+	struct SpriteList *const this = *pthis;
+	struct Sprite *const target = target_param;
+	struct Vec2i b2;
+	const unsigned b = (unsigned)(this - bins);
+	bin_to_bin2i(b, &b2);
+	printf("bin_collide_sprite: bin %u (%u, %u) Sprite: (%f, %f).\n", b, b2.x,
+		b2.y, target->r.x, target->r.y);
+	SpriteListYBiForEach(this, &sprite_sprite_timeless_collide, target);
+}
+/** The sprites have been ordered by their {r_5}. Now we can do collisions.
+ @implements <Sprite>Action */
+static void collision_detection_and_responses(struct Sprite *const this) {
+	/*SpriteBiAction biact = &collision_detection_and_response;*/
+	printf("--Sprite bins:\n");
+	sprite_new_bins(this);
+	printf("--Checking:\n");
+	BinSetBiForEach(sprite_bins, &bin_sprite_collide, this);
+	/* fixme: have a {BinSetBiShortCircuit(bin_sprite_collide_dist);} that stops
+	 after the bounding box on edges (maybe! I think, yes, that would make it
+	 faster. Hmm, all of the thing is an edge.) */
+}
+
+
+
+
 
 int main(void) {
 	FILE *data = 0, *gnu = 0;
@@ -517,9 +545,14 @@ int main(void) {
 	char buff[128];
 	unsigned i;
 	const unsigned seed = (unsigned)clock(), sprite_no = 1000;
-	enum { E_NO, E_DATA, E_GNU, E_DBIN, E_UBIN, E_SHIP } e = E_NO;
+	enum { E_NO, E_DATA, E_GNU, E_DBIN, E_UBIN, E_SBIN, E_SHIP } e = E_NO;
 
 	srand(seed), rand(), printf("Seed %u.\n", seed);
+	/* Random camera position. */ {
+		struct Vec2f pos;
+		Vec2f_filler_fg(&pos);
+		DrawSetCamera(pos);
+	}
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 	do {
 		struct OutputData out;
@@ -530,6 +563,7 @@ int main(void) {
 		if(!(gnu = fopen(gnu_fn, "w")))   { e = E_GNU;  break; }
 		if(!(draw_bins = BinSet()))       { e = E_DBIN; break; }
 		if(!(update_bins = BinSet()))     { e = E_UBIN; break; }
+		if(!(sprite_bins = BinSet()))     { e = E_SBIN; break; }
 		if(!(ships = ShipSet()))          { e = E_SHIP; break; }
 		ShipSetSetMigrate(ships, &Sprite_migrate);
 		for(i = 0; i < sprite_no; i++) {
@@ -540,10 +574,15 @@ int main(void) {
 
 		new_bins();
 		/* switch these sprites glowing */
+		printf("Update sprites:\n");
 		for_each_update(&draw_sprite);
+		printf("Updating:\n");
 		for_each_update_and_sort(&update_where);
-		/*fixme! for_each_update(&collision_detection_and_response);*/
+		/* fixme: place things in to drawing area */
+		printf("Colliding:\n");
+		for_each_update(&collision_detection_and_responses);
 		/* output data file */
+		printf("Output:\n");
 		out.fp = data, out.i = 0, out.n = sprite_no;
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
 			SpriteListSort(bins + i);
@@ -580,11 +619,17 @@ int main(void) {
 		case E_DATA: perror(data_fn); break;
 		case E_GNU:  perror(gnu_fn);  break;
 		case E_DBIN:
-			fprintf(stderr, "Bin: %s.\n", BinSetGetError(draw_bins)); break;
+			fprintf(stderr, "Draw bin: %s.\n", BinSetGetError(draw_bins));
+			break;
 		case E_UBIN:
-			fprintf(stderr, "Bin: %s.\n", BinSetGetError(update_bins)); break;
+			fprintf(stderr, "Update bin: %s.\n", BinSetGetError(update_bins));
+			break;
+		case E_SBIN:
+			fprintf(stderr, "Sprite bin: %s.\n", BinSetGetError(sprite_bins));
+			break;
 		case E_SHIP:
-			fprintf(stderr, "Ship: %s.\n", ShipSetGetError(ships)); break;
+			fprintf(stderr, "Ship: %s.\n", ShipSetGetError(ships));
+			break;
 	} {
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 		ShipSet_(&ships);

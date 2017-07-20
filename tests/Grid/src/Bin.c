@@ -1,3 +1,16 @@
+/** 2017 Neil Edelman, distributed under the terms of the GNU General
+ Public License 3, see copying.txt, or
+ \url{ https://opensource.org/licenses/GPL-3.0 }.
+
+ Testing the bins. A {Bin} is like a hash bucket, but instead of hashing, it's
+ determined by where in space you are. This allows you to do stuff like drawing
+ and AI for onscreen bins and treat the faraway bins with statistical mechanics.
+
+ @file		Bin
+ @author	Neil
+ @std		C89/90
+ @fixme		Change diameter to radius. */
+
 #include <stdlib.h>	/* rand */
 #include <stdio.h>  /* fprintf */
 #include <time.h>	/* clock */
@@ -203,7 +216,7 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	s->r_5.x = s->r1.x = s->r.x;
 	s->r_5.y = s->r1.y = s->r.y;
 	Ortho3f_filler_v(&s->v);
-	s->bounding = s->bounding1 = 246.0f * rand() / RAND_MAX + 10.0f;
+	s->bounding = s->bounding1 = (246.0f * rand() / RAND_MAX + 10.0f) /* 0.5f*/;
 	s->is_glowing = 0;
 	Vec2f_to_bin(&s->r_5, &s->bin);
 	SpriteListPush(bins + s->bin, this);
@@ -301,7 +314,7 @@ static void sprite_new_bins(const struct Sprite *const this) {
 	/* fixme: only put bins in update of draw! */
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
-			printf("sprite bin2i(%u, %u)\n", bin2i.x, bin2i.y);
+			/*printf("sprite bin2i(%u, %u)\n", bin2i.x, bin2i.y);*/
 			if(!(bin = BinSetNew(sprite_bins))) { perror("bins"); return; }
 			*bin = bins + bin2i_to_bin(bin2i);
 		}
@@ -332,17 +345,6 @@ static void act_bins_and_sort(struct SpriteList **const pthis, void *const pact_
 	SpriteListXForEach(this, act);
 	SpriteListSort(this);
 }
-
-#if 0
-/** I don't even know. */
-static void biact_bins(struct SpriteList **const pthis, void *const pbiact_void,
-	void *const param) {
-	struct SpriteList *const this = *pthis;
-	const SpriteBiAction *const pbiact = pbiact_void, biact = *pbiact;
-	assert(pthis && this && biact);
-	SpriteListXBiForEach(this, biact, param);
-}
-#endif
 
 /** {{act} \in { Draw }}.
  @implements <Bin>Action */
@@ -404,7 +406,8 @@ static void Ship_filler(struct Ship *const this) {
 	Orcish(this->name, sizeof this->name);
 }
 
-/* This is for communication with {SpriteListDiForEach}. */
+/* This is for communication with {sprite_data}, {sprite_arrow}, and
+ {sprite_velocity}. */
 struct OutputData {
 	FILE *fp;
 	unsigned i, n;
@@ -413,8 +416,9 @@ struct OutputData {
 /** @implements <Sprite>DiAction */
 static void sprite_data(struct Sprite *this, void *const void_out) {
 	struct OutputData *const out = void_out;
-	fprintf(out->fp, "%f\t%f\t%f\t%f\n", this->r.x, this->r.y,
-		this->bounding, (double)out->i++ / out->n);
+	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n", this->r.x, this->r.y,
+		this->bounding, (double)out->i++ / out->n, this->r_5.x, this->r_5.y,
+		this->bounding1);
 }
 
 /** @implements <Sprite>DiAction */
@@ -427,13 +431,23 @@ static void sprite_arrow(struct Sprite *this, void *const void_out) {
 		this->bin);
 }
 
-/** For communication. */
+static float dt_ms;
+
+/** @implements <Sprite>DiAction */
+static void sprite_velocity(struct Sprite *this, void *const void_out) {
+	struct OutputData *const out = void_out;
+	fprintf(out->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"blue\" front;\n",
+		this->r.x, this->r.y,
+		this->r.x + this->v.x * dt_ms, this->r.y + this->v.y * dt_ms);
+}
+
+/** For communication with {gnu_draw_bins}. */
 struct ColourData {
 	FILE *fp;
 	const char *colour;
 };
 
-/** Draws squares.
+/** Draws squares for highlighting bins.
  @implements <Bin>DiAction */
 static void gnu_draw_bins(struct SpriteList **this, void *const void_col) {
 	static object = 1;
@@ -448,8 +462,6 @@ static void gnu_draw_bins(struct SpriteList **this, void *const void_col) {
 		"fs solid noborder;\n", object++, bin2i.x, bin2i.y,
 		bin2i.x + 256, bin2i.y + 256, col->colour);
 }
-
-static float dt_ms;
 
 /** Calculates temporary values, {r_5}, {r1}, and {bounding1}, in preparation
  for sorting and \see{collision_detection_and_response}. */
@@ -468,26 +480,20 @@ static void update_where(struct Sprite *const this) {
 	this->bounding1 = this->bounding + dx.x + dx.y;
 	/* wandered out of the bin? */
 	Vec2f_to_bin(&this->r_5, &bin);
+	if(bin != this->bin) {
+		printf("fixme: update bin.\n");
+	}
 }
 
-/*****************************************************************/
-
-#if 0
-/** @implements <Sprite, Sprite>BiAction */
-static void collision_detection_and_response(struct Sprite *const this,
-	void *const target_void) {
-	struct Sprite *const target = target_void;
-	printf("hi!! %s\n", this == target ? "same" : "diff");
-	printf("Sprite at %f, %f target %%f, %%f.\n", this->r.x, this->r.y/*, target->r.x, target->r.y*/);
-}
-#endif
-
-/** @implements <Sprite, Sprite>BiAction */
+/** This is the most course-grained collision detection in pure two-dimensional
+ space using {r_5} and {bounding1}.
+ @implements <Sprite, Sprite>BiAction */
 static void sprite_sprite_timeless_collide(struct Sprite *const this,
 	void *const void_that) {
 	struct Sprite *const that = void_that;
 	struct Vec2f diff;
 	float bounding1;
+	assert(this && that);
 	/* Break symmetry -- if two objects are near, we only need to report it
 	 once. */
 	if(this >= that) return;
@@ -548,12 +554,13 @@ int main(void) {
 	enum { E_NO, E_DATA, E_GNU, E_DBIN, E_UBIN, E_SBIN, E_SHIP } e = E_NO;
 
 	srand(seed), rand(), printf("Seed %u.\n", seed);
+	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 	/* Random camera position. */ {
 		struct Vec2f pos;
 		Vec2f_filler_fg(&pos);
 		DrawSetCamera(pos);
 	}
-	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
+	/* Try. */
 	do {
 		struct OutputData out;
 		struct ColourData col;
@@ -572,6 +579,7 @@ int main(void) {
 		}
 		if(e) break;
 
+		dt_ms = 25.0f;
 		new_bins();
 		/* switch these sprites glowing */
 		printf("Update sprites:\n");
@@ -586,7 +594,7 @@ int main(void) {
 		out.fp = data, out.i = 0, out.n = sprite_no;
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
 			SpriteListSort(bins + i);
-			SpriteListXBiForEach(bins + i, &sprite_data, &out);
+			SpriteListYBiForEach(bins + i, &sprite_data, &out);
 		}
 		/* output gnuplot script */
 		fprintf(gnu, "set term postscript eps enhanced size 20cm, 20cm\n"
@@ -609,9 +617,13 @@ int main(void) {
 		/* draw arrows from each of the sprites to their bins */
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
 			SpriteListXBiForEach(bins + i, &sprite_arrow, &out);
+			SpriteListXBiForEach(bins + i, &sprite_velocity, &out);
 		}
 		/* draw the sprites */
-		fprintf(gnu, "plot \"Bin.data\" using 1:2:(0.5*$3):4 with circles \\\n"
+		fprintf(gnu, "plot \"Bin.data\" using 5:6:7 with circles \\\n"
+			"linecolor rgb(\"grey\") fillstyle transparent solid 0.3 noborder "
+			"title \"Velocity\", \\\n"
+			"\"Bin.data\" using 1:2:(0.5*$3):4 with circles \\\n"
 			"linecolor palette fillstyle transparent solid 0.3 noborder \\\n"
 			"title \"Sprites\";\n");
 	} while(0); switch(e) {

@@ -15,6 +15,7 @@
 #include <stdio.h>  /* fprintf */
 #include <time.h>	/* clock */
 #include <assert.h>	/* assert */
+#include <math.h>	/* sqrtf (important, or else it will be wrong) */
 #include "Orcish.h"
 
 /* M_PI is a widely accepted gnu standard, not C<=99 -- who knew? */
@@ -25,6 +26,8 @@
 #define M_2PI_F \
 (6.283185307179586476925286766559005768394338798750211641949889f)
 #endif
+
+const unsigned sprite_no = 10000;
 
 /* 16384px de sitter (8192px on each quadrant,) divided between positive and
  negative for greater floating point accuracy */
@@ -86,8 +89,8 @@ static void Ortho3f_filler_fg(struct Ortho3f *const this) {
 	this->theta = M_2PI_F * rand() / RAND_MAX - M_PI_F;
 }
 static void Ortho3f_filler_v(struct Ortho3f *const this) {
-	this->x = 30.0f * rand() / RAND_MAX - 15.0f;
-	this->y = 30.0f * rand() / RAND_MAX - 15.0f;
+	this->x = 10.0f * rand() / RAND_MAX - 5.0f;
+	this->y = 10.0f * rand() / RAND_MAX - 5.0f;
 	this->theta = 0.01f * rand() / RAND_MAX - 0.005f;
 }
 /** Maps a recangle from pixel space, {pixel}, to bin2 space, {bin}. */
@@ -184,7 +187,7 @@ struct Sprite {
 	struct Ortho3f r, v;
 	struct Vec2f r_5, r1;
 	float bounding, bounding1;
-	int is_glowing;
+	int is_glowing, is_collision;
 };
 /** @implements <Bin>Comparator */
 static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
@@ -218,7 +221,7 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	s->r_5.y = s->r1.y = s->r.y;
 	Ortho3f_filler_v(&s->v);
 	s->bounding = s->bounding1 = (246.0f * rand() / RAND_MAX + 10.0f) * 0.5f;
-	s->is_glowing = 0;
+	s->is_glowing = s->is_collision = 0;
 	Vec2f_to_bin(&s->r_5, &s->bin);
 	SpriteListPush(bins + s->bin, this);
 }
@@ -437,9 +440,10 @@ static float dt_ms;
 /** @implements <Sprite>DiAction */
 static void sprite_velocity(struct Sprite *this, void *const void_out) {
 	struct OutputData *const out = void_out;
-	fprintf(out->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"blue\" front;\n",
-		this->r.x, this->r.y,
-		this->r.x + this->v.x * dt_ms, this->r.y + this->v.y * dt_ms);
+	fprintf(out->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"%s\" "
+		"front;\n", this->r.x, this->r.y,
+		this->r.x + this->v.x * dt_ms, this->r.y + this->v.y * dt_ms,
+		this->is_collision ? "red" : "blue");
 }
 
 /** For communication with {gnu_draw_bins}. */
@@ -479,14 +483,17 @@ static void update_where(struct Sprite *const this) {
 	/* expanded bounding circle; sqrt? overestimate bounded by {Sqrt[2]} */
 #define PRECISE
 #ifdef PRECISE
-	this->bounding1 = this->bounding + sqrtf(dx.x * dx.x + dx.y * dx.y);
+	this->bounding1 = this->bounding + 0.5f * sqrtf(dx.x * dx.x + dx.y * dx.y);
 #else
-	this->bounding1 = this->bounding + dx.x + dx.y;
+	this->bounding1 = this->bounding + 0.5f * (fabsf(dx.x) + fabsf(dx.y));
 #endif
 	/* wandered out of the bin? */
 	Vec2f_to_bin(&this->r_5, &bin);
 	if(bin != this->bin) {
-		printf("fixme: update bin.\n");
+		printf("Update bin of Sprite at (%f, %f).\n", this->r.x, this->r.y);
+		SpriteListRemove(bins + this->bin, this);
+		SpriteListPush(bins + bin, (struct SpriteListNode *)this);
+		this->bin = bin;
 	}
 }
 
@@ -512,6 +519,7 @@ static void sprite_sprite_timeless_collide(struct Sprite *const this,
 		|| diff.x * diff.x + diff.y * diff.y >= bounding1 * bounding1) return;
 	/* We know that they are kind of close. */
 	printf("(this and that are kind of close.)\n");
+	this->is_collision = that->is_collision = 1;
 }
 /** @implements <Bin, Sprite *>BiAction */
 static void bin_sprite_collide(struct SpriteList **const pthis,
@@ -555,7 +563,7 @@ int main(void) {
 		;
 	char buff[128];
 	unsigned i;
-	const unsigned seed = (unsigned)clock(), sprite_no = 1000;
+	const unsigned seed = (unsigned)clock();
 	enum { E_NO, E_DATA, E_GNU, E_DBIN, E_UBIN, E_SBIN, E_SHIP } e = E_NO;
 
 	srand(seed), rand(), printf("Seed %u.\n", seed);

@@ -27,7 +27,7 @@
 (6.283185307179586476925286766559005768394338798750211641949889f)
 #endif
 
-const unsigned sprite_no = 10000;
+const unsigned sprite_no = 1000;
 
 /* 16384px de sitter (8192px on each quadrant,) divided between positive and
  negative for greater floating point accuracy */
@@ -483,7 +483,8 @@ static void update_where(struct Sprite *const this) {
 	/* expanded bounding circle; sqrt? overestimate bounded by {Sqrt[2]} */
 #define PRECISE
 #ifdef PRECISE
-	this->bounding1 = this->bounding + 0.5f * sqrtf(dx.x * dx.x + dx.y * dx.y);
+	this->bounding1 = this->bounding + 0.5f * sqrtf(dx.x * dx.x + dx.y * dx.y)
+		/*+ BIN_FG_SPACE*/;
 #else
 	this->bounding1 = this->bounding + 0.5f * (fabsf(dx.x) + fabsf(dx.y));
 #endif
@@ -514,9 +515,7 @@ static void sprite_sprite_timeless_collide(struct Sprite *const this,
 	 projected on time for easy discard. */
 	diff.x = this->r_5.x - that->r_5.x, diff.y = this->r_5.y - that->r_5.y;
 	bounding1 = this->bounding1 + that->bounding1;
-	/* Square approximation for speed, then circle. */
-	if(diff.x + diff.y >= bounding1
-		|| diff.x * diff.x + diff.y * diff.y >= bounding1 * bounding1) return;
+	if(diff.x * diff.x + diff.y * diff.y >= bounding1 * bounding1) return;
 	/* We know that they are kind of close. */
 	printf("(this and that are kind of close.)\n");
 	this->is_collision = that->is_collision = 1;

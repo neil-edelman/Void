@@ -301,6 +301,8 @@ static void new_bins(void) {
 	}
 }
 
+static FILE *gnu_glob; /* hack for sprite_new_bins */
+
 static void sprite_new_bins(const struct Sprite *const this) {
 	struct Rectangle4f extent;
 	struct Rectangle4i bin4;
@@ -320,9 +322,14 @@ static void sprite_new_bins(const struct Sprite *const this) {
 	/* fixme: only put bins in update of draw! */
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
+			struct Vec2i bin_pos;
 			/*printf("sprite bin2i(%u, %u)\n", bin2i.x, bin2i.y);*/
 			if(!(bin = BinSetNew(sprite_bins))) { perror("bins"); return; }
 			*bin = bins + bin2i_to_bin(bin2i);
+			bin_to_Vec2i(bin2i_to_bin(bin2i), &bin_pos);
+			fprintf(gnu_glob, "set arrow from %f,%f to %d,%d lw 1 "
+				"lc rgb \"#CCEEEE\" front;\n",
+				this->r_5.x, this->r_5.y, bin_pos.x, bin_pos.y);
 		}
 	}
 }
@@ -356,13 +363,13 @@ static void act_bins(struct SpriteList **const pthis, void *const pact_void) {
 }
 
 /** @implements <SpriteList *, SpriteAction *>DiAction */
-static void act_bins_and_sort(struct SpriteList **const pthis, void *const pact_void) {
+/*static void act_bins_and_sort(struct SpriteList **const pthis, void *const pact_void) {
 	struct SpriteList *const this = *pthis;
 	const SpriteAction *const pact = pact_void, act = *pact;
 	assert(pthis && this && act);
 	SpriteListYForEach(this, act);
 	SpriteListSort(this);
-}
+}*/
 
 /** {{act} \in { Draw }}.
  @implements <Bin>Action */
@@ -375,10 +382,39 @@ static void for_each_update(SpriteAction act) {
 	for_each_draw(act);
 }
 /** {{act} \in { Update, Draw }}. */
-static void for_each_update_and_sort(SpriteAction act) {
+/*static void for_each_update_and_sort(SpriteAction act) {
 	BinSetBiForEach(update_bins, &act_bins_and_sort, &act);
 	BinSetBiForEach(draw_bins,   &act_bins_and_sort, &act);
+}*/
+
+
+
+
+
+/* Sprite transfers for delayed moving sprites while SpriteListForEach. */
+
+struct Transfer {
+	struct Sprite *sprite;
+	unsigned to_bin;
+};
+
+#define SET_NAME Transfer
+#define SET_TYPE struct Transfer
+#include "../../../src/general/Set.h" /* defines BinSet, BinSetNode */
+static struct TransferSet *transfers;
+
+static void transfer_sprite(struct Transfer *const this) {
+	assert(this && this->sprite && this->to_bin < BIN_BIN_FG_SIZE);
+	printf("Update bin of Sprite at (%f, %f) from Bin%u to Bin%u.\n",
+		this->sprite->r.x, this->sprite->r.y, this->sprite->bin, this->to_bin);
+	SpriteListRemove(bins + this->sprite->bin, this->sprite);
+	SpriteListPush(bins + this->to_bin, (struct SpriteListNode *)this->sprite);
+	this->sprite->bin = this->to_bin;
 }
+
+
+
+
 
 /* Forward references for {SpriteVt}. */
 struct Ship;
@@ -495,20 +531,15 @@ static void update_where(struct Sprite *const this) {
 	this->r1.x = this->r.x + dx.x;
 	this->r1.y = this->r.y + dx.y;
 	/* expanded bounding circle; sqrt? overestimate bounded by {Sqrt[2]} */
-#define PRECISE
-#ifdef PRECISE
-	this->bounding1 = this->bounding + 0.5f * sqrtf(dx.x * dx.x + dx.y * dx.y)
-		/*+ BIN_FG_SPACE*/;
-#else
-	this->bounding1 = this->bounding + 0.5f * (fabsf(dx.x) + fabsf(dx.y));
-#endif
+	this->bounding1 = this->bounding + 0.5f * sqrtf(dx.x * dx.x + dx.y * dx.y);
 	/* wandered out of the bin? */
 	Vec2f_to_bin(&this->r_5, &bin);
 	if(bin != this->bin) {
-		printf("Update bin of Sprite at (%f, %f).\n", this->r.x, this->r.y);
-		SpriteListRemove(bins + this->bin, this);
-		SpriteListPush(bins + bin, (struct SpriteListNode *)this);
-		this->bin = bin;
+		struct Transfer *t;
+		if(!(t = TransferSetNew(transfers))) { fprintf(stderr,
+			"Transfer error: %s.\n", TransferSetGetError(transfers)); return; }
+		t->sprite = this;
+		t->to_bin = bin;
 	}
 }
 
@@ -575,8 +606,9 @@ int main(void) {
 		;
 	char buff[128];
 	unsigned i;
-	const unsigned seed = 12295/*(unsigned)clock()*/;
-	enum { E_NO, E_DATA, E_GNU, E_DBIN, E_UBIN, E_SBIN, E_SHIP } e = E_NO;
+	const unsigned seed = /*12005*//*12295*/(unsigned)clock();
+	enum { E_NO, E_DATA, E_GNU, E_DBIN, E_UBIN, E_SBIN, E_TRAN, E_SHIP }
+		e = E_NO;
 
 	srand(seed), rand(), printf("Seed %u.\n", seed);
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
@@ -593,9 +625,11 @@ int main(void) {
 
 		if(!(data = fopen(data_fn, "w"))) { e = E_DATA; break; }
 		if(!(gnu = fopen(gnu_fn, "w")))   { e = E_GNU;  break; }
+		gnu_glob = gnu;
 		if(!(draw_bins = BinSet()))       { e = E_DBIN; break; }
 		if(!(update_bins = BinSet()))     { e = E_UBIN; break; }
 		if(!(sprite_bins = BinSet()))     { e = E_SBIN; break; }
+		if(!(transfers = TransferSet()))  { e = E_TRAN; break; }
 		if(!(ships = ShipSet()))          { e = E_SHIP; break; }
 		ShipSetSetMigrate(ships, &Sprite_migrate);
 		for(i = 0; i < sprite_no; i++) {
@@ -604,13 +638,18 @@ int main(void) {
 		}
 		if(e) break;
 
+		/* max 64? 256/64=4 max safe speed? max 32? 8 max safe speed? */
 		dt_ms = 25.0f;
 		new_bins();
 		/* switch these sprites glowing */
 		for_each_update(&mark_sprite);
 		for_each_update(&show_sprite);
 		printf("Updating:\n");
-		for_each_update_and_sort(&update_where);
+		/*for_each_update_and_sort(&update_where);*/
+		for_each_update(&update_where);
+		/* transfer bins for those that have wandered out of their bin */
+		TransferSetForEach(transfers, &transfer_sprite);
+		TransferSetClear(transfers);
 		/* fixme: place things in to drawing area */
 		printf("Colliding:\n");
 		for_each_update(&collision_detection_and_responses);
@@ -667,12 +706,16 @@ int main(void) {
 		case E_SBIN:
 			fprintf(stderr, "Sprite bin: %s.\n", BinSetGetError(sprite_bins));
 			break;
+		case E_TRAN:
+			fprintf(stderr,"Transfer set: %s.\n",TransferSetGetError(transfers))
+			; break;
 		case E_SHIP:
 			fprintf(stderr, "Ship: %s.\n", ShipSetGetError(ships));
 			break;
 	} {
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 		ShipSet_(&ships);
+		TransferSet_(&transfers);
 		BinSet_(&update_bins);
 		BinSet_(&draw_bins);
 		if(fclose(data) == EOF) perror(data_fn);

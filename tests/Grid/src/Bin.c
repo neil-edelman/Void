@@ -188,6 +188,7 @@ struct Sprite {
 	struct Vec2f r_5, r1;
 	float bounding, bounding1;
 	int is_glowing, is_collision;
+	char label;
 };
 /** @implements <Bin>Comparator */
 static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
@@ -222,6 +223,7 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	Ortho3f_filler_v(&s->v);
 	s->bounding = s->bounding1 = (246.0f * rand() / RAND_MAX + 10.0f) * 0.5f;
 	s->is_glowing = s->is_collision = 0;
+	s->label = '?';
 	Vec2f_to_bin(&s->r_5, &s->bin);
 	SpriteListPush(bins + s->bin, this);
 }
@@ -327,10 +329,22 @@ static void sprite_new_bins(const struct Sprite *const this) {
 
 /** Temporary action.
  @implements <Sprite>Action */
-static void draw_sprite(struct Sprite *this) {
+static void show_sprite(struct Sprite *this) {
 	assert(this);
-	printf("Sprite at %f, %f.\n", this->r.x, this->r.y);
+	printf("Sprite (%.1f, %.1f) : %.1f -(%.1f, %.1f)-> (%.1f, %.1f) : %.1f.\n",
+		this->r.x, this->r.y, this->bounding,
+		this->v.x, this->v.y,
+		this->r_5.x, this->r_5.y, this->bounding1);
+}
+
+/** Temporary action.
+ @implements <Sprite>Action */
+static void mark_sprite(struct Sprite *this) {
+	static label = 'a';
+	assert(this);
 	this->is_glowing = 1;
+	this->label = label;
+	if(label++ == 'z') label = 'a';
 }
 
 /** @implements <SpriteList *, SpriteAction *>DiAction */
@@ -338,7 +352,7 @@ static void act_bins(struct SpriteList **const pthis, void *const pact_void) {
 	struct SpriteList *const this = *pthis;
 	const SpriteAction *const pact = pact_void, act = *pact;
 	assert(pthis && this && act);
-	SpriteListXForEach(this, act);
+	SpriteListYForEach(this, act);
 }
 
 /** @implements <SpriteList *, SpriteAction *>DiAction */
@@ -346,7 +360,7 @@ static void act_bins_and_sort(struct SpriteList **const pthis, void *const pact_
 	struct SpriteList *const this = *pthis;
 	const SpriteAction *const pact = pact_void, act = *pact;
 	assert(pthis && this && act);
-	SpriteListXForEach(this, act);
+	SpriteListYForEach(this, act);
 	SpriteListSort(this);
 }
 
@@ -517,7 +531,6 @@ static void sprite_sprite_timeless_collide(struct Sprite *const this,
 	bounding1 = this->bounding1 + that->bounding1;
 	if(diff.x * diff.x + diff.y * diff.y >= bounding1 * bounding1) return;
 	/* We know that they are kind of close. */
-	printf("(this and that are kind of close.)\n");
 	this->is_collision = that->is_collision = 1;
 }
 /** @implements <Bin, Sprite *>BiAction */
@@ -562,7 +575,7 @@ int main(void) {
 		;
 	char buff[128];
 	unsigned i;
-	const unsigned seed = (unsigned)clock();
+	const unsigned seed = 12295/*(unsigned)clock()*/;
 	enum { E_NO, E_DATA, E_GNU, E_DBIN, E_UBIN, E_SBIN, E_SHIP } e = E_NO;
 
 	srand(seed), rand(), printf("Seed %u.\n", seed);
@@ -594,13 +607,16 @@ int main(void) {
 		dt_ms = 25.0f;
 		new_bins();
 		/* switch these sprites glowing */
-		printf("Update sprites:\n");
-		for_each_update(&draw_sprite);
+		for_each_update(&mark_sprite);
+		for_each_update(&show_sprite);
 		printf("Updating:\n");
 		for_each_update_and_sort(&update_where);
 		/* fixme: place things in to drawing area */
 		printf("Colliding:\n");
 		for_each_update(&collision_detection_and_responses);
+		/* really? */
+		printf("Updated?\n");
+		for_each_update(&show_sprite);
 		/* output data file */
 		printf("Output:\n");
 		out.fp = data, out.i = 0, out.n = sprite_no;
@@ -629,7 +645,7 @@ int main(void) {
 		/* draw arrows from each of the sprites to their bins */
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
 			/*SpriteListXBiForEach(bins + i, &sprite_arrow, &out);*/
-			SpriteListXBiForEach(bins + i, &sprite_velocity, &out);
+			SpriteListYBiForEach(bins + i, &sprite_velocity, &out);
 		}
 		/* draw the sprites */
 		fprintf(gnu, "plot \"Bin.data\" using 5:6:7 with circles \\\n"

@@ -5,6 +5,7 @@
  Testing the bins. A {Bin} is like a hash bucket, but instead of hashing, it's
  determined by where in space you are. This allows you to do stuff like drawing
  and AI for onscreen bins and treat the faraway bins with statistical mechanics.
+ Which allows you to have a lot of sprites -> ships, weapons -> more epic.
 
  @file		Bin
  @author	Neil
@@ -50,6 +51,9 @@ const unsigned sprite_no = 2000;
  big! too slow to get anywhere, so fudge it; basically, this makes space much
  smaller: ratio of fg:bg distance. */
 static const float foreshortening = 0.2f, one_foreshortening = 5.0f;
+/* 1 guarentees that an object is detected within BIN_FG_SPACE; less will make
+ it n^2 faster, but could miss something. */
+static const float shortcut_collision = 0.5f;
 
 
 
@@ -310,18 +314,17 @@ static void sprite_new_bins(const struct Sprite *const this) {
 	struct Rectangle4i bin4;
 	struct Vec2i bin2i;
 	struct SpriteList **bin;
+	float extent_grow = this->bounding1 + shortcut_collision * BIN_FG_SPACE;
 	assert(this && sprite_bins);
 	BinSetClear(sprite_bins);
 	/*extent.x_min = this->r_5.x - 0.5f * (BIN_FG_SPACE - this->bounding);
 	extent.x_max = this->r_5.x + 0.5f * (BIN_FG_SPACE + this->bounding);
 	extent.y_min = this->r_5.y - 0.5f * (BIN_FG_SPACE - this->bounding);
 	extent.y_max = this->r_5.y + 0.5f * (BIN_FG_SPACE + this->bounding);*/
-	/* will check the _centre_ of everything within these bins, so we need more
-	 space (BIN_FG_SPACE, can get away with less) */
-	extent.x_min = this->r_5.x - this->bounding1 - 1.0f * BIN_FG_SPACE;
-	extent.x_max = this->r_5.x + this->bounding1 + 1.0f * BIN_FG_SPACE;
-	extent.y_min = this->r_5.y - this->bounding1 - 1.0f * BIN_FG_SPACE;
-	extent.y_max = this->r_5.y + this->bounding1 + 1.0f * BIN_FG_SPACE;
+	extent.x_min = this->r_5.x - extent_grow;
+	extent.x_max = this->r_5.x + extent_grow;
+	extent.y_min = this->r_5.y - extent_grow;
+	extent.y_max = this->r_5.y + extent_grow;
 	Rectangle4f_to_bin4(&extent, &bin4);
 	/* draw in the centre */
 	printf("sprite_new_bins(%f, %f)\n", this->r.x, this->r.y);

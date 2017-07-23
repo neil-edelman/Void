@@ -218,9 +218,9 @@ struct GateSet *gates;
 /** Changes the window parameters so all of them don't point to {this} and
  deletes {this} from the sprite list.
  @implements <Sprite>Action */
-static void sprite_remove(struct SpriteListNode *const this) {
+static void sprite_remove(struct Sprite *const this) {
 	/* fixme: window parameters */
-	SpriteListRemove(sprites + this->data.bin, this);
+	SpriteListRemove(sprites + this->bin, this);
 }
 
 /** @implements <Debris>Action */
@@ -232,7 +232,7 @@ static void debris_out(struct Debris *const this) {
 /** @implements <Debris>Action */
 static void debris_delete(struct Debris *const this) {
 	assert(this);
-	sprite_remove(&this->sprite);
+	sprite_remove(&this->sprite.data);
 	DebrisSetRemove(debris, this);
 	/* fixme: explode */
 }
@@ -285,7 +285,7 @@ static void ship_out(struct Ship *const this) {
 static void ship_delete(struct Ship *const this) {
 	assert(this);
 	Event_(&this->event_recharge);
-	sprite_remove(&this->sprite);
+	sprite_remove(&this->sprite.data);
 	ShipSetRemove(ships, this);
 }
 /** @implements <Ship>Action */
@@ -352,7 +352,7 @@ static void wmd_out(struct Wmd *const this) {
 static void wmd_delete(struct Wmd *const this) {
 	assert(this);
 	Light_(&this->light);
-	sprite_remove(&this->sprite);
+	sprite_remove(&this->sprite.data);
 	WmdSetRemove(wmds, this);
 }
 /** @implements <Wmd>Action */
@@ -374,7 +374,7 @@ static void gate_out(struct Gate *const this) {
 /** @implements <Gate>Action */
 static void gate_delete(struct Gate *const this) {
 	assert(this);
-	sprite_remove(&this->sprite);
+	sprite_remove(&this->sprite.data);
 	GateSetRemove(gates, this);
 	/* fixme: explode */
 }

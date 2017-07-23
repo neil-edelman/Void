@@ -399,10 +399,10 @@
 										<key>_historyCapacity</key>
 										<integer>20</integer>
 										<key>bookmark</key>
-										<string>28D2B3341F16B5DE0050E830</string>
+										<string>28A739FF1F2460500082A7E2</string>
 										<key>history</key>
 										<array>
-											<string>288EFA271F0F1CF500EBDE92</string>
+											<string>28D2B3341F16B5DE0050E830</string>
 										</array>
 									</dict>
 									<key>SplitCount</key>
@@ -431,8 +431,6 @@
 							<key>Tabs</key>
 							<array>
 								<dict>
-									<key>BecomeActive</key>
-									<true/>
 									<key>ContentConfiguration</key>
 									<dict>
 										<key>PBXProjectModuleGUID</key>
@@ -444,8 +442,6 @@
 									<dict>
 										<key>Frame</key>
 										<string>{{10, 27}, {644, 655}}</string>
-										<key>RubberWindowFrame</key>
-										<string>429 50 851 728 0 0 1280 778 </string>
 									</dict>
 									<key>Module</key>
 									<string>XCDetailModule</string>
@@ -500,6 +496,8 @@
 									<dict>
 										<key>Frame</key>
 										<string>{{10, 27}, {644, 655}}</string>
+										<key>RubberWindowFrame</key>
+										<string>429 50 851 728 0 0 1280 778 </string>
 									</dict>
 									<key>Module</key>
 									<string>PBXBuildResultsModule</string>
@@ -527,11 +525,11 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>28D2B3311F16B5B10050E830</string>
+				<string>28A739EF1F245FD10082A7E2</string>
 				<string>1CA23ED40692098700951B8B</string>
-				<string>28D2B3321F16B5B10050E830</string>
+				<string>28A739F01F245FD10082A7E2</string>
 				<string>2866766C1E8467350090EBDC</string>
-				<string>28D2B3331F16B5B10050E830</string>
+				<string>28A739F11F245FD10082A7E2</string>
 				<string>1CA23EDF0692099D00951B8B</string>
 				<string>1CA23EE00692099D00951B8B</string>
 				<string>1CA23EE10692099D00951B8B</string>
@@ -704,7 +702,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>521582046.16395801</real>
+	<real>522477648.72530597</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>

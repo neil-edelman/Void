@@ -27,7 +27,7 @@
 (6.283185307179586476925286766559005768394338798750211641949889f)
 #endif
 
-const unsigned sprite_no = 1000;
+const unsigned sprite_no = 5000;
 
 /* 16384px de sitter (8192px on each quadrant,) divided between positive and
  negative for greater floating point accuracy */
@@ -248,13 +248,14 @@ static void Sprite_migrate(const struct Migrate *const migrate) {
 #define SET_TYPE struct SpriteList *
 #include "../../../src/general/Set.h" /* defines BinSet, BinSetNode */
 static struct BinSet *draw_bins, *update_bins, *sprite_bins;
+static struct Rectangle4i grow4; /* for clipping */
 
 /** New bins calculates which bins are at all visible and which we should
  update, (around the visible,) every frame.
  @order The screen area. */
 static void new_bins(void) {
 	struct Rectangle4f rect;
-	struct Rectangle4i bin4, grow4;
+	struct Rectangle4i bin4/*, grow4 <- now static */;
 	struct Vec2i bin2i;
 	struct SpriteList **bin;
 	BinSetClear(draw_bins), BinSetClear(update_bins);
@@ -303,6 +304,7 @@ static void new_bins(void) {
 
 static FILE *gnu_glob; /* hack for sprite_new_bins */
 
+/** Called from \see{collision_detection_and_respose}. */
 static void sprite_new_bins(const struct Sprite *const this) {
 	struct Rectangle4f extent;
 	struct Rectangle4i bin4;
@@ -310,16 +312,25 @@ static void sprite_new_bins(const struct Sprite *const this) {
 	struct SpriteList **bin;
 	assert(this && sprite_bins);
 	BinSetClear(sprite_bins);
-	extent.x_min = this->r.x - 0.5f * (BIN_FG_SPACE - this->bounding);
-	extent.x_max = this->r.x + 0.5f * (BIN_FG_SPACE + this->bounding);
-	extent.y_min = this->r.y - 0.5f * (BIN_FG_SPACE - this->bounding);
-	extent.y_max = this->r.y + 0.5f * (BIN_FG_SPACE + this->bounding);
+	/*extent.x_min = this->r_5.x - 0.5f * (BIN_FG_SPACE - this->bounding);
+	extent.x_max = this->r_5.x + 0.5f * (BIN_FG_SPACE + this->bounding);
+	extent.y_min = this->r_5.y - 0.5f * (BIN_FG_SPACE - this->bounding);
+	extent.y_max = this->r_5.y + 0.5f * (BIN_FG_SPACE + this->bounding);*/
+	extent.x_min = this->r_5.x - this->bounding1;
+	extent.x_max = this->r_5.x + this->bounding1;
+	extent.y_min = this->r_5.y - this->bounding1;
+	extent.y_max = this->r_5.y + this->bounding1;
 	Rectangle4f_to_bin4(&extent, &bin4);
 	/* draw in the centre */
 	printf("sprite_new_bins(%f, %f)\n", this->r.x, this->r.y);
 	rect4f_print("sprite px", &extent);
 	rect4i_print("sprite bin", &bin4);
-	/* fixme: only put bins in update of draw! */
+	/* from \see{new_bins}, clip the sprite bins to the update bins */
+	if(bin4.x_min < grow4.x_min) bin4.x_min = grow4.x_min;
+	if(bin4.x_max > grow4.x_max) bin4.x_max = grow4.x_max;
+	if(bin4.y_min < grow4.y_min) bin4.y_min = grow4.y_min;
+	if(bin4.y_max > grow4.y_max) bin4.y_max = grow4.y_max;
+	/* enumerate for calling */
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
 			struct Vec2i bin_pos;

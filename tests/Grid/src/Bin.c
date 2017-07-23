@@ -27,7 +27,7 @@
 (6.283185307179586476925286766559005768394338798750211641949889f)
 #endif
 
-const unsigned sprite_no = 5000;
+const unsigned sprite_no = 2000;
 
 /* 16384px de sitter (8192px on each quadrant,) divided between positive and
  negative for greater floating point accuracy */
@@ -187,7 +187,7 @@ struct Sprite {
 	struct Ortho3f r, v;
 	struct Vec2f r_5, r1;
 	float bounding, bounding1;
-	int is_glowing, is_collision;
+	int is_glowing;
 	char label;
 };
 /** @implements <Bin>Comparator */
@@ -222,7 +222,7 @@ static void Sprite_filler(struct SpriteListNode *const this) {
 	s->r_5.y = s->r1.y = s->r.y;
 	Ortho3f_filler_v(&s->v);
 	s->bounding = s->bounding1 = (246.0f * rand() / RAND_MAX + 10.0f) * 0.5f;
-	s->is_glowing = s->is_collision = 0;
+	s->is_glowing = 0;
 	s->label = '?';
 	Vec2f_to_bin(&s->r_5, &s->bin);
 	SpriteListPush(bins + s->bin, this);
@@ -316,10 +316,12 @@ static void sprite_new_bins(const struct Sprite *const this) {
 	extent.x_max = this->r_5.x + 0.5f * (BIN_FG_SPACE + this->bounding);
 	extent.y_min = this->r_5.y - 0.5f * (BIN_FG_SPACE - this->bounding);
 	extent.y_max = this->r_5.y + 0.5f * (BIN_FG_SPACE + this->bounding);*/
-	extent.x_min = this->r_5.x - this->bounding1;
-	extent.x_max = this->r_5.x + this->bounding1;
-	extent.y_min = this->r_5.y - this->bounding1;
-	extent.y_max = this->r_5.y + this->bounding1;
+	/* will check the _centre_ of everything within these bins, so we need more
+	 space (BIN_FG_SPACE, can get away with less) */
+	extent.x_min = this->r_5.x - this->bounding1 - 1.0f * BIN_FG_SPACE;
+	extent.x_max = this->r_5.x + this->bounding1 + 1.0f * BIN_FG_SPACE;
+	extent.y_min = this->r_5.y - this->bounding1 - 1.0f * BIN_FG_SPACE;
+	extent.y_max = this->r_5.y + this->bounding1 + 1.0f * BIN_FG_SPACE;
 	Rectangle4f_to_bin4(&extent, &bin4);
 	/* draw in the centre */
 	printf("sprite_new_bins(%f, %f)\n", this->r.x, this->r.y);
@@ -330,7 +332,7 @@ static void sprite_new_bins(const struct Sprite *const this) {
 	if(bin4.x_max > grow4.x_max) bin4.x_max = grow4.x_max;
 	if(bin4.y_min < grow4.y_min) bin4.y_min = grow4.y_min;
 	if(bin4.y_max > grow4.y_max) bin4.y_max = grow4.y_max;
-	/* enumerate for calling */
+	/* enumerate bins for the sprite */
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
 			struct Vec2i bin_pos;
@@ -338,7 +340,7 @@ static void sprite_new_bins(const struct Sprite *const this) {
 			if(!(bin = BinSetNew(sprite_bins))) { perror("bins"); return; }
 			*bin = bins + bin2i_to_bin(bin2i);
 			bin_to_Vec2i(bin2i_to_bin(bin2i), &bin_pos);
-			fprintf(gnu_glob, "set arrow from %f,%f to %d,%d lw 1 "
+			fprintf(gnu_glob, "set arrow from %f,%f to %d,%d lw 0.2 "
 				"lc rgb \"#CCEEEE\" front;\n",
 				this->r_5.x, this->r_5.y, bin_pos.x, bin_pos.y);
 		}
@@ -501,10 +503,9 @@ static float dt_ms;
 /** @implements <Sprite>DiAction */
 static void sprite_velocity(struct Sprite *this, void *const void_out) {
 	struct OutputData *const out = void_out;
-	fprintf(out->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"%s\" "
+	fprintf(out->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"blue\" "
 		"front;\n", this->r.x, this->r.y,
-		this->r.x + this->v.x * dt_ms, this->r.y + this->v.y * dt_ms,
-		this->is_collision ? "red" : "blue");
+		this->r.x + this->v.x * dt_ms, this->r.y + this->v.y * dt_ms);
 }
 
 /** For communication with {gnu_draw_bins}. */
@@ -573,7 +574,8 @@ static void sprite_sprite_timeless_collide(struct Sprite *const this,
 	bounding1 = this->bounding1 + that->bounding1;
 	if(diff.x * diff.x + diff.y * diff.y >= bounding1 * bounding1) return;
 	/* We know that they are kind of close. */
-	this->is_collision = that->is_collision = 1;
+	fprintf(gnu_glob, "set arrow from %f,%f to %f,%f nohead lw 0.5 "
+		"lc rgb \"red\" front;\n", this->r.x, this->r.y, that->r.x, that->r.y);
 }
 /** @implements <Bin, Sprite *>BiAction */
 static void bin_sprite_collide(struct SpriteList **const pthis,

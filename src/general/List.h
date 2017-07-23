@@ -969,10 +969,6 @@ static T *T_U_(List, GetLast)(struct T_(List) *const this) {
 	return &this->U_(last)->data;
 }
 
-/** This is a shortcut to
- {for(l = <T>List<U>GetFirst; l; l = <T>ListNode<U>GetNext)}.
- @fixme Unwritten. */
-
 #ifdef LIST_U_COMPARATOR /* <-- comp */
 
 #ifndef LIST_SORT_INTERNALS /* <!-- sort internals only once per translation

@@ -191,6 +191,7 @@ struct Sprite {
 	struct Ortho3f x, v;
 	struct Vec2f dx, x_5; /* temporary values */
 	float bounding, bounding1; /* bounding1 is temporary */
+	int collision_mask;
 };
 /** @implements <Bin>Comparator */
 static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
@@ -543,58 +544,173 @@ static void update_where(struct Sprite *const this) {
 	}
 }
 
-/** Called from \see{collide_timeless} to give the next level of detail with
- time.
- @param a, b: Point {u} moves from {a} to {b}.
- @param c, d: Point {v} moves from {c} to {d}.
- @param r: Combined radius.
+/* branch cut (-Pi,Pi]? */
+
+#if 0
+/** Elastic collision between circles; use this when we've determined that {u}
+ collides with {v} at {t0_dt}. Called explicitly from collision handlers.
+ Alters {u} and {v}. Also, it may alter (fudge) the positions a little to avoid
+ interpenetration.
+ @param t0_dt	The fraction of the frame that the collision occurs, [0, 1]. */
+static void elastic_bounce(struct Sprite *const u, struct Sprite *const v,
+	const float t0_dt) {
+	/* Interpolate position of collision. */
+	const struct Vec2f a = {
+		u->x.x + t0_dt * u->v,
+		u->x.y * t0_dt + u->r_5.y * (1.0f - t0_dt)
+	}, b = {
+		v->r.x * t0_dt + v->r1.x * (1.0f - t0_dt),
+		v->r.y * t0_dt + v->r1.y * (1.0f - t0_dt)
+	},
+	/* delta */
+	d = {
+		b.x - a.x,
+		b.y - a.y
+	};
+	/* normal at point of impact; fixme: iffy infinities */
+	const float n_d2 = d.x * d.x + d.y * d.y;
+	const float n_n  = (n_d2 < epsilon) ? 1.0f / epsilon : 1.0f / sqrtf(n_d2);
+	const struct Vec2f n = {
+		d.x * n_n,
+		d.y * n_n
+	};
+	/* a's velocity, normal direction */
+	const float a_nrm_s = u->v.x * n.x + u->v.y * n.y;
+	const struct Vec2f a_nrm = {
+		a_nrm_s * n.x,
+		a_nrm_s * n.y
+	},
+	/* a's velocity, tangent direction */
+	a_tan = {
+		u->v.x - a_nrm.x,
+		u->v.y - a_nrm.y
+	};
+	/* b's velocity, normal direction */
+	const float b_nrm_s = v->v.x * n.x + v->v.y * n.y;
+	const struct Vec2f b_nrm = {
+		b_nrm_s * n.x,
+		b_nrm_s * n.y
+	},
+	/* b's velocity, tangent direction */
+	b_tan = {
+		v->v.x - b_nrm.x,
+		v->v.y - b_nrm.y
+	};
+	/* mass (assume all mass is positive!) */
+	const float a_m = u->mass, b_m = v->mass;
+	const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
+	/* elastic collision */
+	const struct Vec2f a_v = {
+		a_tan.x + (a_nrm.x*diff_m + 2*b_m*b_nrm.x) * invsum_m,
+		a_tan.y + (a_nrm.y*diff_m + 2*b_m*b_nrm.y) * invsum_m
+	}, b_v = {
+		(-b_nrm.x*diff_m + 2*a_m*a_nrm.x) * invsum_m + b_tan.x,
+		(-b_nrm.y*diff_m + 2*a_m*a_nrm.y) * invsum_m + b_tan.y
+	};
+	/* check for sanity */
+	const float bounding = u->bounding + v->bounding;
+	/* fixme: float stored in memory? */
+	
+	/*pedantic("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f, %f--%ft\n",
+	 SpriteToString(u), SpriteToString(v), sqrtf(n_d2), bounding, a_m, b_m);*/
+	
+	/* interpenetation; happens about half the time because of IEEE754 numerics,
+	 which could be on one side or the other; also, sprites that just appear,
+	 multiple collisions interfering, and gremlins; you absolutely do not want
+	 objects to get stuck orbiting each other (fixme: this happens) */
+	if(n_d2 < bounding * bounding) {
+		const float push = (bounding - sqrtf(n_d2)) * 0.5f;
+		pedantic("elastic_bounce: \\pushing sprites %f distance apart\n", push);
+		u->r.x -= n.x * push;
+		u->r.y -= n.y * push;
+		v->r.x += n.x * push;
+		v->r.y += n.y * push;
+	}
+	
+	if(!u->no_collisions) {
+		/* first collision */
+		u->no_collisions = 1;
+		u->t0_dt_collide = t0_dt;
+		u->v1.x = a_v.x;
+		u->v1.y = a_v.y;
+	} else {
+		/* there are multiple collisions, rebound from the 1st one and add */
+		/* fixme: shouldn't it be all inside? */
+		if(t0_dt < u->t0_dt_collide) u->t0_dt_collide = t0_dt;
+		u->v1.x += a_v.x;
+		u->v1.y += a_v.y;
+		u->no_collisions++;
+		/*pedantic(" \\%u collisions %s (%s.)\n", u->no_collisions, SpriteToString(u), SpriteToString(v));*/
+	}
+	if(!v->no_collisions) {
+		/* first collision */
+		v->no_collisions = 1;
+		v->t0_dt_collide = t0_dt;
+		v->v1.x          = b_v.x;
+		v->v1.y          = b_v.y;
+	} else {
+		/* there are multiple collisions, rebound from the 1st one and add */
+		if(t0_dt < v->t0_dt_collide) v->t0_dt_collide = t0_dt;
+		v->v1.x          += b_v.x;
+		v->v1.y          += b_v.y;
+		v->no_collisions++;
+		/*pedantic(" \\%u collisions %s (%s.)\n", v->no_collisions, SpriteToString(v), SpriteToString(u));*/
+	}
+}
+#endif
+
+/** Called from \see{collide} to give the next level of detail with time.
  @param t0_ptr: If true, sets the time of collision, normalised to the frame
  time, {[0, 1]}.
- @return If they collided. */
-static int collide_circles(const struct Sprite *const a,
-	const struct Sprite *const b, float *t0_ptr) {
+ @return If {u} and {v} collided. */
+static int collide_circles(const struct Sprite *const u,
+	const struct Sprite *const v, float *t0_ptr) {
 	/* t \in [0,1]
-	             u = a_1 - a_0 ( -- a.dx)
-	             v = b_1 - b_0 ( -- b.dx)
+	             u = u_1 - u_0 ( -- u.dx)
+	             v = v_1 - v_0 ( -- v.dx)
 	if(v-u ~= 0) t = doesn't matter, parallel-ish
-	          p(t) = a_0 + (a_1 - a_0)t
-	          q(t) = b_0 + (b_1 - b_0)t
+	          p(t) = u_0 + ut
+	          q(t) = v_0 + vt
 	 distance(t)   = |q(t) - p(t)|
 	 distance^2(t) = (q(t) - p(t))^2
-	               = ((b_0+vt) - (a_0+ut))^2
-	               = ((b_0-a_0) + (v-u)t)^2
-	               = (v-u)*(v-u)t^2 + 2(b_0-a_0)*(v-u)t + (b_0-a_0)*(b_0-a_0)
-	             0 = 2(v-u)*(v-u)t_min + 2(b_0-a_0)*(v-u)
-	         t_min = -(b_0-a_0)*(v-u)/(v-u)*(v-u)
+	               = ((v_0+vt) - (u_0+ut))^2
+	               = ((v_0-u_0) + (v-u)t)^2
+	               = (v-u)*(v-u)t^2 + 2(v_0-u_0)*(v-u)t + (v_0-u_0)*(v_0-u_0)
+	             0 = 2(v-u)*(v-u)t_min + 2(v_0-u_0)*(v-u)
+	         t_min = -(v_0-u_0)*(v-u)/(v-u)*(v-u)
 	 this is an optimisation, if t \notin [0,1] then pick the closest; if
 	 distance^2(t_min) < r^2 then we have a collision, which happened at t0,
-	           r^2 = (v-u)*(v-u)t0^2 + 2(b_0-a_0)*(v-u)t0 + (b_0-a_0)*(b_0-a_0)
-	            t0 = [-2(b_0-a_0)*(v-u) - sqrt((2(b_0-a_0)*(v-u))^2
-					- 4((v-u)*(v-u))((b_0-a_0)*(b_0-a_0) - r^2))] / 2(v-u)*(v-u)
-	            t0 = [-(b_0-a_0)*(v-u) - sqrt(((b_0-a_0)*(v-u))^2
-	                - ((v-u)*(v-u))((b_0-a_0)*(b_0-a_0) - r^2))] / (v-u)*(v-u)*/
+	           r^2 = (v-u)*(v-u)t0^2 + 2(v_0-u_0)*(v-u)t0 + (v_0-u_0)*(v_0-u_0)
+	            t0 = [-2(v_0-u_0)*(v-u) - sqrt((2(v_0-u_0)*(v-u))^2
+					- 4((v-u)*(v-u))((v_0-u_0)*(v_0-u_0) - r^2))] / 2(v-u)*(v-u)
+	            t0 = [-(v_0-u_0)*(v-u) - sqrt(((v_0-u_0)*(v-u))^2
+	                - ((v-u)*(v-u))((v_0-u_0)*(v_0-u_0) - r^2))] / (v-u)*(v-u)
+	 or t in ms since frame, u = u.v, v = v.v
+	 p(t) = u_0 + u_v t
+	 q(t) = v_0 + v_v t
+	 distance^2(t_min) < r^2 -> collision at t0 [ms] */
 	struct Vec2f vu, d0;
 	float vu_2, d0_vu;
 	struct Vec2f dist;
 	float t, dist_2, d0_2, det;
-	const float r = a->bounding + b->bounding;
+	const float r = u->bounding + v->bounding;
 	/* fixme: float stored in memory? can this be more performant? with
 	 doubles? eww overkill */
-	assert(a && b && t0_ptr);
-	vu.x = b->dx.x - a->dx.x, vu.y = b->dx.y - a->dx.y;
-	d0.x = b->x.x - a->x.x,   d0.y = b->x.y - a->x.y;
-	vu_2  = vu.x * vu.x + vu.y * vu.y;
-	d0_vu = d0.x * vu.x + d0.y * vu.y;
+	assert(u && v && t0_ptr);
+	vu.x = v->dx.x - u->dx.x, vu.y = v->dx.y - u->dx.y; /* v-u */
+	d0.x = v->x.x - u->x.x,   d0.y = v->x.y - u->x.y; /* v_0-u_0 */
+	vu_2  = vu.x * vu.x + vu.y * vu.y; /* (v-u)*(v-u) */
+	d0_vu = d0.x * vu.x + d0.y * vu.y; /* (v_0-u_0)*(v-u) = d0*vu */
 	/* time (t_min) of closest approach; we want the first contact */
-	if(vu_2 < 0.0005) {
+	if(vu_2 < 0.0005f) {
 		t = 0.0f;
 	} else {
 		t = -d0_vu / vu_2;
-		if(     t < 0.0f) t = 0.0f;
-		else if(t > 1.0f) t = 1.0f;
+		if(     t < 0.0f)  t = 0.0f;
+		else if(t > dt_ms) t = dt_ms;
 	}
 	/* distance(t_min) of closest approach */
-	dist.x = d0.x + vu.x * t; dist.y = d0.y + vu.y * t;
+	dist.x = d0.x + vu.x * t, dist.y = d0.y + vu.y * t;
 	dist_2 = dist.x * dist.x + dist.y * dist.y;
 	/* not colliding */
 	if(dist_2 >= r * r) return printf("*** Not colliding; nvrmnd.\n"), 0;
@@ -607,10 +723,11 @@ static int collide_circles(const struct Sprite *const a,
 	return printf("*** Collision at %f!\n", t), 1;
 }
 
-/** This is the most course-grained collision detection in pure two-dimensional
- space using {x_5} and {bounding1}.
+/** This first applies the most course-grained collision detection in pure
+ two-dimensional space using {x_5} and {bounding1}. If passed, calls
+ \see{collide_circles} to introduce time.
  @implements <Sprite, Sprite>BiAction */
-static void collide_timeless(struct Sprite *const this,
+static void collide(struct Sprite *const this,
 	void *const void_that) {
 	struct Sprite *const that = void_that;
 	struct Vec2f diff;
@@ -626,6 +743,7 @@ static void collide_timeless(struct Sprite *const this,
 	bounding1 = this->bounding1 + that->bounding1;
 	if(diff.x * diff.x + diff.y * diff.y >= bounding1 * bounding1) return;
 	if(!collide_circles(this, that, &t0)) {
+		/* Not colliding. */
 		fprintf(gnu_glob, "set arrow from %f,%f to %f,%f nohead lw 0.5 "
 			"lc rgb \"#AA44DD\" front;\n", this->x.x, this->x.y, that->x.x,
 			that->x.y);
@@ -644,7 +762,7 @@ static void bin_sprite_collide(struct SpriteList **const pthis,
 	bin_to_bin2i(b, &b2);
 	printf("bin_collide_sprite: bin %u (%u, %u) Sprite: (%f, %f).\n", b, b2.x,
 		b2.y, target->x.x, target->x.y);
-	SpriteListYBiForEach(this, &collide_timeless, target);
+	SpriteListYBiForEach(this, &collide, target);
 }
 /** The sprites have been ordered by their {x_5}. Now we can do collisions.
  @implements <Sprite>Action */
@@ -656,7 +774,8 @@ static void collision_detection_and_responses(struct Sprite *const this) {
 	BinSetBiForEach(sprite_bins, &bin_sprite_collide, this);
 	/* fixme: have a {BinSetBiShortCircuit(bin_sprite_collide_dist);} that stops
 	 after the bounding box on edges (maybe! I think, yes, that would make it
-	 faster. Hmm, all of the thing is an edge.) */
+	 faster. Hmm, all of the thing is an edge. But now, I can get away with not
+	 sorting!) */
 }
 
 

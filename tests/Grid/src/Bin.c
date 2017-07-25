@@ -413,18 +413,17 @@ static void Sprite_migrate_collisions(struct Sprite *const this,
 	char a[12];
 	assert(this && migrate);
 	Sprite_to_string(this, &a);
-	printf(" Sprite %s: [%p, %p]->%lu\n", a,
-		migrate->begin, migrate->end, (unsigned long)migrate->delta);
 	if(!this->collision_set) return;
-	/*
 	CollisionMigrate(migrate, &this->collision_set);
-	c = this->collision_set, printf("   (collision (%.1f, %.1f):%.1f)\n", c->v.x, c->v.y, c->t);
+	/*printf(" %s: [%p, %p]->%lu: ", a,
+		migrate->begin, migrate->end, (unsigned long)migrate->delta);*/
+	/*c = this->collision_set, printf("(collision (%.1f, %.1f):%.1f)", c->v.x, c->v.y, c->t);*/
 	for(c = this->collision_set; c->next; c = c->next) {
 		CollisionMigrate(migrate, &c->next);
-		printf("   (next (%.1f, %.1f):%.1f)\n", c->v.x, c->v.y, c->t);
+		/*printf("(next (%.1f, %.1f):%.1f)", c->v.x, c->v.y, c->t);*/
 	}
-	 */
-	this->collision_set = 0;
+	/*printf(".\n");*/
+	/*this->collision_set = 0;*/
 }
 
 static void show_sprite(struct Sprite *this);
@@ -435,7 +434,6 @@ static void Bin_migrate_collisions(struct SpriteList **const pthis,
 	assert(pthis && this && migrate_void);
 	printf("__Bin %u__\n", (unsigned)(this - bins));
 	SpriteListYBiForEach(this, &Sprite_migrate_collisions, migrate_void);
-	printf("___Check___\n");
 	SpriteListYForEach(this, &show_sprite);
 }
 /** @implements Migrate */
@@ -824,21 +822,24 @@ static void collide(struct Sprite *const this) {
 static void timestep(struct Sprite *const this) {
 	struct Collision *c;
 	float t0 = dt_ms;
-	struct Vec2f v1 = { 0.0f, 0.0f }, x_temp;
+	struct Vec2f v1 = { 0.0f, 0.0f }, x_temp, d;
 	char a[12];
 	assert(this);
 	Sprite_to_string(this, &a);
 	printf("__Time-step %s__\n", a);
-#if 1
 	/* The earliest time to collision and sum the collisions together. */
 	for(c = this->collision_set; c; c = c->next) {
+		d.x = this->x.x + this->v.x * c->t;
+		d.y = this->x.y + this->v.y * c->t;
+		fprintf(gnu_glob, "set arrow from %f,%f to %f,%f lw 0.5 "
+			"lc rgb \"#EE66AA\" front;\n", d.x, d.y,
+			d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));
 		printf(" -- collides at %.1f going (%.1f, %.1f) (next #%p.)\n",
 			c->t, c->v.x, c->v.y, (void *)c->next);
 		if(c->t < t0) t0 = c->t;
 		v1.x += c->v.x, v1.y += c->v.y;
-		/* fixme: this is unstable? */
+		/* fixme: stability; v1->v */
 	}
-#endif
 	this->collision_set = 0;
 	x_temp.x = this->x.x + this->v.x * t0 + v1.x * (1.0f - t0);
 	x_temp.y = this->x.y + this->v.y * t0 + v1.y * (1.0f - t0);
@@ -933,7 +934,7 @@ int main(void) {
 		;
 	char buff[128];
 	unsigned i;
-	const unsigned seed = 11544/*(unsigned)clock()*/;/*11674*/
+	const unsigned seed = /*11544*/(unsigned)clock();/*11674*/
 	enum { E_NO, E_DATA, E_GNU, E_DBIN, E_UBIN, E_SBIN, E_TRAN, E_COLL, E_SHIP }
 		e = E_NO;
 

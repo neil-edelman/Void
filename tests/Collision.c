@@ -60,9 +60,9 @@ static int collision(const struct Collide *const a,
 	v2 = v.x * v.x + v.y * v.y;
 	vz = v.x * z.x + v.y * z.y;
 
-	/* Time of closest approch. */
+	/* Time of closest approach. */
 	if(v2 < 0.0005f) {
-		t = 0.0f; /* Parallel. */
+		t = 0.0f;
 	} else {
 		t = -vz / v2;
 		if(     t < 0.0f)  t = 0.0f;

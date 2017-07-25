@@ -440,6 +440,19 @@ static void T_(SetSetMigrate)(struct T_(Set) *const this,
 	this->migrate = migrate;
 }
 
+/** This allows custom {realloc} pointers in migrate handler.
+ @param pointer: A pointer to a pointer-to-<T>.
+ @order \Theta(1)
+ @fixme Untested.
+ @allow */
+static void T_(Migrate)(const struct Migrate *const migrate, T **const pointer){
+	void *t;
+	if(!migrate || !pointer) return;
+	t = *pointer;
+	if(t < migrate->begin || t >= migrate->end) return;
+	*(char **)pointer += migrate->delta;
+}
+
 /** Increases the capacity of this Set to ensure that it can hold at least the
  number of elements specified by the {min_capacity}.
  @param this: If {this} is null, returns false.
@@ -727,6 +740,7 @@ static void PRIVATE_T_(unused_set)(void) {
 	T_(SetIsEmpty)(0);
 	T_(SetIsElement)(0, (size_t)0);
 	T_(SetSetMigrate)(0, 0);
+	T_(Migrate)(0, 0);
 	T_(SetReserve)(0, (size_t)0);
 	T_(SetNew)(0);
 	T_(SetRemove)(0, 0);

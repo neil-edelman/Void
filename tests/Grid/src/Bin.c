@@ -356,18 +356,6 @@ static void sprite_new_bins(const struct Sprite *const this) {
 	}
 }
 
-/** Temporary action.
- @implements <Sprite>Action */
-static void show_sprite(struct Sprite *this) {
-	char a[12];
-	assert(this);
-	Sprite_to_string(this, &a);
-	printf("Sprite %s (%.1f, %.1f) : %.1f -0.5(%.1f, %.1f)-> "
-		"(%.1f, %.1f) : %.1f.\n", a, this->x.x, this->x.y, this->bounding,
-		this->v.x, this->v.y,
-		this->x_5.x, this->x_5.y, this->bounding1);
-}
-
 /** @implements <SpriteList *, SpriteAction *>DiAction */
 static void act_bins(struct SpriteList **const pthis, void *const pact_void) {
 	struct SpriteList *const this = *pthis;
@@ -428,13 +416,18 @@ static void Sprite_migrate_collisions(struct Sprite *const this,
 	printf(" Sprite %s: [%p, %p]->%lu\n", a,
 		migrate->begin, migrate->end, (unsigned long)migrate->delta);
 	if(!this->collision_set) return;
+	/*
 	CollisionMigrate(migrate, &this->collision_set);
 	c = this->collision_set, printf("   (collision (%.1f, %.1f):%.1f)\n", c->v.x, c->v.y, c->t);
 	for(c = this->collision_set; c->next; c = c->next) {
 		CollisionMigrate(migrate, &c->next);
 		printf("   (next (%.1f, %.1f):%.1f)\n", c->v.x, c->v.y, c->t);
 	}
+	 */
+	this->collision_set = 0;
 }
+
+static void show_sprite(struct Sprite *this);
 /** @implements <Bin, Migrate>BiAction */
 static void Bin_migrate_collisions(struct SpriteList **const pthis,
 	void *const migrate_void) {
@@ -450,6 +443,7 @@ static void Collision_migrate(const struct Migrate *const migrate) {
 	printf("\n\n***Collision MIGRATE [%p, %p]->%lu***\n", migrate->begin,
 		migrate->end, (unsigned long)migrate->delta);
 	BinSetBiForEach(update_bins, &Bin_migrate_collisions, (void *const)migrate);
+	BinSetBiForEach(draw_bins, &Bin_migrate_collisions, (void *const)migrate);
 	printf("\n\n");
 }
 
@@ -538,7 +532,7 @@ static void Ship_filler(struct Ship *const this) {
 	assert(this);
 	Sprite_filler(&this->sprite);
 	this->sprite.data.vt = &ship_vt;
-	this->mass = 160.0f;
+	this->mass = 60.0f;
 	Orcish(this->name, sizeof this->name);
 }
 
@@ -641,11 +635,11 @@ static void apply_bounce_later(struct Sprite *const this,
 	c->next = this->collision_set, this->collision_set = c;
 	c->v.x = v->x, c->v.y = v->y;
 	c->t = t;
-	printf("Sprite %s BOUNCE (%.1f, %.1f):%.1f -> ", a, v->x, v->y, t);
+	printf("^^^ Sprite %s BOUNCE (%.1f, %.1f):%.1f -> \n", a, v->x, v->y, t);
 	for(i = this->collision_set; i; i = i->next) {
-		printf("(%.1f, %.1f):%.1f, ", i->v.x, i->v.y, i->t);
+		printf(" (%.1f, %.1f):%.1f, \n", i->v.x, i->v.y, i->t);
 	}
-	printf("DONE\n");
+	printf("^^^ DONE\n");
 }
 
 /** Elastic collision between circles; use this when we've determined that {u}
@@ -835,6 +829,7 @@ static void timestep(struct Sprite *const this) {
 	assert(this);
 	Sprite_to_string(this, &a);
 	printf("__Time-step %s__\n", a);
+#if 1
 	/* The earliest time to collision and sum the collisions together. */
 	for(c = this->collision_set; c; c = c->next) {
 		printf(" -- collides at %.1f going (%.1f, %.1f) (next #%p.)\n",
@@ -843,6 +838,7 @@ static void timestep(struct Sprite *const this) {
 		v1.x += c->v.x, v1.y += c->v.y;
 		/* fixme: this is unstable? */
 	}
+#endif
 	this->collision_set = 0;
 	x_temp.x = this->x.x + this->v.x * t0 + v1.x * (1.0f - t0);
 	x_temp.y = this->x.y + this->v.y * t0 + v1.y * (1.0f - t0);
@@ -903,6 +899,23 @@ static void timestep(struct Sprite *const this) {
 #endif
 }
 
+/** Temporary action.
+ @implements <Sprite>Action */
+static void show_sprite(struct Sprite *this) {
+	struct Collision *c;
+	char a[12];
+	assert(this);
+	Sprite_to_string(this, &a);
+	printf("%s Bin%u at (%.1f, %.1f):%.1f -0.5(%.1f, %.1f)-> "
+		   "(%.1f, %.1f):%.1f; collisions:\n",
+		   a, this->bin, this->x.x, this->x.y, this->bounding,
+		   this->v.x, this->v.y,
+		   this->x_5.x, this->x_5.y, this->bounding1);
+	for(c = this->collision_set; c; c = c->next) {
+		printf(" velocity (%.1f, %.1f) at %.1f\n", c->v.x, c->v.y, c->t);
+	}
+}
+
 
 
 
@@ -920,7 +933,7 @@ int main(void) {
 		;
 	char buff[128];
 	unsigned i;
-	const unsigned seed = (unsigned)clock();
+	const unsigned seed = 11544/*(unsigned)clock()*/;/*11674*/
 	enum { E_NO, E_DATA, E_GNU, E_DBIN, E_UBIN, E_SBIN, E_TRAN, E_COLL, E_SHIP }
 		e = E_NO;
 

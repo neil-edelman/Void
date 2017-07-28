@@ -447,16 +447,33 @@ static int light_compute_texture(void) {
 }
 
 int draw_is_print_sprites;
+static unsigned old_texture;
+
+/** Only called from \see{display} while OpenGL is in a certain state.
+ @implements SpriteOutput */
+static void display_sprite(const struct Ortho3f *const x,
+	const struct AutoImage *const tex, const struct AutoImage *const nor) {
+	assert(x && tex && nor);
+	printf("Draw Sprite: (%f,%f)\n", x->x, x->y);
+	if(old_texture != tex->texture) {
+		glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
+		glBindTexture(GL_TEXTURE_2D, nor->texture);
+		glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
+		glBindTexture(GL_TEXTURE_2D, tex->texture);
+		old_texture = tex->texture;
+	}
+	glUniform1f(auto_Lambert_shader.size, tex->width);
+	glUniform1f(auto_Lambert_shader.angle, x->theta);
+	glUniform2f(auto_Lambert_shader.object, x->x, x->y);
+	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
+}
 
 /** Callback for glutDisplayFunc; this is where all of the drawing happens. */
 static void display(void) {
-	struct Sprite *sprite;
-	struct Ship *player;
-	struct Vec2u bin;
 	int lights;
 	/* for SpriteIterate */
-	struct Ortho3f r;
-	unsigned old_tex = 0, tex, normal, size;
+	struct Ortho3f x;
+	unsigned old_tex = 0, tex, size;
 
 	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	 <- https://www.khronos.org/opengl/wiki/Common_Mistakes
@@ -514,14 +531,14 @@ static void display(void) {
 	/* background sprites */
 	/*const->glUniform1i(far_texture_location, TEX_CLASS_SPRITE); */
 	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
-	while(FarIterate(&r, &tex, &size)) {
+	while(FarIterate(&x, &tex, &size)) {
 		if(old_tex != tex) {
 			glBindTexture(GL_TEXTURE_2D, tex);
 			old_tex = tex;
 		}
 		glUniform1f(auto_Far_shader.size, (float)size);
-		glUniform1f(auto_Far_shader.angle, r.theta);
-		glUniform2f(auto_Far_shader.position, r.x, r.y);
+		glUniform1f(auto_Far_shader.angle, x.theta);
+		glUniform2f(auto_Far_shader.position, x.x, x.y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
 	old_tex = 0;
@@ -536,7 +553,7 @@ static void display(void) {
 	}
 	/* draw bins going from upper left, (-,+), to lower right, (+,-) to match
 	 memory. */
-	old_tex = 0;
+	SpriteDraw(&display_sprite);
 #if 0
 	for(bin.y = bin_pos.y; bin.y >= bin_neg.y; bin.y--) {
 		for(bin.x = bin_neg.x; bin.x <= bin_pos.y; bin.x++) {
@@ -567,6 +584,7 @@ static void display(void) {
 	size = 128;*/
 	/*WindowIsGlError("display");*/
 
+#if 0
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {
 		struct Vec2f x;
@@ -581,6 +599,7 @@ static void display(void) {
 		glUniform2i(auto_Hud_shader.shield, hit.x, hit.y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
+#endif
 
 	/* disable, swap */
 	glUseProgram(0);

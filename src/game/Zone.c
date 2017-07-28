@@ -37,14 +37,6 @@ extern const float de_sitter;
 
 const struct AutoSpaceZone *current_zone;
 
-/** "Random" -- used for initialising.
- @return A uniformly distributed random variable in the range [-limit, limit].
- @fixme This will be used a lot! have Rando.c include all sorts of random
- fuctions. */
-static float rnd(const float limit) {
-	return limit * (2.0f * rand() / RAND_MAX - 1.0f);
-}
-
 /** @fixme Player should be on it's own. */
 static int remove_all_except_player(struct Sprite *const this) {
 	const struct Ship *const player = GameGetPlayer();
@@ -54,8 +46,8 @@ static int remove_all_except_player(struct Sprite *const this) {
 static int remove_all_events_except(struct Event *const victim) {
 	/* we don't erase the player's recharge event nor any (one?) event that uses
 	 ZoneChange because it's probably happening right now */
-	return ShipGetEventRecharge(GameGetPlayer()) != victim
-	&& EventGetConsumerAccept(victim) != (void (*)(void *))&ZoneChange;
+	return 0;/*fixme ShipGetEventRecharge(GameGetPlayer()) != victim
+	&& EventGetConsumerAccept(victim) != (void (*)(void *))&ZoneChange;*/
 }
 
 /* public */
@@ -82,12 +74,13 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	Far(sz->ois2);
 	Far(sz->ois3);
 
-	Gate(sz->gate1);
+	/*fixme: Gate(sz->gate1);*/
 
 	/* update the current zone */
 	current_zone = sz;
 
 	/* some asteroids */
+#if 0
 	for(i = 0; i < /*7000*/1000; i++) {
 		struct Ortho3f r = {
 			rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI)
@@ -96,14 +89,10 @@ void Zone(const struct AutoSpaceZone *const sz) {
 		};
 		Debris(AutoDebrisSearch("Asteroid"), &r, &v);
 	}
+#endif
 
 	/* sprinkle some ships */
-	for(i = 0; i < 10; i++) {
-		struct Ortho3f r = {
-			rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI)
-		};
-		Ship(blob_class, &r, SB_STUPID);
-	}
+	for(i = 0; i < 5000; i++) Ship(blob_class, 0);
 
 }
 

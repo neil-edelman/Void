@@ -19,6 +19,7 @@
 #include "system/Draw.h"
 #include "system/Timer.h"
 #include "system/Key.h"
+struct AutoImage; /* for Sprite.h */
 #include "game/Sprite.h"
 #include "game/Game.h"
 
@@ -52,7 +53,7 @@ int main(int argc, char **argv) {
 	/* start up subsystems; window has to be first; timer ms */
 	if(!Window(programme, argc, argv)
 		|| !Key()
-		|| !Sprite()
+		|| !Sprites()
 		|| !Draw()
 	    || !Game()) return EXIT_FAILURE;
 
@@ -70,7 +71,7 @@ static void main_(void) {
 	TimerPause();
 	Game_();
 	Draw_();
-	Sprite_();
+	Sprites_();
 }
 
 /** Help screen. */

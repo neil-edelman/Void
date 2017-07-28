@@ -40,6 +40,20 @@
 </ul>
 
 <p>
+2017 Neil Edelman, distributed under the terms of the GNU General
+Public License 3, see copying.txt, or
+<a href = "https://opensource.org/licenses/GPL-3.0">https://opensource.org/licenses/GPL-3.0</a>.
+</p>
+<p>
+Testing the bins. A <em>Bin</em> is like a hash bucket, but instead of hashing, it's
+determined by where in space you are. This allows you to do stuff like drawing
+and AI for onscreen bins and treat the faraway bins with statistical mechanics.
+Which allows you to have a lot of sprites -&gt; ships, weapons -&gt; more epic.
+</p>
+<p>
+fixme: No. This is wrong. *
+</p>
+<p>
 Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
 Public License, see copying.txt.
 </p>
@@ -75,6 +89,10 @@ process is not elastic, so it loses energy (speed.)
 Gets a read-only copy of the position.
 </p>
 <dl>
+	<dt>minimum standard</dt>
+	<dd>C89/90</dd>
+	<dt>author</dt>
+	<dd>Neil</dd>
 	<dt>author</dt>
 	<dd>Neil</dd>
 	<dt>version</dt>
@@ -82,10 +100,74 @@ Gets a read-only copy of the position.
 	<dt>since</dt>
 	<dd>3.3, 2016-01
  			3.2, 2015-06</dd>
+	<dt>fixme</dt>
+	<dd>Change diameter to radius.</dd>
 </dl>
 
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "struct SpriteVt"><!-- --></a>
+<h3>struct SpriteVt</h3>
+<pre><b>struct SpriteVt</b></pre>
+<p>
+<em>Sprite</em> virtual table.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Collision"><!-- --></a>
+<h3>struct Collision</h3>
+<pre><b>struct Collision</b></pre>
+<p>
+Collisions between two sprites, cleared at every frame.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Sprite"><!-- --></a>
+<h3>struct Sprite</h3>
+<pre><b>struct Sprite</b> {
+	const struct SpriteVt *vt; /* virtual table pointer */
+	const struct AutoImage *image, *normals; /* what the sprite is */
+	unsigned bin; /* where, approximately, is the image between frames */
+	struct Ortho3f x, v; /* where it is and where it is going */
+	struct Vec2f dx, x_5; /* temporary values */
+	float bounding, bounding1; /* bounding1 is temporary */
+	struct Collision *collision_set; /* temporary, \in collisions */
+}</pre>
+<p>
+Define <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "static struct SpriteList bins[BIN_BIN_FG_SIZE]"><!-- --></a>
+<h3>static struct SpriteList bins[BIN_BIN_FG_SIZE]</h3>
+<pre><b>static struct SpriteList bins[BIN_BIN_FG_SIZE]</b></pre>
+<p>
+Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath.h">OrthoMath.h</a>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "static const struct SpriteVt"><!-- --></a>
+<h3>static const struct SpriteVt</h3>
+<pre><b>static const struct SpriteVt</b> {
+	SpriteAction delete;
+	SpriteToString to_string;
+	SpriteFloatAccessor get_mass;
+}</pre>
+<p>
+Define <em>SpriteVt</em>.
+</p>
+<dl>
+</dl>
+</div>
 
 <div><a name = "static struct SpriteList sprites[BIN_BIN_SIZE]"><!-- --></a>
 <h3>static struct SpriteList sprites[BIN_BIN_SIZE]</h3>
@@ -165,21 +247,38 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 </dl>
 </div>
 
-<div><a name = "enum SpriteBehaviour"><!-- --></a>
-<h3>enum SpriteBehaviour</h3>
-<pre><b>enum SpriteBehaviour</b> { SB_NONE, SB_HUMAN, SB_STUPID }</pre>
-<p>
-Sprite AI behaviour.
-</p>
-<dl>
-</dl>
-</div>
-
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>
 
 <table>
 <tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>struct Ship *</td>
+	<td><a href = "#Ship">Ship</a></td>
+	<td>const struct AutoShipClass *const class,
+	const struct Vec2f *const x</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#Sprites">Sprites</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Sprites_">Sprites_</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteDraw">SpriteDraw</a></td>
+	<td>SpriteOutput draw</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteInput">SpriteInput</a></td>
+	<td>struct Sprite *const this, const int turning,
+	const int acceleration</td>
+</tr>
 <tr>
 	<td>void</td>
 	<td><a href = "#SpriteDebris">SpriteDebris</a></td>
@@ -236,12 +335,6 @@ Sprite AI behaviour.
 </tr>
 <tr>
 	<td>void</td>
-	<td><a href = "#ShipInput">ShipInput</a></td>
-	<td>struct Ship *const this, const int turning,
-	const int acceleration</td>
-</tr>
-<tr>
-	<td>void</td>
 	<td><a href = "#ShipGetHit">ShipGetHit</a></td>
 	<td>const struct Ship *const this, struct Vec2u *const hit</td>
 </tr>
@@ -264,6 +357,68 @@ Sprite AI behaviour.
 
 
 <a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Ship"><!-- --></a>
+<h3>Ship</h3>
+<pre>struct Ship * <b>Ship</b> (const struct AutoShipClass *const class,
+	const struct Vec2f *const x)</pre>
+<p>
+Extends <em>Sprite_filler</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "Sprites"><!-- --></a>
+<h3>Sprites</h3>
+<pre>int <b>Sprites</b> (void)</pre>
+<p>
+Initailises all sprite buffers.
+</p>
+<dl>
+	<dt>return</dt>
+	<dd>Success.</dd>
+</dl>
+</div>
+
+<div><a name = "Sprites_"><!-- --></a>
+<h3>Sprites_</h3>
+<pre>void <b>Sprites_</b> (void)</pre>
+<p>
+Erases all sprite buffers.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteDraw"><!-- --></a>
+<h3>SpriteDraw</h3>
+<pre>void <b>SpriteDraw</b> (SpriteOutput draw)</pre>
+<p>
+Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it updates everything.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteInput"><!-- --></a>
+<h3>SpriteInput</h3>
+<pre>void <b>SpriteInput</b> (struct Sprite *const this, const int turning,
+	const int acceleration)</pre>
+<p>
+Gets input to a <em>Sprite</em>.
+</p>
+<dl>
+	<dt>parameter: this</dt>
+	<dd>Which ship to set.</dd>
+	<dt>parameter: turning</dt>
+	<dd>How many <em>ms</em> was this pressed? left is positive.</dd>
+	<dt>parameter: acceleration</dt>
+	<dd>How many <em>ms</em> was this pressed?</dd>
+	<dt>parameter: dt_ms</dt>
+	<dd>Frame time in milliseconds.</dd>
+</dl>
+</div>
 
 <div><a name = "SpriteDebris"><!-- --></a>
 <h3>SpriteDebris</h3>
@@ -376,25 +531,6 @@ This is where most of the work gets done. Called every frame, O(n).
 <dl>
 	<dt>fixme</dt>
 	<dd>C99</dd>
-</dl>
-</div>
-
-<div><a name = "ShipInput"><!-- --></a>
-<h3>ShipInput</h3>
-<pre>void <b>ShipInput</b> (struct Ship *const this, const int turning,
-	const int acceleration)</pre>
-<p>
-Gets input to a Ship.
-</p>
-<dl>
-	<dt>parameter: this</dt>
-	<dd>Which ship to set.</dd>
-	<dt>parameter: turning</dt>
-	<dd>How many <em>ms</em> was this pressed? left is positive.</dd>
-	<dt>parameter: acceleration</dt>
-	<dd>How many <em>ms</em> was this pressed?</dd>
-	<dt>parameter: dt_ms</dt>
-	<dd>Frame time in milliseconds.</dd>
 </dl>
 </div>
 

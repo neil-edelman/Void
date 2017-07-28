@@ -11,6 +11,7 @@
 
 #include <string.h> /* memset */
 #include "../../build/Auto.h"
+#include "../general/OrthoMath.h"
 #include "../Print.h"
 #include "Far.h"
 #include "../general/Sorting.h"
@@ -25,8 +26,7 @@ static const float foreshortening = 0.2f, one_foreshortening = 5.0f;
 
 struct Far {
 	const char *name;
-	float x, y;     /* orientation */
-	float theta;
+	struct Ortho3f x;
 	int   size;     /* the (x, y) size; they are the same */
 	int   texture;  /* in the gpu */
 	struct Far *prev_x, *next_x, *prev_y, *next_y; /* sort by axes */
@@ -71,9 +71,9 @@ struct Far *Far(const struct AutoObjectInSpace *ois) {
 	far = &backgrounds[backgrounds_size++];
 
 	far->name    = ois->name;
-	far->x       = (float)ois->x;
-	far->y       = (float)ois->y;
-	far->theta   = 0.0f;
+	far->x.x     = (float)ois->x;
+	far->x.y     = (float)ois->y;
+	far->x.theta = 0.0f;
 	far->size    = ois->sprite->image->width;
 	far->texture = ois->sprite->image->texture;
 
@@ -154,7 +154,7 @@ int FarIterate(struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *siz
 	/* go to the first spot in the window */
 	if(is_reset) {
 		unsigned w, h;
-		struct Vec2u screen;
+		struct Vec2i screen;
 		/*DrawGetScreen(&screen);*/
 		w = (screen.x  >> 1) + (screen.x & 1);
 		h = (screen.y >> 1) + (screen.y & 1);
@@ -173,28 +173,28 @@ int FarIterate(struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *siz
 		/* no sprite anywhere? */
 		if(!first_x_window && !(first_x_window = first_x)) return 0;
 		/* place the first_x_window on the first x in the window */
-		if(first_x_window->x < x_min) {
+		if(first_x_window->x.x < x_min) {
 			do {
 				if(!(first_x_window = first_x_window->next_x)) return 0;
-			} while(first_x_window->x < x_min);
+			} while(first_x_window->x.x < x_min);
 		} else {
 			while((feeler = first_x_window->prev_x)
-				  && (x_min <= feeler->x)) first_x_window = feeler;
+				  && (x_min <= feeler->x.x)) first_x_window = feeler;
 		}
 		/*debug("first_x_window (%f,%f) %d\n", first_x_window->x, first_x_window->y, first_x_window->texture);*/
 		/* mark x; O(n) :[ */
-		for(b = first_x_window; b && b->x <= x_max; b = b->next_x)
+		for(b = first_x_window; b && b->x.x <= x_max; b = b->next_x)
 			b->is_selected = -1;
 		/* now repeat for y; no sprite anywhere (this shouldn't happen!) */
 		if(!first_y_window && !(first_y_window = first_y)) return 0;
 		/* place the first_y_window on the first y in the window */
-		if(first_y_window->y < y_min) {
+		if(first_y_window->x.y < y_min) {
 			do {
 				if(!(first_y_window = first_y_window->next_y)) return 0;
-			} while(first_y_window->y < y_min);
+			} while(first_y_window->x.y < y_min);
 		} else {
 			while((feeler = first_y_window->prev_y)
-				  && (y_min <= feeler->y)) first_y_window = feeler;
+				  && (y_min <= feeler->x.y)) first_y_window = feeler;
 		}
 		/* select the first y; fixme: should probably go the other way around,
 		 less to mark since the y-extent is probably more; or maybe it's good
@@ -204,16 +204,16 @@ int FarIterate(struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *siz
 	}
 	
 	/* consider y */
-	while(window_iterator && window_iterator->y <= y_max) {
+	while(window_iterator && window_iterator->x.y <= y_max) {
 		if(window_iterator->is_selected) {
 			int extent = (int)((window_iterator->size >> 1) + 1) * one_foreshortening;
 			/* tighter bounds -- slow, but worth it; fixme: optimise for b-t */
-			if(   window_iterator->x > x_min_window - extent
-			   && window_iterator->x < x_max_window + extent
-			   && window_iterator->y > y_min_window - extent
-			   && window_iterator->y < y_max_window + extent) {
+			if(   window_iterator->x.x > x_min_window - extent
+			   && window_iterator->x.x < x_max_window + extent
+			   && window_iterator->x.y > y_min_window - extent
+			   && window_iterator->x.y < y_max_window + extent) {
 				/*debug("Sprite (%.3f, %.3f : %.3f) Tex%d size %d.\n", window_iterator->x, window_iterator->y, window_iterator->theta, window_iterator->texture, window_iterator->size);*/
-				/**r_ptr       = window_iterator->r;*/
+				*r_ptr       = window_iterator->x;
 				*texture_ptr = window_iterator->texture;
 				*size_ptr    = window_iterator->size;
 				window_iterator = window_iterator->next_y;
@@ -226,7 +226,7 @@ int FarIterate(struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *siz
 	}
 
 	/* reset for next time */
-	for(b = first_x_window; b && b->x <= x_max; b = b->next_x)
+	for(b = first_x_window; b && b->x.x <= x_max; b = b->next_x)
 		b->is_selected = 0;
 	is_reset = -1;
 	return 0;
@@ -240,9 +240,9 @@ int FarIterate(struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *siz
  @param t		\theta */
 void FarSetOrientation(struct Far *back, const float x, const float y, const float theta) {
 	if(!back) return;
-	back->x     = x/* * one_foreshortening*/;
-	back->y     = y/* * one_foreshortening*/;
-	back->theta = theta;
+	back->x.x     = x/* * one_foreshortening*/;
+	back->x.y     = y/* * one_foreshortening*/;
+	back->x.theta = theta;
 	inotify((void **)&first_x, (void *)back, (int (*)(const void *, const void *))&compare_x, (void **(*)(void *const))&address_prev_x, (void **(*)(void *const))&address_next_x);
 	inotify((void **)&first_y, (void *)back, (int (*)(const void *, const void *))&compare_y, (void **(*)(void *const))&address_prev_y, (void **(*)(void *const))&address_next_y);
 }
@@ -297,11 +297,11 @@ static void sort_notify(struct Far *s) {
 /* for isort */
 
 static int compare_x(const struct Far *a, const struct Far *b) {
-	return a->x > b->x;
+	return a->x.x > b->x.x;
 }
 
 static int compare_y(const struct Far *a, const struct Far *b) {
-	return a->y > b->y;
+	return a->x.y > b->x.y;
 }
 
 static struct Far **address_prev_x(struct Far *const a) {

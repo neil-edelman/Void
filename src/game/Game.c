@@ -93,7 +93,7 @@ int Game(void) {
 
 	Zone(game.start);
 	Event(0, 2000, 1000, FN_RUNNABLE, &position);
-	game.player = Ship(game.nautilus, 0, SB_HUMAN);
+	game.player = Ship(game.nautilus, 0/*, SB_HUMAN*/);
 
 	debug("Game: on.\n");
 	is_started = -1;
@@ -117,6 +117,7 @@ void GameUpdate(const int dt_ms) {
 	 update so we can predict what the camera is going to do; when collisions
 	 occur, this causes the camera to jerk, but it's better than always
 	 lagging? */
+#if 0
 	if((game.player)) {
 		const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
 		int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
@@ -128,6 +129,7 @@ void GameUpdate(const int dt_ms) {
 		ShipGetPosition(game.player, &x);
 		DrawSetCamera(x);
 	}
+#endif
 	/* collision detect, move sprites; a lot of work */
 	SpriteUpdate(dt_ms);
 	/* check events */
@@ -189,5 +191,5 @@ static void position(void) {
 		info("You are scattered across space.\n");
 		return;
 	}
-	SpriteOut((struct Sprite *)game.player);
+	/*SpriteOut((struct Sprite *)game.player);*/
 }

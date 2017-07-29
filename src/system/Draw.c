@@ -449,12 +449,12 @@ static int light_compute_texture(void) {
 int draw_is_print_sprites;
 static unsigned old_texture;
 
-/** Only called from \see{display} while OpenGL is in a certain state.
+/** Only used as a callback from \see{display} while OpenGL is in a certain
+ state.
  @implements SpriteOutput */
 static void display_sprite(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor) {
 	assert(x && tex && nor);
-	printf("Draw Sprite: (%f,%f)\n", x->x, x->y);
 	if(old_texture != tex->texture) {
 		glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
 		glBindTexture(GL_TEXTURE_2D, nor->texture);
@@ -616,7 +616,7 @@ static void resize(int width, int height) {
 	int w_tex, h_tex;
 	float w_w_tex, h_h_tex;
 
-	debug("resize: %dx%d.\n", width, height);
+	/*debug("resize: %dx%d.\n", width, height);*/
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
 	camera_extent.x = width / 2.0f, camera_extent.y = height / 2.0f; /* global*/

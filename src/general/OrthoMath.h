@@ -152,8 +152,8 @@ static void Ortho3f_filler_fg(struct Ortho3f *const this) {
 /** Assigns a random {Ortho3f} velocity. */
 static void Ortho3f_filler_v(struct Ortho3f *const this) {
 	assert(this);
-	this->x = 10.0f * rand() / RAND_MAX - 5.0f;
-	this->y = 10.0f * rand() / RAND_MAX - 5.0f;
+	this->x = 0.01f * rand() / RAND_MAX - 0.005f;
+	this->y = 0.01f * rand() / RAND_MAX - 0.005f;
 	this->theta = 0.01f * rand() / RAND_MAX - 0.005f;
 }
 

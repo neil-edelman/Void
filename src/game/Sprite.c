@@ -1,12 +1,12 @@
 /** 2017 Neil Edelman, distributed under the terms of the GNU General
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
- 
+
  Testing the bins. A {Bin} is like a hash bucket, but instead of hashing, it's
  determined by where in space you are. This allows you to do stuff like drawing
  and AI for onscreen bins and treat the faraway bins with statistical mechanics.
  Which allows you to have a lot of sprites -> ships, weapons -> more epic.
- 
+
  @file		Bin
  @author	Neil
  @std		C89/90
@@ -20,19 +20,13 @@
 #include "../system/Draw.h" /* DrawGetCamera, DrawSetScreen */
 #include "Sprite.h"
 
+/* This is used for small floating-point values. The value doesn't have any
+ significance. */
+static const float epsilon = 0.0005f;
 
-
-const float epsilon = 0.0005f;
-
-
-
-
-
-
-
-
-
-
+/* Updated frame time, passed to {SpriteUpdate} but used in nearly
+ everything. */
+static float dt_ms;
 
 
 
@@ -48,13 +42,15 @@ struct Collision;
 struct Sprite {
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
+	struct Collision *collision_set; /* temporary, \in collisions */
 	unsigned bin; /* where, approximately, is the image between frames */
 	struct Ortho3f x, v; /* where it is and where it is going */
 	struct Vec2f dx, x_5; /* temporary values */
 	float bounding, bounding1; /* bounding1 is temporary */
-	struct Collision *collision_set; /* temporary, \in collisions */
 };
-/** @implements <Bin>Comparator */
+/** @implements <Bin>Comparator
+ @fixme Actually, we can get rid of this. Unused? That was a lot of work for
+ nothing. */
 static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
 	return (b->x_5.x < a->x_5.x) - (a->x_5.x < b->x_5.x);
 }
@@ -75,23 +71,38 @@ static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #include "../general/List.h"
 /** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
 static struct SpriteList bins[BIN_BIN_FG_SIZE];
-/** {vt} is not set, so you should treat this as abstract: only instantiate
- though concrete classes. */
-static void Sprite_filler(struct SpriteListNode *const this) {
+/** Fills a sprite with data. This is kind of an abstract class: it never
+ appears outside of another struct.
+ @param auto: An auto-sprite prototype, contained in the precompiled {Auto.h}
+ resources, that specifies graphics.
+ @param vt: Virtual table.
+ @param x: Where should the sprite go. Leave null to place it in a uniform
+ distribution across space.
+ @fixme I don't like that. I don't like random velocity. */
+static void Sprite_filler(struct SpriteListNode *const this,
+	const struct AutoSprite *const as, const struct SpriteVt *const vt,
+	const struct Ortho3f *x) {
 	struct Sprite *const s = &this->data;
-	assert(this);
-	s->vt = 0; /* abstract */
-	Ortho3f_filler_fg(&s->x);
+	assert(this && as && vt);
+	s->vt      = vt;
+	s->image   = as->image;
+	s->normals = as->normals;
+	s->collision_set = 0;
+	if(x) {
+		Ortho3f_assign(&s->x, x);
+	} else {
+		Ortho3f_filler_fg(&s->x);
+	}
 	s->dx.x = s->dx.y = 0.0f;
 	s->x_5.x = s->x.x, s->x_5.y = s->x.y;
 	Ortho3f_filler_v(&s->v);
-	s->bounding = s->bounding1 = (246.0f * rand() / RAND_MAX + 10.0f) * 0.5f;
-	s->collision_set = 0;
+	s->bounding = s->bounding1 = (as->image->width >= as->image->height ?
+		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
 	Vec2f_to_bin(&s->x_5, &s->bin);
 	SpriteListPush(bins + s->bin, this);
 }
 /** Stale pointers from {Set}'s {realloc} are taken care of by this callback.
- One must set it with {*SetSetMigrate}.
+ One must set it with {*SetSetMigrate}. It's kind of important.
  @implements Migrate */
 static void Sprite_migrate(const struct Migrate *const migrate) {
 	size_t i;
@@ -166,7 +177,7 @@ static void new_bins(void) {
 
 /*static FILE *gnu_glob;*/ /* hack for sprite_new_bins */
 
-/** Called from \see{collision_detection_and_respose}. */
+/** Called from \see{collide}. */
 static void sprite_new_bins(const struct Sprite *const this) {
 	struct Rectangle4f extent;
 	struct Rectangle4i bin4;
@@ -181,7 +192,7 @@ static void sprite_new_bins(const struct Sprite *const this) {
 	extent.y_max = this->x_5.y + extent_grow;
 	Rectangle4f_to_bin4(&extent, &bin4);
 	/* draw in the centre */
-	printf("sprite_new_bins(%f, %f)\n", this->x.x, this->x.y);
+	/*printf("sprite_new_bins(%f, %f)\n", this->x.x, this->x.y);*/
 	/* from \see{new_bins}, clip the sprite bins to the update bins */
 	if(bin4.x_min < grow4.x_min) bin4.x_min = grow4.x_min;
 	if(bin4.x_max > grow4.x_max) bin4.x_max = grow4.x_max;
@@ -256,23 +267,19 @@ static void Sprite_migrate_collisions(struct Sprite *const this,
 	/*this->collision_set = 0;*/
 }
 
-static void show_sprite(struct Sprite *this);
 /** @implements <Bin, Migrate>BiAction */
 static void Bin_migrate_collisions(struct SpriteList **const pthis,
 	void *const migrate_void) {
 	struct SpriteList *const this = *pthis;
 	assert(pthis && this && migrate_void);
-	printf("__Bin %u__\n", (unsigned)(this - bins));
 	SpriteListYBiForEach(this, &Sprite_migrate_collisions, migrate_void);
-	SpriteListYForEach(this, &show_sprite);
 }
 /** @implements Migrate */
 static void Collision_migrate(const struct Migrate *const migrate) {
-	printf("\n\n***Collision MIGRATE [%p, %p]->%lu***\n", migrate->begin,
+	printf("Collision migrate [%p, %p]->%lu.\n", migrate->begin,
 		migrate->end, (unsigned long)migrate->delta);
 	BinSetBiForEach(update_bins, &Bin_migrate_collisions, (void *const)migrate);
 	BinSetBiForEach(draw_bins, &Bin_migrate_collisions, (void *const)migrate);
-	printf("\n\n");
 }
 
 
@@ -292,11 +299,10 @@ struct Transfer {
 static struct TransferSet *transfers;
 
 static void transfer_sprite(struct Transfer *const this) {
-	char a[12];
+	/*char a[12];*/
 	assert(this && this->sprite && this->to_bin < BIN_BIN_FG_SIZE);
-	Sprite_to_string(this->sprite, &a);
-	printf("Update bin of Sprite %s from Bin%u to Bin%u.\n",
-		a, this->sprite->bin, this->to_bin);
+	/*Sprite_to_string(this->sprite, &a);
+	printf("%s: Bin%u -> Bin%u.\n", a, this->sprite->bin, this->to_bin);*/
 	SpriteListRemove(bins + this->sprite->bin, this->sprite);
 	SpriteListPush(bins + this->to_bin, (struct SpriteListNode *)this->sprite);
 	this->sprite->bin = this->to_bin;
@@ -306,11 +312,11 @@ static void transfer_sprite(struct Transfer *const this) {
 
 
 
-/* Define function types, too. */
+/* Define function types. */
 typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
 /* Forward references for {SpriteVt}. */
 struct Ship;
-static void ship_delete(struct Ship *const this);
+static void Ship_delete(struct Ship *const this);
 static void Ship_to_string(const struct Ship *this, char (*const a)[12]);
 static float Ship_get_mass(const struct Ship *const this);
 /** Define {SpriteVt}. */
@@ -319,7 +325,7 @@ static const struct SpriteVt {
 	SpriteToString to_string;
 	SpriteFloatAccessor get_mass;
 } ship_vt = {
-	(SpriteAction)&ship_delete,
+	(SpriteAction)&Ship_delete,
 	(SpriteToString)&Ship_to_string,
 	(SpriteFloatAccessor)&Ship_get_mass
 };
@@ -339,70 +345,33 @@ struct Ship {
 static void Ship_to_string(const struct Ship *this, char (*const a)[12]) {
 	sprintf(*a, "%.11s", this->name);
 }
+#define SET_NAME Ship
+#define SET_TYPE struct Ship
+#define SET_TO_STRING &Ship_to_string
+#include "../general/Set.h"
+static struct ShipSet *ships;
+/** @implements <Ship>Action */
+static void Ship_delete(struct Ship *const this) {
+	assert(this);
+	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
+	ShipSetRemove(ships, this);
+}
 /** @implements <Ship>FloatAccessor */
 static float Ship_get_mass(const struct Ship *const this) {
 	/* Mass is used for collisions, you don't want zero-mass objects. */
 	assert(this && this->mass > 0.0f);
 	return this->mass;
 }
-#define SET_NAME Ship
-#define SET_TYPE struct Ship
-#include "../general/Set.h"
-static struct ShipSet *ships;
-/** @implements <Ship>Action */
-static void ship_delete(struct Ship *const this) {
-	assert(this);
-	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
-	ShipSetRemove(ships, this);
-}
 /** Extends {Sprite_filler}. */
 struct Ship *Ship(const struct AutoShipClass *const class,
-	const struct Vec2f *const x) {
+	const struct Ortho3f *const x) {
 	struct Ship *ship;
 	assert(class && class->sprite->image && class->sprite->normals);
 	if(!(ship = ShipSetNew(ships))) return 0;
-	Sprite_filler(&ship->sprite);
-	ship->sprite.data.vt = &ship_vt;
-	ship->sprite.data.image   = class->sprite->image;
-	ship->sprite.data.normals = class->sprite->normals;
+	Sprite_filler(&ship->sprite, class->sprite, &ship_vt, x);
 	ship->mass = 60.0f;
 	Orcish(ship->name, sizeof ship->name);
 	return ship;
-}
-
-/* This is for communication with {sprite_data}, {sprite_arrow}, and
- {sprite_velocity}. */
-struct OutputData {
-	FILE *fp;
-	unsigned i, n;
-};
-
-/** @implements <Sprite>DiAction */
-static void print_sprite_data(struct Sprite *this, void *const void_out) {
-	struct OutputData *const out = void_out;
-	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n", this->x.x, this->x.y,
-		this->bounding, (double)out->i++ / out->n, this->x_5.x, this->x_5.y,
-		this->bounding1);
-}
-
-/** @implements <Sprite>DiAction */
-/*static void sprite_arrow(struct Sprite *this, void *const void_out) {
- struct OutputData *const out = void_out;
- struct Vec2i b;
- bin_to_Vec2i(this->bin, &b);
- fprintf(out->fp, "set arrow from %f,%f to %d,%d%s # %u\n", this->x.x,
- this->x.y, b.x, b.y, this->is_glowing ? " lw 3 lc rgb \"red\"" : "",
- this->bin);
- }*/
-
-static float dt_ms;
-
-/** @implements <Sprite>DiAction */
-static void print_sprite_velocity(struct Sprite *this, void *const void_out) {
-	struct OutputData *const out = void_out;
-	fprintf(out->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"blue\" "
-		"front;\n", this->x.x, this->x.y,
-		this->x.x + this->v.x * dt_ms, this->x.y + this->v.y * dt_ms);
 }
 
 /** Calculates temporary values, {dx}, {x_5}, and {bounding1}. Half-way through
@@ -439,7 +408,6 @@ static void extrapolate(struct Sprite *const this) {
 static void apply_bounce_later(struct Sprite *const this,
 	const struct Vec2f *const v, const float t) {
 	struct Collision *const c = CollisionSetNew(collisions);
-	struct Collision *i;
 	char a[12];
 	assert(this && v && t >= 0.0f && t <= dt_ms);
 	if(!c) { fprintf(stderr, "Collision set: %s.\n",
@@ -448,11 +416,11 @@ static void apply_bounce_later(struct Sprite *const this,
 	c->next = this->collision_set, this->collision_set = c;
 	c->v.x = v->x, c->v.y = v->y;
 	c->t = t;
-	printf("^^^ Sprite %s BOUNCE (%.1f, %.1f):%.1f -> \n", a, v->x, v->y, t);
+	/*printf("^^^ Sprite %s BOUNCE -> ", a);
 	for(i = this->collision_set; i; i = i->next) {
-		printf(" (%.1f, %.1f):%.1f, \n", i->v.x, i->v.y, i->t);
+		printf("(%.1f, %.1f):%.1f, ", i->v.x, i->v.y, i->t);
 	}
-	printf("^^^ DONE\n");
+	printf("DONE\n");*/
 }
 
 /** Elastic collision between circles; use this when we've determined that {u}
@@ -467,7 +435,7 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	const float a_m = a->vt->get_mass(a), b_m = b->vt->get_mass(b),
 	diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
 	/* fixme: float stored in memory? */
-	
+
 	/* Extrapolate position of collision. */
 	ac.x = a->x.x + a->v.x * t0_dt, ac.y = a->x.y + a->v.y * t0_dt;
 	bc.x = b->x.x + b->v.x * t0_dt, bc.y = b->x.y + b->v.y * t0_dt;
@@ -566,7 +534,6 @@ static int collide_circles(const struct Sprite *const a,
 	t = (det <= 0.0f) ? 0.0f : (-vz - sqrtf(det)) / v2;
 	if(t < 0.0f) t = 0.0f; /* bounded, dist < r^2 */
 	*t0_ptr = t;
-	
 	return 1;
 }
 
@@ -586,7 +553,6 @@ static void sprite_sprite_collide(struct Sprite *const this,
 	if(this >= that) return;
 	Sprite_to_string(this, &a);
 	Sprite_to_string(that, &b);
-	printf("%s %s.\n", a, b);
 	/* Calculate the distance between; the sum of {bounding1}, viz, {bounding}
 	 projected on time for easy discard. */
 	diff.x = this->x_5.x - that->x_5.x, diff.y = this->x_5.y - that->x_5.y;
@@ -621,9 +587,9 @@ static void bin_sprite_collide(struct SpriteList **const pthis,
  @implements <Sprite>Action */
 static void collide(struct Sprite *const this) {
 	/*SpriteBiAction biact = &collision_detection_and_response;*/
-	printf("--Sprite bins:\n");
+	/*printf("--Sprite bins:\n");*/
 	sprite_new_bins(this);
-	printf("--Checking:\n");
+	/*printf("--Checking:\n");*/
 	BinSetBiForEach(sprite_bins, &bin_sprite_collide, this);
 	/* fixme: have a {BinSetBiShortCircuit(bin_sprite_collide_dist);} that stops
 	 after the bounding box on edges (maybe! I think, yes, that would make it
@@ -641,7 +607,6 @@ static void timestep(struct Sprite *const this) {
 	char a[12];
 	assert(this);
 	Sprite_to_string(this, &a);
-	printf("__Time-step %s__\n", a);
 	/* The earliest time to collision and sum the collisions together. */
 	for(c = this->collision_set; c; c = c->next) {
 		d.x = this->x.x + this->v.x * c->t;
@@ -649,31 +614,18 @@ static void timestep(struct Sprite *const this) {
 		/*fprintf(gnu_glob, "set arrow from %f,%f to %f,%f lw 0.5 "
 			"lc rgb \"#EE66AA\" front;\n", d.x, d.y,
 			d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));*/
-		printf(" -- collides at %.1f going (%.1f, %.1f) (next #%p.)\n",
-			c->t, c->v.x, c->v.y, (void *)c->next);
+		this->vt->to_string(this, &a);
+		printf("%s collides at %.1f and ends up going (%.1f, %.1f).\n", a,
+			c->t, c->v.x * 1000.0f, c->v.y * 1000.0f, (void *)c->next);
 		if(c->t < t0) t0 = c->t;
 		v1.x += c->v.x, v1.y += c->v.y;
-		/* fixme: stability; v1->v */
+		/* fixme: stability! */
 	}
-	this->collision_set = 0;
 	this->x.x = this->x.x + this->v.x * t0 + v1.x * (1.0f - t0);
 	this->x.y = this->x.y + this->v.y * t0 + v1.y * (1.0f - t0);
-}
-
-/** Temporary action.
- @implements <Sprite>Action */
-static void show_sprite(struct Sprite *this) {
-	struct Collision *c;
-	char a[12];
-	assert(this);
-	Sprite_to_string(this, &a);
-	printf("%s Bin%u at (%.1f, %.1f):%.1f -0.5(%.1f, %.1f)-> "
-		"(%.1f, %.1f):%.1f; collisions:\n",
-		a, this->bin, this->x.x, this->x.y, this->bounding,
-		this->v.x, this->v.y,
-		this->x_5.x, this->x_5.y, this->bounding1);
-	for(c = this->collision_set; c; c = c->next) {
-		printf(" velocity (%.1f, %.1f) at %.1f\n", c->v.x, c->v.y, c->t);
+	if(this->collision_set) {
+		this->collision_set = 0;
+		this->v.x = v1.x, this->v.y = v1.y;
 	}
 }
 
@@ -705,26 +657,22 @@ void Sprites_(void) {
 }
 
 void SpriteUpdate(const int dt_ms_passed) {
+	/* The passed parameter goes into a global; we are using it a lot. */
 	dt_ms = dt_ms_passed;
+	/* Each frame, calculate the bins that are visible and stuff. */
 	new_bins();
-	/* switch these sprites glowing */
-	for_each_update(&show_sprite);
 	/* Calculate the future positions and transfer the sprites that have
 	 escaped their bin. */
-	printf("Extrapolating:\n");
 	for_each_update(&extrapolate);
 	TransferSetForEach(transfers, &transfer_sprite);
 	TransferSetClear(transfers);
-	/* fixme: place things in to drawing area */
+	/* fixme: place things in to drawing area. */
 	/* Collision relies on the values calculated in \see{extrapolate}. */
-	printf("Colliding:\n");
 	for_each_update(&collide);
 	/* Final time-step where new values are calculated. Takes data from
 	 \see{extrapolate} and \see{collide}. */
-	printf("Time-step:\n");
 	for_each_update(&timestep);
 	CollisionSetClear(collisions);
-	for_each_update(&show_sprite);
 }
 
 /** @implements <Sprite, SpriteOutput*>DiAction */
@@ -742,6 +690,112 @@ static void draw_bin(struct SpriteList **const pthis, void *const pout_void) {
 /** Must call \see{SpriteUpdate} before this, because it updates everything. */
 void SpriteDraw(SpriteOutput draw) {
 	BinSetBiForEach(draw_bins, &draw_bin, &draw);
+}
+
+/* This is a debug thing. */
+
+/* This is for communication with {sprite_data}, {sprite_arrow}, and
+ {sprite_velocity} for outputting a gnu plot. */
+struct OutputData {
+	FILE *fp;
+	unsigned i, n;
+};
+/** @implements <Sprite, OutputData>DiAction */
+static void sprite_count(struct Sprite *this, void *const void_out) {
+	struct OutputData *const out = void_out;
+	UNUSED(this);
+	out->n++;
+}
+/** @implements <Sprite, OutputData>DiAction */
+static void print_sprite_data(struct Sprite *this, void *const void_out) {
+	struct OutputData *const out = void_out;
+	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n", this->x.x, this->x.y,
+			this->bounding, (double)out->i++ / out->n, this->x_5.x, this->x_5.y,
+			this->bounding1);
+}
+/** @implements <Sprite, OutputData>DiAction */
+static void print_sprite_velocity(struct Sprite *this, void *const void_out) {
+	struct OutputData *const out = void_out;
+	fprintf(out->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"blue\" "
+		"front;\n", this->x.x, this->x.y,
+		this->x.x + this->v.x * dt_ms * 1000.0f,
+		this->x.y + this->v.y * dt_ms * 1000.0f);
+}
+/** For communication with {gnu_draw_bins}. */
+struct ColourData {
+	FILE *fp;
+	const char *colour;
+	unsigned object;
+};
+/** Draws squares for highlighting bins.
+ @implements <Bin, ColourData>DiAction */
+static void gnu_draw_bins(struct SpriteList **this, void *const void_col) {
+	struct ColourData *const col = void_col;
+	const unsigned bin = (unsigned)(*this - bins);
+	struct Vec2i bin2i;
+	assert(col);
+	assert(bin < BIN_BIN_FG_SIZE);
+	bin_to_Vec2i(bin, &bin2i);
+	fprintf(col->fp, "# bin %u -> %d,%d\n", bin, bin2i.x, bin2i.y);
+	fprintf(col->fp, "set object %u rect from %d,%d to %d,%d fc rgb \"%s\" "
+		"fs solid noborder;\n", col->object++, bin2i.x, bin2i.y,
+		bin2i.x + 256, bin2i.y + 256, col->colour);
+}
+/** Debugging plot.
+ @implements Action */
+void SpritePlot(void) {
+	FILE *data = 0, *gnu = 0;
+	const char *data_fn = "sprite.data", *gnu_fn = "sprite.gnu",
+		*eps_fn = "sprite.eps";
+	enum { E_NO, E_DATA, E_GNU } e = E_NO;
+	fprintf(stderr, "Will output %s at the current time, and a gnuplot script, "
+		"%s of the current sprites.\n", data_fn, gnu_fn);
+	do {
+		struct OutputData out;
+		struct ColourData col;
+		unsigned i;
+		if(!(data = fopen(data_fn, "w"))) { e = E_DATA; break; }
+		if(!(gnu = fopen(gnu_fn, "w")))   { e = E_GNU;  break; }
+		out.fp = data, out.i = 0; out.n = 0;
+		for(i = 0; i < BIN_BIN_FG_SIZE; i++)
+			SpriteListYBiForEach(bins + i, &sprite_count, &out);
+		for(i = 0; i < BIN_BIN_FG_SIZE; i++)
+			SpriteListYBiForEach(bins + i, &print_sprite_data, &out);
+		fprintf(gnu, "set term postscript eps enhanced size 20cm, 20cm\n"
+			"set output \"%s\"\n"
+			"set size square;\n"
+			"set palette defined (1 \"#0000FF\", 2 \"#00FF00\", 3 \"#FF0000\");"
+			"\n"
+			"set xtics 256 rotate; set ytics 256;\n"
+			"set grid;\n"
+			"set xrange [-8192:8192];\n"
+			"set yrange [-8192:8192];\n"
+			"set cbrange [0.0:1.0];\n", eps_fn);
+		/* draw bins as squares behind */
+		fprintf(gnu, "set style fill transparent solid 0.3 noborder;\n");
+		col.fp = gnu, col.colour = "#ADD8E6", col.object = 1;
+		BinSetBiForEach(draw_bins, &gnu_draw_bins, &col);
+		col.fp = gnu, col.colour = "#D3D3D3";
+		BinSetBiForEach(update_bins, &gnu_draw_bins, &col);
+		/* draw arrows from each of the sprites to their bins */
+		out.fp = gnu, out.i = 0;
+		for(i = 0; i < BIN_BIN_FG_SIZE; i++)
+			SpriteListYBiForEach(bins + i, &print_sprite_velocity, &out);
+		/* draw the sprites */
+		fprintf(gnu, "plot \"%s\" using 5:6:7 with circles \\\n"
+			"linecolor rgb(\"#00FF00\") fillstyle transparent "
+			"solid 1.0 noborder title \"Velocity\", \\\n"
+			"\"%s\" using 1:2:3:4 with circles \\\n"
+			"linecolor palette fillstyle transparent solid 0.3 noborder \\\n"
+			"title \"Sprites\";\n", data_fn, data_fn);
+	} while(0); switch(e) {
+		case E_NO: break;
+		case E_DATA: perror(data_fn); break;
+		case E_GNU:  perror(gnu_fn);  break;
+	} {
+		if(fclose(data) == EOF) perror(data_fn);
+		if(fclose(gnu) == EOF)  perror(gnu_fn);
+	}
 }
 
 #if 0
@@ -788,6 +842,24 @@ void SpriteInput(struct Sprite *const this, const int turning,
 	/*SpriteAddTheta(this, this->omega * dt_ms); isn't that what we did??? */
 }
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1049,11 +1121,11 @@ static void debris_death(struct Debris *const this) {
 	void SpriteDebris(const struct Sprite *const s) {
 		struct AutoImage *small_image;
 		struct Sprite *sub;
-		
+
 		if(!s || !(small_image = AutoImageSearch("AsteroidSmall.png")) || s->size <= small_image->width) return;
-		
+
 		pedantic("SpriteDebris: %s is exploding at (%.3f, %.3f).\n", SpriteToString(s), s->x, s->y);
-		
+
 		/* break into pieces -- new debris */
 		sub = Sprite(SP_DEBRIS, AutoDebrisSearch("SmallAsteroid"), (float)s->x, (float)s->y, s->theta * deg_to_rad, 10.0f);
 		SpriteSetVelocity(sub, deb_explosion_elasticity * s->vx, deb_explosion_elasticity * s->vy);
@@ -1063,15 +1135,15 @@ static void debris_death(struct Debris *const this) {
 	/*void DebrisEnforce(struct Debris *deb) {
 	 float vx, vy;
 	 float speed_2;
-	 
+
 	 if(!deb || !deb->sprite) return;
-	 
+
 	 SpriteGetVelocity(deb->sprite, &vx, &vy);
 	 if((speed_2 = vx * vx + vy * vy) > maximum_speed_2) {
 	 debug("DebrisEnforce: maximum %.3f\\,(pixels/s)^2, Deb%u is moving %.3f\\,(pixels/s)^2.\n", maximum_speed_2, DebrisGetId(deb), speed_2);
 	 DebrisExplode(deb);
 	 }
-	 }*/	
+	 }*/
 #endif
 	debris_delete(this);
 }
@@ -1107,7 +1179,7 @@ static void ship_action_ai(struct Ship *const this) {
 	struct Vec2f c;
 	float d_2, theta, t;
 	int turning = 0, acceleration = 0;
-	
+
 	if(!b) return; /* fixme */
 	c.x = b->sprite.data.r.x - this->sprite.data.r.x;
 	c.y = b->sprite.data.r.y - this->sprite.data.r.y;
@@ -1621,7 +1693,7 @@ static void collide_boxes(struct Sprite *const this) {
 		s->x += (s->vx * s->t0_dt_collide + s_vx1 * (1.0f - s->t0_dt_collide)) * dt_ms;
 		s->y += (s->vy * s->t0_dt_collide + s_vy1 * (1.0f - s->t0_dt_collide)) * dt_ms;
 		s->vx = s_vx1;
-		s->vy = s_vy1;	
+		s->vy = s_vy1;
 		/* unmark for next frame */
 		s->no_collisions = 0;
 		/* apply De Sitter spacetime? already done? */

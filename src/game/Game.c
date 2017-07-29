@@ -9,7 +9,7 @@
  @since		1.0, 1999 */
 
 #include <stdlib.h> /* malloc free rand (fixme) */
-#include <math.h>   /* M_PI (fixme: no, GNU) */
+/*#include <math.h>*/   /* M_PI (fixme: no, GNU) */
 #include <string.h> /* strcmp for bsearch */
 #include <stdio.h>  /* printf */
 #include "../../build/Auto.h"
@@ -71,9 +71,10 @@ int Game(void) {
 	KeyRegister('p',  &pause);
 	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &fps);
-	KeyRegister('a',  &position);
 	KeyRegister('t',  &gametime);
-	KeyRegister('l',  &LightList);
+	KeyRegister('1',  &SpritePlot);
+	/*KeyRegister('a',  &position);
+	KeyRegister('l',  &LightList);*/
 	/*KeyRegister('s',  &SpriteList);*/
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");

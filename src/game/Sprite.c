@@ -709,9 +709,9 @@ static void sprite_count(struct Sprite *this, void *const void_out) {
 /** @implements <Sprite, OutputData>DiAction */
 static void print_sprite_data(struct Sprite *this, void *const void_out) {
 	struct OutputData *const out = void_out;
-	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n", this->x.x, this->x.y,
+	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t# Tex%u, Tex%u\n", this->x.x, this->x.y,
 			this->bounding, (double)out->i++ / out->n, this->x_5.x, this->x_5.y,
-			this->bounding1);
+			this->bounding1, this->image->texture, this->normals->texture);
 }
 /** @implements <Sprite, OutputData>DiAction */
 static void print_sprite_velocity(struct Sprite *this, void *const void_out) {
@@ -729,7 +729,7 @@ struct ColourData {
 };
 /** Draws squares for highlighting bins.
  @implements <Bin, ColourData>DiAction */
-static void gnu_draw_bins(struct SpriteList **this, void *const void_col) {
+static void gnu_shade_bins(struct SpriteList **this, void *const void_col) {
 	struct ColourData *const col = void_col;
 	const unsigned bin = (unsigned)(*this - bins);
 	struct Vec2i bin2i;
@@ -774,9 +774,9 @@ void SpritePlot(void) {
 		/* draw bins as squares behind */
 		fprintf(gnu, "set style fill transparent solid 0.3 noborder;\n");
 		col.fp = gnu, col.colour = "#ADD8E6", col.object = 1;
-		BinSetBiForEach(draw_bins, &gnu_draw_bins, &col);
+		BinSetBiForEach(draw_bins, &gnu_shade_bins, &col);
 		col.fp = gnu, col.colour = "#D3D3D3";
-		BinSetBiForEach(update_bins, &gnu_draw_bins, &col);
+		BinSetBiForEach(update_bins, &gnu_shade_bins, &col);
 		/* draw arrows from each of the sprites to their bins */
 		out.fp = gnu, out.i = 0;
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++)

@@ -551,9 +551,8 @@ static void display(void) {
 		glUniform2fv(auto_Lambert_shader.point_position, lights, (GLfloat *)LightGetPositionArray());
 		glUniform3fv(auto_Lambert_shader.point_colour, lights, (GLfloat *)LightGetColourArray());
 	}
-	/* draw bins going from upper left, (-,+), to lower right, (+,-) to match
-	 memory. */
 	SpriteDraw(&display_sprite);
+	old_texture = 0;
 #if 0
 	for(bin.y = bin_pos.y; bin.y >= bin_neg.y; bin.y--) {
 		for(bin.x = bin_neg.x; bin.x <= bin_pos.y; bin.x++) {

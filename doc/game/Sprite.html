@@ -132,11 +132,11 @@ Collisions between two sprites, cleared at every frame.
 <pre><b>struct Sprite</b> {
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
+	struct Collision *collision_set; /* temporary, \in collisions */
 	unsigned bin; /* where, approximately, is the image between frames */
 	struct Ortho3f x, v; /* where it is and where it is going */
 	struct Vec2f dx, x_5; /* temporary values */
 	float bounding, bounding1; /* bounding1 is temporary */
-	struct Collision *collision_set; /* temporary, \in collisions */
 }</pre>
 <p>
 Define <em>Sprite</em>.
@@ -164,6 +164,20 @@ Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath
 }</pre>
 <p>
 Define <em>SpriteVt</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct ColourData"><!-- --></a>
+<h3>struct ColourData</h3>
+<pre><b>struct ColourData</b> {
+	FILE *fp;
+	const char *colour;
+	unsigned object;
+}</pre>
+<p>
+For communication with <em>gnu_draw_bins</em>.
 </p>
 <dl>
 </dl>
@@ -256,7 +270,7 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 	<td>struct Ship *</td>
 	<td><a href = "#Ship">Ship</a></td>
 	<td>const struct AutoShipClass *const class,
-	const struct Vec2f *const x</td>
+	const struct Ortho3f *const x</td>
 </tr>
 <tr>
 	<td>int</td>
@@ -272,6 +286,11 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 	<td>void</td>
 	<td><a href = "#SpriteDraw">SpriteDraw</a></td>
 	<td>SpriteOutput draw</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritePlot">SpritePlot</a></td>
+	<td>void</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -361,7 +380,7 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 <div><a name = "Ship"><!-- --></a>
 <h3>Ship</h3>
 <pre>struct Ship * <b>Ship</b> (const struct AutoShipClass *const class,
-	const struct Vec2f *const x)</pre>
+	const struct Ortho3f *const x)</pre>
 <p>
 Extends <em>Sprite_filler</em>.
 </p>
@@ -398,6 +417,18 @@ Erases all sprite buffers.
 Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it updates everything.
 </p>
 <dl>
+</dl>
+</div>
+
+<div><a name = "SpritePlot"><!-- --></a>
+<h3>SpritePlot</h3>
+<pre>void <b>SpritePlot</b> (void)</pre>
+<p>
+Debugging plot.
+</p>
+<dl>
+	<dt>implements</dt>
+	<dd>Action</dd>
 </dl>
 </div>
 

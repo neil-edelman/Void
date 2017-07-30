@@ -22,6 +22,8 @@
 	(6.283185307179586476925286766559005768394338798750211641949889f)
 #endif
 
+#define ONE_S_TO_ONE_MS_F (0.001f)
+
 /* changed? update shader Far.vs! should be 0.00007:14285.714; space is
  big! too slow to get anywhere, so fudge it; basically, this makes space much
  smaller: ratio of fg:bg distance. */

@@ -102,3 +102,6 @@ with collision detection, 101 sprites
 1024 sprites, full-screen (with clipping!)
 17%
 22% now
+
+20000 sprites
+17%

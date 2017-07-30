@@ -58,12 +58,12 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 523000053;
-			PBXWorkspaceStateSaveDate = 523000053;
+			PBXPerProjectTemplateStateSaveDate = 523049729;
+			PBXWorkspaceStateSaveDate = 523049729;
 		};
 		perUserProjectItems = {
-			28973E301F2C378900F3B327 = 28973E301F2C378900F3B327 /* PBXTextBookmark */;
-			28B70BB11F2AF746003AF256 = 28B70BB11F2AF746003AF256 /* PBXTextBookmark */;
+			280FA73A1F2C5D56001E65A7 /* PBXTextBookmark */ = 280FA73A1F2C5D56001E65A7 /* PBXTextBookmark */;
+			28FCEDB21F2D5DD000CBA6FF /* PBXTextBookmark */ = 28FCEDB21F2D5DD000CBA6FF /* PBXTextBookmark */;
 		};
 		sourceControlManager = 2866766A1E8467300090EBDC /* Source Control */;
 		userBuildSettings = {
@@ -71,10 +71,20 @@
 	};
 	2806515F1EE4C6A40023DC21 /* OrthoMath.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {595, 3146}}";
-			sepNavSelRange = "{7193, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {595, 3172}}";
+			sepNavSelRange = "{7229, 0}";
 			sepNavVisRange = "{0, 0}";
 		};
+	};
+	280FA73A1F2C5D56001E65A7 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 2806515F1EE4C6A40023DC21 /* OrthoMath.h */;
+		name = "OrthoMath.h: 217";
+		rLen = 0;
+		rLoc = 7229;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
 	};
 	2866766A1E8467300090EBDC /* Source Control */ = {
 		isa = PBXSourceControlManager;
@@ -89,26 +99,6 @@
 	2866766B1E8467300090EBDC /* Code sense */ = {
 		isa = PBXCodeSenseManager;
 		indexTemplatePath = "";
-	};
-	28973E301F2C378900F3B327 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 2806515F1EE4C6A40023DC21 /* OrthoMath.h */;
-		name = "OrthoMath.h: 217";
-		rLen = 0;
-		rLoc = 7193;
-		rType = 0;
-		vrLen = 0;
-		vrLoc = 0;
-	};
-	28B70BB11F2AF746003AF256 /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 2806515F1EE4C6A40023DC21 /* OrthoMath.h */;
-		name = "OrthoMath.h: 217";
-		rLen = 0;
-		rLoc = 7193;
-		rType = 0;
-		vrLen = 0;
-		vrLoc = 0;
 	};
 	28FB36EC1E8A0FE1003610DC /* EntryPosix.c */ = {
 		uiCtxt = {
@@ -182,23 +172,23 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 28119}}";
-			sepNavSelRange = "{22838, 0}";
-			sepNavVisRange = "{21948, 1758}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 29926}}";
+			sepNavSelRange = "{16975, 0}";
+			sepNavVisRange = "{39900, 1738}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 702}}";
-			sepNavSelRange = "{466, 0}";
-			sepNavVisRange = "{0, 467}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 677}}";
+			sepNavSelRange = "{140, 0}";
+			sepNavVisRange = "{0, 759}";
 		};
 	};
 	28FB36F91E8A0FE1003610DC /* Zone.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2392}}";
-			sepNavSelRange = "{2697, 0}";
-			sepNavVisRange = "{1540, 1425}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2223}}";
+			sepNavSelRange = "{2456, 0}";
+			sepNavVisRange = "{1540, 1651}";
 		};
 	};
 	28FB36FA1E8A0FE1003610DC /* Zone.h */ = {
@@ -210,8 +200,8 @@
 	};
 	28FB36FC1E8A0FE1003610DC /* List.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {802, 20722}}";
-			sepNavSelRange = "{44349, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {802, 20904}}";
+			sepNavSelRange = "{25073, 0}";
 			sepNavVisRange = "{0, 0}";
 		};
 	};
@@ -266,9 +256,9 @@
 	};
 	28FB37061E8A0FE1003610DC /* Draw.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 8879}}";
-			sepNavSelRange = "{21481, 0}";
-			sepNavVisRange = "{20513, 1860}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 8827}}";
+			sepNavSelRange = "{19360, 0}";
+			sepNavVisRange = "{18389, 1944}";
 		};
 	};
 	28FB37071E8A0FE1003610DC /* Draw.h */ = {
@@ -407,6 +397,16 @@
 			sepNavSelRange = "{0, 0}";
 			sepNavVisRange = "{0, 2389}";
 		};
+	};
+	28FCEDB21F2D5DD000CBA6FF /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 2806515F1EE4C6A40023DC21 /* OrthoMath.h */;
+		name = "OrthoMath.h: 219";
+		rLen = 0;
+		rLoc = 7229;
+		rType = 0;
+		vrLen = 0;
+		vrLoc = 0;
 	};
 	8DD76FA90486AB0100D96B5E /* Void */ = {
 		activeExec = 0;

@@ -57,7 +57,7 @@ static int remove_all_events_except(struct Event *const victim) {
 void Zone(const struct AutoSpaceZone *const sz) {
 	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
 	const struct AutoShipClass *blob_class = AutoShipClassSearch("Blob");
-	const struct AutoShipClass *fox_class = AutoShipClassSearch("Fox");
+	/*const struct AutoShipClass *fox_class = AutoShipClassSearch("Fox");*/
 	int i;
 
 	debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name, sz->ois1->name, sz->ois2->name);
@@ -81,19 +81,10 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	current_zone = sz;
 
 	/* some asteroids */
-#if 0
-	for(i = 0; i < /*7000*/1000; i++) {
-		struct Ortho3f r = {
-			rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI)
-		}, v = {
-			rnd(0.02f), rnd(0.02f), rnd(10.0f)
-		};
-		Debris(AutoDebrisSearch("Asteroid"), &r, &v);
-	}
-#endif
+	for(i = 0; i < 7000; i++) Debris(AutoDebrisSearch("Asteroid"), 0);
 
 	/* sprinkle some ships */
-	for(i = 0; i < 5000; i++) Ship(/*blob_class*/fox_class, 0);
+	for(i = 0; i < 1000; i++) Ship(blob_class, 0);
 
 }
 

@@ -14,15 +14,19 @@
 
 #include <stdlib.h>	/* rand */
 #include <stdio.h>  /* fprintf */
-#include "../../build/Auto.h" /* for AutoImage, AutoShipClass */
+#include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
 #include "../general/OrthoMath.h" /* for measurements and types */
 #include "../general/Orcish.h"
 #include "../system/Draw.h" /* DrawGetCamera, DrawSetScreen */
+#include "../system/Timer.h" /* for expiring Sprites */
+#include "Light.h"	/* for glowing Sprites */
 #include "Sprite.h"
 
 /* This is used for small floating-point values. The value doesn't have any
  significance. */
 static const float epsilon = 0.0005f;
+/* controls how far past the bounding radius the ship's shots appear. */
+static const float wmd_distance_mod = 1.3f;
 
 /* Updated frame time, passed to {SpriteUpdate} but used in nearly
  everything. */
@@ -175,8 +179,6 @@ static void new_bins(void) {
 	}
 }
 
-/*static FILE *gnu_glob;*/ /* hack for sprite_new_bins */
-
 /** Called from \see{collide}. */
 static void sprite_new_bins(const struct Sprite *const this) {
 	struct Rectangle4f extent;
@@ -314,25 +316,19 @@ static void transfer_sprite(struct Transfer *const this) {
 
 /* Define function types. */
 typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
-/* Forward references for {SpriteVt}. */
-struct Ship;
-static void Ship_delete(struct Ship *const this);
-static void Ship_to_string(const struct Ship *this, char (*const a)[12]);
-static float Ship_get_mass(const struct Ship *const this);
 /** Define {SpriteVt}. */
-static const struct SpriteVt {
+struct SpriteVt {
 	SpriteAction delete;
 	SpriteToString to_string;
 	SpriteFloatAccessor get_mass;
-} ship_vt = {
-	(SpriteAction)&Ship_delete,
-	(SpriteToString)&Ship_to_string,
-	(SpriteFloatAccessor)&Ship_get_mass
 };
-/** @implements <Sprite>ToString */
+/* Vt is undefined until this point, and we need this as a function to pass to
+ a generic {Sprite}. Define it now.
+ @implements <Sprite>ToString */
 static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]) {
 	this->vt->to_string(this, a);
 }
+
 
 
 /* Define {ShipSet} and {ShipSetNode}, a subclass of {Sprite}. */
@@ -341,15 +337,14 @@ struct Ship {
 	float mass;
 	char name[16];
 };
+#define SET_NAME Ship
+#define SET_TYPE struct Ship
+#include "../general/Set.h"
+static struct ShipSet *ships;
 /** @implements <Ship>ToString */
 static void Ship_to_string(const struct Ship *this, char (*const a)[12]) {
 	sprintf(*a, "%.11s", this->name);
 }
-#define SET_NAME Ship
-#define SET_TYPE struct Ship
-#define SET_TO_STRING &Ship_to_string
-#include "../general/Set.h"
-static struct ShipSet *ships;
 /** @implements <Ship>Action */
 static void Ship_delete(struct Ship *const this) {
 	assert(this);
@@ -362,17 +357,197 @@ static float Ship_get_mass(const struct Ship *const this) {
 	assert(this && this->mass > 0.0f);
 	return this->mass;
 }
+/* Fill in the member functions of this implementation. */
+static const struct SpriteVt ship_vt = {
+	(SpriteAction)&Ship_delete,
+	(SpriteToString)&Ship_to_string,
+	(SpriteFloatAccessor)&Ship_get_mass
+};
 /** Extends {Sprite_filler}. */
 struct Ship *Ship(const struct AutoShipClass *const class,
 	const struct Ortho3f *const x) {
 	struct Ship *ship;
-	assert(class && class->sprite->image && class->sprite->normals);
+	assert(class && class->sprite
+		&& class->sprite->image && class->sprite->normals);
 	if(!(ship = ShipSetNew(ships))) return 0;
 	Sprite_filler(&ship->sprite, class->sprite, &ship_vt, x);
 	ship->mass = 60.0f;
 	Orcish(ship->name, sizeof ship->name);
 	return ship;
 }
+
+
+
+/* Define {DebrisSet} and {DebrisSetNode}, a subclass of {Sprite}. */
+struct Debris {
+	struct SpriteListNode sprite;
+	float mass;
+};
+#define SET_NAME Debris
+#define SET_TYPE struct Debris
+#include "../general/Set.h"
+static struct DebrisSet *debris;
+/** @implements <Debris>ToString */
+static void Debris_to_string(const struct Debris *this, char (*const a)[12]) {
+	sprintf(*a, "Debris%u", (unsigned)DebrisSetGetIndex(debris, this) % 100000);
+}
+/** @implements <Debris>Action */
+static void Debris_delete(struct Debris *const this) {
+	assert(this);
+	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
+	DebrisSetRemove(debris, this);
+}
+/** @implements <Debris>FloatAccessor */
+static float Debris_get_mass(const struct Debris *const this) {
+	assert(this && this->mass > 0.0f);
+	return this->mass;
+}
+/* Fill in the member functions of this implementation. */
+static const struct SpriteVt debris_vt = {
+	(SpriteAction)&Debris_delete,
+	(SpriteToString)&Debris_to_string,
+	(SpriteFloatAccessor)&Debris_get_mass
+};
+/** Extends {Sprite_filler}. */
+struct Debris *Debris(const struct AutoDebris *const class,
+	const struct Ortho3f *const x) {
+	struct Debris *d;
+	assert(class && class->sprite
+		&& class->sprite->image && class->sprite->normals);
+	if(!(d = DebrisSetNew(debris))) return 0;
+	Sprite_filler(&d->sprite, class->sprite, &debris_vt, x);
+	d->mass = class->mass;
+	return d;
+}
+
+
+
+/* Define {WmdSet} and {WmdSetNode}, a subclass of {Sprite}. */
+struct Wmd {
+	struct SpriteListNode sprite;
+	const struct AutoWmdType *class;
+	const struct Sprite *from;
+	float mass;
+	unsigned expires;
+	unsigned light;
+};
+#define SET_NAME Wmd
+#define SET_TYPE struct Wmd
+#include "../general/Set.h"
+static struct WmdSet *wmds;
+/** @implements <Wmd>ToString */
+static void Wmd_to_string(const struct Wmd *this, char (*const a)[12]) {
+	sprintf(*a, "Wmd%u", (unsigned)WmdSetGetIndex(wmds, this) % 100000000);
+}
+/** @implements <Wmd>Action */
+static void Wmd_delete(struct Wmd *const this) {
+	assert(this);
+	Light_(&this->light);
+	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
+	WmdSetRemove(wmds, this);
+}
+/** @implements <Debris>FloatAccessor */
+static float Wmd_get_mass(const struct Wmd *const this) {
+	assert(this);
+	return 1.0f;
+}
+/** This hasn't been implemented.
+ @implements <Wmd>Action */
+/*static void wmd_action(struct Wmd *const this) {
+	if(TimerIsTime(this->expires)) wmd_death(this);
+}*/
+/* Fill in the member functions of this implementation. */
+static const struct SpriteVt wmd_vt = {
+	(SpriteAction)&Wmd_delete,
+	(SpriteToString)&Wmd_to_string,
+	(SpriteFloatAccessor)&Wmd_get_mass
+};
+/** Extends {Sprite_filler}. */
+struct Wmd *Wmd(const struct AutoWmdType *const class,
+	const struct Ship *const from) {
+	struct Wmd *w;
+	struct Ortho3f x;
+	const struct Vec2f dir = { cosf(from->sprite.data.x.theta),
+		sinf(from->sprite.data.x.theta) };
+	assert(class && class->sprite
+		&& class->sprite->image && class->sprite->normals && from);
+	x.x = from->sprite.data.x.x
+		+ dir.x * from->sprite.data.bounding * wmd_distance_mod;
+	x.y = from->sprite.data.x.y
+		+ dir.y * from->sprite.data.bounding * wmd_distance_mod;
+	x.theta = from->sprite.data.x.theta;
+	if(!(w = WmdSetNew(wmds))) return 0;
+	Sprite_filler(&w->sprite, class->sprite, &wmd_vt, &x);
+	/* Speed is in [px/s], want it [px/ms]. */
+	w->sprite.data.v.x = from->sprite.data.v.x + dir.x * class->speed * 0.001f;
+	w->sprite.data.v.y = from->sprite.data.v.y + dir.y * class->speed * 0.001f;
+	w->from = &from->sprite.data;
+	w->mass = class->impact_mass;
+	w->expires = TimerGetGameTime() + class->ms_range;
+	{
+		const float length = sqrtf(class->r * class->r + class->g * class->g
+			+ class->b * class->b);
+		const float one_length = length > epsilon ? 1.0f / length : 1.0f;
+		Light(&w->light, length, class->r * one_length, class->g * one_length,
+			class->b * one_length);
+	}
+	return w;
+}
+
+
+
+/* Define {GateSet} and {GateSetNode}, a subclass of {Sprite}. */
+struct Gate {
+	struct SpriteListNode sprite;
+	const struct AutoSpaceZone *to;
+};
+#define SET_NAME Gate
+#define SET_TYPE struct Gate
+#include "../general/Set.h"
+static struct GateSet *gates;
+/** @implements <Debris>ToString */
+static void Gate_to_string(const struct Gate *this, char (*const a)[12]) {
+	sprintf(*a, "%.7sGate", this->to->name);
+}
+/** @implements <Debris>Action */
+static void Gate_delete(struct Gate *const this) {
+	assert(this);
+	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
+	GateSetRemove(gates, this);
+}
+/** @implements <Debris>FloatAccessor */
+static float Gate_get_mass(const struct Gate *const this) {
+	assert(this);
+	return 1e36f; /* No moving. I don't think this is ever called. */
+}
+/* Fill in the member functions of this implementation. */
+static const struct SpriteVt gate_vt = {
+	(SpriteAction)&Gate_delete,
+	(SpriteToString)&Gate_to_string,
+	(SpriteFloatAccessor)&Gate_get_mass
+};
+/** Extends {Sprite_filler}. */
+struct Gate *Gate(const struct AutoGate *const class) {
+	const struct AutoSprite *const gate_sprite = AutoSpriteSearch("Gate");
+	struct Gate *g;
+	struct Ortho3f x;
+	assert(class && gate_sprite && gate_sprite->image && gate_sprite->normals);
+	x.x     = class->x;
+	x.y     = class->y;
+	x.theta = class->theta;
+	if(!(g = GateSetNew(gates))) return 0;
+	Sprite_filler(&g->sprite, gate_sprite, &gate_vt, &x);
+	g->to = class->to;
+	return g;
+}
+
+
+
+
+
+
+
+
 
 /** Calculates temporary values, {dx}, {x_5}, and {bounding1}. Half-way through
  the frame, {x_5}, is used to divide the sprites into bins; {transfers} is used
@@ -427,45 +602,42 @@ static void apply_bounce_later(struct Sprite *const this,
  collides with {v} at {t0_dt}. Called explicitly from collision handlers.
  Alters {u} and {v}. Also, it may alter (fudge) the positions a little to avoid
  interpenetration.
- @param t0_dt: The added time that the collision occurs in {ms}. */
+ @param t0_dt: The added time that the collision occurs in {ms}.
+ @fixme Changing to generics and now it doesn't work properly; probably a typo
+ somewhere migrating it over. */
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	const float t0_dt) {
-	struct Vec2f ac, bc, delta, a_nrm, a_tan, b_nrm, b_tan, v;
-	float n;
+	struct Vec2f ac, bc, d, a_nrm, a_tan, b_nrm, b_tan, v;
+	float nrm;
 	const float a_m = a->vt->get_mass(a), b_m = b->vt->get_mass(b),
-	diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
+		diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
 	/* fixme: float stored in memory? */
 
 	/* Extrapolate position of collision. */
 	ac.x = a->x.x + a->v.x * t0_dt, ac.y = a->x.y + a->v.y * t0_dt;
 	bc.x = b->x.x + b->v.x * t0_dt, bc.y = b->x.y + b->v.y * t0_dt;
-	/* Normal at point of impact; normalises {ac}; fixme: iffy infinities. */
-	delta.x = bc.x - ac.x, delta.y = bc.y - ac.y;
-	n = sqrtf(delta.x * delta.x + delta.y * delta.y);
-#if 0
-	/** fixme: No. This is wrong. **/
-	/* Degeneracy pressure. (You absolutely do not want objects to get stuck
-	 orbiting each other.) */
-	if(n < a->bounding + b->bounding) {
-		const float push = (a->bounding + b->bounding - n) * 0.5f;
+	/* At point of impact. */
+	d.x = bc.x - ac.x, d.y = bc.y - ac.y;
+	nrm = sqrtf(d.x * d.x + d.y * d.y);
+	/* Degeneracy pressure; you absolutely do not want objects to get stuck
+	 orbiting each other. */
+	if(nrm < a->bounding + b->bounding) {
+		const float push = (a->bounding + b->bounding - nrm) * 0.5f;
 		/*pedantic("elastic_bounce: \\pushing sprites %f distance apart\n", push);*/
-		a->x.x -= delta.x * push;
-		a->x.y -= delta.y * push;
-		b->x.x += delta.x * push;
-		b->x.y += delta.y * push;
+		a->x.x -= d.x * push, a->x.y -= d.y * push;
+		b->x.x += d.x * push, b->x.y += d.y * push;
 	}
-#endif
-	/* Invert to apply to delta. */
-	n = (n < epsilon) ? 1.0f / epsilon : 1.0f / n;
-	delta.x *= n; delta.y *= n;
+	/* Invert to apply to delta to get normalised components. */
+	nrm = (nrm < epsilon) ? 1.0f / epsilon : 1.0f / nrm;
+	d.x *= nrm; d.y *= nrm;
 	/* {a}'s velocity, normal direction */
-	n = a->v.x * delta.x + a->v.y * delta.y;
-	a_nrm.x = n * delta.x, a_nrm.y = n * delta.y;
+	nrm = a->v.x * d.x + a->v.y * d.y;
+	a_nrm.x = nrm * d.x, a_nrm.y = nrm * d.y;
 	/* {a}'s velocity, tangent direction */
 	a_tan.x = a->v.x - a_nrm.x, a_tan.y = a->v.y - a_nrm.y;
 	/* b's velocity, normal direction */
-	n = b->v.x * delta.x + b->v.y * delta.y;
-	b_nrm.x = n * delta.x, b_nrm.y = n * delta.y;
+	nrm = b->v.x * d.x + b->v.y * d.y;
+	b_nrm.x = nrm * d.x, b_nrm.y = nrm * d.y;
 	/* b's velocity, tangent direction */
 	b_tan.x = b->v.y - b_nrm.x, b_nrm.y = b->v.y - b_nrm.y;
 	/* elastic collision */
@@ -569,10 +741,11 @@ static void sprite_sprite_collide(struct Sprite *const this,
 		"lc rgb \"red\" front;\n", this->x.x, this->x.y, that->x.x, that->x.y);*/
 	/* fixme: collision matrix */
 	elastic_bounce(this, that, t0);
+	/*printf("%.1f ms: %s, %s collide at (%.1f, %.1f)\n", t0, a, b, this->x.x, this->x.y);*/
 }
 /** @implements <Bin, Sprite *>BiAction */
 static void bin_sprite_collide(struct SpriteList **const pthis,
-		void *const target_param) {
+	void *const target_param) {
 	struct SpriteList *const this = *pthis;
 	struct Sprite *const target = target_param;
 	struct Vec2i b2;
@@ -591,10 +764,6 @@ static void collide(struct Sprite *const this) {
 	sprite_new_bins(this);
 	/*printf("--Checking:\n");*/
 	BinSetBiForEach(sprite_bins, &bin_sprite_collide, this);
-	/* fixme: have a {BinSetBiShortCircuit(bin_sprite_collide_dist);} that stops
-	 after the bounding box on edges (maybe! I think, yes, that would make it
-	 faster. Hmm, all of the thing is an edge. But now, I can get away with not
-	 sorting!) */
 }
 
 /** Relies on \see{extrapolate}; all pre-computation is finalised in this step
@@ -638,9 +807,11 @@ int Sprites(void) {
 		|| !(sprite_bins = BinSet())
 		|| !(transfers = TransferSet())
 		|| !(collisions = CollisionSet())
-		|| !(ships = ShipSet())) return 0;
+		|| !(ships = ShipSet())
+		|| !(debris = DebrisSet())) return 0;
 	CollisionSetSetMigrate(collisions, &Collision_migrate);
 	ShipSetSetMigrate(ships, &Sprite_migrate);
+	DebrisSetSetMigrate(debris, &Sprite_migrate);
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 	return 1;
 }
@@ -649,6 +820,7 @@ int Sprites(void) {
 void Sprites_(void) {
 	unsigned i;
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
+	DebrisSet_(&debris);
 	ShipSet_(&ships);
 	CollisionSet_(&collisions);
 	TransferSet_(&transfers);
@@ -709,9 +881,9 @@ static void sprite_count(struct Sprite *this, void *const void_out) {
 /** @implements <Sprite, OutputData>DiAction */
 static void print_sprite_data(struct Sprite *this, void *const void_out) {
 	struct OutputData *const out = void_out;
-	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t# Tex%u, Tex%u\n", this->x.x, this->x.y,
+	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n", this->x.x, this->x.y,
 			this->bounding, (double)out->i++ / out->n, this->x_5.x, this->x_5.y,
-			this->bounding1, this->image->texture, this->normals->texture);
+			this->bounding1);
 }
 /** @implements <Sprite, OutputData>DiAction */
 static void print_sprite_velocity(struct Sprite *this, void *const void_out) {
@@ -1219,28 +1391,6 @@ static void ship_action_ai(struct Ship *const this) {
 	ShipInput(this, turning, acceleration);
 }
 
-/** @implements <Wmd>Action */
-static void wmd_out(struct Wmd *const this) {
-	assert(this);
-	printf("Wmd at (%f, %f) in %u.\n", this->sprite.data.r.x,
-		this->sprite.data.r.y, this->sprite.data.bin);
-}
-/** @implements <Wmd>Action */
-static void wmd_delete(struct Wmd *const this) {
-	assert(this);
-	Light_(&this->light);
-	sprite_remove(&this->sprite.data);
-	WmdSetRemove(wmds, this);
-}
-/** @implements <Wmd>Action */
-static void wmd_death(struct Wmd *const this) {
-	/* fixme: explode */
-	wmd_delete(this);
-}
-/** @implements <Wmd>Action */
-static void wmd_action(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) wmd_death(this);
-}
 
 /** @implements <Gate>Action */
 static void gate_out(struct Gate *const this) {
@@ -1379,63 +1529,7 @@ struct Ship *Ship(const struct AutoShipClass *const class,
 	return ship;
 }
 
-/** @implements <Wmd>Action */
-static void wmd_filler(struct Wmd *const this,
-	const struct AutoWmdType *const class,
-	const struct Ship *const from) {
-	struct Ortho3f r, v;
-	float cosine, sine, lenght, one_lenght;
-	unsigned bin;
-	assert(this);
-	assert(class);
-	assert(from);
-	/* Set the wmd's position as a function of the {from} position. */
-	cosine = cosf(from->sprite.data.r.theta);
-	sine   = sinf(from->sprite.data.r.theta);
-	r.x = from->sprite.data.r.x + cosine * from->class->sprite->image->width
-		* 0.5f * wmd_distance_mod;
-	r.y = from->sprite.data.r.y + sine   * from->class->sprite->image->width
-		* 0.5f * wmd_distance_mod;
-	r.theta = from->sprite.data.r.theta;
-	v.x = from->sprite.data.v.x + cosine * class->speed * px_s_to_px_ms;
-	v.y = from->sprite.data.v.y + sine   * class->speed * px_s_to_px_ms;
-	v.theta = 0.0f; /* \omega */
-	{ struct Vec2f x; x.x = r.x, x.y = r.y; bin = location_to_bin(x); }
-	Sprite_filler(&this->sprite.data, class->sprite, bin, &r, &v);
-	this->sprite.data.vt = &wmd_vt;
-	this->class = class;
-	this->from = &from->sprite.data;
-	this->mass = class->impact_mass;
-	this->expires = TimerGetGameTime() + class->ms_range;
-	lenght = sqrtf(class->r * class->r + class->g * class->g
-		+ class->b * class->b);
-	one_lenght = lenght > epsilon ? 1.0f / lenght : 1.0f;
-	SpriteListPush(sprites + bin, &this->sprite);
-	Light(&this->light, lenght, class->r * one_lenght, class->g * one_lenght,
-		class->b * one_lenght);
-}
 
-/** @implements <Gate>Action */
-static void gate_filler(struct Gate *const this,
-	const struct AutoGate *const class) {
-	/* all gates (start off) stationary */
-	const struct Ortho3f v = { 0.0f, 0.0f, 0.0f };
-	const struct AutoSprite *const gate_sprite = AutoSpriteSearch("Gate");
-	struct Ortho3f r;
-	unsigned bin;
-	assert(this);
-	assert(class);
-	assert(gate_sprite);
-	{ struct Vec2f x; x.x = class->x, x.y = class->y; bin = location_to_bin(x);}
-	/* Set the wmd's position as a function of the {from} position. */
-	r.x     = class->x;
-	r.y     = class->y;
-	r.theta = class->theta;
-	Sprite_filler(&this->sprite.data, gate_sprite, bin, &r, &v);
-	this->sprite.data.vt = &gate_vt;
-	this->to = class->to;
-	SpriteListPush(sprites + bin, &this->sprite);
-}
 /** Constructor.
  @return Success. */
 int Gate(const struct AutoGate *const class) {

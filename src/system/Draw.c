@@ -32,6 +32,7 @@
 #include "../../build/shaders/Hud_vsfs.h"
 #include "../../build/shaders/Far_vsfs.h"
 #include "../../build/shaders/Lighting_vsfs.h"
+#include "../../build/shaders/Info_vsfs.h"
 #include "../../build/shaders/Lambert_vsfs.h"
 
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
@@ -164,11 +165,13 @@ int Draw(void) {
 	glUniform3fv(auto_Far_shader.directional_colour, 1, sunshine);
 	if(!auto_Hud(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Hud_shader.sampler, TEX_CLASS_SPRITE);
-	if(!auto_Lighting(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Lighting(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(),0;
 	glUniform1i(auto_Lighting_shader.sampler, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Lighting_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
+	if(!auto_Info(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	glUniform1i(auto_Info_shader.bmp_sprite, TEX_CLASS_SPRITE);
 	if(!auto_Lambert(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Lambert_shader.bmp_sprite, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Lambert_shader.bmp_normal, TEX_CLASS_NORMAL);
@@ -188,6 +191,7 @@ void Draw_(void) {
 
 	/* erase the shaders */
 	auto_Lambert_();
+	auto_Info_();
 	auto_Lighting_();
 	auto_Hud_();
 	auto_Far_();
@@ -452,10 +456,9 @@ static int light_compute_texture(void) {
 int draw_is_print_sprites;
 static unsigned old_texture;
 
-/** Only used as a callback from \see{display} while OpenGL is in a certain
- state.
- @implements SpriteOutput */
-static void display_sprite(const struct Ortho3f *const x,
+/** Only used as a callback from \see{display} while OpenGL is using Lambert.
+ @implements LambertOutput */
+static void display_lambert(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor) {
 	assert(x && tex && nor);
 	if(old_texture != tex->texture) {
@@ -468,6 +471,21 @@ static void display_sprite(const struct Ortho3f *const x,
 	glUniform1f(auto_Lambert_shader.size, tex->width);
 	glUniform1f(auto_Lambert_shader.angle, x->theta);
 	glUniform2f(auto_Lambert_shader.object, x->x, x->y);
+	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
+}
+
+/** Only used as a callback from \see{display} while OpenGL is using Sprite.
+ @implements SpriteOutput */
+static void display_info(const struct Vec2f *const x,
+	const struct AutoImage *const tex) {
+	assert(x && tex);
+	if(old_texture != tex->texture) {
+		glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
+		glBindTexture(GL_TEXTURE_2D, tex->texture);
+		old_texture = tex->texture;
+	}
+	glUniform1f(auto_Info_shader.size, tex->width);
+	glUniform2f(auto_Info_shader.object, x->x, x->y);
 	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
 }
 
@@ -554,8 +572,13 @@ static void display(void) {
 		glUniform2fv(auto_Lambert_shader.point_position, lights, (GLfloat *)LightGetPositionArray());
 		glUniform3fv(auto_Lambert_shader.point_colour, lights, (GLfloat *)LightGetColourArray());
 	}
-	SpritesDraw(&display_sprite);
-	old_texture = 0;
+	SpritesDrawLambert(&display_lambert);
+
+	glUseProgram(auto_Info_shader.compiled);
+	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
+	SpritesDrawInfo(&display_info);
+
+	old_texture = 0; /* Without this, it's Bad. */
 #if 0
 	for(bin.y = bin_pos.y; bin.y >= bin_neg.y; bin.y--) {
 		for(bin.x = bin_neg.x; bin.x <= bin_pos.y; bin.x++) {
@@ -668,6 +691,8 @@ static void resize(int width, int height) {
 	glUniform2f(auto_Far_shader.two_screen, two_screen.x, two_screen.y);
 	glUseProgram(auto_Lighting_shader.compiled);
 	glUniform2f(auto_Lighting_shader.two_screen, two_screen.x, two_screen.y);
+	glUseProgram(auto_Info_shader.compiled);
+	glUniform2f(auto_Info_shader.inv_screen, two_screen.x, two_screen.y);
 	glUseProgram(auto_Lambert_shader.compiled);
 	glUniform2f(auto_Lambert_shader.inv_screen, two_screen.x, two_screen.y);
 }

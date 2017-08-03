@@ -946,27 +946,41 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	TransferSetClear(transfers);
 	/* fixme: place things in to drawing area. */
 	/* Collision relies on the values calculated in \see{extrapolate}. */
-	for_each_update(&collide);
+	/*for_each_update(&collide);*/
 	/* Final time-step where new values are calculated. Takes data from
 	 \see{extrapolate} and \see{collide}. */
 	for_each_update(&timestep);
 	CollisionSetClear(collisions);
 }
 
-/** @implements <Sprite, SpriteOutput*>DiAction */
+/** @implements <Bin*, InfoOutput*>DiAction */
+static void draw_bin_literally(struct SpriteList **const pthis, void *const pout_void) {
+	struct SpriteList *const this = *pthis;
+	const InfoOutput *const pout = pout_void, out = *pout;
+	assert(pthis && this && out);
+	/* fixme out(); */
+}
+/** Must call \see{SpriteUpdate} before this, because it updates everything.
+ Use when the Info GPU shader is loaded. */
+void SpritesDrawInfo(InfoOutput draw) {
+	BinSetBiForEach(draw_bins, &draw_bin_literally, &draw);
+}
+
+/** @implements <Sprite, LambertOutput*>DiAction */
 static void draw_sprite(struct Sprite *const this, void *const pout_void) {
-	const SpriteOutput *const pout = pout_void, out = *pout;
+	const LambertOutput *const pout = pout_void, out = *pout;
 	assert(this && out);
 	out(&this->x, this->image, this->normals);
 }
-/** @implements <Bin*, SpriteOutput*>DiAction */
+/** @implements <Bin*, LambertOutput*>DiAction */
 static void draw_bin(struct SpriteList **const pthis, void *const pout_void) {
 	struct SpriteList *const this = *pthis;
 	assert(pthis && this);
 	SpriteListYBiForEach(this, &draw_sprite, pout_void);
 }
-/** Must call \see{SpriteUpdate} before this, because it updates everything. */
-void SpritesDraw(SpriteOutput draw) {
+/** Must call \see{SpriteUpdate} before this, because it updates everything.
+ Use when the Lambert GPU shader is loaded. */
+void SpritesDrawLambert(LambertOutput draw) {
 	BinSetBiForEach(draw_bins, &draw_bin, &draw);
 }
 

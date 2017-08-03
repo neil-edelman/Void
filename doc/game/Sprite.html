@@ -298,8 +298,13 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 </tr>
 <tr>
 	<td>void</td>
-	<td><a href = "#SpritesDraw">SpritesDraw</a></td>
-	<td>SpriteOutput draw</td>
+	<td><a href = "#SpritesDrawInfo">SpritesDrawInfo</a></td>
+	<td>InfoOutput draw</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesDrawLambert">SpritesDrawLambert</a></td>
+	<td>LambertOutput draw</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -450,11 +455,23 @@ Erases all sprite buffers.
 </dl>
 </div>
 
-<div><a name = "SpritesDraw"><!-- --></a>
-<h3>SpritesDraw</h3>
-<pre>void <b>SpritesDraw</b> (SpriteOutput draw)</pre>
+<div><a name = "SpritesDrawInfo"><!-- --></a>
+<h3>SpritesDrawInfo</h3>
+<pre>void <b>SpritesDrawInfo</b> (InfoOutput draw)</pre>
 <p>
 Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it updates everything.
+Use when the Info GPU shader is loaded.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesDrawLambert"><!-- --></a>
+<h3>SpritesDrawLambert</h3>
+<pre>void <b>SpritesDrawLambert</b> (LambertOutput draw)</pre>
+<p>
+Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it updates everything.
+Use when the Lambert GPU shader is loaded.
 </p>
 <dl>
 </dl>

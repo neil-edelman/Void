@@ -108,22 +108,6 @@ static void bin_to_Vec2i(const unsigned bin, struct Vec2i *const x) {
 	x->y = ((bin >> BIN_FG_LOG_SIZE) << BIN_FG_LOG_SPACE) - BIN_HALF_ENTIRE;
 }
 
-#if 0
-/** Maps a location component into a bin. */
-static unsigned location_to_bin(const struct Vec2f x) {
-	struct Vec2i bin2 = { (int)x.x / bin_space + bin_half_size,
-		(int)x.y / bin_space + bin_half_size };
-	struct Vec2u bin2u;
-	if(bin2.x < 0) bin2u.x = 0;
-	else if((unsigned)bin2.x >= bin_size) bin2u.x = bin_size - 1;
-	else bin2u.x = bin2.x;
-	if(bin2.y < 0) bin2u.y = 0;
-	else if((unsigned)bin2.y >= bin_size) bin2u.y = bin_size - 1;
-	else bin2u.y = bin2.y;
-	return bin2_to_bin(bin2u);
-}
-#endif
-
 /** Assigns a random position. */
 static void Vec2f_filler_fg(struct Vec2f *const this) {
 	assert(this);
@@ -151,14 +135,11 @@ static void Ortho3f_filler_fg(struct Ortho3f *const this) {
 	Vec2f_filler_fg((struct Vec2f *)this);
 	this->theta = M_2PI_F * rand() / RAND_MAX - M_PI_F;
 }
-/** Assigns a random {Ortho3f} velocity. */
-static void Ortho3f_filler_v(struct Ortho3f *const this) {
+/** Assigns zero to an {Ortho3f}. */
+static void Ortho3f_filler_zero(struct Ortho3f *const this) {
 	assert(this);
-	this->x = 0.01f * rand() / RAND_MAX - 0.005f;
-	this->y = 0.01f * rand() / RAND_MAX - 0.005f;
-	this->theta = 0.01f * rand() / RAND_MAX - 0.005f;
+	this->x = this->y = this->theta = 0.0f;
 }
-
 
 
 
@@ -230,7 +211,7 @@ static void orthomath_unused(void) {
 	Ortho3f_init(0);
 	Ortho3f_assign(0, 0);
 	Ortho3f_filler_fg(0);
-	Ortho3f_filler_v(0);
+	Ortho3f_filler_zero(0);
 
 	Rectangle4f_init(0);
 	Rectangle4i_assign(0, 0);

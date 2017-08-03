@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title>Sprite</title>
+<title>BinSprite</title>
 </head>
 
 
 <body>
 
-<h1>Sprite</h1>
+<h1>BinSprite</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -49,9 +49,6 @@ Testing the bins. A <em>Bin</em> is like a hash bucket, but instead of hashing, 
 determined by where in space you are. This allows you to do stuff like drawing
 and AI for onscreen bins and treat the faraway bins with statistical mechanics.
 Which allows you to have a lot of sprites -&gt; ships, weapons -&gt; more epic.
-</p>
-<p>
-fixme: No. This is wrong. *
 </p>
 <p>
 Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
@@ -155,10 +152,10 @@ Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath
 </dl>
 </div>
 
-<div><a name = "static const struct SpriteVt"><!-- --></a>
-<h3>static const struct SpriteVt</h3>
-<pre><b>static const struct SpriteVt</b> {
-	SpriteAction delete;
+<div><a name = "struct SpriteVt"><!-- --></a>
+<h3>struct SpriteVt</h3>
+<pre><b>struct SpriteVt</b> {
+	SpriteAction update, delete;
 	SpriteToString to_string;
 	SpriteFloatAccessor get_mass;
 }</pre>
@@ -270,7 +267,24 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 	<td>struct Ship *</td>
 	<td><a href = "#Ship">Ship</a></td>
 	<td>const struct AutoShipClass *const class,
+	const struct Ortho3f *const x, const enum AiType ai</td>
+</tr>
+<tr>
+	<td>struct Debris *</td>
+	<td><a href = "#Debris">Debris</a></td>
+	<td>const struct AutoDebris *const class,
 	const struct Ortho3f *const x</td>
+</tr>
+<tr>
+	<td>struct Wmd *</td>
+	<td><a href = "#Wmd">Wmd</a></td>
+	<td>const struct AutoWmdType *const class,
+	const struct Ship *const from</td>
+</tr>
+<tr>
+	<td>struct Gate *</td>
+	<td><a href = "#Gate">Gate</a></td>
+	<td>const struct AutoGate *const class</td>
 </tr>
 <tr>
 	<td>int</td>
@@ -284,19 +298,13 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 </tr>
 <tr>
 	<td>void</td>
-	<td><a href = "#SpriteDraw">SpriteDraw</a></td>
+	<td><a href = "#SpritesDraw">SpritesDraw</a></td>
 	<td>SpriteOutput draw</td>
 </tr>
 <tr>
 	<td>void</td>
-	<td><a href = "#SpritePlot">SpritePlot</a></td>
+	<td><a href = "#SpritesPlot">SpritesPlot</a></td>
 	<td>void</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#SpriteInput">SpriteInput</a></td>
-	<td>struct Sprite *const this, const int turning,
-	const int acceleration</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -380,7 +388,39 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 <div><a name = "Ship"><!-- --></a>
 <h3>Ship</h3>
 <pre>struct Ship * <b>Ship</b> (const struct AutoShipClass *const class,
+	const struct Ortho3f *const x, const enum AiType ai)</pre>
+<p>
+Extends <em>Sprite_filler</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "Debris"><!-- --></a>
+<h3>Debris</h3>
+<pre>struct Debris * <b>Debris</b> (const struct AutoDebris *const class,
 	const struct Ortho3f *const x)</pre>
+<p>
+Extends <em>Sprite_filler</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "Wmd"><!-- --></a>
+<h3>Wmd</h3>
+<pre>struct Wmd * <b>Wmd</b> (const struct AutoWmdType *const class,
+	const struct Ship *const from)</pre>
+<p>
+Extends <em>Sprite_filler</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "Gate"><!-- --></a>
+<h3>Gate</h3>
+<pre>struct Gate * <b>Gate</b> (const struct AutoGate *const class)</pre>
 <p>
 Extends <em>Sprite_filler</em>.
 </p>
@@ -410,9 +450,9 @@ Erases all sprite buffers.
 </dl>
 </div>
 
-<div><a name = "SpriteDraw"><!-- --></a>
-<h3>SpriteDraw</h3>
-<pre>void <b>SpriteDraw</b> (SpriteOutput draw)</pre>
+<div><a name = "SpritesDraw"><!-- --></a>
+<h3>SpritesDraw</h3>
+<pre>void <b>SpritesDraw</b> (SpriteOutput draw)</pre>
 <p>
 Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it updates everything.
 </p>
@@ -420,34 +460,15 @@ Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it upd
 </dl>
 </div>
 
-<div><a name = "SpritePlot"><!-- --></a>
-<h3>SpritePlot</h3>
-<pre>void <b>SpritePlot</b> (void)</pre>
+<div><a name = "SpritesPlot"><!-- --></a>
+<h3>SpritesPlot</h3>
+<pre>void <b>SpritesPlot</b> (void)</pre>
 <p>
 Debugging plot.
 </p>
 <dl>
 	<dt>implements</dt>
 	<dd>Action</dd>
-</dl>
-</div>
-
-<div><a name = "SpriteInput"><!-- --></a>
-<h3>SpriteInput</h3>
-<pre>void <b>SpriteInput</b> (struct Sprite *const this, const int turning,
-	const int acceleration)</pre>
-<p>
-Gets input to a <em>Sprite</em>.
-</p>
-<dl>
-	<dt>parameter: this</dt>
-	<dd>Which ship to set.</dd>
-	<dt>parameter: turning</dt>
-	<dd>How many <em>ms</em> was this pressed? left is positive.</dd>
-	<dt>parameter: acceleration</dt>
-	<dd>How many <em>ms</em> was this pressed?</dd>
-	<dt>parameter: dt_ms</dt>
-	<dd>Frame time in milliseconds.</dd>
 </dl>
 </div>
 

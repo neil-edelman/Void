@@ -57,12 +57,13 @@ static void gametime(void);
 /*static float rnd(const float limit);*/
 /*static void add_sprites(void);*/
 /*static void poll_sprites(void);*/
-static void position(void);
+/*static void position(void);*/
 
 /* public */
 
 /** constructor */
 int Game(void) {
+	struct Ortho3f position = { 0.0f, 0.0f, 0.0f };
 
 	if(is_started) return -1;
 
@@ -72,7 +73,7 @@ int Game(void) {
 	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &fps);
 	KeyRegister('t',  &gametime);
-	KeyRegister('1',  &SpritePlot);
+	KeyRegister('1',  &SpritesPlot);
 	/*KeyRegister('a',  &position);
 	KeyRegister('l',  &LightList);*/
 	/*KeyRegister('s',  &SpriteList);*/
@@ -93,8 +94,8 @@ int Game(void) {
 	DrawSetShield("Bar.png");
 
 	Zone(game.start);
-	Event(0, 2000, 1000, FN_RUNNABLE, &position);
-	game.player = Ship(game.nautilus, 0/*, SB_HUMAN*/);
+	/*Event(0, 2000, 1000, FN_RUNNABLE, &position);*/
+	game.player = Ship(game.nautilus, &position, AI_HUMAN);
 
 	debug("Game: on.\n");
 	is_started = -1;
@@ -114,27 +115,10 @@ void Game_(void) {
 /** updates the gameplay */
 void GameUpdate(const int dt_ms) {
 	if(!is_started) return;
-	/* \see{SpriteUpdate} has a fixed camera position; apply input before the
-	 update so we can predict what the camera is going to do; when collisions
-	 occur, this causes the camera to jerk, but it's better than always
-	 lagging? */
-#if 0
-	if((game.player)) {
-		const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
-		int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
-		const int ms_shoot = KeyTime(32); /* fixme */
-		struct Vec2f x;
-		if(ms_acceleration < 0) ms_acceleration = 0; /* not a forklift */
-		ShipInput(game.player, ms_turning, ms_acceleration);
-		if(ms_shoot) ShipShoot(game.player);
-		ShipGetPosition(game.player, &x);
-		DrawSetCamera(x);
-	}
-#endif
-	/* collision detect, move sprites; a lot of work */
-	SpriteUpdate(dt_ms);
+	/* Collision detect, move sprites, center on the player; a lot of work. */
+	SpritesUpdate(dt_ms, game.player);
 	/* check events */
-	EventDispatch();
+	/*EventDispatch();*/
 }
 
 struct Ship *GameGetPlayer(void) {
@@ -187,6 +171,7 @@ static void gametime(void) {
 	Event(5000, 500, FN_RUNNABLE, &add_sprites);
 }*/
 
+#if 0
 static void position(void) {
 	if(!game.player) {
 		info("You are scattered across space.\n");
@@ -194,3 +179,4 @@ static void position(void) {
 	}
 	/*SpriteOut((struct Sprite *)game.player);*/
 }
+#endif

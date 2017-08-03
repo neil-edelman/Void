@@ -132,7 +132,7 @@ geometry, uploaded into video memory. Fixme: not fully variablised!?
 <tr>
 	<td>void</td>
 	<td><a href = "#DrawSetCamera">DrawSetCamera</a></td>
-	<td>const struct Vec2f x</td>
+	<td>const struct Vec2f *const x</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -178,7 +178,7 @@ Destructor.
 
 <div><a name = "DrawSetCamera"><!-- --></a>
 <h3>DrawSetCamera</h3>
-<pre>void <b>DrawSetCamera</b> (const struct Vec2f x)</pre>
+<pre>void <b>DrawSetCamera</b> (const struct Vec2f *const x)</pre>
 <p>
 Sets the camera location.
 </p>

@@ -217,7 +217,10 @@ void Draw_(void) {
 
 /** Sets the camera location.
  @param x: (x, y) in pixels. */
-void DrawSetCamera(const struct Vec2f x) { camera.x = x.x, camera.y = x.y; }
+void DrawSetCamera(const struct Vec2f *const x) {
+	if(!x) return;
+	camera.x = x->x, camera.y = x->y;
+}
 
 /** Gets the visible part of the screen. */
 void DrawGetScreen(struct Rectangle4f *const rect) {
@@ -551,7 +554,7 @@ static void display(void) {
 		glUniform2fv(auto_Lambert_shader.point_position, lights, (GLfloat *)LightGetPositionArray());
 		glUniform3fv(auto_Lambert_shader.point_colour, lights, (GLfloat *)LightGetColourArray());
 	}
-	SpriteDraw(&display_sprite);
+	SpritesDraw(&display_sprite);
 	old_texture = 0;
 #if 0
 	for(bin.y = bin_pos.y; bin.y >= bin_neg.y; bin.y--) {

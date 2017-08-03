@@ -7,7 +7,7 @@
  and AI for onscreen bins and treat the faraway bins with statistical mechanics.
  Which allows you to have a lot of sprites -> ships, weapons -> more epic.
 
- @file		Bin
+ @title		Bin
  @author	Neil
  @std		C89/90
  @fixme		Change diameter to radius. */
@@ -17,16 +17,25 @@
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
 #include "../general/OrthoMath.h" /* for measurements and types */
 #include "../general/Orcish.h"
+#include "../system/Key.h" /* keys for input */
 #include "../system/Draw.h" /* DrawGetCamera, DrawSetScreen */
-#include "../system/Timer.h" /* for expiring Sprites */
+#include "../system/Timer.h" /* for expiring */
 #include "Light.h"	/* for glowing Sprites */
 #include "Sprite.h"
 
 /* This is used for small floating-point values. The value doesn't have any
  significance. */
 static const float epsilon = 0.0005f;
-/* controls how far past the bounding radius the ship's shots appear. */
+/* Mass is a measure of a rigid body's resistance to a change of state of it's
+ motion; it is a divisor, thus cannot be (near) zero. */
+static const float minimum_mass = 0.01f; /* mg (t) */
+/* Controls how far past the bounding radius the ship's shots appear. */
 static const float wmd_distance_mod = 1.3f;
+/* Controls the acceleration of a turn; low values are sluggish; (0, 1]. */
+static const float turn_acceleration = 0.005f;
+/* {0.995^t} Taylor series at {t = 25ms}. */
+static const float turn_damping_per_25ms = 0.88222f;
+static const float turn_damping_1st_order = 0.00442217f;
 
 /* Updated frame time, passed to {SpriteUpdate} but used in nearly
  everything. */
@@ -99,7 +108,7 @@ static void Sprite_filler(struct SpriteListNode *const this,
 	}
 	s->dx.x = s->dx.y = 0.0f;
 	s->x_5.x = s->x.x, s->x_5.y = s->x.y;
-	Ortho3f_filler_v(&s->v);
+	Ortho3f_filler_zero(&s->v);
 	s->bounding = s->bounding1 = (as->image->width >= as->image->height ?
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
 	Vec2f_to_bin(&s->x_5, &s->bin);
@@ -318,7 +327,7 @@ static void transfer_sprite(struct Transfer *const this) {
 typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
 /** Define {SpriteVt}. */
 struct SpriteVt {
-	SpriteAction delete;
+	SpriteAction update, delete;
 	SpriteToString to_string;
 	SpriteFloatAccessor get_mass;
 };
@@ -331,10 +340,15 @@ static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]) {
 
 
 
+/* Declare {ShipVt}. */
+struct ShipVt;
+
 /* Define {ShipSet} and {ShipSetNode}, a subclass of {Sprite}. */
 struct Ship {
 	struct SpriteListNode sprite;
+	struct ShipVt *vt;
 	float mass;
+	float shield, ms_recharge, max_speed2, acceleration, turn;
 	char name[16];
 };
 #define SET_NAME Ship
@@ -354,24 +368,83 @@ static void Ship_delete(struct Ship *const this) {
 /** @implements <Ship>FloatAccessor */
 static float Ship_get_mass(const struct Ship *const this) {
 	/* Mass is used for collisions, you don't want zero-mass objects. */
-	assert(this && this->mass > 0.0f);
+	assert(this && this->mass >= minimum_mass);
 	return this->mass;
 }
+/** @implements <Ship>Action */
+static void Ship_dumb_ai(struct Ship *const this) {
+	assert(this);
+	this->sprite.data.v.theta = 0.0002f;
+}
+/** @implements <Ship>Action */
+static void Ship_human(struct Ship *const this) {
+	const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
+	const int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
+	const int ms_shoot = KeyTime(32); /* fixme */
+	/* fixme: This is for all. :[ */
+	if(ms_acceleration > 0) { /* not a forklift */
+		struct Vec2f v = { this->sprite.data.v.x, this->sprite.data.v.y };
+		float a = ms_acceleration * this->acceleration, speed2;
+		v.x += cosf(this->sprite.data.x.theta) * a;
+		v.y += sinf(this->sprite.data.x.theta) * a;
+		if((speed2 = v.x * v.x + v.y * v.y) > this->max_speed2) {
+			float correction = sqrtf(this->max_speed2 / speed2);
+			v.x *= correction, v.y *= correction;
+		}
+		this->sprite.data.v.x = v.x, this->sprite.data.v.y = v.y;
+	}
+	if(ms_turning) {
+		float t = ms_turning * this->turn * turn_acceleration;
+		this->sprite.data.v.theta += t;
+		if(this->sprite.data.v.theta < -this->turn) {
+			this->sprite.data.v.theta = -this->turn;
+		} else if(this->sprite.data.v.theta > this->turn) {
+			this->sprite.data.v.theta = this->turn;
+		}
+	} else {
+		/* \${turn_damping_per_ms^dt_ms}
+		 Taylor: d^25 + d^25(t-25)log d + O((t-25)^2).
+		 @fixme What about extreme values? */
+		this->sprite.data.v.theta *= turn_damping_per_25ms
+			- turn_damping_1st_order * (dt_ms - 25.0f);
+	}
+	/*if(ms_shoot) Ship_shoot(game.this);*/
+}
 /* Fill in the member functions of this implementation. */
-static const struct SpriteVt ship_vt = {
+static const struct SpriteVt ship_ai_vt = {
+	(SpriteAction)&Ship_dumb_ai,
+	(SpriteAction)&Ship_delete,
+	(SpriteToString)&Ship_to_string,
+	(SpriteFloatAccessor)&Ship_get_mass
+};
+static const struct SpriteVt ship_human_vt = {
+	(SpriteAction)&Ship_human,
 	(SpriteAction)&Ship_delete,
 	(SpriteToString)&Ship_to_string,
 	(SpriteFloatAccessor)&Ship_get_mass
 };
 /** Extends {Sprite_filler}. */
 struct Ship *Ship(const struct AutoShipClass *const class,
-	const struct Ortho3f *const x) {
+	const struct Ortho3f *const x, const enum AiType ai) {
 	struct Ship *ship;
+	const struct SpriteVt *vt;
 	assert(class && class->sprite
 		&& class->sprite->image && class->sprite->normals);
+	switch(ai) {
+		case AI_DUMB:  vt = &ship_ai_vt;    break;
+		case AI_HUMAN: vt = &ship_human_vt; break;
+		default: assert(printf("Out of range.", 0));
+	}
 	if(!(ship = ShipSetNew(ships))) return 0;
-	Sprite_filler(&ship->sprite, class->sprite, &ship_vt, x);
-	ship->mass = 60.0f;
+	Sprite_filler(&ship->sprite, class->sprite, vt, x);
+	ship->vt = 0;
+	ship->mass = class->mass;
+	ship->shield = class->shield;
+	ship->ms_recharge = class->ms_recharge;
+	ship->max_speed2 = class->speed * class->speed;
+	ship->acceleration = class->acceleration;
+	ship->turn = class->turn /* \deg/s */
+		* 0.001f /* s/ms */ * M_2PI_F / 360.0f /* \rad/\deg */;
 	Orcish(ship->name, sizeof ship->name);
 	return ship;
 }
@@ -402,8 +475,14 @@ static float Debris_get_mass(const struct Debris *const this) {
 	assert(this && this->mass > 0.0f);
 	return this->mass;
 }
+/** Does nothing; just debris.
+ @implements <Debris>Action */
+static void Debris_update(struct Debris *const this) {
+	UNUSED(this);
+}
 /* Fill in the member functions of this implementation. */
 static const struct SpriteVt debris_vt = {
+	(SpriteAction)&Debris_update,
 	(SpriteAction)&Debris_delete,
 	(SpriteToString)&Debris_to_string,
 	(SpriteFloatAccessor)&Debris_get_mass
@@ -451,13 +530,14 @@ static float Wmd_get_mass(const struct Wmd *const this) {
 	assert(this);
 	return 1.0f;
 }
-/** This hasn't been implemented.
- @implements <Wmd>Action */
-/*static void wmd_action(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) wmd_death(this);
-}*/
+/** @implements <Wmd>Action
+ @fixme Replace delete with more dramatic death. */
+static void Wmd_update(struct Wmd *const this) {
+	if(TimerIsTime(this->expires)) /*wmd_death*/Wmd_delete(this);
+}
 /* Fill in the member functions of this implementation. */
 static const struct SpriteVt wmd_vt = {
+	(SpriteAction)&Wmd_update,
 	(SpriteAction)&Wmd_delete,
 	(SpriteToString)&Wmd_to_string,
 	(SpriteFloatAccessor)&Wmd_get_mass
@@ -510,6 +590,10 @@ static void Gate_to_string(const struct Gate *this, char (*const a)[12]) {
 	sprintf(*a, "%.7sGate", this->to->name);
 }
 /** @implements <Debris>Action */
+static void Gate_update(struct Gate *const this) {
+	UNUSED(this);
+}
+/** @implements <Debris>Action */
 static void Gate_delete(struct Gate *const this) {
 	assert(this);
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
@@ -522,6 +606,7 @@ static float Gate_get_mass(const struct Gate *const this) {
 }
 /* Fill in the member functions of this implementation. */
 static const struct SpriteVt gate_vt = {
+	(SpriteAction)&Gate_update,
 	(SpriteAction)&Gate_delete,
 	(SpriteToString)&Gate_to_string,
 	(SpriteFloatAccessor)&Gate_get_mass
@@ -557,6 +642,9 @@ struct Gate *Gate(const struct AutoGate *const class) {
 static void extrapolate(struct Sprite *const this) {
 	unsigned bin;
 	assert(this);
+	/* Do whatever the sprite parent class does. */
+	this->vt->update(this);
+	/* Kinematics. */
 	this->dx.x = this->v.x * dt_ms;
 	this->dx.y = this->v.y * dt_ms;
 	/* Determines into which bin it should be. */
@@ -766,6 +854,14 @@ static void collide(struct Sprite *const this) {
 	BinSetBiForEach(sprite_bins, &bin_sprite_collide, this);
 }
 
+/* Branch cut to the principal branch (-Pi,Pi] for numerical stability. We
+ should really use normalised {ints}, so this would not be a problem, but
+ {OpenGl} doesn't like that. */
+static void branch_cut_pi_pi(float *theta_ptr) {
+	assert(theta_ptr);
+	*theta_ptr -= M_2PI_F * floorf((*theta_ptr + M_PI_F) / M_2PI_F);
+}
+
 /** Relies on \see{extrapolate}; all pre-computation is finalised in this step
  and values are advanced. Collisions are used up and need to be cleared after.
  @implements <Sprite>Action */
@@ -773,19 +869,18 @@ static void timestep(struct Sprite *const this) {
 	struct Collision *c;
 	float t0 = dt_ms;
 	struct Vec2f v1 = { 0.0f, 0.0f }, d;
-	char a[12];
 	assert(this);
-	Sprite_to_string(this, &a);
 	/* The earliest time to collision and sum the collisions together. */
 	for(c = this->collision_set; c; c = c->next) {
+		char a[12];
 		d.x = this->x.x + this->v.x * c->t;
 		d.y = this->x.y + this->v.y * c->t;
 		/*fprintf(gnu_glob, "set arrow from %f,%f to %f,%f lw 0.5 "
-			"lc rgb \"#EE66AA\" front;\n", d.x, d.y,
-			d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));*/
+		 "lc rgb \"#EE66AA\" front;\n", d.x, d.y,
+		 d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));*/
 		this->vt->to_string(this, &a);
 		printf("%s collides at %.1f and ends up going (%.1f, %.1f).\n", a,
-			c->t, c->v.x * 1000.0f, c->v.y * 1000.0f, (void *)c->next);
+			   c->t, c->v.x * 1000.0f, c->v.y * 1000.0f, (void *)c->next);
 		if(c->t < t0) t0 = c->t;
 		v1.x += c->v.x, v1.y += c->v.y;
 		/* fixme: stability! */
@@ -796,6 +891,9 @@ static void timestep(struct Sprite *const this) {
 		this->collision_set = 0;
 		this->v.x = v1.x, this->v.y = v1.y;
 	}
+	/* Angular velocity. */
+	this->x.theta += this->v.theta /* omega */ * dt_ms;
+	branch_cut_pi_pi(&this->x.theta);
 }
 
 /** Initailises all sprite buffers.
@@ -828,9 +926,17 @@ void Sprites_(void) {
 	BinSet_(&draw_bins);
 }
 
-void SpriteUpdate(const int dt_ms_passed) {
+void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	/* The passed parameter goes into a global; we are using it a lot. */
 	dt_ms = dt_ms_passed;
+	/* Centre on the sprite that was passed, if it is available. */
+	/* \see{SpriteUpdate} has a fixed camera position; apply input before the
+	 update so we can predict what the camera is going to do; when collisions
+	 occur, this causes the camera to jerk, but it's better than always
+	 lagging? */
+	if(player) {
+		DrawSetCamera((struct Vec2f *)&player->sprite.data.x);
+	}
 	/* Each frame, calculate the bins that are visible and stuff. */
 	new_bins();
 	/* Calculate the future positions and transfer the sprites that have
@@ -860,7 +966,7 @@ static void draw_bin(struct SpriteList **const pthis, void *const pout_void) {
 	SpriteListYBiForEach(this, &draw_sprite, pout_void);
 }
 /** Must call \see{SpriteUpdate} before this, because it updates everything. */
-void SpriteDraw(SpriteOutput draw) {
+void SpritesDraw(SpriteOutput draw) {
 	BinSetBiForEach(draw_bins, &draw_bin, &draw);
 }
 
@@ -915,7 +1021,7 @@ static void gnu_shade_bins(struct SpriteList **this, void *const void_col) {
 }
 /** Debugging plot.
  @implements Action */
-void SpritePlot(void) {
+void SpritesPlot(void) {
 	FILE *data = 0, *gnu = 0;
 	const char *data_fn = "sprite.data", *gnu_fn = "sprite.gnu",
 		*eps_fn = "sprite.eps";
@@ -969,51 +1075,6 @@ void SpritePlot(void) {
 		if(fclose(gnu) == EOF)  perror(gnu_fn);
 	}
 }
-
-#if 0
-/** Gets input to a {Sprite}.
- @param this			Which ship to set.
- @param turning			How many {ms} was this pressed? left is positive.
- @param acceleration	How many {ms} was this pressed?
- @param dt_ms			Frame time in milliseconds. */
-void SpriteInput(struct Sprite *const this, const int turning,
-	const int acceleration) {
-	if(!this) return;
-	if(acceleration != 0) {
-		float vx = this->sprite.data.r.x, vy = this->sprite.data.r.y;
-		float a = this->acceleration * acceleration, speed2;
-		vx += cosf(this->sprite.data.r.theta) * a;
-		vy += sinf(this->sprite.data.r.theta) * a;
-		if((speed2 = vx * vx + vy * vy) > this->max_speed2) {
-			float correction = sqrtf(this->max_speed2 / speed2);
-			vx *= correction;
-			vy *= correction;
-		}
-		this->sprite.data.r.x = vx;
-		this->sprite.data.r.y = vy;
-	}
-	if(turning) {
-		this->sprite.data.v.theta += this->turn_acceleration * turning * dt_ms;
-		if(this->sprite.data.v.theta < -this->turn) {
-			this->sprite.data.v.theta = -this->turn;
-		} else if(this->sprite.data.v.theta > this->turn) {
-			this->sprite.data.v.theta = this->turn;
-		}
-	} else {
-		const float damping = this->turn_acceleration * dt_ms;
-		if(this->sprite.data.v.theta > damping) {
-			this->sprite.data.v.theta -= damping;
-		} else if(this->sprite.data.v.theta < -damping) {
-			this->sprite.data.v.theta += damping;
-		} else {
-			this->sprite.data.v.theta = 0;
-		}
-	}
-	/* fixme: this should be gone! instead have it for all sprites and get rid
-	 of dt_ms */
-	/*SpriteAddTheta(this, this->omega * dt_ms); isn't that what we did??? */
-}
-#endif
 
 
 
@@ -1088,10 +1149,6 @@ void SpriteInput(struct Sprite *const this, const int turning,
 
 /* dependancy from Lore
 extern const struct Gate gate; */
-
-static const float epsilon = 0.0005f;
-
-static const float minimum_mass        = 0.01f;
 
 static const float debris_hit_per_mass      = 5.0f;
 static const float deb_maximum_speed_2      = 20.0f; /* 2000? */
@@ -1453,7 +1510,7 @@ static void debris_filler(struct Debris *const this,
 	assert(class);
 	assert(r);
 	assert(v);
-	bin = location_to_bin(*(struct Vec2f *)r);
+	bin = wtfaaaaailocation_to_bin(*(struct Vec2f *)r);
 	Sprite_filler(&this->sprite.data, class->sprite, bin, r, v);
 	this->sprite.data.vt = &debris_vt;
 	this->sprite.data.mass = class->mass;

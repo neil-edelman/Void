@@ -355,7 +355,7 @@
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
-							<string>{{0, 275}, {185, 669}}</string>
+							<string>{{0, 181}, {185, 669}}</string>
 						</dict>
 						<key>PBXTopSmartGroupGIDs</key>
 						<array/>
@@ -695,7 +695,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>523912144.149369</real>
+	<real>523919640.18857098</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -712,6 +712,7 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
+		<string>28A571A41F3A611800D5143B</string>
 		<string>28A571031F3A133000D5143B</string>
 		<string>28A571041F3A133000D5143B</string>
 		<string>28A5712E1F3A43D000D5143B</string>

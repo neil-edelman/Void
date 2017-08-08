@@ -10,7 +10,9 @@
  @title		Bin
  @author	Neil
  @std		C89/90
- @fixme		Change diameter to radius. */
+ @version	3.4, 2017-05 generics
+ @since		3.3, 2016-01
+			3.2, 2015-06 */
 
 #include <stdlib.h>	/* rand */
 #include <stdio.h>  /* fprintf */
@@ -29,13 +31,35 @@ static const float epsilon = 0.0005f;
 /* Mass is a measure of a rigid body's resistance to a change of state of it's
  motion; it is a divisor, thus cannot be (near) zero. */
 static const float minimum_mass = 0.01f; /* mg (t) */
-/* Controls how far past the bounding radius the ship's shots appear. */
+/* Controls how far past the bounding radius the ship's shots appear. 1.415? */
 static const float wmd_distance_mod = 1.3f;
 /* Controls the acceleration of a turn; low values are sluggish; (0, 1]. */
 static const float turn_acceleration = 0.005f;
 /* {0.995^t} Taylor series at {t = 25ms}. */
 static const float turn_damping_per_25ms = 0.88222f;
 static const float turn_damping_1st_order = 0.00442217f;
+
+#if 0
+/* dependancy from Lore
+ extern const struct Gate gate; */
+
+static const float debris_hit_per_mass      = 5.0f;
+static const float deb_maximum_speed_2      = 20.0f; /* 2000? */
+static const float deb_explosion_elasticity = 0.5f; /* < 1 */
+
+static const float deg_sec_to_rad_ms  = (float)(M_PI_F / (180.0 * 1000.0));
+static const float px_s_to_px_ms      = 0.001f;
+static const float px_s_to_px2_ms2    = 0.000001f;
+static const float deg_to_rad         = (float)(M_PI_F / 180.0);
+
+static const float shp_ai_turn        = 0.2f;     /* rad/ms */
+static const float shp_ai_too_close   = 3200.0f;  /* pixel^(1/2) */
+static const float shp_ai_too_far     = 32000.0f; /* pixel^(1/2) */
+static const int   shp_ai_speed       = 15;       /* pixel^2 / ms */
+static const float shp_ai_turn_sloppy = 0.4f;     /* rad */
+static const float shp_ai_turn_constant = 10.0f;
+static const int   shp_ms_sheild_uncertainty = 50;
+#endif
 
 /* Updated frame time, passed to {SpriteUpdate} but used in nearly
  everything. */
@@ -350,6 +374,8 @@ struct Ship {
 	float mass;
 	float shield, ms_recharge, max_speed2, acceleration, turn;
 	char name[16];
+	const struct AutoWmdType *wmd;
+	unsigned ms_recharge_wmd;
 };
 #define SET_NAME Ship
 #define SET_TYPE struct Ship
@@ -371,6 +397,8 @@ static float Ship_get_mass(const struct Ship *const this) {
 	assert(this && this->mass >= minimum_mass);
 	return this->mass;
 }
+
+static void shoot(struct Ship *const this);
 /** @implements <Ship>Action */
 static void Ship_dumb_ai(struct Ship *const this) {
 	assert(this);
@@ -408,7 +436,7 @@ static void Ship_human(struct Ship *const this) {
 		this->sprite.data.v.theta *= turn_damping_per_25ms
 			- turn_damping_1st_order * (dt_ms - 25.0f);
 	}
-	/*if(ms_shoot) Ship_shoot(game.this);*/
+	if(ms_shoot) shoot(this);
 }
 /* Fill in the member functions of this implementation. */
 static const struct SpriteVt ship_ai_vt = {
@@ -446,6 +474,8 @@ struct Ship *Ship(const struct AutoShipClass *const class,
 	ship->turn = class->turn /* \deg/s */
 		* 0.001f /* s/ms */ * M_2PI_F / 360.0f /* \rad/\deg */;
 	Orcish(ship->name, sizeof ship->name);
+	ship->wmd = class->weapon;
+	ship->ms_recharge_wmd = 0;
 	return ship;
 }
 
@@ -547,16 +577,18 @@ struct Wmd *Wmd(const struct AutoWmdType *const class,
 	const struct Ship *const from) {
 	struct Wmd *w;
 	struct Ortho3f x;
-	const struct Vec2f dir = { cosf(from->sprite.data.x.theta),
-		sinf(from->sprite.data.x.theta) };
+	struct Vec2f dir;
 	assert(class && class->sprite
 		&& class->sprite->image && class->sprite->normals && from);
+	dir.x = cosf(from->sprite.data.x.theta);
+	dir.y = sinf(from->sprite.data.x.theta);
 	x.x = from->sprite.data.x.x
 		+ dir.x * from->sprite.data.bounding * wmd_distance_mod;
 	x.y = from->sprite.data.x.y
 		+ dir.y * from->sprite.data.bounding * wmd_distance_mod;
 	x.theta = from->sprite.data.x.theta;
-	if(!(w = WmdSetNew(wmds))) return 0;
+	if(!(w = WmdSetNew(wmds)))
+		{ printf("Wmd: %s.\n", WmdSetGetError(wmds)); return 0; }
 	Sprite_filler(&w->sprite, class->sprite, &wmd_vt, &x);
 	/* Speed is in [px/s], want it [px/ms]. */
 	w->sprite.data.v.x = from->sprite.data.v.x + dir.x * class->speed * 0.001f;
@@ -572,6 +604,15 @@ struct Wmd *Wmd(const struct AutoWmdType *const class,
 			class->b * one_length);
 	}
 	return w;
+}
+/** This is used by AI and humans.
+ @fixme Simplistic, shoot on frame. */
+static void shoot(struct Ship *const this) {
+	assert(this && this->wmd);
+	if(!TimerIsTime(this->ms_recharge_wmd)) return;
+	printf("Phew!\n");
+	Wmd(this->wmd, this);
+	this->ms_recharge_wmd = TimerGetGameTime() + this->wmd->ms_recharge;
 }
 
 
@@ -906,7 +947,9 @@ int Sprites(void) {
 		|| !(transfers = TransferSet())
 		|| !(collisions = CollisionSet())
 		|| !(ships = ShipSet())
-		|| !(debris = DebrisSet())) return 0;
+		|| !(debris = DebrisSet())
+		|| !(wmds = WmdSet())
+		|| !(gates = GateSet())) return 0;
 	CollisionSetSetMigrate(collisions, &Collision_migrate);
 	ShipSetSetMigrate(ships, &Sprite_migrate);
 	DebrisSetSetMigrate(debris, &Sprite_migrate);
@@ -918,6 +961,8 @@ int Sprites(void) {
 void Sprites_(void) {
 	unsigned i;
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
+	GateSet_(&gates);
+	WmdSet_(&wmds);
 	DebrisSet_(&debris);
 	ShipSet_(&ships);
 	CollisionSet_(&collisions);
@@ -1123,96 +1168,6 @@ void SpritesPlot(void) {
 
 
 #if 0
-
-
-
-
-
-
-
-
-/** Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
- Public License, see copying.txt.
-
- Sprites have an {Ortho} location and are lit by \cite{lambert1892photometrie}.
- They are drawn by the gpu in {../system/Draw} as the main foreground. Sprites
- detect collisions. The sprite system must startup by calling \see{Sprite} and
- can shutdown by calling \see{Sprite_}. To instatiate an abstract {Sprite}, one
- must call one of it's subclasses:
-
- * Debris: is everything that doesn't have license, but moves around on a
- linear path, can be damaged, killed, and moved. Astroids and stuff.
- * Ship: has license and is controlled by a player or an ai.
- * Wmd: cannons, bombs, and other cool stuff that has sprites and can hurt.
- * Ethereal: are in the forground but poll collision detection instead of
- interacting; they generally do something in the game. For example, gates are
- devices that can magically transport you faster than light, or powerups.
-
- @title		Sprite
- @author	Neil
- @version	3.4, 2017-05 generics
- @since		3.3, 2016-01
- 			3.2, 2015-06 */
-
-#include <stdarg.h> /* va_* */
-#include <math.h>   /* sqrtf, atan2f, cosf, sinf */
-#include <string.h> /* memset */
-#include <stdio.h>	/* snprintf */
-#include "../../build/Auto.h"
-#include "../Print.h"
-#include "../general/Orcish.h"
-#include "../system/Timer.h"
-#include "../system/Draw.h"
-#include "../system/Key.h"
-#include "Light.h"
-#include "Zone.h"
-#include "Game.h"
-#include "Event.h"
-#include "Sprite.h"
-
-/* dependancy from Lore
-extern const struct Gate gate; */
-
-static const float debris_hit_per_mass      = 5.0f;
-static const float deb_maximum_speed_2      = 20.0f; /* 2000? */
-static const float deb_explosion_elasticity = 0.5f; /* < 1 */
-
-static const float deg_sec_to_rad_ms  = (float)(M_PI_F / (180.0 * 1000.0));
-static const float px_s_to_px_ms      = 0.001f;
-static const float px_s_to_px2_ms2    = 0.000001f;
-static const float deg_to_rad         = (float)(M_PI_F / 180.0);
-
-static const float shp_ai_turn        = 0.2f;     /* rad/ms */
-static const float shp_ai_too_close   = 3200.0f;  /* pixel^(1/2) */
-static const float shp_ai_too_far     = 32000.0f; /* pixel^(1/2) */
-static const int   shp_ai_speed       = 15;       /* pixel^2 / ms */
-static const float shp_ai_turn_sloppy = 0.4f;     /* rad */
-static const float shp_ai_turn_constant = 10.0f;
-static const int   shp_ms_sheild_uncertainty = 50;
-
-/* fixme: 1.415? */
-static const float wmd_distance_mod         = 1.3f; /* to clear ship */
-
-
-
-/* global variable: frame time */
-static float dt_ms;
-
-
-
-/* Define the bins that each frame will concern itself with; these are erased
- and updated every frame. See \see{SpriteUpdate}. */
-#define LIST_NAME Bin
-#define LIST_TYPE unsigned
-#define LIST_UA_NAME Order
-#include "../general/List.h" /* defines BinList, BinListNode */
-static struct BinList draw_bins, update_bins;
-#define SET_NAME BinList
-#define SET_TYPE struct BinListNode
-#include "../general/Set.h" /* defines BinListSet, BinListSetNode */
-static struct BinListSet *bins;
-
-
 
 /* Define class {Sprite}. */
 

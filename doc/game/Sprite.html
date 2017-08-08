@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title>BinSprite</title>
+<title>Bin</title>
 </head>
 
 
 <body>
 
-<h1>BinSprite</h1>
+<h1>Bin</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -51,34 +51,6 @@ and AI for onscreen bins and treat the faraway bins with statistical mechanics.
 Which allows you to have a lot of sprites -&gt; ships, weapons -&gt; more epic.
 </p>
 <p>
-Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
-Public License, see copying.txt.
-</p>
-<p>
-Sprites have an <em>Ortho</em> location and are lit by <a href = "https://scholar.google.ca/scholar?q=lambert1892photometrie">lambert1892photometrie</a>.
-They are drawn by the gpu in <em>../system/Draw</em> as the main foreground. Sprites
-detect collisions. The sprite system must startup by calling <a href = "#Sprite">Sprite</a> and
-can shutdown by calling <a href = "#Sprite_">Sprite_</a>. To instatiate an abstract <em>Sprite</em>, one
-must call one of it's subclasses:
-</p>
-<ul>
-	<li>
-Debris: is everything that doesn't have license, but moves around on a
-linear path, can be damaged, killed, and moved. Astroids and stuff.
-	</li>
-	<li>
-Ship: has license and is controlled by a player or an ai.
-	</li>
-	<li>
-Wmd: cannons, bombs, and other cool stuff that has sprites and can hurt.
-	</li>
-	<li>
-Ethereal: are in the forground but poll collision detection instead of
-interacting; they generally do something in the game. For example, gates are
-devices that can magically transport you faster than light, or powerups.
-	</li>
-</ul>
-<p>
 Enforces the maximum speed by breaking the debris into smaller chunks; the
 process is not elastic, so it loses energy (speed.)
 </p>
@@ -90,15 +62,11 @@ Gets a read-only copy of the position.
 	<dd>C89/90</dd>
 	<dt>author</dt>
 	<dd>Neil</dd>
-	<dt>author</dt>
-	<dd>Neil</dd>
 	<dt>version</dt>
 	<dd>3.4, 2017-05 generics</dd>
 	<dt>since</dt>
 	<dd>3.3, 2016-01
- 			3.2, 2015-06</dd>
-	<dt>fixme</dt>
-	<dd>Change diameter to radius.</dd>
+			3.2, 2015-06</dd>
 </dl>
 
 

@@ -954,22 +954,25 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 }
 
 /** @implements <Bin*, InfoOutput*>DiAction */
-/*static void draw_bin_literally(struct SpriteList **const pthis, void *const pout_void) {
+static void draw_bin_literally(struct SpriteList **const pthis, void *const pout_void) {
 	struct SpriteList *const this = *pthis;
 	const InfoOutput *const pout = pout_void, out = *pout;
-	const struct Vec2f a = { 0.0f, 0.0f };
-	const struct AutoImage *image = AutoImageSearch("Hair.png");
-	assert(pthis && this && out && image);
-	out(&a, image);
-}*/
+	const struct AutoImage *hair = AutoImageSearch("Hair.png");
+	struct Vec2i bin_in_space;
+	struct Vec2f bin_float;
+	assert(pthis && this && out && hair);
+	bin_to_Vec2i((unsigned)(this - bins), &bin_in_space);
+	bin_float.x = bin_in_space.x, bin_float.y = bin_in_space.y;
+	out(&bin_float, hair);
+}
 /** Must call \see{SpriteUpdate} before this, because it updates everything.
  Use when the Info GPU shader is loaded. */
 void SpritesDrawInfo(InfoOutput draw) {
-	const struct Vec2f a = { 0.0f, 0.0f };
-	const struct AutoImage *image = AutoImageSearch("Hair.png");
-	/*BinSetBiForEach(draw_bins, &draw_bin_literally, &draw);*/
+	/*const struct Vec2f a = { 10.0f, 10.0f };*/
+	/*const struct AutoImage *hair = AutoImageSearch("Hair.png");*/
 	assert(draw);
-	draw(&a, image);
+	BinSetBiForEach(draw_bins, &draw_bin_literally, &draw);
+	/*draw(&a, hair);*/
 }
 
 /** @implements <Sprite, LambertOutput*>DiAction */

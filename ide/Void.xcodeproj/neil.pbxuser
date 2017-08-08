@@ -67,9 +67,9 @@
 	};
 	2806515F1EE4C6A40023DC21 /* OrthoMath.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {595, 3003}}";
-			sepNavSelRange = "{6619, 0}";
-			sepNavVisRange = "{0, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2951}}";
+			sepNavSelRange = "{3461, 29}";
+			sepNavVisRange = "{2107, 1847}";
 		};
 	};
 	2866766A1E8467300090EBDC /* Source Control */ = {
@@ -165,9 +165,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 30316}}";
-			sepNavSelRange = "{34840, 0}";
-			sepNavVisRange = "{33492, 2122}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 30264}}";
+			sepNavSelRange = "{34486, 0}";
+			sepNavVisRange = "{33418, 2147}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
@@ -249,9 +249,9 @@
 	};
 	28FB37061E8A0FE1003610DC /* Draw.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 8918}}";
-			sepNavSelRange = "{6567, 37}";
-			sepNavVisRange = "{4475, 2606}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 8788}}";
+			sepNavSelRange = "{16804, 0}";
+			sepNavVisRange = "{15872, 2106}";
 		};
 	};
 	28FB37071E8A0FE1003610DC /* Draw.h */ = {

@@ -577,40 +577,15 @@ static void display(void) {
 	}
 	SpritesDrawLambert(&display_lambert);
 
+	/* Display info. */
 	glUseProgram(auto_Info_shader.compiled);
 	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
 	SpritesDrawInfo(&display_info);
 
-	old_texture = 0; /* Without this, it's Bad. */
-#if 0
-	for(bin.y = bin_pos.y; bin.y >= bin_neg.y; bin.y--) {
-		for(bin.x = bin_neg.x; bin.x <= bin_pos.y; bin.x++) {
-			/* draw a sprite; fixme: minimise texture transitions? */
-			for(sprite = SpriteBinGetFirst(bin);
-				sprite;
-				sprite = SpriteBinGetNext(sprite)) {
-				if(draw_is_print_sprites) debug("\tTex%d normal Tex%d Size %d (%.1f,%.1f:%.1f)\n", tex, nor, size, r.x, r.y, r.theta);
-				if(old_texture != tex) {
-					glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
-					glBindTexture(GL_TEXTURE_2D, nor);
-					glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
-					glBindTexture(GL_TEXTURE_2D, tex);
-					old_texture = tex;
-				}
-				glUniform1f(auto_Lambert_shader.size, (float)size);
-				glUniform1f(auto_Lambert_shader.angle, r.theta);
-				glUniform2f(auto_Lambert_shader.object, r.x, r.y);
-				glDrawArrays(GL_TRIANGLE_STRIP,
-					vbo_info_square.first, vbo_info_square.count);
-			}
-		}
-	}
-#endif
+	/* Without this, it's Bad. */
+	old_texture = 0;
+
 	if(draw_is_print_sprites) draw_is_print_sprites = 0;
-	/*x = y = 0.0f;
-	t = SpriteGetTheta(GameGetPlayer());
-	size = 128;*/
-	/*WindowIsGlError("display");*/
 
 #if 0
 	/* overlay hud */

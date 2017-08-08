@@ -64,15 +64,15 @@ static GLuint TexClassTexture(const enum TexClass class) {
 /** Shader attribute assignment. {VBO_ATTRIB_CENTERED} is the normalised centre
  co-ordinates in which the sprite goes from [-1, 1]; {VBO_ATTRIB_TEXTURE} maps
  that to [0, 1] for texture mapping the sprite. */
-enum { /* vec2 */ VBO_ATTRIB_CENTRED, /* vec2 */ VBO_ATTRIB_TEXTURE };
-/** Corresponds to {(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)}. */
+enum { /* vec2 */ VBO_ATTRIB_VERTEX, /* vec2 */ VBO_ATTRIB_TEXTURE };
+/** Corresponds to {(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)}. */
 static const struct {
 	GLint size;
 	GLenum type;
 	const GLvoid *offset;
 } vbo_attrib[] = {
 	{ 2, GL_FLOAT, 0 },
-	{ 2, GL_FLOAT, (GLvoid *)(sizeof(GLfloat) * 2) }
+	{ 2, GL_FLOAT, (GLvoid *)(sizeof(GLfloat) * 2) /* offset */ }
 };
 
 /** {struct} corresponding to the above. {vbo} is used ubiquitously for static
@@ -137,12 +137,15 @@ int Draw(void) {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vbo), vbo, GL_STATIC_DRAW);
 	/* fixme: the texture should be the same as the vetices, half the data */
 	/* fixme: done per-frame, because apparently OpenGl does not keep track of the bindings per-buffer */
-	glEnableVertexAttribArray(VBO_ATTRIB_CENTRED);
-	glVertexAttribPointer(VBO_ATTRIB_CENTRED, vbo_attrib[VBO_ATTRIB_CENTRED].size, vbo_attrib[VBO_ATTRIB_CENTRED].type,
-		GL_FALSE, sizeof(struct Vertex), vbo_attrib[VBO_ATTRIB_CENTRED].offset);
+	glEnableVertexAttribArray(VBO_ATTRIB_VERTEX);
+	glVertexAttribPointer(VBO_ATTRIB_VERTEX, vbo_attrib[VBO_ATTRIB_VERTEX].size,
+		vbo_attrib[VBO_ATTRIB_VERTEX].type, GL_FALSE, sizeof(struct Vertex),
+		vbo_attrib[VBO_ATTRIB_VERTEX].offset);
     glEnableVertexAttribArray(VBO_ATTRIB_TEXTURE);
-    glVertexAttribPointer(VBO_ATTRIB_TEXTURE, vbo_attrib[VBO_ATTRIB_TEXTURE].size, vbo_attrib[VBO_ATTRIB_TEXTURE].type, GL_FALSE,
-		sizeof(struct Vertex), vbo_attrib[VBO_ATTRIB_TEXTURE].offset);
+    glVertexAttribPointer(VBO_ATTRIB_TEXTURE,
+		vbo_attrib[VBO_ATTRIB_TEXTURE].size,
+		vbo_attrib[VBO_ATTRIB_TEXTURE].type, GL_FALSE, sizeof(struct Vertex),
+		vbo_attrib[VBO_ATTRIB_TEXTURE].offset);
 	debug("Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
 
 	/* textures */
@@ -155,24 +158,24 @@ int Draw(void) {
 	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
 	/* shader initialisation */
-	if(!auto_Background(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Background(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	/* these are constant; fixme: could they be declared as such? */
 	glUniform1i(auto_Background_shader.sampler, TEX_CLASS_BACKGROUND);
-	if(!auto_Far(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Far(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Far_shader.sampler, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Far_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Far_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Far_shader.directional_colour, 1, sunshine);
-	if(!auto_Hud(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Hud(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Hud_shader.sampler, TEX_CLASS_SPRITE);
-	if(!auto_Lighting(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(),0;
+	if(!auto_Lighting(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(),0;
 	glUniform1i(auto_Lighting_shader.sampler, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Lighting_shader.sampler_light, TEX_CLASS_NORMAL);
 	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
 	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
-	if(!auto_Info(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Info(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Info_shader.bmp_sprite, TEX_CLASS_SPRITE);
-	if(!auto_Lambert(VBO_ATTRIB_CENTRED, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
+	if(!auto_Lambert(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Lambert_shader.bmp_sprite, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Lambert_shader.bmp_normal, TEX_CLASS_NORMAL);
 	glUniform3f(auto_Lambert_shader.sun_direction, -0.2f, -0.2f, 0.1f);
@@ -467,8 +470,8 @@ static void display_lambert(const struct Ortho3f *const x,
 		glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
 		glBindTexture(GL_TEXTURE_2D, tex->texture);
 		old_texture = tex->texture;
+		glUniform1f(auto_Lambert_shader.size, tex->width);
 	}
-	glUniform1f(auto_Lambert_shader.size, tex->width);
 	glUniform1f(auto_Lambert_shader.angle, x->theta);
 	glUniform2f(auto_Lambert_shader.object, x->x, x->y);
 	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
@@ -483,8 +486,8 @@ static void display_info(const struct Vec2f *const x,
 		glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
 		glBindTexture(GL_TEXTURE_2D, tex->texture);
 		old_texture = tex->texture;
+		glUniform1f(auto_Info_shader.size, tex->width);
 	}
-	glUniform1f(auto_Info_shader.size, tex->width);
 	glUniform2f(auto_Info_shader.object, x->x, x->y);
 	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
 }
@@ -675,7 +678,6 @@ static void resize(int width, int height) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	} else {
 		glUniform1f(auto_Background_shader.scale, 1.0f);
-		/* fixme: here? */
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}
@@ -692,7 +694,7 @@ static void resize(int width, int height) {
 	glUseProgram(auto_Lighting_shader.compiled);
 	glUniform2f(auto_Lighting_shader.two_screen, two_screen.x, two_screen.y);
 	glUseProgram(auto_Info_shader.compiled);
-	glUniform2f(auto_Info_shader.inv_screen, two_screen.x, two_screen.y);
+	glUniform2f(auto_Info_shader.projection, two_screen.x, two_screen.y);
 	glUseProgram(auto_Lambert_shader.compiled);
-	glUniform2f(auto_Lambert_shader.inv_screen, two_screen.x, two_screen.y);
+	glUniform2f(auto_Lambert_shader.projection, two_screen.x, two_screen.y);
 }

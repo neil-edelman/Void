@@ -11,7 +11,7 @@ uniform vec3 point_colour[MAX_LIGHTS];
 // passed these from vertex shader
 varying mat2 pass_rotation;
 varying vec2 pass_texture;
-varying vec2 pass_object;
+varying vec2 pass_view;
 
 void main() {
 	// texture map
@@ -29,7 +29,7 @@ void main() {
 			break;
 		} else {
 			vec3 colour = point_colour[i];
-			vec2 incoming = point_position[i] - pass_object;
+			vec2 incoming = point_position[i] - pass_view;
 			shade += colour * max(0.0, dot(normal.xy, normalize(incoming))) / length(incoming);
 		}
 	}

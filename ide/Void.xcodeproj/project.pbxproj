@@ -41,6 +41,13 @@
 
 /* Begin PBXFileReference section */
 		2806515F1EE4C6A40023DC21 /* OrthoMath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OrthoMath.h; sourceTree = "<group>"; };
+		28A5710A1F3A29F100D5143B /* Background_vsfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Background_vsfs.h; sourceTree = "<group>"; };
+		28A5710B1F3A29F100D5143B /* Far_vsfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Far_vsfs.h; sourceTree = "<group>"; };
+		28A5710C1F3A29F100D5143B /* Hud_vsfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Hud_vsfs.h; sourceTree = "<group>"; };
+		28A5710D1F3A29F100D5143B /* Info_vsfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Info_vsfs.h; sourceTree = "<group>"; };
+		28A5710E1F3A29F100D5143B /* Lambert_vsfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Lambert_vsfs.h; sourceTree = "<group>"; };
+		28A5710F1F3A29F100D5143B /* Lighting_vsfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Lighting_vsfs.h; sourceTree = "<group>"; };
+		28A571101F3A29F100D5143B /* Phong_vsfs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Phong_vsfs.h; sourceTree = "<group>"; };
 		28FB36EC1E8A0FE1003610DC /* EntryPosix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = EntryPosix.c; sourceTree = "<group>"; };
 		28FB36ED1E8A0FE1003610DC /* EntryPosix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EntryPosix.h; sourceTree = "<group>"; };
 		28FB36EF1E8A0FE1003610DC /* Event.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = Event.c; sourceTree = "<group>"; };
@@ -96,6 +103,7 @@
 		08FB7794FE84155DC02AAC07 /* Void */ = {
 			isa = PBXGroup;
 			children = (
+				28A571091F3A29F100D5143B /* shaders */,
 				28FB37271E8A1031003610DC /* external */,
 				28FB37221E8A100A003610DC /* Auto.c */,
 				28FB37231E8A100A003610DC /* Auto.h */,
@@ -121,6 +129,21 @@
 			);
 			name = Products;
 			sourceTree = "<group>";
+		};
+		28A571091F3A29F100D5143B /* shaders */ = {
+			isa = PBXGroup;
+			children = (
+				28A5710A1F3A29F100D5143B /* Background_vsfs.h */,
+				28A5710B1F3A29F100D5143B /* Far_vsfs.h */,
+				28A5710C1F3A29F100D5143B /* Hud_vsfs.h */,
+				28A5710D1F3A29F100D5143B /* Info_vsfs.h */,
+				28A5710E1F3A29F100D5143B /* Lambert_vsfs.h */,
+				28A5710F1F3A29F100D5143B /* Lighting_vsfs.h */,
+				28A571101F3A29F100D5143B /* Phong_vsfs.h */,
+			);
+			name = shaders;
+			path = ../build/shaders;
+			sourceTree = SOURCE_ROOT;
 		};
 		28FB36EB1E8A0FE1003610DC /* src */ = {
 			isa = PBXGroup;

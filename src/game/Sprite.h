@@ -12,7 +12,7 @@ enum AiType { AI_DUMB, AI_HUMAN };
 typedef void (*InfoOutput)(const struct Vec2f *const x,
 	const struct AutoImage *const sprite);
 typedef void (*LambertOutput)(const struct Ortho3f *const x,
-	const struct AutoImage *const sprite,
+	const struct AutoImage *const image,
 	const struct AutoImage *const normals);
 
 struct Ship *Ship(const struct AutoShipClass *const class,

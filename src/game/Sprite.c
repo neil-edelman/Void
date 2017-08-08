@@ -954,16 +954,22 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 }
 
 /** @implements <Bin*, InfoOutput*>DiAction */
-static void draw_bin_literally(struct SpriteList **const pthis, void *const pout_void) {
+/*static void draw_bin_literally(struct SpriteList **const pthis, void *const pout_void) {
 	struct SpriteList *const this = *pthis;
 	const InfoOutput *const pout = pout_void, out = *pout;
-	assert(pthis && this && out);
-	/* fixme out(); */
-}
+	const struct Vec2f a = { 0.0f, 0.0f };
+	const struct AutoImage *image = AutoImageSearch("Hair.png");
+	assert(pthis && this && out && image);
+	out(&a, image);
+}*/
 /** Must call \see{SpriteUpdate} before this, because it updates everything.
  Use when the Info GPU shader is loaded. */
 void SpritesDrawInfo(InfoOutput draw) {
-	BinSetBiForEach(draw_bins, &draw_bin_literally, &draw);
+	const struct Vec2f a = { 0.0f, 0.0f };
+	const struct AutoImage *image = AutoImageSearch("Hair.png");
+	/*BinSetBiForEach(draw_bins, &draw_bin_literally, &draw);*/
+	assert(draw);
+	draw(&a, image);
 }
 
 /** @implements <Sprite, LambertOutput*>DiAction */

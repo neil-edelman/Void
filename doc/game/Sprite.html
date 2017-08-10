@@ -98,7 +98,7 @@ Collisions between two sprites, cleared at every frame.
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
 	struct Collision *collision_set; /* temporary, \in collisions */
-	unsigned bin; /* where, approximately, is the image between frames */
+	unsigned bin; /* which bin is it in, set by {x_5} */
 	struct Ortho3f x, v; /* where it is and where it is going */
 	struct Vec2f dx, x_5; /* temporary values */
 	float bounding, bounding1; /* bounding1 is temporary */

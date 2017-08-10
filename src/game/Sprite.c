@@ -80,7 +80,7 @@ struct Sprite {
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
 	struct Collision *collision_set; /* temporary, \in collisions */
-	unsigned bin; /* where, approximately, is the image between frames */
+	unsigned bin; /* which bin is it in, set by {x_5} */
 	struct Ortho3f x, v; /* where it is and where it is going */
 	struct Vec2f dx, x_5; /* temporary values */
 	float bounding, bounding1; /* bounding1 is temporary */
@@ -334,10 +334,11 @@ struct Transfer {
 static struct TransferSet *transfers;
 
 static void transfer_sprite(struct Transfer *const this) {
-	/*char a[12];*/
+	/**/char a[12];
 	assert(this && this->sprite && this->to_bin < BIN_BIN_FG_SIZE);
-	/*Sprite_to_string(this->sprite, &a);
-	printf("%s: Bin%u -> Bin%u.\n", a, this->sprite->bin, this->to_bin);*/
+	/**/Sprite_to_string(this->sprite, &a);
+	printf("%s#%p: Bin%u -> Bin%u.\n", a, (void *)this->sprite,
+		this->sprite->bin, this->to_bin);
 	SpriteListRemove(bins + this->sprite->bin, this->sprite);
 	SpriteListPush(bins + this->to_bin, (struct SpriteListNode *)this->sprite);
 	this->sprite->bin = this->to_bin;
@@ -387,7 +388,10 @@ static void Ship_to_string(const struct Ship *this, char (*const a)[12]) {
 }
 /** @implements <Ship>Action */
 static void Ship_delete(struct Ship *const this) {
+	char a[12];
 	assert(this);
+	Ship_to_string(this, &a);
+	printf("Ship_delete %s#%p.\n", a, (void *)&this->sprite.data);
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	ShipSetRemove(ships, this);
 }
@@ -404,8 +408,12 @@ static void Ship_dumb_ai(struct Ship *const this) {
 	assert(this);
 	this->sprite.data.v.theta = 0.0002f;
 }
-/** @implements <Ship>Action */
-static void Ship_human(struct Ship *const this) {
+/** As well as {Ship_human}.
+ @implements <Ship>Action */
+static void Ship_human(struct Ship *const this) { UNUSED(this); }
+/** Called at beginning of frame with one ship, {player}.
+ @implements <Ship>Action */
+static void Ship_player(struct Ship *const this) {
 	const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
 	const int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
 	const int ms_shoot = KeyTime(32); /* fixme */
@@ -496,7 +504,10 @@ static void Debris_to_string(const struct Debris *this, char (*const a)[12]) {
 }
 /** @implements <Debris>Action */
 static void Debris_delete(struct Debris *const this) {
+	char a[12];
 	assert(this);
+	Debris_to_string(this, &a);
+	printf("Debris_delete %s#%p.\n", a, (void *)&this->sprite.data);
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	DebrisSetRemove(debris, this);
 }
@@ -550,7 +561,10 @@ static void Wmd_to_string(const struct Wmd *this, char (*const a)[12]) {
 }
 /** @implements <Wmd>Action */
 static void Wmd_delete(struct Wmd *const this) {
+	char a[12];
 	assert(this);
+	Wmd_to_string(this, &a);
+	printf("Wmd_delete %s#%p.\n", a, (void *)&this->sprite.data);
 	Light_(&this->light);
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	WmdSetRemove(wmds, this);
@@ -563,7 +577,7 @@ static float Wmd_get_mass(const struct Wmd *const this) {
 /** @implements <Wmd>Action
  @fixme Replace delete with more dramatic death. */
 static void Wmd_update(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) /*wmd_death*/Wmd_delete(this);
+	if(TimerIsTime(this->expires)) /*wmd_death*//*Wmd_delete(this)*/; /* this!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
 }
 /* Fill in the member functions of this implementation. */
 static const struct SpriteVt wmd_vt = {
@@ -636,7 +650,10 @@ static void Gate_update(struct Gate *const this) {
 }
 /** @implements <Debris>Action */
 static void Gate_delete(struct Gate *const this) {
+	char a[12];
 	assert(this);
+	Gate_to_string(this, &a);
+	printf("Gate_delete %s#%p.\n", a, (void *)&this->sprite.data);
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	GateSetRemove(gates, this);
 }
@@ -981,6 +998,7 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	 lagging? */
 	if(player) {
 		DrawSetCamera((struct Vec2f *)&player->sprite.data.x);
+		Ship_player(player);
 	}
 	/* Each frame, calculate the bins that are visible and stuff. */
 	new_bins();
@@ -1304,6 +1322,10 @@ struct GateSet *gates;
  @implements <Sprite>Action */
 static void sprite_remove(struct Sprite *const this) {
 	/* fixme: window parameters */
+	char a[12];
+	assert(this);
+	Sprite_to_string(this, &a);
+	printf("Sprite_delete %s#%p.\n", a, (void *)this);
 	SpriteListRemove(sprites + this->bin, this);
 }
 
@@ -1315,7 +1337,10 @@ static void debris_out(struct Debris *const this) {
 }
 /** @implements <Debris>Action */
 static void debris_delete(struct Debris *const this) {
+	char a[12];
 	assert(this);
+	Debris_to_string(this, &a);
+	printf("Debris_delete %s#%p.\n", a, (void *)&this->sprite.data);
 	sprite_remove(&this->sprite.data);
 	DebrisSetRemove(debris, this);
 	/* fixme: explode */
@@ -1367,7 +1392,10 @@ static void ship_out(struct Ship *const this) {
 }
 /** @implements <Ship>Action */
 static void ship_delete(struct Ship *const this) {
+	char a[12];
 	assert(this);
+	Ship_to_string(this, &a);
+	printf("Ship_delete %s#%p.\n", a, (void *)&this->sprite.data);
 	Event_(&this->event_recharge);
 	sprite_remove(&this->sprite.data);
 	ShipSetRemove(ships, this);
@@ -1435,7 +1463,10 @@ static void gate_out(struct Gate *const this) {
 }
 /** @implements <Gate>Action */
 static void gate_delete(struct Gate *const this) {
+	char a[12];
 	assert(this);
+	Gate_to_string(this, &a);
+	printf("Gate_delete %s#%p.\n", a, (void *)&this->sprite.data);
 	sprite_remove(&this->sprite.data);
 	GateSetRemove(gates, this);
 	/* fixme: explode */

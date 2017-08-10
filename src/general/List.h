@@ -647,7 +647,12 @@ static void T_(ListSort)(struct T_(List) *const this) {
  @allow */
 static void T_(ListMigrate)(struct T_(List) *const this,
 	const struct Migrate *const migrate) {
-	if(!this || !migrate) return;
+	if(!this || !migrate || !migrate->delta) return;
+#ifdef LIST_DEBUG
+	fprintf(stderr, "List<" QUOTE(LIST_NAME)
+		"#%p: moved entries at #%p-#%p by %lu.\n", (void *)this, migrate->begin,
+		migrate->end, (long unsigned)migrate->delta);
+#endif	
 #ifdef LIST_OPENMP /* <-- omp */
 	#pragma omp parallel sections
 #endif /* omp --> */
@@ -849,8 +854,7 @@ static void PRIVATE_T_U_(list, push)(struct T_(List) *const this,
 /** Private: add before {this.first} in {<U>}. */
 static void PRIVATE_T_U_(list, unshift)(struct T_(List) *const this,
 	struct T_(ListNode) *const node) {
-	assert(this);
-	assert(node);
+	assert(this && node);
 	node->U_(prev) = 0;
 	node->U_(next) = this->U_(first);
 	if(this->U_(first)) {
@@ -865,8 +869,20 @@ static void PRIVATE_T_U_(list, unshift)(struct T_(List) *const this,
 /** Private: list remove in {<U>}. */
 static void PRIVATE_T_U_(list, remove)(struct T_(List) *const this,
 	struct T_(ListNode) *const node) {
-	assert(this);
-	assert(node);
+	assert(this && node);
+/*#ifndef NDEBUG*/
+	{
+		struct T_(ListNode) *no;
+		size_t n = 0;
+		int is_in = 0;
+		for(no = this->U_(first); no; no = no->U_(next)) {
+			if(no == node) is_in = 1;
+			n++;
+		}
+		printf("count: %lu\n", n);
+		assert(is_in);
+	}
+/*#endif*/
 	if(node->U_(prev)) {
 		node->U_(prev)->U_(next) = node->U_(next);
 	} else {
@@ -906,17 +922,15 @@ static void PRIVATE_T_U_(list, cat)(struct T_(List) *const this,
 static void PRIVATE_T_U_(list, migrate)(struct T_(List) *const this,
 	const struct Migrate *const migrate) {
 	struct T_(ListNode) *node;
+#ifndef NDEBUG
+	size_t n = 0, m = 0;
+#endif
 	assert(this);
 	assert(migrate);
 	assert(migrate->begin);
 	assert(migrate->begin < migrate->end);
 	assert(migrate->delta);
 	assert(!this->U_(first) == !this->U_(last));
-#ifdef LIST_DEBUG
-	fprintf(stderr, "List<" QUOTE(LIST_NAME)
-		"#%p: moved entries at #%p-#%p by %lu.\n", migrate->begin, migrate->end,
-		(void *)migrate->delta);
-#endif
 	/* empty -- done */
 	if(!this->U_(first)) return;
 	/* first and last pointer of {<T>List} */
@@ -926,7 +940,22 @@ static void PRIVATE_T_U_(list, migrate)(struct T_(List) *const this,
 	for(node = this->U_(first); node; node = node->U_(next)) {
 		PRIVATE_T_(migrate)(migrate, &node->U_(prev));
 		PRIVATE_T_(migrate)(migrate, &node->U_(next));
+#ifndef NDEBUG
+		n++;
+#endif
 	}
+#ifndef NDEBUG
+	{
+		struct T_(ListNode) *temp = 0;
+		for(node = this->U_(first); node; node = node->U_(next)) {
+			assert(node->U_(prev) == temp);
+			temp = node;
+			m++;
+		}
+		assert(this->U_(last) == temp);
+		assert(n == m);
+	}
+#endif
 }
 
 

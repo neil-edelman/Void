@@ -22,7 +22,7 @@
 #include "../system/Key.h" /* keys for input */
 #include "../system/Draw.h" /* DrawGetCamera, DrawSetScreen */
 #include "../system/Timer.h" /* for expiring */
-#include "Light.h"	/* for glowing Sprites */
+/*#include "Light.h"*/ /* for glowing Sprites */
 #include "Sprite.h"
 
 /* This is used for small floating-point values. The value doesn't have any
@@ -143,9 +143,12 @@ static void Sprite_filler(struct SpriteListNode *const this,
  @implements Migrate */
 static void Sprite_migrate(const struct Migrate *const migrate) {
 	size_t i;
+	/* For all the bins, do a {List} migrate. */
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
 		SpriteListMigrate(bins + i, migrate);
 	}
+	/* {Transfer} also has to get migrated. */
+	///////
 }
 
 
@@ -163,7 +166,8 @@ static struct Rectangle4i grow4; /* for clipping */
 
 /** New bins calculates which bins are at all visible and which we should
  update, (around the visible,) every frame.
- @order The screen area. */
+ @order The screen area.
+ @fixme Draw bins needs to be expanded. */
 static void new_bins(void) {
 	struct Rectangle4f rect;
 	struct Rectangle4i bin4/*, grow4 <- now static */;
@@ -281,7 +285,10 @@ struct Collision {
 #define SET_TYPE struct Collision
 #include "../general/Set.h" /* CollisionSet, CollisionSetNode */
 static struct CollisionSet *collisions;
-/** @implements <Sprite, Migrate>DiAction */
+/** This is a stack. The {Set} doesn't know that {Collision} is
+ self-referential, so we have to inject code into the {realloc};
+ \see{Collision_migrate}.
+ @implements <Sprite, Migrate>DiAction */
 static void Sprite_migrate_collisions(struct Sprite *const this,
 	void *const migrate_void) {
 	const struct Migrate *const migrate = migrate_void;
@@ -301,7 +308,6 @@ static void Sprite_migrate_collisions(struct Sprite *const this,
 	/*printf(".\n");*/
 	/*this->collision_set = 0;*/
 }
-
 /** @implements <Bin, Migrate>BiAction */
 static void Bin_migrate_collisions(struct SpriteList **const pthis,
 	void *const migrate_void) {
@@ -330,7 +336,7 @@ struct Transfer {
 
 #define SET_NAME Transfer
 #define SET_TYPE struct Transfer
-#include "../general/Set.h" /* defines BinSet, BinSetNode */
+#include "../general/Set.h" /* defines TransferSet, TransferSetNode */
 static struct TransferSet *transfers;
 
 static void transfer_sprite(struct Transfer *const this) {
@@ -343,6 +349,27 @@ static void transfer_sprite(struct Transfer *const this) {
 	SpriteListPush(bins + this->to_bin, (struct SpriteListNode *)this->sprite);
 	this->sprite->bin = this->to_bin;
 }
+
+/** @implements <Transfer, Migrate>BiAction */
+static void Transfer_migrate_sprite(struct Transfer *const this,
+	void *const migrate_void) {
+	const struct Migrate *const migrate = migrate_void;
+	assert(this && migrate);
+	/*SpriteMigrate(migrate, this->sprite);!!!!!!!!!!!!!!!*/
+}
+/** @implements Migrate */
+static void Transfer_migrate(const struct Migrate *const migrate) {
+	TransferSetBiForEach(transfers, &Transfer_migrate_sprite,
+		(void *const)migrate);
+}
+
+/* Sprite delayed deletions. */
+
+/*struct Remove {
+	struct Sprite *sprite;
+};
+
+#define SET_NAME Delete*/
 
 
 
@@ -565,7 +592,7 @@ static void Wmd_delete(struct Wmd *const this) {
 	assert(this);
 	Wmd_to_string(this, &a);
 	printf("Wmd_delete %s#%p.\n", a, (void *)&this->sprite.data);
-	Light_(&this->light);
+	/*Light_(&this->light);*/
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	WmdSetRemove(wmds, this);
 }
@@ -610,13 +637,13 @@ struct Wmd *Wmd(const struct AutoWmdType *const class,
 	w->from = &from->sprite.data;
 	w->mass = class->impact_mass;
 	w->expires = TimerGetGameTime() + class->ms_range;
-	{
+	/*{
 		const float length = sqrtf(class->r * class->r + class->g * class->g
 			+ class->b * class->b);
 		const float one_length = length > epsilon ? 1.0f / length : 1.0f;
 		Light(&w->light, length, class->r * one_length, class->g * one_length,
 			class->b * one_length);
-	}
+	}*/
 	return w;
 }
 /** This is used by AI and humans.
@@ -692,15 +719,16 @@ struct Gate *Gate(const struct AutoGate *const class) {
 
 
 
-/** Calculates temporary values, {dx}, {x_5}, and {bounding1}. Half-way through
- the frame, {x_5}, is used to divide the sprites into bins; {transfers} is used
- to stick sprites that have overflowed their bin, and should be dealt with
- next.
- @implements <Sprite>Action */
+/** Moves the sprite. Calculates temporary values, {dx}, {x_5}, and
+ {bounding1}. Half-way through the frame, {x_5}, is used to divide the sprites
+ into bins; {transfers} is used to stick sprites that have overflowed their
+ bin, and should be dealt with next.
+ @return If it was destroyed, return false.
+ @implements <Sprite>Predicate */
 static void extrapolate(struct Sprite *const this) {
 	unsigned bin;
 	assert(this);
-	/* Do whatever the sprite parent class does. */
+	/* Do whatever the sprite parent class does. It returns false if deleted. */
 	this->vt->update(this);
 	/* Kinematics. */
 	this->dx.x = this->v.x * dt_ms;
@@ -967,9 +995,14 @@ int Sprites(void) {
 		|| !(debris = DebrisSet())
 		|| !(wmds = WmdSet())
 		|| !(gates = GateSet())) return 0;
+	/* Collision is a self-referential stack; this always must be here. */
 	CollisionSetSetMigrate(collisions, &Collision_migrate);
+	/* Updates all the {bins} (etc) that reference sprites on {realloc}. */
 	ShipSetSetMigrate(ships, &Sprite_migrate);
 	DebrisSetSetMigrate(debris, &Sprite_migrate);
+	WmdSetSetMigrate(wmds, &Sprite_migrate);
+	GateSetSetMigrate(gates, &Sprite_migrate);
+	/* Initialises to starting all {bins}, (global variable.) */
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 	return 1;
 }
@@ -1162,7 +1195,16 @@ void SpritesPlot(void) {
 	}
 }
 
-
+/** Output sprites. */
+void SpritesOut(void) {
+	struct OutputData out;
+	unsigned i;
+	out.fp = stdout, out.i = 0; out.n = 0;
+	for(i = 0; i < BIN_BIN_FG_SIZE; i++)
+		SpriteListYBiForEach(bins + i, &sprite_count, &out);
+	for(i = 0; i < BIN_BIN_FG_SIZE; i++)
+		SpriteListYBiForEach(bins + i, &print_sprite_data, &out);
+}
 
 
 

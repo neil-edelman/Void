@@ -650,9 +650,9 @@ static void T_(ListMigrate)(struct T_(List) *const this,
 	if(!this || !migrate || !migrate->delta) return;
 #ifdef LIST_DEBUG
 	fprintf(stderr, "List<" QUOTE(LIST_NAME)
-		"#%p: moved entries at #%p-#%p by %lu.\n", (void *)this, migrate->begin,
-		migrate->end, (long unsigned)migrate->delta);
-#endif	
+		"#%p: moved entries at #%p-#%p by %lu.\n", (void *)this,
+		migrate->begin, migrate->end, (long unsigned)migrate->delta);
+#endif
 #ifdef LIST_OPENMP /* <-- omp */
 	#pragma omp parallel sections
 #endif /* omp --> */
@@ -693,16 +693,17 @@ static void PRIVATE_T_(migrate)(const struct Migrate *const migrate,
 	*(char **)node_ptr += migrate->delta;
 }
 
-/** Call this function with the address of any self-referential node pointers
+/* Call this function with the address of any self-referential node pointers
  contained in the data itself, to make sure that they are updated on {realloc}.
  To update the list, see \see{<T>ListMigrate}.
  @fixme Untested.
- @allow */
-static void T_(Migrate)(const struct Migrate *const migrate,
+ @allow
+ @depreciated Use {<T>SetMigrate} in {Set.h}. */
+/*static void T_(Migrate)(const struct Migrate *const migrate,
 	T **const t_ptr) {
 	if(!migrate || !t_ptr || !*t_ptr) return;
 	PRIVATE_T_(migrate)(migrate, (struct T_(ListNode) **const)t_ptr);
-}
+}*/
 
 #ifdef LIST_TEST /* <-- test */
 #include "../test/TestList.h" /* need this file if one is going to run tests */
@@ -724,7 +725,7 @@ static void PRIVATE_T_(unused_list)(void) {
 	T_(ListSort)(0);
 #endif /* comp --> */
 	T_(ListMigrate)(0, 0);
-	T_(Migrate)(0, 0);
+	/*T_(Migrate)(0, 0);*/
 	PRIVATE_T_(unused_coda)();
 }
 /** {clang}'s pre-processor is not fooled if one has one function. */
@@ -838,8 +839,7 @@ static void PRIVATE_T_(unused_coda)(void) { PRIVATE_T_(unused_list)(); }
 /** Private: add to {this.last} in {<U>}. */
 static void PRIVATE_T_U_(list, push)(struct T_(List) *const this,
 	struct T_(ListNode) *const node) {
-	assert(this);
-	assert(node);
+	assert(this && node);
 	node->U_(prev) = this->U_(last);
 	node->U_(next) = 0;
 	if(this->U_(last)) {
@@ -870,19 +870,6 @@ static void PRIVATE_T_U_(list, unshift)(struct T_(List) *const this,
 static void PRIVATE_T_U_(list, remove)(struct T_(List) *const this,
 	struct T_(ListNode) *const node) {
 	assert(this && node);
-/*#ifndef NDEBUG*/
-	{
-		struct T_(ListNode) *no;
-		size_t n = 0;
-		int is_in = 0;
-		for(no = this->U_(first); no; no = no->U_(next)) {
-			if(no == node) is_in = 1;
-			n++;
-		}
-		printf("count: %lu\n", n);
-		assert(is_in);
-	}
-/*#endif*/
 	if(node->U_(prev)) {
 		node->U_(prev)->U_(next) = node->U_(next);
 	} else {
@@ -901,10 +888,8 @@ static void PRIVATE_T_U_(list, remove)(struct T_(List) *const this,
  @order \Theta(1) */
 static void PRIVATE_T_U_(list, cat)(struct T_(List) *const this,
 	struct T_(List) *const from) {
-	assert(this);
-	assert(from);
-	assert(!this->U_(first) == !this->U_(last));
-	assert(!from->U_(first) == !from->U_(last));
+	assert(this && from && !this->U_(first) == !this->U_(last)
+		&& !from->U_(first) == !from->U_(last));
 	if(!from->U_(first)) {        /* there is nothing in {from} */
 		return;
 	} else if(!this->U_(first)) { /* there is nothing in {this} */
@@ -922,15 +907,8 @@ static void PRIVATE_T_U_(list, cat)(struct T_(List) *const this,
 static void PRIVATE_T_U_(list, migrate)(struct T_(List) *const this,
 	const struct Migrate *const migrate) {
 	struct T_(ListNode) *node;
-#ifndef NDEBUG
-	size_t n = 0, m = 0;
-#endif
-	assert(this);
-	assert(migrate);
-	assert(migrate->begin);
-	assert(migrate->begin < migrate->end);
-	assert(migrate->delta);
-	assert(!this->U_(first) == !this->U_(last));
+	assert(this && migrate && migrate->begin && migrate->begin < migrate->end
+		&&migrate->delta && !this->U_(first) == !this->U_(last));
 	/* empty -- done */
 	if(!this->U_(first)) return;
 	/* first and last pointer of {<T>List} */
@@ -940,22 +918,7 @@ static void PRIVATE_T_U_(list, migrate)(struct T_(List) *const this,
 	for(node = this->U_(first); node; node = node->U_(next)) {
 		PRIVATE_T_(migrate)(migrate, &node->U_(prev));
 		PRIVATE_T_(migrate)(migrate, &node->U_(next));
-#ifndef NDEBUG
-		n++;
-#endif
 	}
-#ifndef NDEBUG
-	{
-		struct T_(ListNode) *temp = 0;
-		for(node = this->U_(first); node; node = node->U_(next)) {
-			assert(node->U_(prev) == temp);
-			temp = node;
-			m++;
-		}
-		assert(this->U_(last) == temp);
-		assert(n == m);
-	}
-#endif
 }
 
 

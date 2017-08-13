@@ -58,8 +58,8 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 524286209;
-			PBXWorkspaceStateSaveDate = 524286209;
+			PBXPerProjectTemplateStateSaveDate = 524338711;
+			PBXWorkspaceStateSaveDate = 524338711;
 		};
 		sourceControlManager = 2866766A1E8467300090EBDC /* Source Control */;
 		userBuildSettings = {
@@ -165,16 +165,16 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 30641}}";
-			sepNavSelRange = "{42297, 21}";
-			sepNavVisRange = "{41037, 1554}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 31213}}";
+			sepNavSelRange = "{10532, 0}";
+			sepNavVisRange = "{9801, 1735}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 702}}";
-			sepNavSelRange = "{644, 0}";
-			sepNavVisRange = "{0, 996}";
+			sepNavSelRange = "{1019, 0}";
+			sepNavVisRange = "{0, 1019}";
 		};
 	};
 	28FB36F91E8A0FE1003610DC /* Zone.c */ = {
@@ -193,8 +193,8 @@
 	};
 	28FB36FC1E8A0FE1003610DC /* List.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {802, 20592}}";
-			sepNavSelRange = "{43931, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {802, 20761}}";
+			sepNavSelRange = "{26085, 0}";
 			sepNavVisRange = "{0, 0}";
 		};
 	};

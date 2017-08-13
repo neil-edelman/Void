@@ -22,7 +22,7 @@
 #include "../system/Key.h" /* keys for input */
 #include "../system/Draw.h" /* DrawGetCamera, DrawSetScreen */
 #include "../system/Timer.h" /* for expiring */
-/*#include "Light.h"*/ /* for glowing Sprites */
+#include "Light.h" /* for glowing Sprites */
 #include "Sprite.h"
 
 /* This is used for small floating-point values. The value doesn't have any
@@ -107,7 +107,7 @@ static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_TO_STRING &Sprite_to_string
 #include "../general/List.h"
 /** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
-static struct SpriteList bins[BIN_BIN_FG_SIZE];
+static struct SpriteList bins[BIN_BIN_FG_SIZE], holding_bin;
 /** Fills a sprite with data. This is kind of an abstract class: it never
  appears outside of another struct.
  @param auto: An auto-sprite prototype, contained in the precompiled {Auto.h}
@@ -136,7 +136,7 @@ static void Sprite_filler(struct SpriteListNode *const this,
 	s->bounding = s->bounding1 = (as->image->width >= as->image->height ?
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
 	Vec2f_to_bin(&s->x_5, &s->bin);
-	SpriteListPush(bins + s->bin, this);
+	SpriteListPush(&holding_bin/*bins + s->bin*/, this);
 }
 /** Stale pointers from {Set}'s {realloc} are taken care of by this callback.
  One must set it with {*SetSetMigrate}. It's kind of important.
@@ -147,8 +147,9 @@ static void Sprite_migrate(const struct Migrate *const migrate) {
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
 		SpriteListMigrate(bins + i, migrate);
 	}
+	SpriteListMigrate(&holding_bin, migrate);
 	/* {Transfer} also has to get migrated. */
-	///////
+	/*Transfer_migrate(migrate);*/
 }
 
 
@@ -267,6 +268,17 @@ static void for_each_draw(SpriteAction act) {
 static void for_each_update(SpriteAction act) {
 	BinSetBiForEach(update_bins, &act_bins, &act);
 	for_each_draw(act);
+}
+/** Transfer one sprite from the {holding_bin} to one of the {bins}; must be
+ pre-calculated, must be in {holding_bin}. */
+static void clear_holding_sprite(struct Sprite *this) {
+	assert(this);
+	SpriteListRemove(&holding_bin, this);
+	SpriteListPush(bins + this->bin, (struct SpriteListNode *)this);
+}
+/** Transfer all Sprites from the spawning bin to their respective places. */
+static void clear_holding_bin(void) {
+	SpriteListXForEach(&holding_bin, &clear_holding_sprite);
 }
 
 
@@ -592,7 +604,7 @@ static void Wmd_delete(struct Wmd *const this) {
 	assert(this);
 	Wmd_to_string(this, &a);
 	printf("Wmd_delete %s#%p.\n", a, (void *)&this->sprite.data);
-	/*Light_(&this->light);*/
+	Light_(&this->light);
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	WmdSetRemove(wmds, this);
 }
@@ -604,7 +616,8 @@ static float Wmd_get_mass(const struct Wmd *const this) {
 /** @implements <Wmd>Action
  @fixme Replace delete with more dramatic death. */
 static void Wmd_update(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) /*wmd_death*//*Wmd_delete(this)*/; /* this!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
+	if(TimerIsTime(this->expires)) /*wmd_death*/Wmd_delete(this); /* this!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
+	/* return 1 take; return 0;??? and then have a upcoming sprite list? */
 }
 /* Fill in the member functions of this implementation. */
 static const struct SpriteVt wmd_vt = {
@@ -637,13 +650,13 @@ struct Wmd *Wmd(const struct AutoWmdType *const class,
 	w->from = &from->sprite.data;
 	w->mass = class->impact_mass;
 	w->expires = TimerGetGameTime() + class->ms_range;
-	/*{
+	{
 		const float length = sqrtf(class->r * class->r + class->g * class->g
 			+ class->b * class->b);
 		const float one_length = length > epsilon ? 1.0f / length : 1.0f;
 		Light(&w->light, length, class->r * one_length, class->g * one_length,
 			class->b * one_length);
-	}*/
+	}
 	return w;
 }
 /** This is used by AI and humans.
@@ -1004,12 +1017,14 @@ int Sprites(void) {
 	GateSetSetMigrate(gates, &Sprite_migrate);
 	/* Initialises to starting all {bins}, (global variable.) */
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
+	SpriteListClear(&holding_bin);
 	return 1;
 }
 
 /** Erases all sprite buffers. */
 void Sprites_(void) {
 	unsigned i;
+	SpriteListClear(&holding_bin);
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 	GateSet_(&gates);
 	WmdSet_(&wmds);
@@ -1035,6 +1050,10 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	}
 	/* Each frame, calculate the bins that are visible and stuff. */
 	new_bins();
+	/* The {holding_bin} is an invisible {bin} that sprites go to spawn and not
+	 have to worry about weather they are going to be iterated this frame.
+	 Transfer all the {holding_bin} to actual {bins}. */
+	clear_holding_bin();
 	/* Calculate the future positions and transfer the sprites that have
 	 escaped their bin. */
 	for_each_update(&extrapolate);

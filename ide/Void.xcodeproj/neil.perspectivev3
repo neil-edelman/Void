@@ -348,14 +348,14 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>28</integer>
-									<integer>19</integer>
+									<integer>33</integer>
+									<integer>32</integer>
 									<integer>16</integer>
 									<integer>0</integer>
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
-							<string>{{0, 0}, {185, 669}}</string>
+							<string>{{0, 147}, {185, 669}}</string>
 						</dict>
 						<key>PBXTopSmartGroupGIDs</key>
 						<array/>
@@ -434,7 +434,7 @@
 									<key>GeometryConfiguration</key>
 									<dict>
 										<key>Frame</key>
-										<string>{{10, 27}, {644, 676}}</string>
+										<string>{{10, 27}, {644, 655}}</string>
 									</dict>
 									<key>Module</key>
 									<string>XCDetailModule</string>
@@ -518,11 +518,11 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>28A5AC711F40C61B007B8767</string>
+				<string>28E481CA1F40E477001052AA</string>
 				<string>1CA23ED40692098700951B8B</string>
-				<string>28A5AC721F40C61B007B8767</string>
+				<string>28E481CB1F40E477001052AA</string>
 				<string>2866766C1E8467350090EBDC</string>
-				<string>28A5AC731F40C61B007B8767</string>
+				<string>28E481CC1F40E477001052AA</string>
 				<string>1CA23EDF0692099D00951B8B</string>
 				<string>1CA23EE00692099D00951B8B</string>
 				<string>1CA23EE10692099D00951B8B</string>
@@ -671,14 +671,14 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>28A5AC741F40C61B007B8767</string>
+				<string>28E481CD1F40E477001052AA</string>
 				<string>1CCC7628064C1048000F2A68</string>
 				<string>1CCC7629064C1048000F2A68</string>
-				<string>28A5AC751F40C61B007B8767</string>
-				<string>28A5AC761F40C61B007B8767</string>
-				<string>28A5AC771F40C61B007B8767</string>
-				<string>28A5AC781F40C61B007B8767</string>
-				<string>2866766C1E8467350090EBDC</string>
+				<string>28E481CE1F40E477001052AA</string>
+				<string>28E481CF1F40E477001052AA</string>
+				<string>28E481D01F40E477001052AA</string>
+				<string>28E481D11F40E477001052AA</string>
+				<string>28E481D21F40E477001052AA</string>
 			</array>
 			<key>ToolbarConfigUserDefaultsMinorVersion</key>
 			<string>2</string>
@@ -695,7 +695,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>524345032.00117803</real>
+	<real>524348836.35969698</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -712,11 +712,11 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>28A5ACB31F40DEC8007B8767</string>
-		<string>28A5AC7C1F40CCF6007B8767</string>
-		<string>28A5AC7D1F40CCF6007B8767</string>
+		<string>28E481F01F40EDA4001052AA</string>
+		<string>28E481D41F40E477001052AA</string>
+		<string>28E481D51F40E477001052AA</string>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
-		<string>28A5AC9A1F40D53A007B8767</string>
+		<string>28E481D61F40E477001052AA</string>
 	</array>
 	<key>WindowString</key>
 	<string>415 50 851 728 0 0 1280 778 </string>

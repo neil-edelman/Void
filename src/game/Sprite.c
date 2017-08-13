@@ -125,6 +125,7 @@ static void Sprite_filler(struct SpriteListNode *const this,
 	s->image   = as->image;
 	s->normals = as->normals;
 	s->collision_set = 0;
+	s->bin = 0;
 	if(x) {
 		Ortho3f_assign(&s->x, x);
 	} else {
@@ -135,9 +136,9 @@ static void Sprite_filler(struct SpriteListNode *const this,
 	Ortho3f_filler_zero(&s->v);
 	s->bounding = s->bounding1 = (as->image->width >= as->image->height ?
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
-	Vec2f_to_bin(&s->x_5, &s->bin);
 	SpriteListPush(&holding_bin/*bins + s->bin*/, this);
 }
+static void Transfer_migrate(const struct Migrate *const migrate);
 /** Stale pointers from {Set}'s {realloc} are taken care of by this callback.
  One must set it with {*SetSetMigrate}. It's kind of important.
  @implements Migrate */
@@ -149,7 +150,7 @@ static void Sprite_migrate(const struct Migrate *const migrate) {
 	}
 	SpriteListMigrate(&holding_bin, migrate);
 	/* {Transfer} also has to get migrated. */
-	/*Transfer_migrate(migrate);*/
+	Transfer_migrate(migrate);
 }
 
 
@@ -269,11 +270,12 @@ static void for_each_update(SpriteAction act) {
 	BinSetBiForEach(update_bins, &act_bins, &act);
 	for_each_draw(act);
 }
-/** Transfer one sprite from the {holding_bin} to one of the {bins}; must be
- pre-calculated, must be in {holding_bin}. */
+/** Transfer one sprite from the {holding_bin} to one of the {bins} based on
+ {x_5}; must be in {holding_bin}; \see{clear_holding_bin}. */
 static void clear_holding_sprite(struct Sprite *this) {
 	assert(this);
 	SpriteListRemove(&holding_bin, this);
+	Vec2f_to_bin(&this->x_5, &this->bin);
 	SpriteListPush(bins + this->bin, (struct SpriteListNode *)this);
 }
 /** Transfer all Sprites from the spawning bin to their respective places. */
@@ -367,21 +369,13 @@ static void Transfer_migrate_sprite(struct Transfer *const this,
 	void *const migrate_void) {
 	const struct Migrate *const migrate = migrate_void;
 	assert(this && migrate);
-	/*SpriteMigrate(migrate, this->sprite);!!!!!!!!!!!!!!!*/
+	SpriteMigrate(migrate, &this->sprite);
 }
 /** @implements Migrate */
 static void Transfer_migrate(const struct Migrate *const migrate) {
 	TransferSetBiForEach(transfers, &Transfer_migrate_sprite,
 		(void *const)migrate);
 }
-
-/* Sprite delayed deletions. */
-
-/*struct Remove {
-	struct Sprite *sprite;
-};
-
-#define SET_NAME Delete*/
 
 
 
@@ -1061,7 +1055,7 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	TransferSetClear(transfers);
 	/* fixme: place things in to drawing area. */
 	/* Collision relies on the values calculated in \see{extrapolate}. */
-	/*for_each_update(&collide);*/
+	for_each_update(&collide);
 	/* Final time-step where new values are calculated. Takes data from
 	 \see{extrapolate} and \see{collide}. */
 	for_each_update(&timestep);

@@ -138,7 +138,7 @@ static void Sprite_filler(struct SpriteListNode *const this,
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
 	SpriteListPush(&holding_bin/*bins + s->bin*/, this);
 }
-static void Transfer_migrate(const struct Migrate *const migrate);
+static void Delay_migrate(const struct Migrate *const migrate);
 /** Stale pointers from {Set}'s {realloc} are taken care of by this callback.
  One must set it with {*SetSetMigrate}. It's kind of important.
  @implements Migrate */
@@ -149,8 +149,27 @@ static void Sprite_migrate(const struct Migrate *const migrate) {
 		SpriteListMigrate(bins + i, migrate);
 	}
 	SpriteListMigrate(&holding_bin, migrate);
-	/* {Transfer} also has to get migrated. */
-	Transfer_migrate(migrate);
+	/* {Delay} also has to get migrated, since it has a {sprite}. */
+	Delay_migrate(migrate);
+}
+
+
+
+
+
+/* Define function types. */
+typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
+/** Define {SpriteVt}. */
+struct SpriteVt {
+	SpriteAction update, delete;
+	SpriteToString to_string;
+	SpriteFloatAccessor get_mass;
+};
+/* Vt is undefined until this point, and we need this as a function to pass to
+ a generic {Sprite}. Define it now.
+ @implements <Sprite>ToString */
+static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]) {
+	this->vt->to_string(this, a);
 }
 
 
@@ -341,35 +360,60 @@ static void Collision_migrate(const struct Migrate *const migrate) {
 
 
 
-/* Sprite transfers, etc, for delayed moving or delete sprites while
- SpriteListForEach. */
-
-struct Delay;
-typedef void (*DelayHandler)(struct Delay *const);
+/** While {SpriteListForEach} is running, we may have to transfer a sprite to
+ another bin, or delete a sprite, or whatever; this causes causality problems
+ for iteration. We introduce a delay function that is called right after the
+ loop for dealing with that. */
 struct Delay {
-	DelayHandler action;
+	SpriteAction action;
 	struct Sprite *sprite;
-	unsigned to_bin;
 };
-
 #define SET_NAME Delay
 #define SET_TYPE struct Delay
 #include "../general/Set.h" /* defines TransferSet, TransferSetNode */
 static struct DelaySet *delays;
 
-static void evaluate_delays(struct Delay *const this) {
-	assert(this && this->action);
-	this->action(this);
-#if 0
+/* These are the types of delays. */
+
+/** Called from \see{Delay_transfer}.
+ @implements <Sprite>Action */
+static void lazy_update_bin(struct Sprite *const this) {
+	unsigned to_bin;
 	/**/char a[12];
-	assert(this && this->sprite && this->to_bin < BIN_BIN_FG_SIZE);
-	/**/Sprite_to_string(this->sprite, &a);
-	printf("%s#%p: Bin%u -> Bin%u.\n", a, (void *)this->sprite,
-		this->sprite->bin, this->to_bin);
-	SpriteListRemove(bins + this->sprite->bin, this->sprite);
-	SpriteListPush(bins + this->to_bin, (struct SpriteListNode *)this->sprite);
-	this->sprite->bin = this->to_bin;
-#endif
+	assert(this);
+	/**/Sprite_to_string(this, &a);
+	Vec2f_to_bin(&this->x_5, &to_bin); /* fixme: again. */
+	printf("%s#%p: Bin%u -> Bin%u.\n", a, (void *)this, this->bin, to_bin);
+	SpriteListRemove(bins + this->bin, this);
+	SpriteListPush(bins + to_bin, (struct SpriteListNode *)this);
+	this->bin = to_bin;
+}
+static void Delay_transfer(struct Sprite *const sprite) {
+	struct Delay *d;
+	if(!(d = DelaySetNew(delays))) { fprintf(stderr, "Delay error: %s.\n",
+		DelaySetGetError(delays)); return; }
+	d->action = &lazy_update_bin;
+	d->sprite = sprite;
+}
+
+/** Called from \see{Delay_delete}. */
+static void lazy_delete(struct Sprite *const this) {
+	assert(this);
+	/////// and???
+	this->vt->delete(this);
+}
+static void Delay_delete(struct Sprite *const sprite) {
+	struct Delay *d;
+	if(!(d = DelaySetNew(delays))) { fprintf(stderr, "Delay error: %s.\n",
+		DelaySetGetError(delays)); return; }
+	d->action = &lazy_delete;
+	d->sprite = sprite;
+}
+
+/** This applies the delay. */
+static void Delay_evaluate(struct Delay *const this) {
+	assert(this && this->action);
+	this->action(this->sprite);
 }
 
 /** Called by \see{Delay_migrate}.
@@ -380,30 +424,13 @@ static void Delay_migrate_sprite(struct Delay *const this,
 	assert(this && migrate);
 	SpriteMigrate(migrate, &this->sprite);
 }
-/** The {sprite} field in {Delay} 
+/** The {sprite} field in {Delay} needs migrating. Called from {Sprite_migrate}.
  @implements Migrate */
 static void Delay_migrate(const struct Migrate *const migrate) {
 	DelaySetBiForEach(delays, &Delay_migrate_sprite, (void *const)migrate);
 }
 
 
-
-
-
-/* Define function types. */
-typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
-/** Define {SpriteVt}. */
-struct SpriteVt {
-	SpriteAction update, delete;
-	SpriteToString to_string;
-	SpriteFloatAccessor get_mass;
-};
-/* Vt is undefined until this point, and we need this as a function to pass to
- a generic {Sprite}. Define it now.
- @implements <Sprite>ToString */
-static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]) {
-	this->vt->to_string(this, a);
-}
 
 
 
@@ -619,8 +646,7 @@ static float Wmd_get_mass(const struct Wmd *const this) {
 /** @implements <Wmd>Action
  @fixme Replace delete with more dramatic death. */
 static void Wmd_update(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) /*wmd_death*/Wmd_delete(this); /* this!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
-	/* return 1 take; return 0;??? and then have a upcoming sprite list? */
+	if(TimerIsTime(this->expires)) Delay_delete(&this->sprite.data);
 }
 /* Fill in the member functions of this implementation. */
 static const struct SpriteVt wmd_vt = {
@@ -758,13 +784,9 @@ static void extrapolate(struct Sprite *const this) {
 	/* Wandered out of the bin? Mark it as such; you don't want to move it
 	 right away, because this is called in sequence. */
 	Vec2f_to_bin(&this->x_5, &bin);
-	if(bin != this->bin) {
-		struct Transfer *t;
-		if(!(t = TransferSetNew(transfers))) { fprintf(stderr,
-			"Transfer error: %s.\n", TransferSetGetError(transfers)); return; }
-		t->sprite = this;
-		t->to_bin = bin;
-	}
+	/* fixme: should {bin} be stored so we don't uselessly calculate it
+	 again? */
+	if(bin != this->bin) Delay_transfer(this);
 }
 
 /* branch cut (-Pi,Pi]? */
@@ -1058,10 +1080,9 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	 Transfer all the {holding_bin} to actual {bins}. */
 	clear_holding_bin();
 	/* Calculate the future positions and transfer the sprites that have
-	 escaped their bin. */
+	 escaped their bin or been deleted. */
 	for_each_update(&extrapolate);
-	DelaySetForEach(delays, &evaluate_delays);
-	DelaySetClear(delays);
+	DelaySetForEach(delays, &Delay_evaluate), DelaySetClear(delays);
 	/* fixme: place things in to drawing area. */
 	/* Collision relies on the values calculated in \see{extrapolate}. */
 	for_each_update(&collide);
@@ -1375,7 +1396,7 @@ struct Gate {
 #define SET_TYPE struct Gate
 #include "../general/Set.h"
 
-/* Storage. */
+/* Storage; the actual data goes here. */
 struct DebrisSet *debris;
 struct ShipSet *ships;
 struct WmdSet *wmds;
@@ -1518,6 +1539,28 @@ static void ship_action_ai(struct Ship *const this) {
 	ShipInput(this, turning, acceleration);
 }
 
+/** @implements <Wmd>Action */
+static void wmd_out(struct Wmd *const this) {
+	assert(this);
+	printf("Wmd%u.\n", (WmdListNode *)this - wmds);
+}
+/** @implements <Wmd>Action */
+static void wmd_delete(struct Wmd *const this) {
+	char a[12];
+	assert(this);
+	printf("wmd_delete %s#%p.\n", a, (void *)&this->sprite.data);
+	sprite_remove(&this->sprite.data);
+	WmdSetRemove(gates, this);
+	/* fixme: explode */
+}
+/** @implements <Wmd>Action */
+static void wmd_death(struct Wmd *const this) {
+	fprintf(stderr, "Tryi to %s.\n", this->);
+}
+/** @implements <Wmd>Action */
+static void wmd_action(struct Wmd *const this) {
+	UNUSED(this);
+}
 
 /** @implements <Gate>Action */
 static void gate_out(struct Gate *const this) {

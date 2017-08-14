@@ -67,9 +67,9 @@
 	};
 	2806515F1EE4C6A40023DC21 /* OrthoMath.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2951}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2847}}";
 			sepNavSelRange = "{3461, 29}";
-			sepNavVisRange = "{2107, 1847}";
+			sepNavVisRange = "{2109, 1881}";
 		};
 	};
 	2866766A1E8467300090EBDC /* Source Control */ = {
@@ -165,9 +165,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 31499}}";
-			sepNavSelRange = "{13121, 0}";
-			sepNavVisRange = "{12395, 1684}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 31954}}";
+			sepNavSelRange = "{22648, 0}";
+			sepNavVisRange = "{21642, 1707}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {

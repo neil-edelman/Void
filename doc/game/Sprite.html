@@ -110,9 +110,9 @@ Define <em>Sprite</em>.
 </dl>
 </div>
 
-<div><a name = "static struct SpriteList bins[BIN_BIN_FG_SIZE]"><!-- --></a>
-<h3>static struct SpriteList bins[BIN_BIN_FG_SIZE]</h3>
-<pre><b>static struct SpriteList bins[BIN_BIN_FG_SIZE]</b></pre>
+<div><a name = "static struct SpriteList bins[BIN_BIN_FG_SIZE], holding_bin"><!-- --></a>
+<h3>static struct SpriteList bins[BIN_BIN_FG_SIZE], holding_bin</h3>
+<pre><b>static struct SpriteList bins[BIN_BIN_FG_SIZE], holding_bin</b></pre>
 <p>
 Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath.h">OrthoMath.h</a>.
 </p>
@@ -129,6 +129,22 @@ Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath
 }</pre>
 <p>
 Define <em>SpriteVt</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Delay"><!-- --></a>
+<h3>struct Delay</h3>
+<pre><b>struct Delay</b> {
+	SpriteAction action;
+	struct Sprite *sprite;
+}</pre>
+<p>
+While <em>SpriteListForEach</em> is running, we may have to transfer a sprite to
+another bin, or delete a sprite, or whatever; this causes causality problems
+for iteration. We introduce a delay function that is called right after the
+loop for dealing with that.
 </p>
 <dl>
 </dl>
@@ -277,6 +293,11 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 <tr>
 	<td>void</td>
 	<td><a href = "#SpritesPlot">SpritesPlot</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesOut">SpritesOut</a></td>
 	<td>void</td>
 </tr>
 <tr>
@@ -454,6 +475,16 @@ Debugging plot.
 <dl>
 	<dt>implements</dt>
 	<dd>Action</dd>
+</dl>
+</div>
+
+<div><a name = "SpritesOut"><!-- --></a>
+<h3>SpritesOut</h3>
+<pre>void <b>SpritesOut</b> (void)</pre>
+<p>
+Output sprites.
+</p>
+<dl>
 </dl>
 </div>
 

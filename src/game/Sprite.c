@@ -341,19 +341,26 @@ static void Collision_migrate(const struct Migrate *const migrate) {
 
 
 
-/* Sprite transfers for delayed moving sprites while SpriteListForEach. */
+/* Sprite transfers, etc, for delayed moving or delete sprites while
+ SpriteListForEach. */
 
-struct Transfer {
+struct Delay;
+typedef void (*DelayHandler)(struct Delay *const);
+struct Delay {
+	DelayHandler action;
 	struct Sprite *sprite;
 	unsigned to_bin;
 };
 
-#define SET_NAME Transfer
-#define SET_TYPE struct Transfer
+#define SET_NAME Delay
+#define SET_TYPE struct Delay
 #include "../general/Set.h" /* defines TransferSet, TransferSetNode */
-static struct TransferSet *transfers;
+static struct DelaySet *delays;
 
-static void transfer_sprite(struct Transfer *const this) {
+static void evaluate_delays(struct Delay *const this) {
+	assert(this && this->action);
+	this->action(this);
+#if 0
 	/**/char a[12];
 	assert(this && this->sprite && this->to_bin < BIN_BIN_FG_SIZE);
 	/**/Sprite_to_string(this->sprite, &a);
@@ -362,19 +369,21 @@ static void transfer_sprite(struct Transfer *const this) {
 	SpriteListRemove(bins + this->sprite->bin, this->sprite);
 	SpriteListPush(bins + this->to_bin, (struct SpriteListNode *)this->sprite);
 	this->sprite->bin = this->to_bin;
+#endif
 }
 
-/** @implements <Transfer, Migrate>BiAction */
-static void Transfer_migrate_sprite(struct Transfer *const this,
+/** Called by \see{Delay_migrate}.
+ @implements <Transfer, Migrate>BiAction */
+static void Delay_migrate_sprite(struct Delay *const this,
 	void *const migrate_void) {
 	const struct Migrate *const migrate = migrate_void;
 	assert(this && migrate);
 	SpriteMigrate(migrate, &this->sprite);
 }
-/** @implements Migrate */
-static void Transfer_migrate(const struct Migrate *const migrate) {
-	TransferSetBiForEach(transfers, &Transfer_migrate_sprite,
-		(void *const)migrate);
+/** The {sprite} field in {Delay} 
+ @implements Migrate */
+static void Delay_migrate(const struct Migrate *const migrate) {
+	DelaySetBiForEach(delays, &Delay_migrate_sprite, (void *const)migrate);
 }
 
 
@@ -996,7 +1005,7 @@ int Sprites(void) {
 	if(!(draw_bins = BinSet())
 		|| !(update_bins = BinSet())
 		|| !(sprite_bins = BinSet())
-		|| !(transfers = TransferSet())
+		|| !(delays = DelaySet())
 		|| !(collisions = CollisionSet())
 		|| !(ships = ShipSet())
 		|| !(debris = DebrisSet())
@@ -1025,7 +1034,7 @@ void Sprites_(void) {
 	DebrisSet_(&debris);
 	ShipSet_(&ships);
 	CollisionSet_(&collisions);
-	TransferSet_(&transfers);
+	DelaySet_(&delays);
 	BinSet_(&update_bins);
 	BinSet_(&draw_bins);
 }
@@ -1051,8 +1060,8 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	/* Calculate the future positions and transfer the sprites that have
 	 escaped their bin. */
 	for_each_update(&extrapolate);
-	TransferSetForEach(transfers, &transfer_sprite);
-	TransferSetClear(transfers);
+	DelaySetForEach(delays, &evaluate_delays);
+	DelaySetClear(delays);
 	/* fixme: place things in to drawing area. */
 	/* Collision relies on the values calculated in \see{extrapolate}. */
 	for_each_update(&collide);

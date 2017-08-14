@@ -107,7 +107,8 @@ static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_TO_STRING &Sprite_to_string
 #include "../general/List.h"
 /** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
-static struct SpriteList bins[BIN_BIN_FG_SIZE], holding_bin;
+static struct SpriteList bins[BIN_BIN_FG_SIZE + 1];
+static struct SpriteList *const holding_bin = bins + BIN_BIN_FG_SIZE;
 /** Fills a sprite with data. This is kind of an abstract class: it never
  appears outside of another struct.
  @param auto: An auto-sprite prototype, contained in the precompiled {Auto.h}
@@ -125,7 +126,7 @@ static void Sprite_filler(struct SpriteListNode *const this,
 	s->image   = as->image;
 	s->normals = as->normals;
 	s->collision_set = 0;
-	s->bin = 0;
+	s->bin = (unsigned)(holding_bin - bins); /* Going in holding bin. */
 	if(x) {
 		Ortho3f_assign(&s->x, x);
 	} else {
@@ -136,7 +137,7 @@ static void Sprite_filler(struct SpriteListNode *const this,
 	Ortho3f_filler_zero(&s->v);
 	s->bounding = s->bounding1 = (as->image->width >= as->image->height ?
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
-	SpriteListPush(&holding_bin/*bins + s->bin*/, this);
+	SpriteListPush(holding_bin/*bins + s->bin*/, this);
 }
 static void Delay_migrate(const struct Migrate *const migrate);
 /** Stale pointers from {Set}'s {realloc} are taken care of by this callback.
@@ -148,7 +149,7 @@ static void Sprite_migrate(const struct Migrate *const migrate) {
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
 		SpriteListMigrate(bins + i, migrate);
 	}
-	SpriteListMigrate(&holding_bin, migrate);
+	SpriteListMigrate(holding_bin, migrate);
 	/* {Delay} also has to get migrated, since it has a {sprite}. */
 	Delay_migrate(migrate);
 }
@@ -293,13 +294,13 @@ static void for_each_update(SpriteAction act) {
  {x_5}; must be in {holding_bin}; \see{clear_holding_bin}. */
 static void clear_holding_sprite(struct Sprite *this) {
 	assert(this);
-	SpriteListRemove(&holding_bin, this);
+	SpriteListRemove(holding_bin, this);
 	Vec2f_to_bin(&this->x_5, &this->bin);
 	SpriteListPush(bins + this->bin, (struct SpriteListNode *)this);
 }
 /** Transfer all Sprites from the spawning bin to their respective places. */
 static void clear_holding_bin(void) {
-	SpriteListXForEach(&holding_bin, &clear_holding_sprite);
+	SpriteListXForEach(holding_bin, &clear_holding_sprite);
 }
 
 
@@ -1042,14 +1043,14 @@ int Sprites(void) {
 	GateSetSetMigrate(gates, &Sprite_migrate);
 	/* Initialises to starting all {bins}, (global variable.) */
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
-	SpriteListClear(&holding_bin);
+	SpriteListClear(holding_bin);
 	return 1;
 }
 
 /** Erases all sprite buffers. */
 void Sprites_(void) {
 	unsigned i;
-	SpriteListClear(&holding_bin);
+	SpriteListClear(holding_bin);
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 	GateSet_(&gates);
 	WmdSet_(&wmds);

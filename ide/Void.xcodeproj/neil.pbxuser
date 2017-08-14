@@ -165,9 +165,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {802, 25831}}";
-			sepNavSelRange = "{15555, 0}";
-			sepNavVisRange = "{0, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 26390}}";
+			sepNavSelRange = "{39883, 0}";
+			sepNavVisRange = "{38302, 2132}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
@@ -193,7 +193,7 @@
 	};
 	28FB36FC1E8A0FE1003610DC /* List.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {802, 20800}}";
+			sepNavIntBoundsRect = "{{0, 0}, {802, 20709}}";
 			sepNavSelRange = "{26183, 0}";
 			sepNavVisRange = "{0, 0}";
 		};

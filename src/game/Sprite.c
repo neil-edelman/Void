@@ -653,7 +653,12 @@ static float Wmd_get_mass(const struct Wmd *const this) {
 /** @implements <Wmd>Action
  @fixme Replace delete with more dramatic death. */
 static void Wmd_update(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) Delay_delete(&this->sprite.data);
+	if(TimerIsTime(this->expires)) {
+		char a[12];
+		Wmd_to_string(this, &a);
+		printf("Wmd %s expired.\n", a);
+		Delay_delete(&this->sprite.data);
+	}
 }
 /* Fill in the member functions of this implementation. */
 static const struct SpriteVt wmd_vt = {
@@ -793,7 +798,12 @@ static void extrapolate(struct Sprite *const this) {
 	Vec2f_to_bin(&this->x_5, &bin);
 	/* fixme: should {bin} be stored so we don't uselessly calculate it
 	 again? */
-	if(bin != this->bin) Delay_transfer(this);
+	if(bin != this->bin) {
+		char a[12];
+		this->vt->to_string(this, &a);
+		printf("Sprite %s transfers.\n", a);
+		Delay_transfer(this);
+	}
 }
 
 /* branch cut (-Pi,Pi]? */
@@ -1089,11 +1099,11 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	/* Calculate the future positions and transfer the sprites that have
 	 escaped their bin or been deleted. */
 	for_each_update(&extrapolate);
-	printf("Delay: %s.\n", DelaySetToString(delays));
+	if(!DelaySetIsEmpty(delays)) printf("Delay: %s.\n", DelaySetToString(delays));
 	DelaySetForEach(delays, &Delay_evaluate), DelaySetClear(delays);
 	/* fixme: place things in to drawing area. */
 	/* Collision relies on the values calculated in \see{extrapolate}. */
-	for_each_update(&collide);
+	/*for_each_update(&collide);*/
 	/* Final time-step where new values are calculated. Takes data from
 	 \see{extrapolate} and \see{collide}. */
 	for_each_update(&timestep);

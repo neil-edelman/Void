@@ -186,7 +186,12 @@ static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]) {
 #include "../general/Set.h" /* defines BinSet, BinSetNode */
 static struct BinSet *draw_bins, *update_bins, *sprite_bins;
 static struct Rectangle4i grow4; /* for clipping */
-
+/** @implements <SpriteList *>Action */
+static void Bin_print(struct SpriteList **const pthis) {
+	struct SpriteList *const this = *pthis;
+	assert(pthis && this);
+	printf("Bin%u: %s.\n", (unsigned)(this - bins), SpriteListXToString(this));
+}
 /** New bins calculates which bins are at all visible and which we should
  update, (around the visible,) every frame.
  @order The screen area.
@@ -378,7 +383,7 @@ static void Delay_to_string(const struct Delay *this, char (*const a)[12]) {
 #define SET_TYPE struct Delay
 #define SET_TO_STRING &Delay_to_string
 #include "../general/Set.h" /* defines TransferSet, TransferSetNode */
-static struct DelaySet *delays;
+static struct DelaySet *delays, *removes;
 
 /* These are the types of delays. */
 
@@ -390,7 +395,7 @@ static void lazy_update_bin(struct Sprite *const this) {
 	assert(this);
 	/**/Sprite_to_string(this, &a);
 	Vec2f_to_bin(&this->x_5, &to_bin); /* fixme: again. */
-	printf("%s#%p: Bin%u -> Bin%u.\n", a, (void *)this, this->bin, to_bin);
+	printf("%s: Bin%u -> Bin%u.\n", a, this->bin, to_bin);
 	SpriteListRemove(bins + this->bin, this);
 	SpriteListPush(bins + to_bin, (struct SpriteListNode *)this);
 	this->bin = to_bin;
@@ -403,16 +408,16 @@ static void Delay_transfer(struct Sprite *const sprite) {
 	d->sprite = sprite;
 }
 
-/** Called from \see{Delay_delete}. */
+/** Called from \see{Delay_delete}.
+ @implements <Sprite>Action */
 static void lazy_delete(struct Sprite *const this) {
 	assert(this);
-	/////// and???
 	this->vt->delete(this);
 }
 static void Delay_delete(struct Sprite *const sprite) {
 	struct Delay *d;
-	if(!(d = DelaySetNew(delays))) { fprintf(stderr, "Delay error: %s.\n",
-		DelaySetGetError(delays)); return; }
+	if(!(d = DelaySetNew(removes))) { fprintf(stderr, "Delay error: %s.\n",
+		DelaySetGetError(removes)); return; }
 	d->action = &lazy_delete;
 	d->sprite = sprite;
 }
@@ -435,6 +440,7 @@ static void Delay_migrate_sprite(struct Delay *const this,
  @implements Migrate */
 static void Delay_migrate(const struct Migrate *const migrate) {
 	DelaySetBiForEach(delays, &Delay_migrate_sprite, (void *const)migrate);
+	DelaySetBiForEach(removes, &Delay_migrate_sprite, (void *const)migrate);
 }
 
 
@@ -467,7 +473,7 @@ static void Ship_delete(struct Ship *const this) {
 	char a[12];
 	assert(this);
 	Ship_to_string(this, &a);
-	printf("Ship_delete %s#%p.\n", a, (void *)&this->sprite.data);
+	/*printf("Ship_delete %s.\n", a);*/
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	ShipSetRemove(ships, this);
 }
@@ -583,7 +589,7 @@ static void Debris_delete(struct Debris *const this) {
 	char a[12];
 	assert(this);
 	Debris_to_string(this, &a);
-	printf("Debris_delete %s#%p.\n", a, (void *)&this->sprite.data);
+	/*printf("Debris_delete %s.\n", a);*/
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	DebrisSetRemove(debris, this);
 }
@@ -640,7 +646,7 @@ static void Wmd_delete(struct Wmd *const this) {
 	char a[12];
 	assert(this);
 	Wmd_to_string(this, &a);
-	printf("Wmd_delete %s#%p.\n", a, (void *)&this->sprite.data);
+	/*printf("Wmd_delete %s.\n", a);*/
 	Light_(&this->light);
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	WmdSetRemove(wmds, this);
@@ -731,10 +737,10 @@ static void Gate_update(struct Gate *const this) {
 }
 /** @implements <Debris>Action */
 static void Gate_delete(struct Gate *const this) {
-	char a[12];
+	/*char a[12];*/
 	assert(this);
-	Gate_to_string(this, &a);
-	printf("Gate_delete %s#%p.\n", a, (void *)&this->sprite.data);
+	/*Gate_to_string(this, &a);
+	printf("Gate_delete %s#%p.\n", a);*/
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	GateSetRemove(gates, this);
 }
@@ -858,7 +864,7 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	}
 	/* Invert to apply to delta to get normalised components. */
 	nrm = (nrm < epsilon) ? 1.0f / epsilon : 1.0f / nrm;
-	d.x *= nrm; d.y *= nrm;
+	d.x *= nrm, d.y *= nrm;
 	/* {a}'s velocity, normal direction */
 	nrm = a->v.x * d.x + a->v.y * d.y;
 	a_nrm.x = nrm * d.x, a_nrm.y = nrm * d.y;
@@ -1045,6 +1051,7 @@ int Sprites(void) {
 		|| !(update_bins = BinSet())
 		|| !(sprite_bins = BinSet())
 		|| !(delays = DelaySet())
+		|| !(removes = DelaySet())
 		|| !(collisions = CollisionSet())
 		|| !(ships = ShipSet())
 		|| !(debris = DebrisSet())
@@ -1073,6 +1080,7 @@ void Sprites_(void) {
 	DebrisSet_(&debris);
 	ShipSet_(&ships);
 	CollisionSet_(&collisions);
+	DelaySet_(&removes);
 	DelaySet_(&delays);
 	BinSet_(&update_bins);
 	BinSet_(&draw_bins);
@@ -1097,10 +1105,20 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	 Transfer all the {holding_bin} to actual {bins}. */
 	clear_holding_bin();
 	/* Calculate the future positions and transfer the sprites that have
-	 escaped their bin or been deleted. */
+	 escaped their bin or been deleted. The reason we have {delays} and
+	 {removes} is that a remove deletes the sprite, which is not further
+	 usable. */
 	for_each_update(&extrapolate);
-	if(!DelaySetIsEmpty(delays)) printf("Delay: %s.\n", DelaySetToString(delays));
+	if(!DelaySetIsEmpty(delays)) {
+		BinSetForEach(draw_bins, &Bin_print);
+		printf("Delay: %s.\n", DelaySetToString(delays));
+	}
+	if(!DelaySetIsEmpty(removes)) {
+		BinSetForEach(draw_bins, &Bin_print);
+		printf("Remove: %s.\n", DelaySetToString(removes));
+	}
 	DelaySetForEach(delays, &Delay_evaluate), DelaySetClear(delays);
+	DelaySetForEach(removes, &Delay_evaluate), DelaySetClear(removes);
 	/* fixme: place things in to drawing area. */
 	/* Collision relies on the values calculated in \see{extrapolate}. */
 	/*for_each_update(&collide);*/
@@ -1333,10 +1351,10 @@ static void ship_out(struct Ship *const this) {
 }
 /** @implements <Ship>Action */
 static void ship_delete(struct Ship *const this) {
-	char a[12];
+	/*char a[12];*/
 	assert(this);
-	Ship_to_string(this, &a);
-	printf("Ship_delete %s#%p.\n", a, (void *)&this->sprite.data);
+	/*Ship_to_string(this, &a);
+	printf("Ship_delete %s#%p.\n", a, (void *)&this->sprite.data);*/
 	Event_(&this->event_recharge);
 	sprite_remove(&this->sprite.data);
 	ShipSetRemove(ships, this);
@@ -1402,9 +1420,9 @@ static void wmd_out(struct Wmd *const this) {
 }
 /** @implements <Wmd>Action */
 static void wmd_delete(struct Wmd *const this) {
-	char a[12];
+	/*char a[12];*/
 	assert(this);
-	printf("wmd_delete %s#%p.\n", a, (void *)&this->sprite.data);
+	/*printf("wmd_delete %s#%p.\n", a, (void *)&this->sprite.data);*/
 	sprite_remove(&this->sprite.data);
 	WmdSetRemove(gates, this);
 	/* fixme: explode */
@@ -1426,10 +1444,10 @@ static void gate_out(struct Gate *const this) {
 }
 /** @implements <Gate>Action */
 static void gate_delete(struct Gate *const this) {
-	char a[12];
+	/*char a[12];*/
 	assert(this);
-	Gate_to_string(this, &a);
-	printf("Gate_delete %s#%p.\n", a, (void *)&this->sprite.data);
+	/*Gate_to_string(this, &a);
+	printf("Gate_delete %s#%p.\n", a, (void *)&this->sprite.data);*/
 	sprite_remove(&this->sprite.data);
 	GateSetRemove(gates, this);
 	/* fixme: explode */

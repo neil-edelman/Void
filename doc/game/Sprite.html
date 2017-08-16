@@ -50,13 +50,6 @@ determined by where in space you are. This allows you to do stuff like drawing
 and AI for onscreen bins and treat the faraway bins with statistical mechanics.
 Which allows you to have a lot of sprites -&gt; ships, weapons -&gt; more epic.
 </p>
-<p>
-Enforces the maximum speed by breaking the debris into smaller chunks; the
-process is not elastic, so it loses energy (speed.)
-</p>
-<p>
-Gets a read-only copy of the position.
-</p>
 <dl>
 	<dt>minimum standard</dt>
 	<dd>C89/90</dd>
@@ -67,6 +60,10 @@ Gets a read-only copy of the position.
 	<dt>since</dt>
 	<dd>3.3, 2016-01
 			3.2, 2015-06</dd>
+	<dt>fixme</dt>
+	<dd>Still crashes.</dd>
+	<dt>fixme</dt>
+	<dd>Collision resolution wonky.</dd>
 </dl>
 
 
@@ -102,17 +99,19 @@ Collisions between two sprites, cleared at every frame.
 	struct Ortho3f x, v; /* where it is and where it is going */
 	struct Vec2f dx, x_5; /* temporary values */
 	float bounding, bounding1; /* bounding1 is temporary */
+	/*struct Rectangle4f box;*/ /* fixme: temp bounding box; tighter bounds */
 }</pre>
 <p>
-Define <em>Sprite</em>.
+Define <em>Sprite</em>. This is, if you will, abstract: <em>SpriteListNode</em>, derived
+from <em>Sprite</em>, is always part of a bigger structure. <em>vt</em> is polymorphic.
 </p>
 <dl>
 </dl>
 </div>
 
-<div><a name = "static struct SpriteList bins[BIN_BIN_FG_SIZE], holding_bin"><!-- --></a>
-<h3>static struct SpriteList bins[BIN_BIN_FG_SIZE], holding_bin</h3>
-<pre><b>static struct SpriteList bins[BIN_BIN_FG_SIZE], holding_bin</b></pre>
+<div><a name = "static struct SpriteList bins[BIN_BIN_FG_SIZE + 1]"><!-- --></a>
+<h3>static struct SpriteList bins[BIN_BIN_FG_SIZE + 1]</h3>
+<pre><b>static struct SpriteList bins[BIN_BIN_FG_SIZE + 1]</b></pre>
 <p>
 Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath.h">OrthoMath.h</a>.
 </p>
@@ -164,30 +163,6 @@ For communication with <em>gnu_draw_bins</em>.
 </dl>
 </div>
 
-<div><a name = "static struct SpriteList sprites[BIN_BIN_SIZE]"><!-- --></a>
-<h3>static struct SpriteList sprites[BIN_BIN_SIZE]</h3>
-<pre><b>static struct SpriteList sprites[BIN_BIN_SIZE]</b></pre>
-<p>
-Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath.h">OrthoMath.h</a>.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "struct Debris"><!-- --></a>
-<h3>struct Debris</h3>
-<pre><b>struct Debris</b> {
-	struct SpriteListNode sprite;
-	int hit;
-	/*void (*on_kill)(void); minerals? */
-}</pre>
-<p>
-Define <em>Debris</em> as a subclass of <em>Sprite</em>.
-</p>
-<dl>
-</dl>
-</div>
-
 <div><a name = "struct Ship"><!-- --></a>
 <h3>struct Ship</h3>
 <pre><b>struct Ship</b> {
@@ -224,19 +199,6 @@ Define <em>Ship</em> as a subclass of <em>Sprite</em>.
 }</pre>
 <p>
 Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "struct Gate"><!-- --></a>
-<h3>struct Gate</h3>
-<pre><b>struct Gate</b> {
-	struct SpriteListNode sprite;
-	const struct AutoSpaceZone *to;
-}</pre>
-<p>
-Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 </p>
 <dl>
 </dl>
@@ -301,17 +263,6 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 	<td>void</td>
 </tr>
 <tr>
-	<td>void</td>
-	<td><a href = "#SpriteDebris">SpriteDebris</a></td>
-	<td>const struct Sprite *const s</td>
-</tr>
-<tr>
-	<td>int</td>
-	<td><a href = "#Debris">Debris</a></td>
-	<td>const struct AutoDebris *const class,
-	struct Ortho3f *r, const struct Ortho3f *v</td>
-</tr>
-<tr>
 	<td>struct Ship *</td>
 	<td><a href = "#Ship">Ship</a></td>
 	<td>const struct AutoShipClass *const class,
@@ -321,38 +272,6 @@ Define <em>Gate</em> as a subclass of <em>Sprite</em>.
 	<td>int</td>
 	<td><a href = "#Gate">Gate</a></td>
 	<td>const struct AutoGate *const class</td>
-</tr>
-<tr>
-	<td>int</td>
-	<td><a href = "#Sprite">Sprite</a></td>
-	<td>void</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#Sprite_">Sprite_</a></td>
-	<td>void</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#SpriteOut">SpriteOut</a></td>
-	<td>struct Sprite *const this</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#SpriteUpdate">SpriteUpdate</a></td>
-	<td>const int frame_ms</td>
-</tr>
-<tr>
-	<td>inline const struct SpriteList *</td>
-	<td><a href = "#SpriteListBin">SpriteListBin</a></td>
-	<td>struct Vec2u bin2</td>
-</tr>
-<tr>
-	<td>inline void</td>
-	<td><a href = "#SpriteExtractDrawing">SpriteExtractDrawing</a></td>
-	<td>const struct Sprite *const this,
-	const struct Ortho3f **const r_ptr, unsigned *const image_ptr,
-	unsigned *const normals_ptr, const struct Vec2u **const size_ptr</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -488,29 +407,6 @@ Output sprites.
 </dl>
 </div>
 
-<div><a name = "SpriteDebris"><!-- --></a>
-<h3>SpriteDebris</h3>
-<pre>void <b>SpriteDebris</b> (const struct Sprite *const s)</pre>
-<p>
-Spawns smaller Debris (fixme: stub.)
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "Debris"><!-- --></a>
-<h3>Debris</h3>
-<pre>int <b>Debris</b> (const struct AutoDebris *const class,
-	struct Ortho3f *r, const struct Ortho3f *v)</pre>
-<p>
-Constructor.
-</p>
-<dl>
-	<dt>return</dt>
-	<dd>Success.</dd>
-</dl>
-</div>
-
 <div><a name = "Ship"><!-- --></a>
 <h3>Ship</h3>
 <pre>struct Ship * <b>Ship</b> (const struct AutoShipClass *const class,
@@ -533,72 +429,6 @@ Constructor.
 <dl>
 	<dt>return</dt>
 	<dd>Success.</dd>
-</dl>
-</div>
-
-<div><a name = "Sprite"><!-- --></a>
-<h3>Sprite</h3>
-<pre>int <b>Sprite</b> (void)</pre>
-<p>
-Initailises all sprite buffers.
-</p>
-<dl>
-	<dt>return</dt>
-	<dd>Success.</dd>
-</dl>
-</div>
-
-<div><a name = "Sprite_"><!-- --></a>
-<h3>Sprite_</h3>
-<pre>void <b>Sprite_</b> (void)</pre>
-<p>
-Erases all sprite buffers.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "SpriteOut"><!-- --></a>
-<h3>SpriteOut</h3>
-<pre>void <b>SpriteOut</b> (struct Sprite *const this)</pre>
-<p>
-Prints out debug info.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "SpriteUpdate"><!-- --></a>
-<h3>SpriteUpdate</h3>
-<pre>void <b>SpriteUpdate</b> (const int frame_ms)</pre>
-<p>
-This is where most of the work gets done. Called every frame, O(n).
-</p>
-<dl>
-	<dt>parameter: frame_ms</dt>
-	<dd>Milliseconds since the last frame.</dd>
-</dl>
-</div>
-
-<div><a name = "SpriteListBin"><!-- --></a>
-<h3>SpriteListBin</h3>
-<pre>inline const struct SpriteList * <b>SpriteListBin</b> (struct Vec2u bin2)</pre>
-<dl>
-	<dt>return</dt>
-	<dd>The first sprite in the <em>bin2</em>.</dd>
-	<dt>fixme</dt>
-	<dd>C99</dd>
-</dl>
-</div>
-
-<div><a name = "SpriteExtractDrawing"><!-- --></a>
-<h3>SpriteExtractDrawing</h3>
-<pre>inline void <b>SpriteExtractDrawing</b> (const struct Sprite *const this,
-	const struct Ortho3f **const r_ptr, unsigned *const image_ptr,
-	unsigned *const normals_ptr, const struct Vec2u **const size_ptr)</pre>
-<dl>
-	<dt>fixme</dt>
-	<dd>C99</dd>
 </dl>
 </div>
 

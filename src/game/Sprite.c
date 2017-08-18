@@ -87,6 +87,7 @@ struct Sprite {
 	float bounding, bounding1; /* bounding1 is temporary */
 	/*struct Rectangle4f box;*/ /* fixme: temp bounding box; tighter bounds */
 };
+#if 0
 /** @implements <Bin>Comparator
  @fixme Actually, we can get rid of this. Unused? That was a lot of work for
  nothing. */
@@ -97,15 +98,17 @@ static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
 static int Sprite_y_cmp(const struct Sprite *a, const struct Sprite *b) {
 	return (b->x_5.x < a->x_5.x) - (a->x_5.x < b->x_5.x);
 }
+#endif
 /* declare */
 static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 /* Define {BinList} and {BinListNode}. */
 #define LIST_NAME Sprite
 #define LIST_TYPE struct Sprite
-#define LIST_UA_NAME X
-#define LIST_UA_COMPARATOR &Sprite_x_cmp
-#define LIST_UB_NAME Y
-#define LIST_UB_COMPARATOR &Sprite_y_cmp
+#define LIST_UA_NAME Unorder
+/*#define LIST_UA_NAME X
+#define LIST_UA_COMPARATOR &Sprite_x_cmp*/
+/*#define LIST_UB_NAME Y
+#define LIST_UB_COMPARATOR &Sprite_y_cmp*/
 #define LIST_TO_STRING &Sprite_to_string
 #include "../general/List.h"
 /** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
@@ -190,7 +193,7 @@ static struct Rectangle4i grow4; /* for clipping */
 static void Bin_print(struct SpriteList **const pthis) {
 	struct SpriteList *const this = *pthis;
 	assert(pthis && this);
-	printf("Bin%u: %s.\n", (unsigned)(this - bins), SpriteListXToString(this));
+	printf("Bin%u: %s.\n", (unsigned)(this - bins), SpriteListUnorderToString(this));
 }
 /** New bins calculates which bins are at all visible and which we should
  update, (around the visible,) every frame.
@@ -285,7 +288,7 @@ static void act_bins(struct SpriteList **const pthis, void *const pact_void) {
 	struct SpriteList *const this = *pthis;
 	const SpriteAction *const pact = pact_void, act = *pact;
 	assert(pthis && this && act);
-	SpriteListYForEach(this, act);
+	SpriteListUnorderForEach(this, act);
 }
 /** {{act} \in { Draw }}. */
 static void for_each_draw(SpriteAction act) {
@@ -306,7 +309,7 @@ static void clear_holding_sprite(struct Sprite *this) {
 }
 /** Transfer all Sprites from the spawning bin to their respective places. */
 static void clear_holding_bin(void) {
-	SpriteListXForEach(holding_bin, &clear_holding_sprite);
+	SpriteListUnorderForEach(holding_bin, &clear_holding_sprite);
 }
 
 
@@ -353,7 +356,7 @@ static void Bin_migrate_collisions(struct SpriteList **const pthis,
 	void *const migrate_void) {
 	struct SpriteList *const this = *pthis;
 	assert(pthis && this && migrate_void);
-	SpriteListYBiForEach(this, &Sprite_migrate_collisions, migrate_void);
+	SpriteListUnorderBiForEach(this, &Sprite_migrate_collisions, migrate_void);
 }
 /** @implements Migrate */
 static void Collision_migrate(const struct Migrate *const migrate) {
@@ -822,12 +825,12 @@ static void apply_bounce_later(struct Sprite *const this,
 	assert(this && v && t >= 0.0f && t <= dt_ms);
 	if(!c) { fprintf(stderr, "Collision set: %s.\n",
 		CollisionSetGetError(collisions)); return; }
-	Sprite_to_string(this, &a);
-	c->next = this->collision_set, this->collision_set = c;
+	c->next = this->collision_set;
 	c->v.x = v->x, c->v.y = v->y;
 	c->t = t;
-	/*printf("^^^ Sprite %s BOUNCE -> ", a);
-	for(i = this->collision_set; i; i = i->next) {
+	this->collision_set = c;
+	Sprite_to_string(this, &a), printf("apply_bounce_later: %s.\n", a);
+	/*for(i = this->collision_set; i; i = i->next) {
 		printf("(%.1f, %.1f):%.1f, ", i->v.x, i->v.y, i->t);
 	}
 	printf("DONE\n");*/
@@ -858,7 +861,8 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	 orbiting each other. */
 	if(nrm < a->bounding + b->bounding) {
 		const float push = (a->bounding + b->bounding - nrm) * 0.5f;
-		/*pedantic("elastic_bounce: \\pushing sprites %f distance apart\n", push);*/
+		printf("elastic_bounce: degeneracy pressure pushing sprites "
+			"(%.1f,%.1f) apart.\n", push * d.x, push * d.y);
 		a->x.x -= d.x * push, a->x.y -= d.y * push;
 		b->x.x += d.x * push, b->x.y += d.y * push;
 	}
@@ -880,8 +884,8 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	v.y = a_tan.y +  (a_nrm.y*diff_m + 2*b_m*b_nrm.y) * invsum_m;
 	assert(!isnan(v.x) && !isnan(v.y));
 	apply_bounce_later(a, &v, t0_dt);
-	v.x = b_tan.x + (-b_nrm.x*diff_m + 2*a_m*a_nrm.x) * invsum_m;
-	v.y = b_tan.y + (-b_nrm.y*diff_m + 2*a_m*a_nrm.y) * invsum_m;
+	v.x = b_tan.x + (b_nrm.x*diff_m + 2*a_m*a_nrm.x) * invsum_m;
+	v.y = b_tan.y + (b_nrm.y*diff_m + 2*a_m*a_nrm.y) * invsum_m;
 	assert(!isnan(v.x) && !isnan(v.y));
 	apply_bounce_later(b, &v, t0_dt);
 }
@@ -988,7 +992,7 @@ static void bin_sprite_collide(struct SpriteList **const pthis,
 	bin_to_bin2i(b, &b2);
 	/*printf("bin_collide_sprite: bin %u (%u, %u) Sprite: (%f, %f).\n", b, b2.x,
 	 b2.y, target->x.x, target->x.y);*/
-	SpriteListYBiForEach(this, &sprite_sprite_collide, target);
+	SpriteListUnorderBiForEach(this, &sprite_sprite_collide, target);
 }
 /** The sprites have been ordered by their {x_5}. Now we can do collisions.
  This places a list of {Collide} in the sprite.
@@ -1027,13 +1031,13 @@ static void timestep(struct Sprite *const this) {
 		 d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));*/
 		this->vt->to_string(this, &a);
 		printf("%s collides at %.1f and ends up going (%.1f, %.1f).\n", a,
-			   c->t, c->v.x * 1000.0f, c->v.y * 1000.0f, (void *)c->next);
+			   c->t, c->v.x * 1000.0f, c->v.y * 1000.0f);
 		if(c->t < t0) t0 = c->t;
-		v1.x += c->v.x, v1.y += c->v.y;
+		/* fixme: v1.x += c->v.x, v1.y += c->v.y;*/
 		/* fixme: stability! */
 	}
-	this->x.x = this->x.x + this->v.x * t0 + v1.x * (1.0f - t0);
-	this->x.y = this->x.y + this->v.y * t0 + v1.y * (1.0f - t0);
+	this->x.x = this->x.x + this->v.x * t0 + v1.x * (dt_ms - t0);
+	this->x.y = this->x.y + this->v.y * t0 + v1.y * (dt_ms - t0);
 	if(this->collision_set) {
 		this->collision_set = 0;
 		this->v.x = v1.x, this->v.y = v1.y;
@@ -1110,18 +1114,18 @@ void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
 	 usable. */
 	for_each_update(&extrapolate);
 	if(!DelaySetIsEmpty(delays)) {
-		BinSetForEach(draw_bins, &Bin_print);
+		/*BinSetForEach(draw_bins, &Bin_print);*/
 		printf("Delay: %s.\n", DelaySetToString(delays));
 	}
 	if(!DelaySetIsEmpty(removes)) {
-		BinSetForEach(draw_bins, &Bin_print);
+		/*BinSetForEach(draw_bins, &Bin_print);*/
 		printf("Remove: %s.\n", DelaySetToString(removes));
 	}
 	DelaySetForEach(delays, &Delay_evaluate), DelaySetClear(delays);
 	DelaySetForEach(removes, &Delay_evaluate), DelaySetClear(removes);
 	/* fixme: place things in to drawing area. */
 	/* Collision relies on the values calculated in \see{extrapolate}. */
-	/*for_each_update(&collide);*/
+	for_each_update(&collide);
 	/* Final time-step where new values are calculated. Takes data from
 	 \see{extrapolate} and \see{collide}. */
 	for_each_update(&timestep);
@@ -1160,7 +1164,7 @@ static void draw_sprite(struct Sprite *const this, void *const pout_void) {
 static void draw_bin(struct SpriteList **const pthis, void *const pout_void) {
 	struct SpriteList *const this = *pthis;
 	assert(pthis && this);
-	SpriteListYBiForEach(this, &draw_sprite, pout_void);
+	SpriteListUnorderBiForEach(this, &draw_sprite, pout_void);
 }
 /** Must call \see{SpriteUpdate} before this, because it updates everything.
  Use when the Lambert GPU shader is loaded. */
@@ -1234,9 +1238,9 @@ void SpritesPlot(void) {
 		if(!(gnu = fopen(gnu_fn, "w")))   { e = E_GNU;  break; }
 		out.fp = data, out.i = 0; out.n = 0;
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-			SpriteListYBiForEach(bins + i, &sprite_count, &out);
+			SpriteListUnorderBiForEach(bins + i, &sprite_count, &out);
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-			SpriteListYBiForEach(bins + i, &print_sprite_data, &out);
+			SpriteListUnorderBiForEach(bins + i, &print_sprite_data, &out);
 		fprintf(gnu, "set term postscript eps enhanced size 20cm, 20cm\n"
 			"set output \"%s\"\n"
 			"set size square;\n"
@@ -1256,7 +1260,7 @@ void SpritesPlot(void) {
 		/* draw arrows from each of the sprites to their bins */
 		out.fp = gnu, out.i = 0;
 		for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-			SpriteListYBiForEach(bins + i, &print_sprite_velocity, &out);
+			SpriteListUnorderBiForEach(bins + i, &print_sprite_velocity, &out);
 		/* draw the sprites */
 		fprintf(gnu, "plot \"%s\" using 5:6:7 with circles \\\n"
 			"linecolor rgb(\"#00FF00\") fillstyle transparent "
@@ -1280,9 +1284,9 @@ void SpritesOut(void) {
 	unsigned i;
 	out.fp = stdout, out.i = 0; out.n = 0;
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-		SpriteListYBiForEach(bins + i, &sprite_count, &out);
+		SpriteListUnorderBiForEach(bins + i, &sprite_count, &out);
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-		SpriteListYBiForEach(bins + i, &print_sprite_data, &out);
+		SpriteListUnorderBiForEach(bins + i, &print_sprite_data, &out);
 }
 
 

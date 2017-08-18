@@ -294,7 +294,8 @@ static void act_bins(struct SpriteList **const pthis, void *const pact_void) {
 static void for_each_draw(SpriteAction act) {
 	BinSetBiForEach(draw_bins, &act_bins, &act);
 }
-/** {{act} \in { Update, Draw }}. */
+/** {{act} \in { Update, Draw }}.
+ @fixme Uhm, not sure these should be different, now that I've played with it.*/
 static void for_each_update(SpriteAction act) {
 	BinSetBiForEach(update_bins, &act_bins, &act);
 	for_each_draw(act);

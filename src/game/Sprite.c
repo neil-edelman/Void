@@ -1023,18 +1023,19 @@ static void timestep(struct Sprite *const this) {
 	assert(this);
 	/* The earliest time to collision and sum the collisions together. */
 	for(c = this->collision_set; c; c = c->next) {
-		char a[12];
+		/*char a[12];*/
 		d.x = this->x.x + this->v.x * c->t;
 		d.y = this->x.y + this->v.y * c->t;
 		/*fprintf(gnu_glob, "set arrow from %f,%f to %f,%f lw 0.5 "
 		 "lc rgb \"#EE66AA\" front;\n", d.x, d.y,
 		 d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));*/
-		this->vt->to_string(this, &a);
+		/*this->vt->to_string(this, &a);
 		printf("%s collides at %.1f and ends up going (%.1f, %.1f).\n", a,
-			   c->t, c->v.x * 1000.0f, c->v.y * 1000.0f);
+			c->t, c->v.x * 1000.0f, c->v.y * 1000.0f);*/
 		if(c->t < t0) t0 = c->t;
-		/* fixme: v1.x += c->v.x, v1.y += c->v.y;*/
-		/* fixme: stability! */
+		v1.x += c->v.x, v1.y += c->v.y;
+		/* fixme: stability! do a linear search O(n) to pick out the 2 most
+		 recent, then divide by, { 1, 2, 4, 4, 4, . . . }? */
 	}
 	this->x.x = this->x.x + this->v.x * t0 + v1.x * (dt_ms - t0);
 	this->x.y = this->x.y + this->v.y * t0 + v1.y * (dt_ms - t0);

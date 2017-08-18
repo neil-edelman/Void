@@ -41,6 +41,7 @@
 /* 256px bins in the foreground, (ships, etc.) */
 #define BIN_FG_LOG_SPACE 8
 #define BIN_FG_SPACE (1 << BIN_FG_LOG_SPACE)
+#define BIN_FG_HALF_SPACE (1 << (BIN_FG_LOG_SPACE - 1))
 #define BIN_FG_LOG_SIZE (BIN_LOG_ENTIRE - BIN_FG_LOG_SPACE)
 #define BIN_FG_SIZE (1 << BIN_FG_LOG_SIZE)
 #define BIN_BIN_FG_SIZE (BIN_FG_SIZE * BIN_FG_SIZE)

@@ -205,7 +205,14 @@ static void new_bins(void) {
 	struct Vec2i bin2i;
 	struct SpriteList **bin;
 	BinSetClear(draw_bins), BinSetClear(update_bins);
+	/* Get the screen c\:oordines and add some space for sprites that are
+	 occluded off the side. In practcal terms, this sets the maximum sprite
+	 size without artifacts at {256px}, ({BIN_FG_HALF_SPACE = 128}.) */
 	DrawGetScreen(&rect);
+	rect.x_min -= BIN_FG_HALF_SPACE;
+	rect.x_max += BIN_FG_HALF_SPACE;
+	rect.y_min -= BIN_FG_HALF_SPACE;
+	rect.y_max += BIN_FG_HALF_SPACE;
 	Rectangle4f_to_bin4(&rect, &bin4);
 	/* the updating region extends past the drawing region */
 	Rectangle4i_assign(&grow4, &bin4);

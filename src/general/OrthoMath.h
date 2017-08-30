@@ -47,6 +47,8 @@
 #define BIN_BIN_FG_SIZE (BIN_FG_SIZE * BIN_FG_SIZE)
 /* 1024px bins in the background, (planets, etc.) */
 #define BIN_BG_LOG_SPACE 10
+#define BIN_BG_SPACE (1 << BIN_BG_LOG_SPACE)
+#define BIN_BG_HALF_SPACE (1 << (BIN_BG_LOG_SPACE - 1))
 #define BIN_BG_LOG_SIZE (BIN_LOG_ENTIRE - BIN_BG_LOG_SPACE)
 #define BIN_BG_SIZE (1 << BIN_FG_LOG_SIZE)
 #define BIN_BIN_BG_SIZE (BIN_BG_SIZE * BIN_BG_SIZE)
@@ -91,7 +93,7 @@ static void bin_to_bin2i(const unsigned bin, struct Vec2i *const bin2) {
 	bin2->y = bin >> BIN_FG_LOG_SIZE;
 }
 /** Maps a {Vec2f} into a {bin}. */
-static void Vec2f_to_bin(const struct Vec2f *const x, unsigned *const bin) {
+static void Vec2f_to_fg_bin(const struct Vec2f *const x, unsigned *const bin) {
 	struct Vec2i b;
 	assert(x);
 	assert(bin);
@@ -100,6 +102,17 @@ static void Vec2f_to_bin(const struct Vec2f *const x, unsigned *const bin) {
 	b.y = ((int)x->y + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
 	if(b.y < 0) b.y = 0; else if(b.y >= BIN_FG_SIZE) b.y = BIN_FG_SIZE - 1;
 	*bin = (b.y << BIN_FG_LOG_SIZE) + b.x;
+}
+/** Maps a {Vec2f} into a bg {bin}. */
+static void Vec2f_to_bg_bin(const struct Vec2f *const x, unsigned *const bin) {
+	struct Vec2i b;
+	assert(x);
+	assert(bin);
+	b.x = ((int)x->x + BIN_HALF_ENTIRE) >> BIN_BG_LOG_SPACE;
+	if(b.x < 0) b.x = 0; else if(b.x >= BIN_BG_SIZE) b.x = BIN_BG_SIZE - 1;
+	b.y = ((int)x->y + BIN_HALF_ENTIRE) >> BIN_BG_LOG_SPACE;
+	if(b.y < 0) b.y = 0; else if(b.y >= BIN_BG_SIZE) b.y = BIN_BG_SIZE - 1;
+	*bin = (b.y << BIN_BG_LOG_SIZE) + b.x;
 }
 /** Maps the lower-left corner of a {Bin} to a {Vec2i}. */
 static void bin_to_Vec2i(const unsigned bin, struct Vec2i *const x) {
@@ -173,7 +186,7 @@ static void Rectangle4i_assign(struct Rectangle4i *const this,
 	this->y_max = that->y_max;
 }
 /** Maps a recangle from pixel space, {pixel}, to bin2 space, {bin}. */
-static void Rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
+static void Rectangle4f_to_fg_bin4(const struct Rectangle4f *const pixel,
 	struct Rectangle4i *const bin) {
 	int temp;
 	assert(pixel);
@@ -198,13 +211,38 @@ static void Rectangle4f_to_bin4(const struct Rectangle4f *const pixel,
 	else if((unsigned)temp >= BIN_FG_SIZE) temp = BIN_FG_SIZE - 1;
 	bin->y_max = temp;
 }
+static void Rectangle4f_to_bg_bin4(const struct Rectangle4f *const pixel,
+	struct Rectangle4i *const bin) {
+	int temp;
+	assert(pixel);
+	assert(pixel->x_min <= pixel->x_max);
+	assert(pixel->y_min <= pixel->y_max);
+	assert(bin);
+	temp = ((int)pixel->x_min + BIN_HALF_ENTIRE) >> BIN_BG_LOG_SPACE;
+	if(temp < 0) temp = 0;
+	else if((unsigned)temp >= BIN_BG_SIZE) temp = BIN_BG_SIZE - 1;
+	bin->x_min = temp;
+	temp = ((int)pixel->x_max + 1 + BIN_HALF_ENTIRE) >> BIN_BG_LOG_SPACE;
+	if(temp < 0) temp = 0;
+	else if((unsigned)temp >= BIN_BG_SIZE) temp = BIN_BG_SIZE - 1;
+	bin->x_max = temp;
+	temp = ((int)pixel->y_min + BIN_HALF_ENTIRE) >> BIN_BG_LOG_SPACE;
+	if(temp < 0) temp = 0;
+	else if((unsigned)temp >= BIN_BG_SIZE) temp = BIN_BG_SIZE - 1;
+	bin->y_min = temp;
+	temp = ((int)pixel->y_max + 1 + BIN_HALF_ENTIRE) >> BIN_BG_LOG_SPACE;
+	if(temp < 0) temp = 0;
+	else if((unsigned)temp >= BIN_BG_SIZE) temp = BIN_BG_SIZE - 1;
+	bin->y_max = temp;
+}
 
 static void orthomath_unused_coda(void);
 static void orthomath_unused(void) {
 	struct Vec2i w = { 0, 0 };
 	bin2i_to_bin(w);
 	bin_to_bin2i(0, 0);
-	Vec2f_to_bin(0, 0);
+	Vec2f_to_fg_bin(0, 0);
+	Vec2f_to_bg_bin(0, 0);
 	bin_to_Vec2i(0, 0);
 
 	Vec2f_filler_fg(0);
@@ -216,7 +254,8 @@ static void orthomath_unused(void) {
 
 	Rectangle4f_init(0);
 	Rectangle4i_assign(0, 0);
-	Rectangle4f_to_bin4(0, 0);
+	Rectangle4f_to_fg_bin4(0, 0);
+	Rectangle4f_to_bg_bin4(0, 0);
 
 	orthomath_unused_coda();
 }

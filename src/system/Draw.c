@@ -162,10 +162,10 @@ int Draw(void) {
 	/* these are constant; fixme: could they be declared as such? */
 	glUniform1i(auto_Background_shader.sampler, TEX_CLASS_BACKGROUND);
 	if(!auto_Far(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
-	glUniform1i(auto_Far_shader.sampler, TEX_CLASS_SPRITE);
-	glUniform1i(auto_Far_shader.sampler_light, TEX_CLASS_NORMAL);
-	glUniform1f(auto_Far_shader.directional_angle, -2.0f);
-	glUniform3fv(auto_Far_shader.directional_colour, 1, sunshine);
+	glUniform1i(auto_Far_shader.bmp_sprite, TEX_CLASS_SPRITE);
+	glUniform1i(auto_Far_shader.bmp_normal, TEX_CLASS_NORMAL);
+	glUniform1f(auto_Far_shader.sun_direction, -2.0f);
+	glUniform3fv(auto_Far_shader.sun_colour, 1, sunshine);
 	if(!auto_Hud(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Hud_shader.sampler, TEX_CLASS_SPRITE);
 	if(!auto_Lighting(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(),0;
@@ -477,6 +477,24 @@ static void display_lambert(const struct Ortho3f *const x,
 	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
 }
 
+/** Only used as a callback from \see{display} while OpenGL is using Far.
+ @implements FarOutput */
+static void far_lambert(const struct Ortho3f *const x,
+	const struct AutoImage *const tex, const struct AutoImage *const nor) {
+	assert(x && tex && nor);
+	if(old_texture != tex->texture) {
+		glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
+		glBindTexture(GL_TEXTURE_2D, nor->texture);
+		glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
+		glBindTexture(GL_TEXTURE_2D, tex->texture);
+		old_texture = tex->texture;
+		glUniform1f(auto_Far_shader.size, tex->width);
+	}
+	glUniform1f(auto_Far_shader.angle, x->theta);
+	glUniform2f(auto_Far_shader.object, x->x, x->y);
+	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
+}
+
 /** Only used as a callback from \see{display} while OpenGL is using Sprite.
  @implements SpriteOutput */
 static void display_info(const struct Vec2f *const x,
@@ -496,8 +514,8 @@ static void display_info(const struct Vec2f *const x,
 static void display(void) {
 	int lights;
 	/* for SpriteIterate */
-	struct Ortho3f x;
-	unsigned old_tex = 0, tex, size;
+	/*struct Ortho3f x;
+	unsigned old_tex = 0, tex, size;*/
 
 	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	 <- https://www.khronos.org/opengl/wiki/Common_Mistakes
@@ -554,7 +572,8 @@ static void display(void) {
 
 	/* background sprites */
 	/*const->glUniform1i(far_texture_location, TEX_CLASS_SPRITE); */
-	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
+
+	/*glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
 	while(FarIterate(&x, &tex, &size)) {
 		if(old_tex != tex) {
 			glBindTexture(GL_TEXTURE_2D, tex);
@@ -565,24 +584,28 @@ static void display(void) {
 		glUniform2f(auto_Far_shader.position, x.x, x.y);
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
-	old_tex = 0;
+	old_tex = 0;*/
+	FarDrawLambert(&far_lambert);
 
+	/* Enable anti-aliasing, set up lights, draw sprites. */
 	glEnable(GL_BLEND);
 	glUseProgram(auto_Lambert_shader.compiled);
 	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
 	glUniform1i(auto_Lambert_shader.points, lights = LightGetArraySize());
 	if(lights) {
-		glUniform2fv(auto_Lambert_shader.point_position, lights, (GLfloat *)LightGetPositionArray());
-		glUniform3fv(auto_Lambert_shader.point_colour, lights, (GLfloat *)LightGetColourArray());
+		glUniform2fv(auto_Lambert_shader.point_position, lights,
+			(GLfloat *)LightGetPositionArray());
+		glUniform3fv(auto_Lambert_shader.point_colour, lights,
+			(GLfloat *)LightGetColourArray());
 	}
 	SpritesDrawLambert(&display_lambert);
 
-	/* Display info. */
+	/* Display info on top. */
 	glUseProgram(auto_Info_shader.compiled);
 	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
 	SpritesDrawInfo(&display_info);
 
-	/* Without this, it's Bad. */
+	/* Reset texture for next frame. */
 	old_texture = 0;
 
 	if(draw_is_print_sprites) draw_is_print_sprites = 0;
@@ -604,11 +627,11 @@ static void display(void) {
 	}
 #endif
 
-	/* disable, swap */
+	/* Disable, swap. */
 	glUseProgram(0);
 	glutSwapBuffers();
 
-	WindowIsGlError("display");
+	/*WindowIsGlError("display");*/
 }
 
 /** Callback for glutReshapeFunc.
@@ -661,11 +684,13 @@ static void resize(int width, int height) {
 	 DEPENDENCE ON SCREEN SIZE */
 	/* update the inverse screen on the card */
 	two_screen.x = 2.0f / width;
-	two_screen.y = 2.0f / height;	
+	two_screen.y = 2.0f / height;
+	/* fixme */
 	glUseProgram(auto_Hud_shader.compiled);
 	glUniform2f(auto_Hud_shader.two_screen, two_screen.x, two_screen.y);
 	glUseProgram(auto_Far_shader.compiled);
-	glUniform2f(auto_Far_shader.two_screen, two_screen.x, two_screen.y);
+	glUniform2f(auto_Far_shader.projection, two_screen.x, two_screen.y);
+	/* fixme! */
 	glUseProgram(auto_Lighting_shader.compiled);
 	glUniform2f(auto_Lighting_shader.two_screen, two_screen.x, two_screen.y);
 	glUseProgram(auto_Info_shader.compiled);

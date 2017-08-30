@@ -1,21 +1,28 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
  Public License, see copying.txt.
 
- Sprites in the background have a (world) position, a rotation, and a bitmap.
- They are sorted by bitmap and drawn by the gpu in ../system/Draw but not lit.
+ Fars in the background have a (world) position, a rotation, and a sprite. They
+ are not affected by point lights, just directional.
 
  @title		Far
  @author	Neil
- @version	3.2, 2015-07
+ @version	3.3, 2017-07
  @since		3.2, 2015-07 */
 
-#include <string.h> /* memset */
-#include "../../build/Auto.h"
-#include "../general/OrthoMath.h"
-#include "../Print.h"
+#include <string.h>	/* sprintf fprintf */
+#include "../../build/Auto.h" /* for AutoImage, AutoObjectInSpace, etc */
+#include "../general/OrthoMath.h" /* for measurements and types */
 #include "Far.h"
-#include "../general/Sorting.h"
-#include "../system/Draw.h"
+#include "../system/Draw.h" /* DrawGetCamera, DrawGetScreen */
+
+#if 0
+/*
+ ObjectInSpace
+ string name
+ Sprite sprite
+ int x
+ int y
+ */
 
 /* the backgrounds can be larger than the sprites, 1024x1024? */
 static const int half_max_size    = 512;
@@ -23,125 +30,110 @@ static const int half_max_size    = 512;
  big! too slow to get anywhere, so fudge it; basically, this makes space much
  smaller */
 static const float foreshortening = 0.2f, one_foreshortening = 5.0f;
+#endif
 
 struct Far {
-	const char *name;
+	const struct AutoImage *image, *normals;
 	struct Ortho3f x;
-	int   size;     /* the (x, y) size; they are the same */
-	int   texture;  /* in the gpu */
-	struct Far *prev_x, *next_x, *prev_y, *next_y; /* sort by axes */
-	int   is_selected;
-} backgrounds[1024];
-static const unsigned backgrounds_capacity = sizeof(backgrounds) / sizeof(struct Far);
-static unsigned       backgrounds_size;
+	const char *name;
+	unsigned bin;
+};
 
-static struct Far *first_x, *first_y; /* the projected axis sorting thing */
+/* declare */
+static void Far_to_string(const struct Far *this, char (*const a)[12]);
+/* Define {FarList} and {FarListNode}. */
+#define LIST_NAME Far
+#define LIST_TYPE struct Far
+#define LIST_UA_NAME Unorder
+#define LIST_TO_STRING &Far_to_string
+#include "../general/List.h"
+/** Every Far has one {bin} based on their position. \see{OrthoMath.h}. */
+static struct FarList bins[BIN_BIN_BG_SIZE];
 
-static struct Far *first_x_window, *first_y_window, *window_iterator;
-/*static struct Far *iterator = backgrounds;*/ /* for drawing and stuff */
+#define SET_NAME FarNode
+#define SET_TYPE struct FarListNode
+#include "../general/Set.h"
+static struct FarNodeSet *fars;
 
-/* private prototypes */
+/** @implements <Far>ToString */
+static void Far_to_string(const struct Far *this, char (*const a)[12]) {
+	assert(this && a);
+	sprintf(*a, "%.11s", this->name);
+}
 
-/*static struct Far *iterate(void);*/
-static void sort_notify(struct Far *);
-static int compare_x(const struct Far *a, const struct Far *b);
-static int compare_y(const struct Far *a, const struct Far *b);
-static struct Far **address_prev_x(struct Far *const a);
-static struct Far **address_next_x(struct Far *const a);
-static struct Far **address_prev_y(struct Far *const a);
-static struct Far **address_next_y(struct Far *const a);
-
-/* public */
-
-/** Get a new background sprite from the pool of unused.
- @param texture		On the GPU.
- @param size		Pixels.
- @return			The Far. */
+/** Get a new background sprite from {ObjectInSpace} resource.
+ @return The Far or null. */
 struct Far *Far(const struct AutoObjectInSpace *ois) {
+	struct FarListNode *fn;
 	struct Far *far;
-
 	/* fixme: diurnal variation */
-
 	if(!ois) return 0;
-	if(backgrounds_size >= backgrounds_capacity) {
-		warn("Far: couldn't be created; reached maximum of %u.\n",
-			backgrounds_capacity);
-		return 0;
-	}
-	far = &backgrounds[backgrounds_size++];
-
-	far->name    = ois->name;
+	if(!(fn = FarNodeSetNew(fars)))
+		{ fprintf(stderr, "Far: %s.\n", FarNodeSetGetError(fars)); return 0; }
+	far = &fn->data;
+	far->image   = ois->sprite->image;
+	far->normals = ois->sprite->normals;
 	far->x.x     = (float)ois->x;
 	far->x.y     = (float)ois->y;
 	far->x.theta = 0.0f;
-	far->size    = ois->sprite->image->width;
-	far->texture = ois->sprite->image->texture;
-
-	far->prev_x                  = 0;
-	far->next_x                  = first_x;
-	far->prev_y                  = 0;
-	far->next_y                  = first_y;
-	if(first_x) first_x->prev_x = far;
-	if(first_y) first_y->prev_y = far;
-	first_x = first_y = far;
-	sort_notify(far);
-
-	debug("Far: created from pool \"%s,\" Far%u->Tex%u.\n", far->name,
-		FarGetId(far), far->texture);
-
+	far->name    = ois->name;
+	Vec2f_to_bg_bin((struct Vec2f *)&far->x, &far->bin);
+	FarListPush(bins + far->bin, fn);
+	fprintf(stderr, "Far: created \"%s.\"\n", far->name);
 	return far;
 }
 
-/** Erase a sprite from the pool (array of static sprites.)
- @param sprite_ptr	A pointer to the sprite; gets set null on success. */
+/** @param far_ptr A pointer to the sprite in a list; gets set null on
+ success.
+ @order O(n)? */
 void Far_(struct Far **far_ptr) {
-	struct Far *far, *replace, *neighbor;
-	unsigned idx;
+	struct Far *far;
+	struct FarListNode *fn;
 
 	if(!far_ptr || !(far = *far_ptr)) return;
-	idx = (unsigned)(far - backgrounds);
-	if(idx >= backgrounds_size) {
-		warn("~Far: Far%u not in range Far%u.\n", idx + 1,backgrounds_size);
-		return;
-	}
-	debug("~Far: returning to pool \"%s,\" Far%u->Tex%u.\n", far->name,
-		FarGetId(far), far->texture);
-
-	/* take it out of the lists */
-	if(far->prev_x) far->prev_x->next_x = far->next_x;
-	else           first_x            = far->next_x;
-	if(far->next_x) far->next_x->prev_x = far->prev_x;
-	if(far->prev_y) far->prev_y->next_y = far->next_y;
-	else           first_y            = far->next_y;
-	if(far->next_y) far->next_y->prev_y = far->prev_y;
-
-	/* move the terminal far to replace this one */
-	if(idx < --backgrounds_size) {
-
-		replace = &backgrounds[backgrounds_size];
-		memcpy(far, replace, sizeof(struct Far));
-
-		/* prev, next, have to know about the replacement */
-		if((neighbor = replace->prev_x)) neighbor->next_x = far;
-		else                             first_x          = far;
-		if((neighbor = replace->next_x)) neighbor->prev_x = far;
-		if((neighbor = replace->prev_y)) neighbor->next_y = far;
-		else                             first_y          = far;
-		if((neighbor = replace->next_y)) neighbor->prev_y = far;
-
-		pedantic("~Far: Far%u has become Far%u.\n",
-			FarGetId(replace), FarGetId(far));
-	}
-
+	fn = (struct FarListNode *)far;
+	FarListRemove(bins + far->bin, far);
+	FarNodeSetRemove(fars, fn);
 	*far_ptr = far = 0;
 }
 
 /** Sets the size to zero; very fast. */
 void FarClear(void) {
-	debug("FarClear: clearing Fars.\n");
-	first_x = first_y = first_x_window = first_y_window = 0;
-	backgrounds_size = 0;
+	unsigned i;
+	fprintf(stderr, "FarClear: clearing Fars.\n");
+	for(i = 0; i < BIN_BIN_BG_SIZE; i++) FarListClear(bins + i);
+	FarNodeSetClear(fars);
 }
+
+/* @fixme This. */
+void FarDrawLambert(FarOutput draw) {
+	struct Rectangle4f rect;
+	struct Rectangle4i bin4;
+	int x, y;
+	/* Use {DrawGetScreen} to clip. */
+	DrawGetScreen(&rect);
+	rect.x_min -= BIN_BG_HALF_SPACE;
+	rect.x_max += BIN_BG_HALF_SPACE;
+	rect.y_min -= BIN_BG_HALF_SPACE;
+	rect.y_max += BIN_BG_HALF_SPACE;
+	Rectangle4f_to_bg_bin4(&rect, &bin4);
+	/* Draw the square. */
+	for(y = bin4.y_min; y <= bin4.y_max; y++) {
+		for(x = bin4.x_min; x <= bin4.x_max; x++) {
+			/*FarListUnorderForEach(); . . . */
+		}
+	}
+}
+
+
+
+
+
+
+
+#if 0
+
+
 
 /** @return True while there are more Fars, sets the values. */
 int FarIterate(struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *size_ptr) {
@@ -232,90 +224,4 @@ int FarIterate(struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *siz
 	return 0;
 }
 
-/** Sets the orientation with respect to the screen, pixels and (0, 0) is at
- the centre.
- @param back	Which background to set.
- @param x		x
- @param y		y
- @param t		\theta */
-void FarSetOrientation(struct Far *back, const float x, const float y, const float theta) {
-	if(!back) return;
-	back->x.x     = x/* * one_foreshortening*/;
-	back->x.y     = y/* * one_foreshortening*/;
-	back->x.theta = theta;
-	inotify((void **)&first_x, (void *)back, (int (*)(const void *, const void *))&compare_x, (void **(*)(void *const))&address_prev_x, (void **(*)(void *const))&address_next_x);
-	inotify((void **)&first_y, (void *)back, (int (*)(const void *, const void *))&compare_y, (void **(*)(void *const))&address_prev_y, (void **(*)(void *const))&address_next_y);
-}
-
-int FarGetId(const struct Far *b) {
-	if(!b) return 0;
-	return (int)(b - backgrounds) + 1;
-}
-
-/* private */
-
-/** This is a private iteration which uses the same variable as Far::iterate.
- This actually returns a Far. Use it when you want to delete a sprite as you
- go though the list. */
-/*static struct Far *iterate(void) {
-	if(iterator >= backgrounds + backgrounds_size) {
-		iterator = backgrounds;
-		return 0;
-	}
-	return iterator++;
-}*/
-
-/* Sorts the sprites; they're (hopefully) almost sorted already from last
- frame, just freshens with insertion sort, O(n + m) where m is the
- related to the dynamicness of the scene
- @return	The number of equvalent-swaps (doesn't do this anymore.) */
-/*static void sort(void) {
-	isort((void **)&first_x,
-		  (int (*)(const void *, const void *))&compare_x,
-		  (void **(*)(void *const))&address_prev_x,
-		  (void **(*)(void *const))&address_next_x);
-	isort((void **)&first_y,
-		  (int (*)(const void *, const void *))&compare_y,
-		  (void **(*)(void *const))&address_prev_y,
-		  (void **(*)(void *const))&address_next_y);
-}*/
-
-/** Keep it sorted when there is one element out-of-place. */
-static void sort_notify(struct Far *s) {
-	inotify((void **)&first_x,
-			(void *)s,
-			(int (*)(const void *, const void *))&compare_x,
-			(void **(*)(void *const))&address_prev_x,
-			(void **(*)(void *const))&address_next_x);
-	inotify((void **)&first_y,
-			(void *)s,
-			(int (*)(const void *, const void *))&compare_y,
-			(void **(*)(void *const))&address_prev_y,
-			(void **(*)(void *const))&address_next_y);
-}
-
-/* for isort */
-
-static int compare_x(const struct Far *a, const struct Far *b) {
-	return a->x.x > b->x.x;
-}
-
-static int compare_y(const struct Far *a, const struct Far *b) {
-	return a->x.y > b->x.y;
-}
-
-static struct Far **address_prev_x(struct Far *const a) {
-	return &a->prev_x;
-}
-
-static struct Far **address_next_x(struct Far *const a) {
-	return &a->next_x;
-}
-
-static struct Far **address_prev_y(struct Far *const a) {
-	return &a->prev_y;
-}
-
-static struct Far **address_next_y(struct Far *const a) {
-	return &a->next_y;
-}
+#endif

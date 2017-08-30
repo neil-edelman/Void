@@ -13,8 +13,8 @@
  @version	3.4, 2017-05 generics
  @since		3.3, 2016-01
 			3.2, 2015-06
- @fixme Still crashes.
- @fixme Collision resolution wonky. */
+ @fixme Collision resolution wonky.
+ @fixme Sprites disappear/reappear randomly. */
 
 #include <stdlib.h>	/* rand */
 #include <stdio.h>  /* fprintf */
@@ -87,28 +87,12 @@ struct Sprite {
 	float bounding, bounding1; /* bounding1 is temporary */
 	/*struct Rectangle4f box;*/ /* fixme: temp bounding box; tighter bounds */
 };
-#if 0
-/** @implements <Bin>Comparator
- @fixme Actually, we can get rid of this. Unused? That was a lot of work for
- nothing. */
-static int Sprite_x_cmp(const struct Sprite *a, const struct Sprite *b) {
-	return (b->x_5.x < a->x_5.x) - (a->x_5.x < b->x_5.x);
-}
-/** @implements <Bin>Comparator */
-static int Sprite_y_cmp(const struct Sprite *a, const struct Sprite *b) {
-	return (b->x_5.x < a->x_5.x) - (a->x_5.x < b->x_5.x);
-}
-#endif
 /* declare */
 static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]);
-/* Define {BinList} and {BinListNode}. */
+/* Define {SpriteList} and {SpriteListNode}. */
 #define LIST_NAME Sprite
 #define LIST_TYPE struct Sprite
 #define LIST_UA_NAME Unorder
-/*#define LIST_UA_NAME X
-#define LIST_UA_COMPARATOR &Sprite_x_cmp*/
-/*#define LIST_UB_NAME Y
-#define LIST_UB_COMPARATOR &Sprite_y_cmp*/
 #define LIST_TO_STRING &Sprite_to_string
 #include "../general/List.h"
 /** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
@@ -197,8 +181,7 @@ static void Bin_print(struct SpriteList **const pthis) {
 }
 /** New bins calculates which bins are at all visible and which we should
  update, (around the visible,) every frame.
- @order The screen area.
- @fixme Draw bins needs to be expanded. */
+ @order The screen area. */
 static void new_bins(void) {
 	struct Rectangle4f rect;
 	struct Rectangle4i bin4/*, grow4 <- now static */;
@@ -213,7 +196,7 @@ static void new_bins(void) {
 	rect.x_max += BIN_FG_HALF_SPACE;
 	rect.y_min -= BIN_FG_HALF_SPACE;
 	rect.y_max += BIN_FG_HALF_SPACE;
-	Rectangle4f_to_bin4(&rect, &bin4);
+	Rectangle4f_to_fg_bin4(&rect, &bin4);
 	/* the updating region extends past the drawing region */
 	Rectangle4i_assign(&grow4, &bin4);
 	if(grow4.x_min > 0)               grow4.x_min--;
@@ -267,7 +250,7 @@ static void sprite_new_bins(const struct Sprite *const this) {
 	extent.x_max = this->x_5.x + extent_grow;
 	extent.y_min = this->x_5.y - extent_grow;
 	extent.y_max = this->x_5.y + extent_grow;
-	Rectangle4f_to_bin4(&extent, &bin4);
+	Rectangle4f_to_fg_bin4(&extent, &bin4);
 	/* draw in the centre */
 	/*printf("sprite_new_bins(%f, %f)\n", this->x.x, this->x.y);*/
 	/* from \see{new_bins}, clip the sprite bins to the update bins */
@@ -312,7 +295,7 @@ static void for_each_update(SpriteAction act) {
 static void clear_holding_sprite(struct Sprite *this) {
 	assert(this);
 	SpriteListRemove(holding_bin, this);
-	Vec2f_to_bin(&this->x_5, &this->bin);
+	Vec2f_to_fg_bin(&this->x_5, &this->bin);
 	SpriteListPush(bins + this->bin, (struct SpriteListNode *)this);
 }
 /** Transfer all Sprites from the spawning bin to their respective places. */
@@ -405,7 +388,7 @@ static void lazy_update_bin(struct Sprite *const this) {
 	/**/char a[12];
 	assert(this);
 	/**/Sprite_to_string(this, &a);
-	Vec2f_to_bin(&this->x_5, &to_bin); /* fixme: again. */
+	Vec2f_to_fg_bin(&this->x_5, &to_bin); /* fixme: again. */
 	printf("%s: Bin%u -> Bin%u.\n", a, this->bin, to_bin);
 	SpriteListRemove(bins + this->bin, this);
 	SpriteListPush(bins + to_bin, (struct SpriteListNode *)this);
@@ -812,7 +795,7 @@ static void extrapolate(struct Sprite *const this) {
 		+ this->dx.y * this->dx.y);
 	/* Wandered out of the bin? Mark it as such; you don't want to move it
 	 right away, because this is called in sequence. */
-	Vec2f_to_bin(&this->x_5, &bin);
+	Vec2f_to_fg_bin(&this->x_5, &bin);
 	/* fixme: should {bin} be stored so we don't uselessly calculate it
 	 again? */
 	if(bin != this->bin) {

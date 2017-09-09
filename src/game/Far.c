@@ -105,11 +105,20 @@ void FarClear(void) {
 	FarNodeSetClear(fars);
 }
 
+/** @implements <Far, FarOutput*>BiAction */
+static void draw_far(struct Far *const this, void *const pout_void) {
+	const FarOutput *const pout = pout_void, out = *pout;
+	assert(this && out);
+	printf("AHA!!!\n");
+	out(&this->x, this->image, this->normals);
+}
+
 /* @fixme This. */
 void FarDrawLambert(FarOutput draw) {
 	struct Rectangle4f rect;
 	struct Rectangle4i bin4;
-	int x, y;
+	struct Vec2i bin2i;
+	unsigned bin;
 	/* Use {DrawGetScreen} to clip. */
 	DrawGetScreen(&rect);
 	rect.x_min -= BIN_BG_HALF_SPACE;
@@ -118,9 +127,10 @@ void FarDrawLambert(FarOutput draw) {
 	rect.y_max += BIN_BG_HALF_SPACE;
 	Rectangle4f_to_bg_bin4(&rect, &bin4);
 	/* Draw the square. */
-	for(y = bin4.y_min; y <= bin4.y_max; y++) {
-		for(x = bin4.x_min; x <= bin4.x_max; x++) {
-			/*FarListUnorderForEach(); . . . */
+	for(bin2i.y = bin4.y_min; bin2i.y <= bin4.y_max; bin2i.y++) {
+		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
+			bin = bin2i_to_bg_bin(bin2i);
+			FarListUnorderBiForEach(bins + bin, &draw_far, &draw);
 		}
 	}
 }

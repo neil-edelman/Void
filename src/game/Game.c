@@ -15,7 +15,6 @@
 #include "../../build/Auto.h"
 #include "../Print.h"
 #include "Sprite.h"
-#include "Far.h"
 #include "Event.h"
 #include "Zone.h"
 #include "Light.h"

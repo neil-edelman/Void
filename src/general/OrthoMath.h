@@ -77,16 +77,23 @@ struct Rectangle4f { float x_min, x_max, y_min, y_max; };
  }*/
 /** Doesn't check for overflow.
  @return Maps a {bin2i} to a {bin}. */
-static unsigned bin2i_to_bin(const struct Vec2i bin2) {
+static unsigned bin2i_to_fg_bin(const struct Vec2i bin2) {
 	assert(bin2.x >= 0);
 	assert(bin2.y >= 0);
 	assert(bin2.x < BIN_FG_SIZE);
 	assert(bin2.y < BIN_FG_SIZE);
 	return (bin2.y << BIN_FG_LOG_SIZE) + bin2.x;
 }
+static unsigned bin2i_to_bg_bin(const struct Vec2i bin2) {
+	assert(bin2.x >= 0);
+	assert(bin2.y >= 0);
+	assert(bin2.x < BIN_BG_SIZE);
+	assert(bin2.y < BIN_BG_SIZE);
+	return (bin2.y << BIN_BG_LOG_SIZE) + bin2.x;
+}
 /** @return Maps a {bin} to the lower left corner of the pixel
  c\:o-ordinates. */
-static void bin_to_bin2i(const unsigned bin, struct Vec2i *const bin2) {
+static void bin_to_fg_bin2i(const unsigned bin, struct Vec2i *const bin2) {
 	assert(bin < BIN_BIN_FG_SIZE);
 	assert(bin2);
 	bin2->x = bin & (BIN_FG_SIZE - 1);
@@ -239,8 +246,9 @@ static void Rectangle4f_to_bg_bin4(const struct Rectangle4f *const pixel,
 static void orthomath_unused_coda(void);
 static void orthomath_unused(void) {
 	struct Vec2i w = { 0, 0 };
-	bin2i_to_bin(w);
-	bin_to_bin2i(0, 0);
+	bin2i_to_fg_bin(w);
+	bin2i_to_bg_bin(w);
+	bin_to_fg_bin2i(0, 0);
 	Vec2f_to_fg_bin(0, 0);
 	Vec2f_to_bg_bin(0, 0);
 	bin_to_Vec2i(0, 0);

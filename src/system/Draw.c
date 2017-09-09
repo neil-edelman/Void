@@ -569,6 +569,7 @@ static void display(void) {
 	glUseProgram(auto_Far_shader.compiled);
 	/*glUseProgram(light_shader);
 	glUniform1i(light_lights_location, 0);*/
+	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
 
 	/* background sprites */
 	/*const->glUniform1i(far_texture_location, TEX_CLASS_SPRITE); */
@@ -586,6 +587,7 @@ static void display(void) {
 	}
 	old_tex = 0;*/
 	FarDrawLambert(&far_lambert);
+	SpritesDrawBackground(&far_lambert);
 
 	/* Enable anti-aliasing, set up lights, draw sprites. */
 	glEnable(GL_BLEND);

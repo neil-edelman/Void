@@ -6,6 +6,7 @@ struct AutoShipClass;
 struct AutoDebris;
 struct AutoWmdType;
 struct AutoGate;
+struct AutoObjectInSpace;
 
 enum AiType { AI_DUMB, AI_HUMAN };
 
@@ -22,10 +23,13 @@ struct Debris *Debris(const struct AutoDebris *const class,
 struct Wmd *Wmd(const struct AutoWmdType *const class,
 	const struct Ship *const from);
 struct Gate *Gate(const struct AutoGate *const class);
+struct Planetoid *Planetoid(const struct AutoObjectInSpace *const class);
+void PlanetoidClear(void);
 int Sprites(void);
 void Sprites_(void);
 void SpritesUpdate(const int dt_ms_passed, struct Ship *const centre);
 void SpritesDrawInfo(const InfoOutput draw);
 void SpritesDrawLambert(const LambertOutput draw);
+void SpritesDrawBackground(LambertOutput draw);
 void SpritesPlot(void);
 void SpritesOut(void);

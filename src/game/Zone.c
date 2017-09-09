@@ -10,7 +10,6 @@
 #include "../Print.h"
 #include "../system/Draw.h"
 #include "Game.h"
-#include "Far.h"
 #include "Sprite.h"
 #include "Event.h"
 #include "Zone.h"
@@ -66,17 +65,18 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* clear all objects */
 	/*SpriteRemoveIf(&remove_all_except_player);*/
 	EventRemoveIf(&remove_all_events_except);
-	FarClear();
+	PlanetoidClear();
 
 	/* set drawing elements */
 	DrawSetBackground("Dorado.jpeg");
 	/* fixme: set sunlight */
 
-	Far(sz->ois1);
-	Far(sz->ois2);
-	Far(sz->ois3);
+	Planetoid(sz->ois1);
+	Planetoid(sz->ois2);
+	Planetoid(sz->ois3);
+	printf("***planets???\n");
 
-	/*fixme: Gate(sz->gate1);*/
+	Gate(sz->gate1);
 
 	/* update the current zone */
 	current_zone = sz;

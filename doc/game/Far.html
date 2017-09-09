@@ -44,25 +44,30 @@ Copyright 2015 Neil Edelman, distributed under the terms of the GNU General
 Public License, see copying.txt.
 </p>
 <p>
-Sprites in the background have a (world) position, a rotation, and a bitmap.
-They are sorted by bitmap and drawn by the gpu in ../system/Draw but not lit.
-</p>
-<p>
-This is a private iteration which uses the same variable as Far::iterate.
-This actually returns a Far. Use it when you want to delete a sprite as you
-go though the list.
+Fars in the background have a (world) position, a rotation, and a sprite. They
+are not affected by point lights, just directional.
 </p>
 <dl>
 	<dt>author</dt>
 	<dd>Neil</dd>
 	<dt>version</dt>
-	<dd>3.2, 2015-07</dd>
+	<dd>3.3, 2017-07</dd>
 	<dt>since</dt>
 	<dd>3.2, 2015-07</dd>
 </dl>
 
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "static struct FarList bins[BIN_BIN_BG_SIZE]"><!-- --></a>
+<h3>static struct FarList bins[BIN_BIN_BG_SIZE]</h3>
+<pre><b>static struct FarList bins[BIN_BIN_BG_SIZE]</b></pre>
+<p>
+Every Far has one <em>bin</em> based on their position. <a href = "#OrthoMath.h">OrthoMath.h</a>.
+</p>
+<dl>
+</dl>
+</div>
 
 <div><a name = "struct Far"><!-- --></a>
 <h3>struct Far</h3>
@@ -99,11 +104,6 @@ See <a href = "#Far">Far</a>.
 	<td><a href = "#FarIterate">FarIterate</a></td>
 	<td>struct Ortho3f *const r_ptr, unsigned *texture_ptr, unsigned *size_ptr</td>
 </tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#FarSetOrientation">FarSetOrientation</a></td>
-	<td>struct Far *back, const float x, const float y, const float theta</td>
-</tr>
 </table>
 
 
@@ -113,27 +113,22 @@ See <a href = "#Far">Far</a>.
 <h3>Far</h3>
 <pre>struct Far * <b>Far</b> (const struct AutoObjectInSpace *ois)</pre>
 <p>
-Get a new background sprite from the pool of unused.
+Get a new background sprite from <em>ObjectInSpace</em> resource.
 </p>
 <dl>
-	<dt>parameter: texture</dt>
-	<dd>On the GPU.</dd>
-	<dt>parameter: size</dt>
-	<dd>Pixels.</dd>
 	<dt>return</dt>
-	<dd>The Far.</dd>
+	<dd>The Far or null.</dd>
 </dl>
 </div>
 
 <div><a name = "Far_"><!-- --></a>
 <h3>Far_</h3>
 <pre>void <b>Far_</b> (struct Far **far_ptr)</pre>
-<p>
-Erase a sprite from the pool (array of static sprites.)
-</p>
 <dl>
-	<dt>parameter: sprite_ptr</dt>
-	<dd>A pointer to the sprite; gets set null on success.</dd>
+	<dt>parameter: far_ptr A pointer to the sprite in a list; gets set null on</dt>
+	<dd>success.</dd>
+	<dt>order</dt>
+	<dd>O(n)?</dd>
 </dl>
 </div>
 
@@ -153,25 +148,6 @@ Sets the size to zero; very fast.
 <dl>
 	<dt>return</dt>
 	<dd>True while there are more Fars, sets the values.</dd>
-</dl>
-</div>
-
-<div><a name = "FarSetOrientation"><!-- --></a>
-<h3>FarSetOrientation</h3>
-<pre>void <b>FarSetOrientation</b> (struct Far *back, const float x, const float y, const float theta)</pre>
-<p>
-Sets the orientation with respect to the screen, pixels and (0, 0) is at
-the centre.
-</p>
-<dl>
-	<dt>parameter: back</dt>
-	<dd>Which background to set.</dd>
-	<dt>parameter: x</dt>
-	<dd>x</dd>
-	<dt>parameter: y</dt>
-	<dd>y</dd>
-	<dt>parameter: t</dt>
-	<dd>&theta;</dd>
 </dl>
 </div>
 

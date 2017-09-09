@@ -61,9 +61,9 @@ Which allows you to have a lot of sprites -&gt; ships, weapons -&gt; more epic.
 	<dd>3.3, 2016-01
 			3.2, 2015-06</dd>
 	<dt>fixme</dt>
-	<dd>Still crashes.</dd>
-	<dt>fixme</dt>
 	<dd>Collision resolution wonky.</dd>
+	<dt>fixme</dt>
+	<dd>Sprites disappear/reappear randomly.</dd>
 </dl>
 
 
@@ -233,6 +233,16 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 	<td>const struct AutoGate *const class</td>
 </tr>
 <tr>
+	<td>struct Planetoid *</td>
+	<td><a href = "#Planetoid">Planetoid</a></td>
+	<td>const struct AutoObjectInSpace *const class</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#PlanetoidClear">PlanetoidClear</a></td>
+	<td>void</td>
+</tr>
+<tr>
 	<td>int</td>
 	<td><a href = "#Sprites">Sprites</a></td>
 	<td>void</td>
@@ -250,6 +260,11 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 <tr>
 	<td>void</td>
 	<td><a href = "#SpritesDrawLambert">SpritesDrawLambert</a></td>
+	<td>LambertOutput draw</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesDrawBackground">SpritesDrawBackground</a></td>
 	<td>LambertOutput draw</td>
 </tr>
 <tr>
@@ -341,6 +356,26 @@ Extends <em>Sprite_filler</em>.
 </dl>
 </div>
 
+<div><a name = "Planetoid"><!-- --></a>
+<h3>Planetoid</h3>
+<pre>struct Planetoid * <b>Planetoid</b> (const struct AutoObjectInSpace *const class)</pre>
+<p>
+Extends <em>Sprite_filler</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "PlanetoidClear"><!-- --></a>
+<h3>PlanetoidClear</h3>
+<pre>void <b>PlanetoidClear</b> (void)</pre>
+<p>
+Clears all planets in preparation for jump.
+</p>
+<dl>
+</dl>
+</div>
+
 <div><a name = "Sprites"><!-- --></a>
 <h3>Sprites</h3>
 <pre>int <b>Sprites</b> (void)</pre>
@@ -380,6 +415,16 @@ Use when the Info GPU shader is loaded.
 <p>
 Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it updates everything.
 Use when the Lambert GPU shader is loaded.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesDrawBackground"><!-- --></a>
+<h3>SpritesDrawBackground</h3>
+<pre>void <b>SpritesDrawBackground</b> (LambertOutput draw)</pre>
+<p>
+Use when the Far GPU shader is loaded.
 </p>
 <dl>
 </dl>

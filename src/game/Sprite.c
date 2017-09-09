@@ -98,6 +98,7 @@ static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 /** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
 static struct SpriteList bins[BIN_BIN_FG_SIZE + 1];
 static struct SpriteList *const holding_bin = bins + BIN_BIN_FG_SIZE;
+static struct SpriteList fars[BIN_BIN_BG_SIZE];
 /** Fills a sprite with data. It never appears outside of another struct.
  @param auto: An auto-sprite prototype, contained in the precompiled {Auto.h}
  resources, that specifies graphics.
@@ -207,32 +208,32 @@ static void new_bins(void) {
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
 			if(!(bin = BinSetNew(draw_bins))) { perror("draw_bins"); return; }
-			*bin = bins + bin2i_to_bin(bin2i);
+			*bin = bins + bin2i_to_fg_bin(bin2i);
 		}
 	}
 	/* update around the outside of the screen */
 	if((bin2i.y = grow4.y_min) < bin4.y_min) {
 		for(bin2i.x = grow4.x_min; bin2i.x <= grow4.x_max; bin2i.x++) {
 			if(!(bin = BinSetNew(update_bins))) { perror("update_bins");return;}
-			*bin = bins + bin2i_to_bin(bin2i);
+			*bin = bins + bin2i_to_fg_bin(bin2i);
 		}
 	}
 	if((bin2i.y = grow4.y_max) > bin4.y_max) {
 		for(bin2i.x = grow4.x_min; bin2i.x <= grow4.x_max; bin2i.x++) {
 			if(!(bin = BinSetNew(update_bins))) { perror("update_bins");return;}
-			*bin = bins + bin2i_to_bin(bin2i);
+			*bin = bins + bin2i_to_fg_bin(bin2i);
 		}
 	}
 	if((bin2i.x = grow4.x_min) < bin4.x_min) {
 		for(bin2i.y = bin4.y_min; bin2i.y <= bin4.y_max; bin2i.y++) {
 			if(!(bin = BinSetNew(update_bins))) { perror("update_bins");return;}
-			*bin = bins + bin2i_to_bin(bin2i);
+			*bin = bins + bin2i_to_fg_bin(bin2i);
 		}
 	}
 	if((bin2i.x = grow4.x_max) > bin4.x_max) {
 		for(bin2i.y = bin4.y_min; bin2i.y <= bin4.y_max; bin2i.y++) {
 			if(!(bin = BinSetNew(update_bins))) { perror("update_bins");return;}
-			*bin = bins + bin2i_to_bin(bin2i);
+			*bin = bins + bin2i_to_fg_bin(bin2i);
 		}
 	}
 }
@@ -264,8 +265,8 @@ static void sprite_new_bins(const struct Sprite *const this) {
 			struct Vec2i bin_pos;
 			/*printf("sprite bin2i(%u, %u)\n", bin2i.x, bin2i.y);*/
 			if(!(bin = BinSetNew(sprite_bins))) { perror("bins"); return; }
-			*bin = bins + bin2i_to_bin(bin2i);
-			bin_to_Vec2i(bin2i_to_bin(bin2i), &bin_pos);
+			*bin = bins + bin2i_to_fg_bin(bin2i);
+			bin_to_Vec2i(bin2i_to_fg_bin(bin2i), &bin_pos);
 			/*fprintf(gnu_glob, "set arrow from %f,%f to %d,%d lw 0.2 "
 				"lc rgb \"#CCEEEE\" front;\n",
 				this->x_5.x, this->x_5.y, bin_pos.x, bin_pos.y);*/
@@ -721,15 +722,15 @@ struct Gate {
 #define SET_TYPE struct Gate
 #include "../general/Set.h"
 static struct GateSet *gates;
-/** @implements <Debris>ToString */
+/** @implements <Gate>ToString */
 static void Gate_to_string(const struct Gate *this, char (*const a)[12]) {
 	sprintf(*a, "%.7sGate", this->to->name);
 }
-/** @implements <Debris>Action */
+/** @implements <Gate>Action */
 static void Gate_update(struct Gate *const this) {
 	UNUSED(this);
 }
-/** @implements <Debris>Action */
+/** @implements <Gate>Action */
 static void Gate_delete(struct Gate *const this) {
 	/*char a[12];*/
 	assert(this);
@@ -738,7 +739,7 @@ static void Gate_delete(struct Gate *const this) {
 	SpriteListRemove(bins + this->sprite.data.bin, &this->sprite.data);
 	GateSetRemove(gates, this);
 }
-/** @implements <Debris>FloatAccessor */
+/** @implements <Gate>FloatAccessor */
 static float Gate_get_mass(const struct Gate *const this) {
 	assert(this);
 	return 1e36f; /* No moving. I don't think this is ever called. */
@@ -767,6 +768,73 @@ struct Gate *Gate(const struct AutoGate *const class) {
 
 
 
+
+
+
+
+
+/* Define {PlanetoidSet} and {PlanetoidSetNode}, a subclass of {Sprite}.
+ Planets and asteroids, everything that has a name and you can optionally land
+ on, is a {Planetoid}. They are in the background. */
+struct Planetoid {
+	struct SpriteListNode sprite;
+	const char *name;
+};
+#define SET_NAME Planetoid
+#define SET_TYPE struct Planetoid
+#include "../general/Set.h"
+static struct PlanetoidSet *planetoids;
+/** @implements <Planetoid>ToString */
+static void Planetoid_to_string(const struct Planetoid *this,
+	char (*const a)[12]) {
+	sprintf(*a, "%.11s", this->name);
+}
+/** @implements <Planetoid>Action */
+static void Planetoid_update(struct Planetoid *const this) {
+	UNUSED(this);
+}
+/** @implements <Planetoid>Action */
+static void Planetoid_delete(struct Planetoid *const this) {
+	/*char a[12];*/
+	assert(this);
+	/*Gate_to_string(this, &a);
+	 printf("Gate_delete %s#%p.\n", a);*/
+	SpriteListRemove(fars, &this->sprite.data);
+	PlanetoidSetRemove(planetoids, this);
+}
+/** @implements <Planetoid>FloatAccessor */
+static float Planetoid_get_mass(const struct Planetoid *const this) {
+	assert(this);
+	return 1e36f; /* Fixme: have mass; I want to see planets crashing. */
+}
+/* Fill in the member functions of this implementation. */
+static const struct SpriteVt planetoid_vt = {
+	(SpriteAction)&Planetoid_update,
+	(SpriteAction)&Planetoid_delete,
+	(SpriteToString)&Planetoid_to_string,
+	(SpriteFloatAccessor)&Planetoid_get_mass
+};
+/** Extends {Sprite_filler}. */
+struct Planetoid *Planetoid(const struct AutoObjectInSpace *const class) {
+	struct Planetoid *p;
+	struct Ortho3f x;
+	printf("Planetoid %s ???\n", class->name);
+	assert(class && class->sprite && class->name);
+	x.x     = class->x;
+	x.y     = class->y;
+	x.theta = 0;
+	if(!(p = PlanetoidSetNew(planetoids))) return 0;
+	Sprite_filler(&p->sprite, class->sprite, &planetoid_vt, &x);
+	p->name = class->name;
+	printf("Planetoid %s at (%f, %f)!!!\n", p->name, x.x, x.y);
+	return p;
+}
+/** Clears all planets in preparation for jump. */
+void PlanetoidClear(void) {
+	unsigned i;
+	for(i = 0; i < BIN_BIN_BG_SIZE; i++) SpriteListClear(fars + i);
+	PlanetoidSetClear(planetoids);
+}
 
 
 
@@ -869,7 +937,7 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	nrm = b->v.x * d.x + b->v.y * d.y;
 	b_nrm.x = nrm * d.x, b_nrm.y = nrm * d.y;
 	/* b's velocity, tangent direction */
-	b_tan.x = b->v.y - b_nrm.x, b_nrm.y = b->v.y - b_nrm.y;
+	b_tan.x = b->v.y - b_nrm.x, b_tan.y = b->v.y - b_nrm.y;
 	/* elastic collision */
 	v.x = a_tan.x +  (a_nrm.x*diff_m + 2*b_m*b_nrm.x) * invsum_m;
 	v.y = a_tan.y +  (a_nrm.y*diff_m + 2*b_m*b_nrm.y) * invsum_m;
@@ -980,7 +1048,7 @@ static void bin_sprite_collide(struct SpriteList **const pthis,
 	struct Sprite *const target = target_param;
 	struct Vec2i b2;
 	const unsigned b = (unsigned)(this - bins);
-	bin_to_bin2i(b, &b2);
+	bin_to_fg_bin2i(b, &b2);
 	/*printf("bin_collide_sprite: bin %u (%u, %u) Sprite: (%f, %f).\n", b, b2.x,
 	 b2.y, target->x.x, target->x.y);*/
 	SpriteListUnorderBiForEach(this, &sprite_sprite_collide, target);
@@ -1052,7 +1120,8 @@ int Sprites(void) {
 		|| !(ships = ShipSet())
 		|| !(debris = DebrisSet())
 		|| !(wmds = WmdSet())
-		|| !(gates = GateSet())) return 0;
+		|| !(gates = GateSet())
+		|| !(planetoids = PlanetoidSet())) return 0;
 	/* Collision is a self-referential stack; this always must be here. */
 	CollisionSetSetMigrate(collisions, &Collision_migrate);
 	/* Updates all the {bins} (etc) that reference sprites on {realloc}. */
@@ -1063,14 +1132,17 @@ int Sprites(void) {
 	/* Initialises to starting all {bins}, (global variable.) */
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 	SpriteListClear(holding_bin);
+	for(i = 0; i < BIN_BIN_BG_SIZE; i++) SpriteListClear(fars + i);
 	return 1;
 }
 
 /** Erases all sprite buffers. */
 void Sprites_(void) {
 	unsigned i;
+	for(i = 0; i < BIN_BIN_BG_SIZE; i++) SpriteListClear(fars + i);
 	SpriteListClear(holding_bin);
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
+	PlanetoidSet_(&planetoids);
 	GateSet_(&gates);
 	WmdSet_(&wmds);
 	DebrisSet_(&debris);
@@ -1146,13 +1218,13 @@ void SpritesDrawInfo(InfoOutput draw) {
 	/*draw(&a, hair);*/
 }
 
-/** @implements <Sprite, LambertOutput*>DiAction */
+/** @implements <Sprite, LambertOutput*>BiAction */
 static void draw_sprite(struct Sprite *const this, void *const pout_void) {
 	const LambertOutput *const pout = pout_void, out = *pout;
 	assert(this && out);
 	out(&this->x, this->image, this->normals);
 }
-/** @implements <Bin*, LambertOutput*>DiAction */
+/** @implements <Bin*, LambertOutput*>BiAction */
 static void draw_bin(struct SpriteList **const pthis, void *const pout_void) {
 	struct SpriteList *const this = *pthis;
 	assert(pthis && this);
@@ -1162,6 +1234,10 @@ static void draw_bin(struct SpriteList **const pthis, void *const pout_void) {
  Use when the Lambert GPU shader is loaded. */
 void SpritesDrawLambert(LambertOutput draw) {
 	BinSetBiForEach(draw_bins, &draw_bin, &draw);
+}
+/** Use when the Far GPU shader is loaded. */
+void SpritesDrawBackground(LambertOutput draw) {
+	/*BinSetBiForEach(draw_bins, &draw_bin, &draw);*/
 }
 
 /* This is a debug thing. */

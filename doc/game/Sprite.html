@@ -278,17 +278,6 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 	<td>void</td>
 </tr>
 <tr>
-	<td>struct Ship *</td>
-	<td><a href = "#Ship">Ship</a></td>
-	<td>const struct AutoShipClass *const class,
-	struct Ortho3f *const r, const enum SpriteBehaviour behaviour</td>
-</tr>
-<tr>
-	<td>int</td>
-	<td><a href = "#Gate">Gate</a></td>
-	<td>const struct AutoGate *const class</td>
-</tr>
-<tr>
 	<td>void</td>
 	<td><a href = "#ShipGetHit">ShipGetHit</a></td>
 	<td>const struct Ship *const this, struct Vec2u *const hit</td>
@@ -318,7 +307,7 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 <pre>struct Ship * <b>Ship</b> (const struct AutoShipClass *const class,
 	const struct Ortho3f *const x, const enum AiType ai)</pre>
 <p>
-Extends <em>Sprite_filler</em>.
+Extends <em>Sprite_fg_filler</em>.
 </p>
 <dl>
 </dl>
@@ -329,7 +318,7 @@ Extends <em>Sprite_filler</em>.
 <pre>struct Debris * <b>Debris</b> (const struct AutoDebris *const class,
 	const struct Ortho3f *const x)</pre>
 <p>
-Extends <em>Sprite_filler</em>.
+Extends <em>Sprite_fg_filler</em>.
 </p>
 <dl>
 </dl>
@@ -340,7 +329,7 @@ Extends <em>Sprite_filler</em>.
 <pre>struct Wmd * <b>Wmd</b> (const struct AutoWmdType *const class,
 	const struct Ship *const from)</pre>
 <p>
-Extends <em>Sprite_filler</em>.
+Extends <em>Sprite_fg_filler</em>.
 </p>
 <dl>
 </dl>
@@ -350,7 +339,7 @@ Extends <em>Sprite_filler</em>.
 <h3>Gate</h3>
 <pre>struct Gate * <b>Gate</b> (const struct AutoGate *const class)</pre>
 <p>
-Extends <em>Sprite_filler</em>.
+Extends <em>Sprite_fg_filler</em>.
 </p>
 <dl>
 </dl>
@@ -360,7 +349,7 @@ Extends <em>Sprite_filler</em>.
 <h3>Planetoid</h3>
 <pre>struct Planetoid * <b>Planetoid</b> (const struct AutoObjectInSpace *const class)</pre>
 <p>
-Extends <em>Sprite_filler</em>.
+Extends <em>Sprite_fg_filler</em>.
 </p>
 <dl>
 </dl>
@@ -449,31 +438,6 @@ Debugging plot.
 Output sprites.
 </p>
 <dl>
-</dl>
-</div>
-
-<div><a name = "Ship"><!-- --></a>
-<h3>Ship</h3>
-<pre>struct Ship * <b>Ship</b> (const struct AutoShipClass *const class,
-	struct Ortho3f *const r, const enum SpriteBehaviour behaviour)</pre>
-<p>
-Constructor.
-</p>
-<dl>
-	<dt>return</dt>
-	<dd>Newly created ship or null.</dd>
-</dl>
-</div>
-
-<div><a name = "Gate"><!-- --></a>
-<h3>Gate</h3>
-<pre>int <b>Gate</b> (const struct AutoGate *const class)</pre>
-<p>
-Constructor.
-</p>
-<dl>
-	<dt>return</dt>
-	<dd>Success.</dd>
 </dl>
 </div>
 

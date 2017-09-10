@@ -8,12 +8,37 @@
 			8DD76FA90486AB0100D96B5E /* Void */,
 		);
 		breakpoints = (
+			287DC40F1F6486BB0007EF0F /* List.h:945 */,
 		);
 		codeSenseManager = 2866766B1E8467300090EBDC /* Code sense */;
 		executables = (
 			28FB37211E8A0FE1003610DC /* Void */,
 		);
 		perUserDictionary = {
+			"PBXConfiguration.PBXBreakpointsDataSource.v1:1CA1AED706398EBD00589147" = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXBreakpointsDataSource_BreakpointID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					20,
+					198,
+					20,
+					99,
+					99,
+					29,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXBreakpointsDataSource_ActionID,
+					PBXBreakpointsDataSource_TypeID,
+					PBXBreakpointsDataSource_BreakpointID,
+					PBXBreakpointsDataSource_UseID,
+					PBXBreakpointsDataSource_LocationID,
+					PBXBreakpointsDataSource_ConditionID,
+					PBXBreakpointsDataSource_IgnoreCountID,
+					PBXBreakpointsDataSource_ContinueID,
+				);
+			};
 			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
 				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
 				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
@@ -58,8 +83,8 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 526611505;
-			PBXWorkspaceStateSaveDate = 526611505;
+			PBXPerProjectTemplateStateSaveDate = 526680644;
+			PBXWorkspaceStateSaveDate = 526680644;
 		};
 		sourceControlManager = 2866766A1E8467300090EBDC /* Source Control */;
 		userBuildSettings = {
@@ -85,6 +110,23 @@
 	2866766B1E8467300090EBDC /* Code sense */ = {
 		isa = PBXCodeSenseManager;
 		indexTemplatePath = "";
+	};
+	287DC40F1F6486BB0007EF0F /* List.h:945 */ = {
+		isa = PBXFileBreakpoint;
+		actions = (
+		);
+		breakpointStyle = 0;
+		continueAfterActions = 0;
+		countType = 0;
+		delayBeforeContinue = 0;
+		fileReference = 28FB36FC1E8A0FE1003610DC /* List.h */;
+		hitCount = 0;
+		ignoreCount = 0;
+		lineNumber = 945;
+		location = List;
+		modificationTime = 526708242.472677;
+		originalNumberOfMultipleMatches = 1;
+		state = 2;
 	};
 	28A5710D1F3A29F100D5143B /* Info_vsfs.h */ = {
 		uiCtxt = {
@@ -165,9 +207,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {802, 27118}}";
-			sepNavSelRange = "{33465, 0}";
-			sepNavVisRange = "{0, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 26624}}";
+			sepNavSelRange = "{55111, 0}";
+			sepNavVisRange = "{56114, 2153}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
@@ -179,9 +221,9 @@
 	};
 	28FB36F91E8A0FE1003610DC /* Zone.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2249}}";
-			sepNavSelRange = "{2499, 0}";
-			sepNavVisRange = "{1130, 1652}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2236}}";
+			sepNavSelRange = "{2515, 0}";
+			sepNavVisRange = "{1485, 1578}";
 		};
 	};
 	28FB36FA1E8A0FE1003610DC /* Zone.h */ = {
@@ -193,9 +235,9 @@
 	};
 	28FB36FC1E8A0FE1003610DC /* List.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {802, 20748}}";
-			sepNavSelRange = "{13417, 0}";
-			sepNavVisRange = "{0, 0}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 21242}}";
+			sepNavSelRange = "{14961, 0}";
+			sepNavVisRange = "{8079, 1744}";
 		};
 	};
 	28FB36FD1E8A0FE1003610DC /* Orcish.c */ = {

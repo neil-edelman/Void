@@ -94,18 +94,21 @@ static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_TYPE struct Sprite
 #define LIST_UA_NAME Unorder
 #define LIST_TO_STRING &Sprite_to_string
+#define LIST_DEBUG
 #include "../general/List.h"
 /** Every sprite has one {bin} based on their position. \see{OrthoMath.h}. */
 static struct SpriteList bins[BIN_BIN_FG_SIZE + 1];
 static struct SpriteList *const holding_bin = bins + BIN_BIN_FG_SIZE;
 static struct SpriteList fars[BIN_BIN_BG_SIZE];
-/** Fills a sprite with data. It never appears outside of another struct.
+/** Fills a sprite with data. It never appears outside of another struct, viz,
+ it's an abstract class, called from other {fg} or {bg}, which is called from
+ constructors.
  @param auto: An auto-sprite prototype, contained in the precompiled {Auto.h}
  resources, that specifies graphics.
  @param vt: Virtual table.
  @param x: Where should the sprite go. Leave null to place it in a uniform
  distribution across space.
- @fixme I don't like that. I don't like random velocity. */
+ @fixme I don't like random velocity. */
 static void Sprite_filler(struct SpriteListNode *const this,
 	const struct AutoSprite *const as, const struct SpriteVt *const vt,
 	const struct Ortho3f *x) {
@@ -115,7 +118,6 @@ static void Sprite_filler(struct SpriteListNode *const this,
 	s->image   = as->image;
 	s->normals = as->normals;
 	s->collision_set = 0;
-	s->bin = (unsigned)(holding_bin - bins); /* Going in holding bin. */
 	if(x) {
 		Ortho3f_assign(&s->x, x);
 	} else {
@@ -126,21 +128,39 @@ static void Sprite_filler(struct SpriteListNode *const this,
 	Ortho3f_filler_zero(&s->v);
 	s->bounding = s->bounding1 = (as->image->width >= as->image->height ?
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
-	SpriteListPush(holding_bin/*bins + s->bin*/, this);
+}
+static void Sprite_fg_filler(struct SpriteListNode *const this,
+	const struct AutoSprite *const as, const struct SpriteVt *const vt,
+	const struct Ortho3f *x) {
+	Sprite_filler(this, as, vt, x);
+	this->data.bin = (unsigned)(holding_bin - bins), SpriteListPush(holding_bin,
+		this);
+}
+static void Sprite_bg_filler(struct SpriteListNode *const this,
+	const struct AutoSprite *const as, const struct SpriteVt *const vt,
+	const struct Ortho3f *x) {
+	unsigned to_far;
+	Sprite_filler(this, as, vt, x);
+	Vec2f_to_bg_bin(&this->data.x_5, &to_far);
+	printf("Far%u.\n", to_far);
+	this->data.bin = to_far, SpriteListPush(fars + to_far, this);
 }
 static void Delay_migrate(const struct Migrate *const migrate);
 /** Stale pointers from {Set}'s {realloc} are taken care of by this callback.
  One must set it with {*SetSetMigrate}. It's kind of important.
  @implements Migrate */
-static void Sprite_migrate(const struct Migrate *const migrate) {
+static void Sprite_fg_migrate(const struct Migrate *const migrate) {
 	size_t i;
 	/* For all the bins, do a {List} migrate. */
-	for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
-		SpriteListMigrate(bins + i, migrate);
-	}
+	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListMigrate(bins + i, migrate);
 	SpriteListMigrate(holding_bin, migrate);
 	/* {Delay} also has to get migrated, since it has a {sprite}. */
 	Delay_migrate(migrate);
+}
+static void Sprite_bg_migrate(const struct Migrate *const migrate) {
+	size_t i;
+	/* For all the fars, do a {List} migrate. */
+	for(i = 0; i < BIN_BIN_BG_SIZE; i++) SpriteListMigrate(fars + i, migrate);
 }
 
 
@@ -384,7 +404,7 @@ static struct DelaySet *delays, *removes;
 
 /** Called from \see{Delay_transfer}.
  @implements <Sprite>Action */
-static void lazy_update_bin(struct Sprite *const this) {
+static void lazy_update_fg_bin(struct Sprite *const this) {
 	unsigned to_bin;
 	/**/char a[12];
 	assert(this);
@@ -399,7 +419,7 @@ static void Delay_transfer(struct Sprite *const sprite) {
 	struct Delay *d;
 	if(!(d = DelaySetNew(delays))) { fprintf(stderr, "Delay error: %s.\n",
 		DelaySetGetError(delays)); return; }
-	d->action = &lazy_update_bin;
+	d->action = &lazy_update_fg_bin;
 	d->sprite = sprite;
 }
 
@@ -536,7 +556,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteToString)&Ship_to_string,
 	(SpriteFloatAccessor)&Ship_get_mass
 };
-/** Extends {Sprite_filler}. */
+/** Extends {Sprite_fg_filler}. */
 struct Ship *Ship(const struct AutoShipClass *const class,
 	const struct Ortho3f *const x, const enum AiType ai) {
 	struct Ship *ship;
@@ -549,8 +569,6 @@ struct Ship *Ship(const struct AutoShipClass *const class,
 		default: assert(printf("Out of range.", 0));
 	}
 	if(!(ship = ShipSetNew(ships))) return 0;
-	Sprite_filler(&ship->sprite, class->sprite, vt, x);
-	ship->vt = 0;
 	ship->mass = class->mass;
 	ship->shield = class->shield;
 	ship->ms_recharge = class->ms_recharge;
@@ -561,6 +579,7 @@ struct Ship *Ship(const struct AutoShipClass *const class,
 	Orcish(ship->name, sizeof ship->name);
 	ship->wmd = class->weapon;
 	ship->ms_recharge_wmd = 0;
+	Sprite_fg_filler(&ship->sprite, class->sprite, vt, x);
 	return ship;
 }
 
@@ -605,15 +624,15 @@ static const struct SpriteVt debris_vt = {
 	(SpriteToString)&Debris_to_string,
 	(SpriteFloatAccessor)&Debris_get_mass
 };
-/** Extends {Sprite_filler}. */
+/** Extends {Sprite_fg_filler}. */
 struct Debris *Debris(const struct AutoDebris *const class,
 	const struct Ortho3f *const x) {
 	struct Debris *d;
 	assert(class && class->sprite
 		&& class->sprite->image && class->sprite->normals);
 	if(!(d = DebrisSetNew(debris))) return 0;
-	Sprite_filler(&d->sprite, class->sprite, &debris_vt, x);
 	d->mass = class->mass;
+	Sprite_fg_filler(&d->sprite, class->sprite, &debris_vt, x);
 	return d;
 }
 
@@ -668,7 +687,7 @@ static const struct SpriteVt wmd_vt = {
 	(SpriteToString)&Wmd_to_string,
 	(SpriteFloatAccessor)&Wmd_get_mass
 };
-/** Extends {Sprite_filler}. */
+/** Extends {Sprite_fg_filler}. */
 struct Wmd *Wmd(const struct AutoWmdType *const class,
 	const struct Ship *const from) {
 	struct Wmd *w;
@@ -685,13 +704,13 @@ struct Wmd *Wmd(const struct AutoWmdType *const class,
 	x.theta = from->sprite.data.x.theta;
 	if(!(w = WmdSetNew(wmds)))
 		{ printf("Wmd: %s.\n", WmdSetGetError(wmds)); return 0; }
-	Sprite_filler(&w->sprite, class->sprite, &wmd_vt, &x);
 	/* Speed is in [px/s], want it [px/ms]. */
 	w->sprite.data.v.x = from->sprite.data.v.x + dir.x * class->speed * 0.001f;
 	w->sprite.data.v.y = from->sprite.data.v.y + dir.y * class->speed * 0.001f;
 	w->from = &from->sprite.data;
 	w->mass = class->impact_mass;
 	w->expires = TimerGetGameTime() + class->ms_range;
+	Sprite_fg_filler(&w->sprite, class->sprite, &wmd_vt, &x);
 	{
 		const float length = sqrtf(class->r * class->r + class->g * class->g
 			+ class->b * class->b);
@@ -751,7 +770,7 @@ static const struct SpriteVt gate_vt = {
 	(SpriteToString)&Gate_to_string,
 	(SpriteFloatAccessor)&Gate_get_mass
 };
-/** Extends {Sprite_filler}. */
+/** Extends {Sprite_fg_filler}. */
 struct Gate *Gate(const struct AutoGate *const class) {
 	const struct AutoSprite *const gate_sprite = AutoSpriteSearch("Gate");
 	struct Gate *g;
@@ -761,15 +780,10 @@ struct Gate *Gate(const struct AutoGate *const class) {
 	x.y     = class->y;
 	x.theta = class->theta;
 	if(!(g = GateSetNew(gates))) return 0;
-	Sprite_filler(&g->sprite, gate_sprite, &gate_vt, &x);
 	g->to = class->to;
+	Sprite_fg_filler(&g->sprite, gate_sprite, &gate_vt, &x);
 	return g;
 }
-
-
-
-
-
 
 
 
@@ -814,7 +828,7 @@ static const struct SpriteVt planetoid_vt = {
 	(SpriteToString)&Planetoid_to_string,
 	(SpriteFloatAccessor)&Planetoid_get_mass
 };
-/** Extends {Sprite_filler}. */
+/** Extends {Sprite_fg_filler}. */
 struct Planetoid *Planetoid(const struct AutoObjectInSpace *const class) {
 	struct Planetoid *p;
 	struct Ortho3f x;
@@ -824,8 +838,8 @@ struct Planetoid *Planetoid(const struct AutoObjectInSpace *const class) {
 	x.y     = class->y;
 	x.theta = 0;
 	if(!(p = PlanetoidSetNew(planetoids))) return 0;
-	Sprite_filler(&p->sprite, class->sprite, &planetoid_vt, &x);
 	p->name = class->name;
+	Sprite_bg_filler(&p->sprite, class->sprite, &planetoid_vt, &x);
 	printf("Planetoid %s at (%f, %f)!!!\n", p->name, x.x, x.y);
 	return p;
 }
@@ -1125,10 +1139,11 @@ int Sprites(void) {
 	/* Collision is a self-referential stack; this always must be here. */
 	CollisionSetSetMigrate(collisions, &Collision_migrate);
 	/* Updates all the {bins} (etc) that reference sprites on {realloc}. */
-	ShipSetSetMigrate(ships, &Sprite_migrate);
-	DebrisSetSetMigrate(debris, &Sprite_migrate);
-	WmdSetSetMigrate(wmds, &Sprite_migrate);
-	GateSetSetMigrate(gates, &Sprite_migrate);
+	ShipSetSetMigrate(ships, &Sprite_fg_migrate);
+	DebrisSetSetMigrate(debris, &Sprite_fg_migrate);
+	WmdSetSetMigrate(wmds, &Sprite_fg_migrate);
+	GateSetSetMigrate(gates, &Sprite_fg_migrate);
+	PlanetoidSetSetMigrate(planetoids, &Sprite_bg_migrate);
 	/* Initialises to starting all {bins}, (global variable.) */
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(bins + i);
 	SpriteListClear(holding_bin);
@@ -1536,73 +1551,6 @@ static void gate_action(struct Gate *const this) {
 /** @implements <Sprite>Action */
 static void sprite_update(struct Sprite *const this) {
 	this->vt->update(this);
-}
-
-/** @implements <Ship>Action */
-static void ship_filler(struct Ship *const this,
-	const struct AutoShipClass *const class,
-	struct Ortho3f *const r, const enum SpriteBehaviour behaviour) {
-	unsigned bin;
-	const struct SpriteVt *vt;
-	/* all ships start off stationary */
-	const struct Ortho3f v = { 0.0f, 0.0f, 0.0f };
-	assert(this);
-	assert(class);
-	assert(bin < BIN_BIN_SIZE);
-	assert(r);
-	bin = location_to_bin(*(struct Vec2f *)r);
-	Sprite_filler(&this->sprite.data, class->sprite, bin, r, &v);
-	switch(behaviour) {
-		case SB_HUMAN: vt = &human_ship_vt; break;
-		case SB_NONE:
-		case SB_STUPID:
-		default: vt = &ship_vt; break;
-	}
-	this->sprite.data.vt = vt;
-	this->class = class;
-	this->ms_recharge_wmd = TimerGetGameTime();
-	this->ms_recharge_hit = class->ms_recharge;
-	this->event_recharge  = 0; /* full shields, not recharging */
-	this->hit = this->max_hit = class->shield;
-	this->max_speed2      = class->speed * class->speed * px_s_to_px2_ms2;
-	/* fixme:units! should be t/s^2 -> t/ms^2 */
-	this->acceleration    = class->acceleration;
-	this->turn            = class->turn * deg_sec_to_rad_ms;
-	/* fixme: have it explicity settable */
-	this->turn_acceleration = class->turn * deg_sec_to_rad_ms * 0.01f;
-	/* fixme: horizon is broken w/o a way to reset (for gate effect?) */
-	this->horizon         = 0.0f;
-	this->behaviour       = behaviour;
-	Orcish(this->name, sizeof this->name);
-	SpriteListPush(sprites + bin, &this->sprite);
-}
-/** Constructor.
- @return Newly created ship or null. */
-struct Ship *Ship(const struct AutoShipClass *const class,
-	struct Ortho3f *const r, const enum SpriteBehaviour behaviour) {
-	struct Ship *ship;
-	unsigned bin;
-	if(!class || !r) return 0;
-	if(!(ship = ShipSetNew(ships)))
-		{ fprintf(stderr, "Ship: %s.\n", ShipSetGetError(ships)); return 0; }
-	bin = location_to_bin(*(struct Vec2f *)r);
-	ship_filler(ship, class, r, behaviour);
-	/* fixme: add to temp list, sort, merge */
-	SpriteListPush(&sprites[bin], &ship->sprite);
-	return ship;
-}
-
-
-/** Constructor.
- @return Success. */
-int Gate(const struct AutoGate *const class) {
-	struct Gate *gate;
-	if(!class) return 0;
-	assert(gates);
-	if(!(gate = GateSetNew(gates)))
-		{ fprintf(stderr, "Gate: %s.\n", GateSetGetError(gates)); return 0; }
-	gate_filler(gate, class);
-	return 1;
 }
 
 /* Compute bounding boxes of where the sprite wants to go this frame,

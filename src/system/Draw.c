@@ -164,7 +164,7 @@ int Draw(void) {
 	if(!auto_Far(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Far_shader.bmp_sprite, TEX_CLASS_SPRITE);
 	glUniform1i(auto_Far_shader.bmp_normal, TEX_CLASS_NORMAL);
-	glUniform1f(auto_Far_shader.sun_direction, -2.0f);
+	glUniform3f(auto_Far_shader.sun_direction, -0.2f, -0.2f, 0.1f);
 	glUniform3fv(auto_Far_shader.sun_colour, 1, sunshine);
 	if(!auto_Hud(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Hud_shader.sampler, TEX_CLASS_SPRITE);
@@ -569,7 +569,7 @@ static void display(void) {
 	glUseProgram(auto_Far_shader.compiled);
 	/*glUseProgram(light_shader);
 	glUniform1i(light_lights_location, 0);*/
-	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
+	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
 
 	/* background sprites */
 	/*const->glUniform1i(far_texture_location, TEX_CLASS_SPRITE); */
@@ -586,7 +586,7 @@ static void display(void) {
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 	}
 	old_tex = 0;*/
-	FarDrawLambert(&far_lambert);
+	/*FarDrawLambert(&far_lambert);*/
 	SpritesDrawBackground(&far_lambert);
 
 	/* Enable anti-aliasing, set up lights, draw sprites. */

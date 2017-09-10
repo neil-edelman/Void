@@ -124,7 +124,7 @@
 		ignoreCount = 0;
 		lineNumber = 945;
 		location = List;
-		modificationTime = 526710987.010248;
+		modificationTime = 526713670.83165;
 		originalNumberOfMultipleMatches = 1;
 		state = 2;
 	};
@@ -133,6 +133,13 @@
 			sepNavIntBoundsRect = "{{0, 0}, {578, 1703}}";
 			sepNavSelRange = "{1613, 9}";
 			sepNavVisRange = "{1082, 1914}";
+		};
+	};
+	28A5710E1F3A29F100D5143B /* Lambert_vsfs.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2392}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{4441, 1856}";
 		};
 	};
 	28FB36EC1E8A0FE1003610DC /* EntryPosix.c */ = {
@@ -179,9 +186,9 @@
 	};
 	28FB36F31E8A0FE1003610DC /* Game.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2301}}";
-			sepNavSelRange = "{494, 0}";
-			sepNavVisRange = "{0, 1516}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2431}}";
+			sepNavSelRange = "{549, 0}";
+			sepNavVisRange = "{0, 1493}";
 		};
 	};
 	28FB36F41E8A0FE1003610DC /* Game.h */ = {
@@ -207,9 +214,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 26689}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 26559}}";
 			sepNavSelRange = "{10534, 0}";
-			sepNavVisRange = "{9143, 1930}";
+			sepNavVisRange = "{40632, 1894}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
@@ -221,9 +228,9 @@
 	};
 	28FB36F91E8A0FE1003610DC /* Zone.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 2236}}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 2223}}";
 			sepNavSelRange = "{2515, 0}";
-			sepNavVisRange = "{1485, 1578}";
+			sepNavVisRange = "{1127, 1588}";
 		};
 	};
 	28FB36FA1E8A0FE1003610DC /* Zone.h */ = {
@@ -291,9 +298,9 @@
 	};
 	28FB37061E8A0FE1003610DC /* Draw.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 9126}}";
-			sepNavSelRange = "{20536, 0}";
-			sepNavVisRange = "{17141, 2025}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 9152}}";
+			sepNavSelRange = "{6027, 0}";
+			sepNavVisRange = "{4626, 2510}";
 		};
 	};
 	28FB37071E8A0FE1003610DC /* Draw.h */ = {

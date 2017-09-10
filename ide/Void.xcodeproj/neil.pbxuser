@@ -94,7 +94,7 @@
 		uiCtxt = {
 			sepNavIntBoundsRect = "{{0, 0}, {578, 3497}}";
 			sepNavSelRange = "{3022, 0}";
-			sepNavVisRange = "{2266, 1852}";
+			sepNavVisRange = "{325, 1977}";
 		};
 	};
 	2866766A1E8467300090EBDC /* Source Control */ = {
@@ -124,7 +124,7 @@
 		ignoreCount = 0;
 		lineNumber = 945;
 		location = List;
-		modificationTime = 526708242.472677;
+		modificationTime = 526710987.010248;
 		originalNumberOfMultipleMatches = 1;
 		state = 2;
 	};
@@ -207,9 +207,9 @@
 	};
 	28FB36F71E8A0FE1003610DC /* Sprite.c */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 26624}}";
-			sepNavSelRange = "{55111, 0}";
-			sepNavVisRange = "{56114, 2153}";
+			sepNavIntBoundsRect = "{{0, 0}, {578, 26689}}";
+			sepNavSelRange = "{10534, 0}";
+			sepNavVisRange = "{9143, 1930}";
 		};
 	};
 	28FB36F81E8A0FE1003610DC /* Sprite.h */ = {
@@ -235,9 +235,9 @@
 	};
 	28FB36FC1E8A0FE1003610DC /* List.h */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {578, 21242}}";
-			sepNavSelRange = "{14961, 0}";
-			sepNavVisRange = "{8079, 1744}";
+			sepNavIntBoundsRect = "{{0, 0}, {802, 20995}}";
+			sepNavSelRange = "{25899, 0}";
+			sepNavVisRange = "{0, 0}";
 		};
 	};
 	28FB36FD1E8A0FE1003610DC /* Orcish.c */ = {

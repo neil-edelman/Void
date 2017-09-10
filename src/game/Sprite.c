@@ -192,7 +192,7 @@ static void Sprite_to_string(const struct Sprite *this, char (*const a)[12]) {
 #define SET_NAME Bin
 #define SET_TYPE struct SpriteList *
 #include "../general/Set.h" /* defines BinSet, BinSetNode */
-static struct BinSet *draw_bins, *update_bins, *sprite_bins;
+static struct BinSet *draw_bins, *update_bins, *bg_bins, *sprite_bins;
 static struct Rectangle4i grow4; /* for clipping */
 /** @implements <SpriteList *>Action */
 static void Bin_print(struct SpriteList **const pthis) {
@@ -208,7 +208,7 @@ static void new_bins(void) {
 	struct Rectangle4i bin4/*, grow4 <- now static */;
 	struct Vec2i bin2i;
 	struct SpriteList **bin;
-	BinSetClear(draw_bins), BinSetClear(update_bins);
+	BinSetClear(draw_bins), BinSetClear(update_bins), BinSetClear(bg_bins);
 	/* Get the screen c\:oordines and add some space for sprites that are
 	 occluded off the side. In practcal terms, this sets the maximum sprite
 	 size without artifacts at {256px}, ({BIN_FG_HALF_SPACE = 128}.) */
@@ -218,20 +218,20 @@ static void new_bins(void) {
 	rect.y_min -= BIN_FG_HALF_SPACE;
 	rect.y_max += BIN_FG_HALF_SPACE;
 	Rectangle4f_to_fg_bin4(&rect, &bin4);
-	/* the updating region extends past the drawing region */
+	/* The updating region extends past the drawing region. */
 	Rectangle4i_assign(&grow4, &bin4);
 	if(grow4.x_min > 0)               grow4.x_min--;
 	if(grow4.x_max + 1 < BIN_FG_SIZE) grow4.x_max++;
 	if(grow4.y_min > 0)               grow4.y_min--;
 	if(grow4.y_max + 1 < BIN_FG_SIZE) grow4.y_max++;
-	/* draw in the centre */
+	/* Draw in the centre. */
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
 			if(!(bin = BinSetNew(draw_bins))) { perror("draw_bins"); return; }
 			*bin = bins + bin2i_to_fg_bin(bin2i);
 		}
 	}
-	/* update around the outside of the screen */
+	/* Update around the outside of the screen. */
 	if((bin2i.y = grow4.y_min) < bin4.y_min) {
 		for(bin2i.x = grow4.x_min; bin2i.x <= grow4.x_max; bin2i.x++) {
 			if(!(bin = BinSetNew(update_bins))) { perror("update_bins");return;}
@@ -254,6 +254,19 @@ static void new_bins(void) {
 		for(bin2i.y = bin4.y_min; bin2i.y <= bin4.y_max; bin2i.y++) {
 			if(!(bin = BinSetNew(update_bins))) { perror("update_bins");return;}
 			*bin = bins + bin2i_to_fg_bin(bin2i);
+		}
+	}
+	/* The background. */
+	DrawGetScreen(&rect);
+	rect.x_min -= BIN_BG_HALF_SPACE;
+	rect.x_max += BIN_BG_HALF_SPACE;
+	rect.y_min -= BIN_BG_HALF_SPACE;
+	rect.y_max += BIN_BG_HALF_SPACE;
+	Rectangle4f_to_bg_bin4(&rect, &bin4);
+	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
+		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
+			if(!(bin = BinSetNew(bg_bins))) { perror("bg_bins"); return; }
+			*bin = fars + bin2i_to_bg_bin(bin2i);
 		}
 	}
 }
@@ -1127,6 +1140,7 @@ int Sprites(void) {
 	unsigned i;
 	if(!(draw_bins = BinSet())
 		|| !(update_bins = BinSet())
+		|| !(bg_bins = BinSet())
 		|| !(sprite_bins = BinSet())
 		|| !(delays = DelaySet())
 		|| !(removes = DelaySet())
@@ -1165,6 +1179,8 @@ void Sprites_(void) {
 	CollisionSet_(&collisions);
 	DelaySet_(&removes);
 	DelaySet_(&delays);
+	BinSet_(&sprite_bins);
+	BinSet_(&bg_bins);
 	BinSet_(&update_bins);
 	BinSet_(&draw_bins);
 }
@@ -1252,7 +1268,7 @@ void SpritesDrawLambert(LambertOutput draw) {
 }
 /** Use when the Far GPU shader is loaded. */
 void SpritesDrawBackground(LambertOutput draw) {
-	/*BinSetBiForEach(draw_bins, &draw_bin, &draw);*/
+	BinSetBiForEach(bg_bins, &draw_bin, &draw);
 }
 
 /* This is a debug thing. */
@@ -1391,7 +1407,7 @@ void SpritesOut(void) {
 
 
 
-
+/* THIS IS OLD CODE */
 
 #if 0
 
@@ -1605,20 +1621,20 @@ static void collide_boxes(struct Sprite *const this) {
 	for(b = this->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
 		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
 		if(b->is_selected
-		   && this->y_min < b->y_max
-		   && (response = collision_matrix[b->sp_type][this->sp_type])
-		   && collide_circles(this->x, this->y, this->x1, this->y1, b->x, b->y, b->x1,
-							  b->y1, this->bounding + b->bounding, &t0))
+			&& this->y_min < b->y_max
+			&& (response = collision_matrix[b->sp_type][this->sp_type])
+			&& collide_circles(this->x, this->y, this->x1, this->y1, b->x,
+			b->y, b->x1, b->y1, this->bounding + b->bounding, &t0))
 			response(this, b, t0);
 		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
 	}
 	for(b = this->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
 		b_adj_y = b->next_y;
 		if(b->is_selected
-		   && this->y_max > b->y_min
-		   && (response = collision_matrix[b->sp_type][this->sp_type])
-		   && collide_circles(this->x, this->y, this->x1, this->y1, b->x, b->y, b->x1,
-							  b->y1, this->bounding + b->bounding, &t0))
+			&& this->y_max > b->y_min
+			&& (response = collision_matrix[b->sp_type][this->sp_type])
+			&& collide_circles(this->x, this->y, this->x1, this->y1, b->x,
+			b->y, b->x1, b->y1, this->bounding + b->bounding, &t0))
 			response(this, b, t0);
 		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
 	}

@@ -841,7 +841,7 @@ static void PRIVATE_T_U_(cycle, crash)(const struct T_(List) *const this) {
 #ifdef LIST_DEBUG
 	struct T_(ListNode) *turtle, *hare;
 	assert(this);
-	assert(!this->U_(first) ^ !this->U_(last));
+	assert(!this->U_(first) == !this->U_(last));
 	if(!(turtle = hare = this->U_(first))) return;
 	for( ; (hare = hare->U_(next)) && (hare = hare->U_(next)); ) {
 		turtle = turtle->U_(next);

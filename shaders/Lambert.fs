@@ -22,7 +22,7 @@ void main() {
 	normal.xy *= pass_rotation;
 
 	// \\cite{lambert1892photometrie} -- sun directional light is modulated by length
-	vec3 shade = sun_colour * max(0.0, dot(normal, normalize(sun_direction))) * length(sun_direction);
+	vec3 shade = sun_colour * max(0.0, dot(normal, sun_direction));
 	// point lights are modulated by inverse distance, and z is in null-space
 	for(int i = 0; i < MAX_LIGHTS; i++) {
 		if(i >= points) {

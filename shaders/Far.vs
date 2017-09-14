@@ -17,5 +17,5 @@ void main() {
 	pass_rotation = mat2(c, -s, s, c);
 	pass_texture = attrib_texture;
 	vec2 pass_view = object + inv_rotate * attrib_vertex * size;
-	gl_Position = vec4(projection * (pass_view - camera * foreshortening), 0.0, 1.0);
+	gl_Position = vec4(projection * (pass_view - camera*0.2) /* foreshortening*/, 0.0, 1.0);
 }

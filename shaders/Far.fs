@@ -1,8 +1,5 @@
 // copied from Lambert, but ambient and only sun
 
-// black stuff is hard to see
-#define AMBIENT 0.08
-
 // passed these from C
 uniform sampler2D bmp_sprite, bmp_normal;
 uniform vec3 sun_direction;
@@ -21,7 +18,7 @@ void main() {
 	normal.xy *= pass_rotation;
 
 	// \\cite{lambert1892photometrie} -- sun directional light is modulated by length
-	vec3 shade = sun_colour * max(AMBIENT, dot(normal, normalize(sun_direction))) * length(sun_direction);
+	vec3 shade = sun_colour * max(0.0, dot(normal, sun_direction));
 	// with the lighting
 	gl_FragColor = vec4(shade * texel.xyz, texel.w);
 }

@@ -1267,7 +1267,7 @@ void SpritesDrawLambert(LambertOutput draw) {
 	BinSetBiForEach(draw_bins, &draw_bin, &draw);
 }
 /** Use when the Far GPU shader is loaded. */
-void SpritesDrawBackground(LambertOutput draw) {
+void SpritesDrawFar(LambertOutput draw) {
 	BinSetBiForEach(bg_bins, &draw_bin, &draw);
 }
 

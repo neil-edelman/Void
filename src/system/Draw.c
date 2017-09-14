@@ -166,6 +166,7 @@ int Draw(void) {
 	glUniform1i(auto_Far_shader.bmp_normal, TEX_CLASS_NORMAL);
 	glUniform3f(auto_Far_shader.sun_direction, -0.2f, -0.2f, 0.1f);
 	glUniform3fv(auto_Far_shader.sun_colour, 1, sunshine);
+	glUniform1i(auto_Far_shader.foreshortening, 0.25f);
 	if(!auto_Hud(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Hud_shader.sampler, TEX_CLASS_SPRITE);
 	if(!auto_Lighting(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(),0;
@@ -542,13 +543,10 @@ static void display(void) {
 	if(background_tex) {
 		/* use background shader */
 		glUseProgram(auto_Background_shader.compiled);
-
 		/* turn transperency off */
 		glDisable(GL_BLEND);
-
 		/* why?? */
 		glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
-
 		/* fixme: of course it's a background, set once */
 		/*glUniform1i(background_sampler_location, TEX_CLASS_BACKGROUND);*/
 		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
@@ -556,41 +554,12 @@ static void display(void) {
 	}
 	glEnable(GL_BLEND);
 
-	/* fixme: experiment! */
-	glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
-	glBindTexture(GL_TEXTURE_2D, light_tex);
-
-	/* use simple tex_map_shader */
-	/*glUseProgram(tex_map_shader);*/
-	/* why? the glsl entirely specifies this */
-	glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
-
-	/* turn on background lighting (sprites) */
+	/* Draw far objects. */
 	glUseProgram(auto_Far_shader.compiled);
-	/*glUseProgram(light_shader);
-	glUniform1i(light_lights_location, 0);*/
 	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
+	SpritesDrawFar(&far_lambert);
 
-	/* background sprites */
-	/*const->glUniform1i(far_texture_location, TEX_CLASS_SPRITE); */
-
-	/*glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
-	while(FarIterate(&x, &tex, &size)) {
-		if(old_tex != tex) {
-			glBindTexture(GL_TEXTURE_2D, tex);
-			old_tex = tex;
-		}
-		glUniform1f(auto_Far_shader.size, (float)size);
-		glUniform1f(auto_Far_shader.angle, x.theta);
-		glUniform2f(auto_Far_shader.position, x.x, x.y);
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
-	}
-	old_tex = 0;*/
-	/*FarDrawLambert(&far_lambert);*/
-	SpritesDrawBackground(&far_lambert);
-
-	/* Enable anti-aliasing, set up lights, draw sprites. */
-	glEnable(GL_BLEND);
+	/* Set up lights, draw sprites in foreground. */
 	glUseProgram(auto_Lambert_shader.compiled);
 	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
 	glUniform1i(auto_Lambert_shader.points, lights = LightGetArraySize());

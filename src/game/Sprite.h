@@ -30,6 +30,6 @@ void Sprites_(void);
 void SpritesUpdate(const int dt_ms_passed, struct Ship *const centre);
 void SpritesDrawInfo(const InfoOutput draw);
 void SpritesDrawLambert(const LambertOutput draw);
-void SpritesDrawBackground(LambertOutput draw);
+void SpritesDrawFar(LambertOutput draw);
 void SpritesPlot(void);
 void SpritesOut(void);

@@ -932,40 +932,58 @@ static void apply_bounce_later(struct Sprite *const this,
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	const float t0_dt) {
 	struct Vec2f ac, bc, d, a_nrm, a_tan, b_nrm, b_tan, v;
-	float nrm;
+	float nrm, dist_2, dist, min;
 	const float a_m = a->vt->get_mass(a), b_m = b->vt->get_mass(b),
 		diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
 	/* fixme: float stored in memory? */
 
+	/* Check that they are not stuck together first; we absolutely do not want
+	 objects to get stuck orbiting each other. */
+	d.x = a->x.x - b->x.x, d.y = a->x.y - b->x.y;
+	dist_2 = d.x * d.x + d.y * d.y;
+	min = a->bounding + b->bounding;
+	if(dist_2 < min * min) {
+		const float dist_b = sqrtf(dist_2);
+		const float push = (min - dist) * 0.5f;
+		printf("elastic_bounce: degeneracy pressure pushing sprites "
+			"(%.1f,%.1f) apart.\n", push, push);
+		/* Nomalise {d}. */
+		if(dist_b < epsilon) {
+			/* fixme: random direction would be better. */
+			d.x = 1.0f, d.y = 0.0f;
+		} else {
+			const float one_dist = 1.0f / dist_b;
+			d.x *= one_dist, d.y *= one_dist;
+		}
+		/* Degeneracy pressure. */
+		a->x.x -= d.x * push, a->x.y -= d.y * push;
+		b->x.x += d.x * push, b->x.y += d.y * push;
+	}
 	/* Extrapolate position of collision. */
 	ac.x = a->x.x + a->v.x * t0_dt, ac.y = a->x.y + a->v.y * t0_dt;
 	bc.x = b->x.x + b->v.x * t0_dt, bc.y = b->x.y + b->v.y * t0_dt;
 	/* At point of impact. */
 	d.x = bc.x - ac.x, d.y = bc.y - ac.y;
-	nrm = sqrtf(d.x * d.x + d.y * d.y);
-	/* Degeneracy pressure; you absolutely do not want objects to get stuck
-	 orbiting each other. */
-	if(nrm < a->bounding + b->bounding) {
-		const float push = (a->bounding + b->bounding - nrm) * 0.5f;
-		printf("elastic_bounce: degeneracy pressure pushing sprites "
-			"(%.1f,%.1f) apart.\n", push * d.x, push * d.y);
-		a->x.x -= d.x * push, a->x.y -= d.y * push;
-		b->x.x += d.x * push, b->x.y += d.y * push;
+	dist = sqrtf(d.x * d.x + d.y * d.y);
+	/* Nomalise {d}. */
+	if(dist < epsilon) {
+		/* fixme: random direction would be better. */
+		d.x = 1.0f, d.y = 0.0f;
+	} else {
+		const float one_dist = 1.0f / dist;
+		d.x *= one_dist, d.y *= one_dist;
 	}
-	/* Invert to apply to delta to get normalised components. */
-	nrm = (nrm < epsilon) ? 1.0f / epsilon : 1.0f / nrm;
-	d.x *= nrm, d.y *= nrm;
-	/* {a}'s velocity, normal direction */
+	/* {a}'s velocity, normal direction. */
 	nrm = a->v.x * d.x + a->v.y * d.y;
 	a_nrm.x = nrm * d.x, a_nrm.y = nrm * d.y;
-	/* {a}'s velocity, tangent direction */
+	/* {a}'s velocity, tangent direction. */
 	a_tan.x = a->v.x - a_nrm.x, a_tan.y = a->v.y - a_nrm.y;
-	/* b's velocity, normal direction */
+	/* {b}'s velocity, normal direction. */
 	nrm = b->v.x * d.x + b->v.y * d.y;
 	b_nrm.x = nrm * d.x, b_nrm.y = nrm * d.y;
-	/* b's velocity, tangent direction */
+	/* {b}'s velocity, tangent direction. */
 	b_tan.x = b->v.y - b_nrm.x, b_tan.y = b->v.y - b_nrm.y;
-	/* elastic collision */
+	/* Elastic collision. */
 	v.x = a_tan.x +  (a_nrm.x*diff_m + 2*b_m*b_nrm.x) * invsum_m;
 	v.y = a_tan.y +  (a_nrm.y*diff_m + 2*b_m*b_nrm.y) * invsum_m;
 	assert(!isnan(v.x) && !isnan(v.y));

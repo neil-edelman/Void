@@ -520,11 +520,11 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>28BCD6D81F6B6913000D3C29</string>
+				<string>2857BC151F6C7CCA00220073</string>
 				<string>1CA23ED40692098700951B8B</string>
-				<string>28BCD6D91F6B6913000D3C29</string>
+				<string>2857BC161F6C7CCA00220073</string>
 				<string>2866766C1E8467350090EBDC</string>
-				<string>28BCD6DA1F6B6913000D3C29</string>
+				<string>2857BC171F6C7CCA00220073</string>
 				<string>1CA23EDF0692099D00951B8B</string>
 				<string>1CA23EE00692099D00951B8B</string>
 				<string>1CA23EE10692099D00951B8B</string>
@@ -697,7 +697,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>527132947.728387</real>
+	<real>527203530.82863998</real>
 	<key>ToolbarConfigUserDefaultsMinorVersion</key>
 	<string>2</string>
 	<key>ToolbarDisplayMode</key>
@@ -714,9 +714,6 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>28BCD6E11F6B6913000D3C29</string>
-		<string>28BCD6E21F6B6913000D3C29</string>
-		<string>28BCD6E31F6B6913000D3C29</string>
 		<string>/Users/neil/Movies/Void/ide/Void.xcodeproj</string>
 	</array>
 	<key>WindowString</key>

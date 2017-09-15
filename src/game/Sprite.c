@@ -922,65 +922,62 @@ static void apply_bounce_later(struct Sprite *const this,
 	printf("DONE\n");*/
 }
 
-/** Elastic collision between circles; use this when we've determined that {u}
- collides with {v} at {t0_dt}. Called explicitly from collision handlers.
- Alters {u} and {v}. Also, it may alter (fudge) the positions a little to avoid
+/** Elastic collision between circles; use this when we've determined that {a}
+ collides with {b} at {t0_dt} past frame time. Called explicitly from collision
+ handlers. Also, it may alter (fudge) the positions a little to avoid
  interpenetration.
- @param t0_dt: The added time that the collision occurs in {ms}.
- @fixme Changing to generics and now it doesn't work properly; probably a typo
- somewhere migrating it over. */
+ @param t0_dt: The added time that the collision occurs in {ms}. */
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	const float t0_dt) {
-	struct Vec2f ac, bc, d, a_nrm, a_tan, b_nrm, b_tan, v;
-	float nrm, dist_2, dist, min;
+	struct Vec2f ac, bc, c, a_nrm, a_tan, b_nrm, b_tan, v;
+	float nrm, dist_c_2, dist_c, min;
 	const float a_m = a->vt->get_mass(a), b_m = b->vt->get_mass(b),
 		diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
 	/* fixme: float stored in memory? */
 
 	/* Check that they are not stuck together first; we absolutely do not want
-	 objects to get stuck orbiting each other. */
-	d.x = b->x.x - a->x.x, d.y = b->x.y - a->x.y;
-	dist_2 = d.x * d.x + d.y * d.y;
+	 objects to get stuck orbiting each other. (Allow a little room?) */
+	c.x = b->x.x - a->x.x, c.y = b->x.y - a->x.y;
+	dist_c_2 = c.x * c.x + c.y * c.y;
 	min = a->bounding + b->bounding;
-	if(dist_2 < min * min) {
-		const float dist_b = sqrtf(dist_2);
-		const float push = (min - dist_b) * 0.5f;
+	if(dist_c_2 < min * min * 0.94f) {
+		float push;
+		dist_c = sqrtf(dist_c_2);
+		push = (min - dist_c) * 0.5f;
 		printf("elastic_bounce: degeneracy pressure pushing sprites "
 			"(%.1f,%.1f) apart.\n", push, push);
-		/* Nomalise {d}. */
-		if(dist_b < epsilon) {
-			/* fixme: random direction would be better. */
-			d.x = 1.0f, d.y = 0.0f;
+		/* Nomalise {c}. */
+		if(dist_c < epsilon) {
+			c.x = 1.0f, c.y = 0.0f;
 		} else {
-			const float one_dist = 1.0f / dist_b;
-			d.x *= one_dist, d.y *= one_dist;
+			const float one_dist = 1.0f / dist_c;
+			c.x *= one_dist, c.y *= one_dist;
 		}
 		/* Degeneracy pressure. */
-		a->x.x -= d.x * push, a->x.y -= d.y * push;
-		b->x.x += d.x * push, b->x.y += d.y * push;
+		a->x.x -= c.x * push, a->x.y -= c.y * push;
+		b->x.x += c.x * push, b->x.y += c.y * push;
 	}
 	/* Extrapolate position of collision. */
 	ac.x = a->x.x + a->v.x * t0_dt, ac.y = a->x.y + a->v.y * t0_dt;
 	bc.x = b->x.x + b->v.x * t0_dt, bc.y = b->x.y + b->v.y * t0_dt;
 	/* At point of impact. */
-	d.x = bc.x - ac.x, d.y = bc.y - ac.y;
-	dist = sqrtf(d.x * d.x + d.y * d.y);
-	/* Nomalise {d}. */
-	if(dist < epsilon) {
-		/* fixme: random direction would be better. */
-		d.x = 1.0f, d.y = 0.0f;
+	c.x = bc.x - ac.x, c.y = bc.y - ac.y;
+	dist_c = sqrtf(c.x * c.x + c.y * c.y);
+	/* Nomalise {c}. */
+	if(dist_c < epsilon) {
+		c.x = 1.0f, c.y = 0.0f;
 	} else {
-		const float one_dist = 1.0f / dist;
-		d.x *= one_dist, d.y *= one_dist;
+		const float one_dist = 1.0f / dist_c;
+		c.x *= one_dist, c.y *= one_dist;
 	}
 	/* {a}'s velocity, normal direction. */
-	nrm = a->v.x * d.x + a->v.y * d.y;
-	a_nrm.x = nrm * d.x, a_nrm.y = nrm * d.y;
+	nrm = a->v.x * c.x + a->v.y * c.y;
+	a_nrm.x = nrm * c.x, a_nrm.y = nrm * c.y;
 	/* {a}'s velocity, tangent direction. */
 	a_tan.x = a->v.x - a_nrm.x, a_tan.y = a->v.y - a_nrm.y;
 	/* {b}'s velocity, normal direction. */
-	nrm = b->v.x * d.x + b->v.y * d.y;
-	b_nrm.x = nrm * d.x, b_nrm.y = nrm * d.y;
+	nrm = b->v.x * c.x + b->v.y * c.y;
+	b_nrm.x = nrm * c.x, b_nrm.y = nrm * c.y;
 	/* {b}'s velocity, tangent direction. */
 	b_tan.x = b->v.y - b_nrm.x, b_tan.y = b->v.y - b_nrm.y;
 	/* Elastic collision. */
@@ -1683,66 +1680,6 @@ static void collide_boxes(struct Sprite *const this) {
 #endif
 }
 
-/** Called from \see{collide_boxes}.
- @param a, b: Point {u} moves from {a} to {b}.
- @param c, d: Point {v} moves from {c} to {d}.
- @param r: Combined radius.
- @param t0_ptr: If true, sets the time of collision, normalised to the frame
- time, {[0, 1]}.
- @return If they collided. */
-static int collide_circles(const struct Vec2f a, const struct Vec2f b,
-	const struct Vec2f c, const struct Vec2f d, const float r, float *t0_ptr) {
-	/* t \in [0,1]
-	             u = b - a
-	             v = d - c
-	 if(v-u ~= 0) t = doesn't matter, parallel-ish
-	          p(t) = a + (b-a)t
-	          q(t) = c + (d-c)t
-	 distance(t)   = |q(t) - p(t)|
-	 distance^2(t) = (q(t) - p(t))^2
-	               = ((c+vt) - (a+ut))^2
-	               = ((c-a) + (v-u)t)^2
-	               = (v-u)*(v-u)t^2 + 2(c-a)*(v-u)t + (c-a)*(c-a)
-	             0 = 2(v-u)*(v-u)t_min + 2(c-a)*(v-u)
-	         t_min = -(c-a)*(v-u)/(v-u)*(v-u)
-	 this is an optimisation, if t \notin [0,1] then pick the closest; if
-	 distance^2(t_min) < r^2 then we have a collision, which happened at t0,
-	           r^2 = (v-u)*(v-u)t0^2 + 2(c-a)*(v-u)t0 + (c-a)*(c-a)
-	            t0 = [-2(c-a)*(v-u) - sqrt((2(c-a)*(v-u))^2
-	                 - 4((v-u)*(v-u))((c-a)*(c-a) - r^2))] / 2(v-u)*(v-u)
-	            t0 = [-(c-a)*(v-u) - sqrt(((c-a)*(v-u))^2
-	                 - ((v-u)*(v-u))((c-a)*(c-a) - r^2))] / (v-u)*(v-u) */
-	const struct Vec2f
-		u = { b.x - a.x, b.y - a.y }, v = { d.x - c.x, d.y - c.y },
-		vu = { v.x - u.x, v.y - u.y }, ca = { c.x - a.x, c.y - a.y };
-	const float
-		vu_2  = vu.x * vu.x + vu.y * vu.y,
-		ca_vu = ca.x * vu.x + ca.y * vu.y;
-	struct Vec2f dist;
-	float t, dist_2, ca_2, det;
-	/* fixme: float stored in memory? can this be more performant? */
-	assert(t0_ptr);
-	/* time (t_min) of closest approach; we want the first contact */
-	if(vu_2 < epsilon) {
-		t = 0.0f;
-	} else {
-		t = -ca_vu / vu_2;
-		if(     t < 0.0f) t = 0.0f;
-		else if(t > 1.0f) t = 1.0f;
-	}
-	/* distance(t_min) of closest approach */
-	dist.x = ca.x + vu.x * t; dist.y = ca.y + vu.y * t;
-	dist_2 = dist.x * dist.x + dist.y * dist.y;
-	/* not colliding */
-	if(dist_2 >= r * r) return 0;
-	/* collision time, t_0 */
-	ca_2  = ca.x * ca.x + ca.y * ca.y;
-	det   = (ca_vu * ca_vu - vu_2 * (ca_2 - r * r));
-	t = (det <= 0.0f) ? 0.0f : (-ca_vu - sqrtf(det)) / vu_2;
-	if(t < 0.0f) t = 0.0f; /* it can not be > 1 because dist < r^2 */
-	*t0_ptr = t;
-	return 1;
-}
 
 /** @implements <Ship>Action */
 static void ship_recharge(struct Ship *const this) {
@@ -1776,33 +1713,11 @@ void ShipRechage(struct Ship *const this, const int recharge) {
 	}
 }
 
-/** {hit} will be filled with {x} hit, {y} max hit. */
-void ShipGetHit(const struct Ship *const this, struct Vec2u *const hit) {
-	if(!hit) return;
-	if(!this) {
-		hit->x = hit->y = 0;
-	} else {
-		hit->x = this->hit, hit->y = this->max_hit;
-	}
-}
-
-const struct Event *ShipGetEventRecharge(const struct Ship *const this) {
-	if(!this) return 0;
-	return this->event_recharge;
-}
 
 
 
 
 
-
-
-
-/** Accessor. */
-int WmdGetDamage(const struct Wmd *const this) {
-	if(!this) return 0;
-	return this->class->damage;
-}
 
 /** Gets a SpaceZone that it goes to, if it exists. */
 const struct AutoSpaceZone *GateGetTo(const struct Gate *const this) {
@@ -1822,35 +1737,6 @@ struct Gate *GateFind(struct AutoSpaceZone *const to) {
 	GateSetSetParam(gates, to);
 	return GateSetShortCircuit(gates, &find_gate);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* branch cut (-Pi,Pi] */
 /* branch cut (-Pi,Pi] */

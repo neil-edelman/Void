@@ -939,7 +939,7 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 
 	/* Check that they are not stuck together first; we absolutely do not want
 	 objects to get stuck orbiting each other. */
-	d.x = a->x.x - b->x.x, d.y = a->x.y - b->x.y;
+	d.x = b->x.x - a->x.x, d.y = b->x.y - a->x.y;
 	dist_2 = d.x * d.x + d.y * d.y;
 	min = a->bounding + b->bounding;
 	if(dist_2 < min * min) {

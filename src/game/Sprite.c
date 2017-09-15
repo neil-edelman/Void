@@ -944,7 +944,7 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	min = a->bounding + b->bounding;
 	if(dist_2 < min * min) {
 		const float dist_b = sqrtf(dist_2);
-		const float push = (min - dist) * 0.5f;
+		const float push = (min - dist_b) * 0.5f;
 		printf("elastic_bounce: degeneracy pressure pushing sprites "
 			"(%.1f,%.1f) apart.\n", push, push);
 		/* Nomalise {d}. */

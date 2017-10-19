@@ -3,6 +3,7 @@
 struct Sprites;
 struct Sprite;
 struct Ship;
+struct AutoImage;
 struct AutoShipClass;
 struct AutoDebris;
 struct AutoWmdType;
@@ -17,16 +18,18 @@ typedef void (*LambertOutput)(const struct Ortho3f *const x,
 	const struct AutoImage *const image,
 	const struct AutoImage *const normals);
 
-void Sprites_(struct Sprites **const thisp);
-struct Sprites *Sprites(void);
-struct Ship *SpritesShip(struct Sprites *const this,
-	const struct AutoShipClass *const class,
+void Sprites_(void);
+int Sprites(void);
+struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	const struct Ortho3f *const x, const enum AiType ai);
-struct Debris *SpritesDebris(struct Sprites *const sprites,
-	const struct AutoDebris *const class, const struct Ortho3f *const x);
-struct Wmd *SpritesWmd(struct Sprites *const sprites,
-	const struct AutoWmdType *const class, const struct Ship *const from);
+struct Debris *SpritesDebris(const struct AutoDebris *const class,
+	const struct Ortho3f *const x);
+struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
+	const struct Ship *const from);
+struct Gate *SpritesGate(const struct AutoGate *const class);
+
+void SpritesUpdate(const int dt_ms, struct Sprite *const target);
+
 
 /* fixme: stubs */
-void SpritesUpdate(float, struct Ship *);
 void SpritesPlot(void);

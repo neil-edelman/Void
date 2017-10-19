@@ -34,7 +34,6 @@ static int is_started;
 
 /* public struct */
 struct Game {
-	struct Sprites *sprites; /* everything */
 	struct Ship *player; /* camera moves with this */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
@@ -67,7 +66,7 @@ int Game(void) {
 
 	if(is_started) return -1;
 
-	if(!(game.sprites = Sprites())) return 0;
+	if(!Sprites()) return 0;
 
 	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
 	KeyRegister(27,   &quit);
@@ -97,7 +96,7 @@ int Game(void) {
 
 	Zone(game.start);
 	/*Event(0, 2000, 1000, FN_RUNNABLE, &position);*/
-	game.player = SpritesShip(game.sprites, game.nautilus, &position, AI_HUMAN);
+	game.player = SpritesShip(game.nautilus, &position, AI_HUMAN);
 
 	debug("Game: on.\n");
 	is_started = -1;
@@ -112,7 +111,7 @@ void Game_(void) {
 
 	debug("~Game: over.\n");
 	is_started = 0;
-	Sprites_(&game.sprites);
+	Sprites_();
 }
 
 /** updates the gameplay */

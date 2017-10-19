@@ -2,27 +2,25 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- Testing the bins. A {Bin} is like a hash bucket, but instead of hashing, it's
- determined by where in space you are. This allows you to do stuff like drawing
- and AI for onscreen bins and treat the faraway bins with statistical mechanics.
- Which allows you to have a lot of sprites -> ships, weapons -> more epic.
+ Sprites is a polymorphic static structure. Initialise it with {Sprites} and
+ before exiting, when all references have been resolved, {Sprites_}.
 
  @title		Sprites
  @author	Neil
  @std		C89/90
- @version	3.4, 2017-05 generics
- @since		3.3, 2016-01
-			3.2, 2015-06
- @fixme Collision resolution wonky. */
+ @version	2017-10 Broke into smaller pieces.
+ @since		2017-05 Generics.
+			2016-01
+			2015-06 */
 
-#include <stdio.h>  /* fprintf */
+#include <stdio.h> /* fprintf */
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
-#include "../general/OrthoMath.h" /* for measurements and types */
-#include "../general/Orcish.h" /* for ship names */
+#include "../general/Orcish.h" /* for human-readable ship names */
+#include "../general/Delays.h" /* for delays */
 #include "../system/Key.h" /* keys for input */
-#include "../system/Draw.h" /* DrawGetCamera, DrawPoolScreen */
+#include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "../system/Timer.h" /* for expiring */
-#include "Light.h" /* for glowing Sprites */
+#include "Light.h" /* for glowing */
 #include "Sprites.h"
 
 /* This is used for small floating-point values. The value doesn't have any
@@ -146,12 +144,13 @@ struct Gate {
 /** Sprites all together. */
 static struct Sprites {
 	struct SpriteList bins[BIN_BIN_FG_SIZE + 1]; /* [] + holding bin */
+	struct Delays *delays;
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
+	float dt_ms; /* constantly updating frame time */
 } *sprites;
-typedef void (*SpritesAction)(struct Sprites *const, struct Sprite *const);
 
 
 
@@ -162,8 +161,7 @@ typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
 /** Define {SpriteVt}. */
 struct SpriteVt {
 	SpriteToString to_string;
-	SpritesAction delete;
-	SpriteAction update;
+	SpriteAction delete, update;
 	SpriteFloatAccessor get_mass;
 };
 
@@ -203,75 +201,30 @@ static void sprite_delete(struct Sprite *const this) {
 	this->vt->delete(this);
 }
 /** @implements <Ship>Action */
-static void ship_delete(struct Sprites *const s, struct Ship *const this) {
-	SpriteListRemove(s->bins + this->sprite.data.bin, &this->sprite.data);
-	ShipPoolRemove(s->ships, this);
+static void ship_delete(struct Ship *const this) {
+	SpriteListRemove(sprites->bins + this->sprite.data.bin, &this->sprite.data);
+	ShipPoolRemove(sprites->ships, this);
 }
 /** @implements <Debris>Action */
-static void debris_delete(struct Sprites *const s, struct Debris *const this) {
-	SpriteListRemove(s->bins + this->sprite.data.bin, &this->sprite.data);
-	DebrisPoolRemove(s->debris, this);
+static void debris_delete(struct Debris *const this) {
+	SpriteListRemove(sprites->bins + this->sprite.data.bin, &this->sprite.data);
+	DebrisPoolRemove(sprites->debris, this);
 }
 /** @implements <Wmd>Action */
-static void wmd_delete(struct Sprites *const s, struct Wmd *const this) {
+static void wmd_delete(struct Wmd *const this) {
 	Light_(&this->light);
-	SpriteListRemove(s->bins + this->sprite.data.bin, &this->sprite.data);
-	WmdPoolRemove(s->wmds, this);
+	SpriteListRemove(sprites->bins + this->sprite.data.bin, &this->sprite.data);
+	WmdPoolRemove(sprites->wmds, this);
 }
 /** @implements <Gate>Action */
-static void gate_delete(struct Sprites *const s, struct Gate *const this) {
-	SpriteListRemove(s->bins + this->sprite.data.bin, &this->sprite.data);
-	GatePoolRemove(s->gates, this);
+static void gate_delete(struct Gate *const this) {
+	SpriteListRemove(sprites->bins + this->sprite.data.bin, &this->sprite.data);
+	GatePoolRemove(sprites->gates, this);
 }
 
 
 /** @implements <Ship>Action */
 static void ship_update_human(struct Ship *const this) { UNUSED(this); }
-/** Called at beginning of frame with one ship, {player}. (fixme; hmm)
- @implements <Ship>Action */
-static void ship_player(struct Ship *const this) {
-	const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
-	const int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
-	const int ms_shoot = KeyTime(32); /* fixme */
-	/* fixme: This is for all. :[ */
-	if(ms_acceleration > 0) { /* not a forklift */
-		struct Vec2f v = { this->sprite.data.v.x, this->sprite.data.v.y };
-		float a = ms_acceleration * this->acceleration, speed2;
-		v.x += cosf(this->sprite.data.x.theta) * a;
-		v.y += sinf(this->sprite.data.x.theta) * a;
-		if((speed2 = v.x * v.x + v.y * v.y) > this->max_speed2) {
-			float correction = sqrtf(this->max_speed2 / speed2);
-			v.x *= correction, v.y *= correction;
-		}
-		this->sprite.data.v.x = v.x, this->sprite.data.v.y = v.y;
-	}
-	if(ms_turning) {
-		float t = ms_turning * this->turn * turn_acceleration;
-		this->sprite.data.v.theta += t;
-		if(this->sprite.data.v.theta < -this->turn) {
-			this->sprite.data.v.theta = -this->turn;
-		} else if(this->sprite.data.v.theta > this->turn) {
-			this->sprite.data.v.theta = this->turn;
-		}
-	} else {
-		/* \${turn_damping_per_ms^dt_ms}
-		 Taylor: d^25 + d^25(t-25)log d + O((t-25)^2).
-		 @fixme What about extreme values? */
-		this->sprite.data.v.theta *= turn_damping_per_25ms
-			- turn_damping_1st_order * (25/*dt_ms fixme!!!*/ - 25.0f);
-	}
-	if(ms_shoot) /*shoot(this)*/printf("Pew!\n");
-}
-/** This is used by AI and humans.
- @fixme Simplistic, shoot on frame. */
-static void shoot(struct Ship *const ship) {
-	assert(ship && ship->wmd);
-	if(!TimerIsTime(ship->ms_recharge_wmd)) return;
-	printf("Phew!\n");
-	SpritesWmd(ship->wmd, ship);
-	ship->ms_recharge_wmd = TimerGetGameTime() + ship->wmd->ms_recharge;
-}
-static void shoot(struct Ship *const this);
 /** @implements <Ship>Action */
 static void ship_update_dumb_ai(struct Ship *const this) {
 	assert(this);
@@ -369,31 +322,31 @@ static float gate_get_mass(const struct Gate *const this) {
 
 static const struct SpriteVt ship_human_vt = {
 	(SpriteToString)&ship_to_string,
-	(SpritesAction)&ship_delete,
+	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_human,
 	(SpriteFloatAccessor)&ship_get_mass
 };
 static const struct SpriteVt ship_ai_vt = {
 	(SpriteToString)&ship_to_string,
-	(SpritesAction)&ship_delete,
+	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_dumb_ai,
 	(SpriteFloatAccessor)&ship_get_mass
 };
 static const struct SpriteVt debris_vt = {
 	(SpriteToString)&debris_to_string,
-	(SpritesAction)&debris_delete,
+	(SpriteAction)&debris_delete,
 	(SpriteAction)&debris_update,
 	(SpriteFloatAccessor)&debris_get_mass
 };
 static const struct SpriteVt wmd_vt = {
 	(SpriteToString)&wmd_to_string,
-	(SpritesAction)&wmd_delete,
+	(SpriteAction)&wmd_delete,
 	(SpriteAction)&wmd_update,
 	(SpriteFloatAccessor)&wmd_get_mass
 };
 static const struct SpriteVt gate_vt = {
 	(SpriteToString)&gate_to_string,
-	(SpritesAction)&gate_delete,
+	(SpriteAction)&gate_delete,
 	(SpriteAction)&gate_update,
 	(SpriteFloatAccessor)&gate_get_mass
 };
@@ -402,58 +355,61 @@ static const struct SpriteVt gate_vt = {
 
 /****************** Type functions. **************/
 
-/** @implements Migrate */
+/** @param sprites_void: We don't need this because there's only one static.
+ Should always equal {sprites}.
+ @implements Migrate */
 static void bin_migrate(void *const sprites_void,
 	const struct Migrate *const migrate) {
-	struct Sprites *const sprites = sprites_void;
+	struct Sprites *const sprites_pass = sprites_void;
 	unsigned i;
-	assert(sprites && migrate);
+	assert(sprites_pass && sprites_pass == sprites && migrate);
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
-		SpriteListMigrate(sprites->bins + i, migrate);
+		SpriteListMigrate(sprites_pass->bins + i, migrate);
 	}
 }
 
 /** Destructor. */
-void Sprites_(struct Sprites **const thisp) {
-	struct Sprites *this;
+void Sprites_(void) {
 	unsigned i;
-	if(!thisp || (this = *thisp)) return;
-	for(i = 0; i < BIN_BIN_FG_SIZE + 1; i++) SpriteListClear(this->bins + i);
-	GatePool_(&this->gates);
-	WmdPool_(&this->wmds);
-	DebrisPool_(&this->debris);
-	ShipPool_(&this->ships);
+	if(!sprites) return;
+	for(i = 0; i < BIN_BIN_FG_SIZE + 1; i++) SpriteListClear(sprites->bins + i);
+	GatePool_(&sprites->gates);
+	WmdPool_(&sprites->wmds);
+	DebrisPool_(&sprites->debris);
+	ShipPool_(&sprites->ships);
+	free(sprites), sprites = 0;
 }
 
-/** @return A pointer to a new sprites buffer. */
-struct Sprites *Sprites(void) {
-	struct Sprites *this;
+/** @return True if the sprite buffers have been set up. */
+int Sprites(void) {
 	unsigned i;
 	enum { NO, SHIP, DEBRIS, WMD, GATE } e = NO;
 	const char *ea = 0, *eb = 0;
-	if(!(this = malloc(sizeof *this)))
-		{ perror("Sprites"); Sprites_(&this); return 0; }
-	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(this->bins + i);
-	this->ships = 0;
-	this->debris = 0;
-	this->wmds = 0;
-	this->gates = 0;
+	if(sprites) return 1;
+	if(!(sprites = malloc(sizeof *sprites)))
+		{ perror("Sprites"); Sprites_(); return 0; }
+	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(sprites->bins + i);
+	sprites->ships = 0;
+	sprites->debris = 0;
+	sprites->wmds = 0;
+	sprites->gates = 0;
 	do {
-		if(!(this->ships = ShipPool(&bin_migrate, this))) { e = SHIP; break; }
-		if(!(this->debris = DebrisPool(&bin_migrate, this))) { e =DEBRIS;break;}
-		if(!(this->wmds = WmdPool(&bin_migrate, this))) { e = WMD; break; }
-		if(!(this->gates = GatePool(&bin_migrate, this))) { e = GATE; break; }
+		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
+		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
+		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
+		if(!(sprites->gates = GatePool(&bin_migrate, sprites))) { e=GATE;break;}
 	} while(0); switch(e) {
 		case NO: break;
-		case SHIP: ea = "Ship", eb = ShipPoolGetError(this->ships); break;
-		case DEBRIS: ea = "Debris", eb = DebrisPoolGetError(this->debris);break;
-		case WMD: ea = "Wmd", eb = WmdPoolGetError(this->wmds); break;
-		case GATE: ea = "Gate", eb = GatePoolGetError(this->gates); break;
+		case SHIP: ea = "Ship", eb = ShipPoolGetError(sprites->ships); break;
+		case DEBRIS: ea = "Debris",eb=DebrisPoolGetError(sprites->debris);break;
+		case WMD: ea = "Wmd", eb = WmdPoolGetError(sprites->wmds); break;
+		case GATE: ea = "Gate", eb = GatePoolGetError(sprites->gates); break;
 	} if(e) {
 		fprintf(stderr, "Sprites %s: %s.\n", ea, eb);
-		Sprites_(&this);
+		Sprites_();
+		return 0;
 	}
-	return this;
+	return 1;
 }
 
 
@@ -466,10 +422,10 @@ struct Sprites *Sprites(void) {
  @param x: Where should the sprite go. Leave null to place it in a uniform
  distribution across space.
  @fixme I don't like random velocity. */
-static void sprite_filler(struct Sprites *const sprites,
-	struct Sprite *const this, const struct SpriteVt *const vt,
-	const struct AutoSprite *const as, const struct Ortho3f *x) {
-	assert(this && vt && as);
+static void sprite_filler(struct Sprite *const this,
+	const struct SpriteVt *const vt, const struct AutoSprite *const as,
+	const struct Ortho3f *x) {
+	assert(sprites && this && vt && as);
 	this->vt      = vt;
 	this->image   = as->image;
 	this->normals = as->normals;
@@ -488,9 +444,8 @@ static void sprite_filler(struct Sprites *const sprites,
 	SpriteListPush(sprites->bins + this->bin, (struct SpriteListNode *)this);
 }
 
-/** Creates a new Ship. */
-struct Ship *SpritesShip(struct Sprites *const sprites,
-	const struct AutoShipClass *const class,
+/** Creates a new {Ship}. */
+struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	const struct Ortho3f *const x, const enum AiType ai) {
 	struct Ship *this;
 	const struct SpriteVt *vt;
@@ -514,13 +469,13 @@ struct Ship *SpritesShip(struct Sprites *const sprites,
 	Orcish(this->name, sizeof this->name);
 	this->wmd = class->weapon;
 	this->ms_recharge_wmd = 0;
-	sprite_filler(sprites, &this->sprite.data, vt, class->sprite, x);
+	sprite_filler(&this->sprite.data, vt, class->sprite, x);
 	return this;
 }
 
-/** Creates a new Debris. */
-struct Debris *SpritesDebris(struct Sprites *const sprites,
-	const struct AutoDebris *const class, const struct Ortho3f *const x) {
+/** Creates a new {Debris}. */
+struct Debris *SpritesDebris(const struct AutoDebris *const class,
+	const struct Ortho3f *const x) {
 	struct Debris *this;
 	if(!sprites || !class) return 0;
 	assert(class->sprite && class->sprite->image && class->sprite->normals);
@@ -528,13 +483,13 @@ struct Debris *SpritesDebris(struct Sprites *const sprites,
 		{ fprintf(stderr, "SpriteDebris: %s.\n",
 		DebrisPoolGetError(sprites->debris)); return 0; }
 	this->mass = class->mass;
-	sprite_filler(sprites, &this->sprite.data, &debris_vt, class->sprite, x);
+	sprite_filler(&this->sprite.data, &debris_vt, class->sprite, x);
 	return this;
 }
 
-/** Creates a new Wmd. */
-struct Wmd *SpritesWmd(struct Sprites *const sprites,
-	const struct AutoWmdType *const class, const struct Ship *const from) {
+/** Creates a new {Wmd}. */
+struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
+	const struct Ship *const from) {
 	struct Wmd *this;
 	struct Ortho3f x;
 	struct Vec2f dir;
@@ -556,7 +511,7 @@ struct Wmd *SpritesWmd(struct Sprites *const sprites,
 	this->from = &from->sprite.data;
 	this->mass = class->impact_mass;
 	this->expires = TimerGetGameTime() + class->ms_range;
-	sprite_filler(sprites, &this->sprite.data, &wmd_vt, class->sprite, &x);
+	sprite_filler(&this->sprite.data, &wmd_vt, class->sprite, &x);
 	{
 		const float length = sqrtf(class->r * class->r + class->g * class->g
 			+ class->b * class->b);
@@ -567,22 +522,22 @@ struct Wmd *SpritesWmd(struct Sprites *const sprites,
 	return this;
 }
 
-
-
-
-/** Extends {Sprite_fg_filler}. */
-struct Gate *Gate(const struct AutoGate *const class) {
+/** Creates a new {Gate}. */
+struct Gate *SpritesGate(const struct AutoGate *const class) {
 	const struct AutoSprite *const gate_sprite = AutoSpriteSearch("Gate");
-	struct Gate *g;
+	struct Gate *this;
 	struct Ortho3f x;
-	assert(class && gate_sprite && gate_sprite->image && gate_sprite->normals);
+	if(!sprites || !class) return 0;
+	assert(gate_sprite && gate_sprite->image && gate_sprite->normals);
 	x.x     = class->x;
 	x.y     = class->y;
 	x.theta = class->theta;
-	if(!(g = GatePoolNew(gates))) return 0;
-	g->to = class->to;
-	Sprite_fg_filler(&g->sprite, gate_sprite, &gate_vt, &x);
-	return g;
+	if(!(this = GatePoolNew(sprites->gates)))
+		{ fprintf(stderr, "SpritesGate: %s.\n",
+		GatePoolGetError(sprites->gates)); return 0; }
+	this->to = class->to;
+	sprite_filler(&this->sprite.data, &gate_vt, gate_sprite, &x);
+	return this;
 }
 
 
@@ -590,57 +545,66 @@ struct Gate *Gate(const struct AutoGate *const class) {
 
 
 
-/*************** Update *****************/
+/*************** Functions. *****************/
 
-
-
-/** Relies on \see{extrapolate}; all pre-computation is finalised in this step
- and values are advanced. Collisions are used up and need to be cleared after.
- @implements <Sprite>Action */
-static void timestep(struct Sprite *const sprites) {
-	struct Collision *c;
-	float t0 = dt_ms;
-	struct Vec2f v1 = { 0.0f, 0.0f }, d;
-	assert(sprites);
-	/* The earliest time to collision and sum the collisions together. */
-	for(c = sprites->collision_set; c; c = c->next) {
-		/*char a[12];*/
-		d.x = sprites->x.x + sprites->v.x * c->t;
-		d.y = sprites->x.y + sprites->v.y * c->t;
-		/*fprintf(gnu_glob, "set arrow from %f,%f to %f,%f lw 0.5 "
-		 "lc rgb \"#EE66AA\" front;\n", d.x, d.y,
-		 d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));*/
-		/*this->vt->to_string(this, &a);
-		printf("%s collides at %.1f and ends up going (%.1f, %.1f).\n", a,
-			c->t, c->v.x * 1000.0f, c->v.y * 1000.0f);*/
-		if(c->t < t0) t0 = c->t;
-		v1.x += c->v.x, v1.y += c->v.y;
-		/* fixme: stability! do a linear search O(n) to pick out the 2 most
-		 recent, then divide by, { 1, 2, 4, 4, 4, . . . }? */
-	}
-	sprites->x.x = sprites->x.x + sprites->v.x * t0 + v1.x * (dt_ms - t0);
-	sprites->x.y = sprites->x.y + sprites->v.y * t0 + v1.y * (dt_ms - t0);
-	if(sprites->collision_set) {
-		sprites->collision_set = 0;
-		sprites->v.x = v1.x, sprites->v.y = v1.y;
-	}
-	/* Angular velocity. */
-	sprites->x.theta += sprites->v.theta /* omega */ * dt_ms;
-	branch_cut_pi_pi(&sprites->x.theta);
+/** This is used by AI and humans.
+ @fixme Simplistic, shoot on frame. */
+static void shoot(struct Ship *const ship) {
+	assert(ship && ship->wmd);
+	if(!TimerIsTime(ship->ms_recharge_wmd)) return;
+	printf("Phew!\n");
+	SpritesWmd(ship->wmd, ship);
+	ship->ms_recharge_wmd = TimerGetGameTime() + ship->wmd->ms_recharge;
 }
 
-void SpritesUpdate(const int dt_ms_passed, struct Ship *const player) {
-	/* The passed parameter goes into a global; we are using it a lot. */
-	dt_ms = dt_ms_passed;
+/** Called at beginning of frame with one ship, {player}. (fixme; hmm)
+ @implements <Ship>Action */
+static void ship_player(struct Ship *const this) {
+	const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
+	const int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
+	const int ms_shoot = KeyTime(32); /* fixme */
+	/* fixme: This is for all. :[ */
+	if(ms_acceleration > 0) { /* not a forklift */
+		struct Vec2f v = { this->sprite.data.v.x, this->sprite.data.v.y };
+		float a = ms_acceleration * this->acceleration, speed2;
+		v.x += cosf(this->sprite.data.x.theta) * a;
+		v.y += sinf(this->sprite.data.x.theta) * a;
+		if((speed2 = v.x * v.x + v.y * v.y) > this->max_speed2) {
+			float correction = sqrtf(this->max_speed2 / speed2);
+			v.x *= correction, v.y *= correction;
+		}
+		this->sprite.data.v.x = v.x, this->sprite.data.v.y = v.y;
+	}
+	if(ms_turning) {
+		float t = ms_turning * this->turn * turn_acceleration;
+		this->sprite.data.v.theta += t;
+		if(this->sprite.data.v.theta < -this->turn) {
+			this->sprite.data.v.theta = -this->turn;
+		} else if(this->sprite.data.v.theta > this->turn) {
+			this->sprite.data.v.theta = this->turn;
+		}
+	} else {
+		/* \${turn_damping_per_ms^dt_ms}
+		 Taylor: d^25 + d^25(t-25)log d + O((t-25)^2).
+		 @fixme What about extreme values? */
+		this->sprite.data.v.theta *= turn_damping_per_25ms
+		- turn_damping_1st_order * (sprites->dt_ms - 25.0f);
+	}
+	if(ms_shoot) shoot(this);
+}
+
+/** Update each frame.
+ @param target: What the camera focuses on; could be null. */
+void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
+	if(!sprites) return;
+	/* Update with the passed parameter. */
+	sprites->dt_ms = dt_ms;
 	/* Centre on the sprite that was passed, if it is available. */
 	/* \see{SpriteUpdate} has a fixed camera position; apply input before the
 	 update so we can predict what the camera is going to do; when collisions
 	 occur, this causes the camera to jerk, but it's better than always
 	 lagging? */
-	if(player) {
-		DrawPoolCamera((struct Vec2f *)&player->sprite.data.x);
-		Ship_player(player);
-	}
+	if(target) DrawSetCamera((struct Vec2f *)&target->x);
 	/* Each frame, calculate the bins that are visible and stuff. */
 	new_bins();
 	/* The {holding_bin} is an invisible {bin} that sprites go to spawn and not

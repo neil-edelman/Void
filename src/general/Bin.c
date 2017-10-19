@@ -1,3 +1,20 @@
+/** 2017 Neil Edelman, distributed under the terms of the GNU General
+ Public License 3, see copying.txt, or
+ \url{ https://opensource.org/licenses/GPL-3.0 }.
+
+ Testing the bins. A {Bin} is like a hash bucket, but instead of hashing, it's
+ determined by where in space you are. This allows you to do stuff like drawing
+ and AI for onscreen bins and treat the faraway bins with statistical mechanics.
+ Which allows you to have a lot of sprites -> ships, weapons -> more epic.
+
+ @title		Bin
+ @author	Neil
+ @std		C89/90
+ @version	3.4, 2017-05 generics
+ @since		3.3, 2016-01
+ 3.2, 2015-06
+ @fixme Collision resolution wonky. */
+
 #include "Bin.h"
 
 BinPool_(&sprite_bins);

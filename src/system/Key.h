@@ -1,6 +1,7 @@
 #define KEY_MAX 255
 
-/* https://en.wikipedia.org/wiki/Keyboard_layout
+/* We don't care what historical deliniation these had; map 'special' keys to
+ just keys. \url{https://en.wikipedia.org/wiki/Keyboard_layout}
  101 key US, 104 key Windows, 102/105 international, 110/109/112 extended
  so there's lots of room for these */
 enum Keys {

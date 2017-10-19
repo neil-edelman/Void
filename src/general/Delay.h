@@ -1,1 +1,0 @@
-void delay_delete();

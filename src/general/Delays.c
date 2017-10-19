@@ -1,4 +1,16 @@
-#include "Delay.h"
+/** 2017 Neil Edelman, distributed under the terms of the GNU General
+ Public License 3, see copying.txt, or
+ \url{ https://opensource.org/licenses/GPL-3.0 }.
+
+ Use when you want to call a function, but not right away.
+
+ @title		Delays
+ @author	Neil
+ @std		C89/90
+ @version	2017-10 Broke off from Sprites. */
+
+
+#include "Delays.h"
 
 void delay_delete();
 
@@ -60,10 +72,4 @@ static void Delay_migrate_sprite(struct Delay *const this,
 	const struct Migrate *const migrate = migrate_void;
 	assert(this && migrate);
 	SpriteMigrate(migrate, &this->sprite);
-}
-/** The {sprite} field in {Delay} needs migrating. Called from {Sprite_migrate}.
- @implements Migrate */
-static void Delay_migrate(const struct Migrate *const migrate) {
-	DelayPoolBiForEach(delays, &Delay_migrate_sprite, (void *const)migrate);
-	DelayPoolBiForEach(removes, &Delay_migrate_sprite, (void *const)migrate);
 }

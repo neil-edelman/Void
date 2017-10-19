@@ -14,7 +14,7 @@
 #include <stdio.h>  /* printf */
 #include "../../build/Auto.h"
 #include "../Print.h"
-#include "Sprite.h"
+#include "Sprites.h"
 #include "Event.h"
 #include "Zone.h"
 #include "Light.h"
@@ -34,6 +34,7 @@ static int is_started;
 
 /* public struct */
 struct Game {
+	struct Sprites *sprites; /* everything */
 	struct Ship *player; /* camera moves with this */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
@@ -66,6 +67,8 @@ int Game(void) {
 
 	if(is_started) return -1;
 
+	if(!(game.sprites = Sprites())) return 0;
+
 	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
 	KeyRegister(27,   &quit);
 	KeyRegister('p',  &pause);
@@ -94,7 +97,7 @@ int Game(void) {
 
 	Zone(game.start);
 	/*Event(0, 2000, 1000, FN_RUNNABLE, &position);*/
-	game.player = Ship(game.nautilus, &position, AI_HUMAN);
+	game.player = SpritesShip(game.sprites, game.nautilus, &position, AI_HUMAN);
 
 	debug("Game: on.\n");
 	is_started = -1;
@@ -109,6 +112,7 @@ void Game_(void) {
 
 	debug("~Game: over.\n");
 	is_started = 0;
+	Sprites_(&game.sprites);
 }
 
 /** updates the gameplay */

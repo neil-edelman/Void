@@ -20,7 +20,7 @@
 #include "system/Timer.h"
 #include "system/Key.h"
 struct AutoImage; /* for Sprite.h */
-#include "game/Sprite.h"
+#include "game/Sprites.h"
 #include "game/Game.h"
 
 /* constants */
@@ -31,6 +31,8 @@ static const int versionMinor  = 3;
 
 static void main_(void);
 static void usage(void);
+
+static struct Sprites *sprites;
 
 /** Entry point.
  @param argc the number of arguments starting with the programme name
@@ -53,7 +55,7 @@ int main(int argc, char **argv) {
 	/* start up subsystems; window has to be first; timer ms */
 	if(!Window(programme, argc, argv)
 		|| !Key()
-		|| !Sprites()
+		|| !(sprites = Sprites())
 		|| !Draw()
 	    || !Game()) return EXIT_FAILURE;
 
@@ -71,7 +73,7 @@ static void main_(void) {
 	TimerPause();
 	Game_();
 	Draw_();
-	Sprites_();
+	Sprites_(&sprites);
 }
 
 /** Help screen. */

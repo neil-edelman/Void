@@ -24,34 +24,44 @@
 
 #define ONE_S_TO_ONE_MS_F (0.001f)
 
-/* changed? update shader Far.vs! should be 0.00007:14285.714; space is
- big! too slow to get anywhere, so fudge it; basically, this makes space much
- smaller: ratio of fg:bg distance. */
-#define FG_BG_FORSHORTENING_F (0.2f)
-#define BG_FG_ONE_FORESHORTENING_F (5.0f)
 /* 1 guarantees that an object is detected within BIN_FG_SPACE; less will make
  it n^2 faster, but could miss something. */
 #define SHORTCUT_COLLISION (0.5f)
 
 /* 16384px de sitter (8192px on each quadrant,) divided between positive and
  negative for greater floating point accuracy */
-#define BIN_LOG_ENTIRE 14
+#define BIN_LOG_ENTIRE (14)
 #define BIN_ENTIRE (1 << BIN_LOG_ENTIRE)
 #define BIN_HALF_ENTIRE (1 << (BIN_LOG_ENTIRE - 1))
 /* 256px bins in the foreground, (ships, etc.) */
-#define BIN_FG_LOG_SPACE 8
+#define BIN_FG_LOG_SPACE (8)
 #define BIN_FG_SPACE (1 << BIN_FG_LOG_SPACE)
 #define BIN_FG_HALF_SPACE (1 << (BIN_FG_LOG_SPACE - 1))
 #define BIN_FG_LOG_SIZE (BIN_LOG_ENTIRE - BIN_FG_LOG_SPACE)
 #define BIN_FG_SIZE (1 << BIN_FG_LOG_SIZE)
 #define BIN_BIN_FG_SIZE (BIN_FG_SIZE * BIN_FG_SIZE)
-/* 1024px bins in the background, (planets, etc.) */
-#define BIN_BG_LOG_SPACE 10
-#define BIN_BG_SPACE (1 << BIN_BG_LOG_SPACE)
-#define BIN_BG_HALF_SPACE (1 << (BIN_BG_LOG_SPACE - 1))
-#define BIN_BG_LOG_SIZE (BIN_LOG_ENTIRE - BIN_BG_LOG_SPACE)
-#define BIN_BG_SIZE (1 << BIN_FG_LOG_SIZE)
-#define BIN_BIN_BG_SIZE (BIN_BG_SIZE * BIN_BG_SIZE)
+/* 1024px bins in the background, (planets, etc.)
+ changed? update shader Far.vs! should be 0.00007:14285.714; space is
+ big! too slow to get anywhere, so fudge it; basically, this makes space much
+ smaller: ratio of fg:bg distance. */
+#define BIN_BG_FORESHORTENING (5)
+#define BIN_BG_LOG_SPACE (10)
+#define BIN_BG_SPACE (1 << BIN_BG_LOG_SPACE) /* 1024 */
+#define BIN_BG_EFFECIVE_SPACE (BIN_BG_SPACE * BIN_BG_FORESHORTENING) /* 5120 */
+#define BIN_BG_HALF_SPACE (1 << (BIN_BG_LOG_SPACE - 1)) /* 512 */
+#define BIN_BG_EFFECTIVE_HALF_SPACE \
+	(BIN_BG_HALF_SPACE * BIN_BG_FORESHORTENING) /* 2560 */
+#define BIN_BG_LOG_SIZE (BIN_LOG_ENTIRE - BIN_BG_LOG_SPACE) /* 4 */
+#define BIN_BG_SIZE ((1 << BIN_BG_LOG_SIZE) / BIN_BG_FORESHORTENING) /* 3 */
+#define BIN_BIN_BG_SIZE (BIN_BG_SIZE * BIN_BG_SIZE) /* 9 */
+
+/*
+ 2^14 = 16384 px entire
+ *0.2 = 3276.8 px foreshortened entire
+ 1024*5 = 5120 px effective length of one bg bin
+ 3[.2] bins
+ 5120 px * 3 / 2 = 7680 px on either side
+*/
 
 /** {Ortho3f} must be able to be reinterpreted as {Vec3f}. */
 /*struct Vec2u { unsigned x, y; };*/
@@ -192,28 +202,42 @@ static void Rectangle4i_assign(struct Rectangle4i *const this,
 	this->y_min = that->y_min;
 	this->y_max = that->y_max;
 }
+/** Assigns {that} to {this}. */
+static void Rectangle4f_assign(struct Rectangle4f *const this,
+	const struct Rectangle4f *const that) {
+	assert(this);
+	assert(that);
+	this->x_min = that->x_min;
+	this->x_max = that->x_max;
+	this->y_min = that->y_min;
+	this->y_max = that->y_max;
+}
 /** Maps a recangle from pixel space, {pixel}, to bin2 space, {bin}. */
 static void Rectangle4f_to_fg_bin4(const struct Rectangle4f *const pixel,
 	struct Rectangle4i *const bin) {
-	int temp;
+	int temp; /* is an index */
 	assert(pixel);
 	assert(pixel->x_min <= pixel->x_max);
 	assert(pixel->y_min <= pixel->y_max);
 	assert(bin);
-	temp = ((int)pixel->x_min + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
+	temp = ((int)pixel->x_min - BIN_FG_HALF_SPACE + BIN_HALF_ENTIRE)
+		>> BIN_FG_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= BIN_FG_SIZE) temp = BIN_FG_SIZE - 1;
 	bin->x_min = temp;
 	/*printf("x_min %f -> %d\n", pixel->x_min, temp);*/
-	temp = ((int)pixel->x_max + 1 + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
+	temp = ((int)pixel->x_max + 1 + BIN_FG_HALF_SPACE + BIN_HALF_ENTIRE)
+		>> BIN_FG_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= BIN_FG_SIZE) temp = BIN_FG_SIZE - 1;
 	bin->x_max = temp;
-	temp = ((int)pixel->y_min + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
+	temp = ((int)pixel->y_min - BIN_FG_HALF_SPACE + BIN_HALF_ENTIRE)
+		>> BIN_FG_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= BIN_FG_SIZE) temp = BIN_FG_SIZE - 1;
 	bin->y_min = temp;
-	temp = ((int)pixel->y_max + 1 + BIN_HALF_ENTIRE) >> BIN_FG_LOG_SPACE;
+	temp = ((int)pixel->y_max + 1 + BIN_FG_HALF_SPACE + BIN_HALF_ENTIRE)
+		>> BIN_FG_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= BIN_FG_SIZE) temp = BIN_FG_SIZE - 1;
 	bin->y_max = temp;
@@ -225,11 +249,11 @@ static void Rectangle4f_to_bg_bin4(const struct Rectangle4f *const pixel,
 	assert(pixel->x_min <= pixel->x_max);
 	assert(pixel->y_min <= pixel->y_max);
 	assert(bin);
-	temp = ((int)pixel->x_min + BIN_HALF_ENTIRE) >> BIN_BG_LOG_SPACE;
+	temp = ((int)pixel->x_min + BIN_HALF_ENTIRE) / BIN_BG_EFFECIVE_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= BIN_BG_SIZE) temp = BIN_BG_SIZE - 1;
 	bin->x_min = temp;
-	temp = ((int)pixel->x_max + 1 + BIN_HALF_ENTIRE) >> BIN_BG_LOG_SPACE;
+	temp = ((int)pixel->x_max + 1 + BIN_HALF_ENTIRE) / BIN_BG_LOG_SPACE;
 	if(temp < 0) temp = 0;
 	else if((unsigned)temp >= BIN_BG_SIZE) temp = BIN_BG_SIZE - 1;
 	bin->x_max = temp;
@@ -262,6 +286,7 @@ static void orthomath_unused(void) {
 
 	Rectangle4f_init(0);
 	Rectangle4i_assign(0, 0);
+	Rectangle4f_assign(0, 0);
 	Rectangle4f_to_fg_bin4(0, 0);
 	Rectangle4f_to_bg_bin4(0, 0);
 

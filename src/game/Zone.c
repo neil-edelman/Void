@@ -74,7 +74,6 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	Planetoid(sz->ois1);
 	Planetoid(sz->ois2);
 	Planetoid(sz->ois3);
-	printf("***planets???\n");
 
 	Gate(sz->gate1);
 
@@ -85,7 +84,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	for(i = 0; i < 70/*00*/; i++) Debris(asteroid, 0);
 
 	/* sprinkle some ships */
-	for(i = 0; i < 10/*00*/; i++) Ship(blob_class, 0, AI_DUMB);
+	for(i = 0; i < 1000; i++) Ship(blob_class, 0, AI_DUMB);
 
 }
 

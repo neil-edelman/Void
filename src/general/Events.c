@@ -23,10 +23,7 @@
 struct Event;
 struct EventVt;
 struct EventList;
-struct Event {
-	struct EventVt *vt;
-	struct EventList *in_list;
-};
+struct Event { struct EventVt *vt; };
 
 #define LIST_NAME Event
 #define LIST_TYPE struct Event
@@ -72,15 +69,15 @@ struct SpriteConsumer {
 #include "../templates/Pool.h"
 
 /** Events are fit to various bins depending on the length of the delay. Longer
- delays will be more granular and less-resolution. Maximum delay is
- ~10 minutes; \${1.024s * 64 * 8 * (min/60s) <= 8.74min}. */
+ delays will be more granular and less-resolution. Maximum delay is,
+ \${1.024s * 64 * 8 * (min/60s) <= 8.74min} */
 struct Events;
 struct Events {
 	unsigned update; /* time */
-	struct EventList now;
-	struct EventList approx1s[7];
+	struct EventList immediate;
+	struct EventList approx1s[7]; /* the {1s} falls though to {8s}, etc. */
 	struct EventList approx8s[7];
-	struct EventList approx64s[7];
+	struct EventList approx64s[8];
 	struct RunnablePool *runnables;
 	struct IntConsumerPool *int_consumers;
 	struct SpriteConsumerPool *sprite_consumers;
@@ -94,32 +91,29 @@ typedef void (*EventsAction)(struct Events *const, struct Event *const);
 
 struct EventVt { EventsAction call; };
 
-static void event_call(struct Events *const events, struct Event *const this) {
+/** This is only called from {run_event_list} as the event list must be purged
+ because the backing in the {Pool}s has been removed; important!
+ @implements <Event, [Events]>BiAction */
+static void event_call(struct Event *const this, struct Events *const events) {
 	assert(events && this);
 	this->vt->call(events, this);
 }
 
 static void runnable_call(struct Events *const events,
 	struct Runnable *const this) {
-	assert(events && this);
 	this->run();
-	EventListRemove(this->event.data.in_list, &this->event.data);
 	RunnablePoolRemove(events->runnables, this);
 }
 
 static void int_consumer_call(struct Events *const events,
 	struct IntConsumer *const this) {
-	assert(events && this);
 	this->accept(this->param);
-	EventListRemove(this->event.data.in_list, &this->event.data);
 	IntConsumerPoolRemove(events->int_consumers, this);
 }
 
 static void sprite_consumer_call(struct Events *const events,
 	struct SpriteConsumer *const this) {
-	assert(events && this);
 	this->accept(this->param);
-	EventListRemove(this->event.data.in_list, &this->event.data);
 	SpriteConsumerPoolRemove(events->sprite_consumers, this);
 }
 
@@ -136,7 +130,7 @@ static const struct EventVt
 static void clear_events(struct Events *const this) {
 	unsigned i;
 	assert(this);
-	EventListClear(&this->now);
+	EventListClear(&this->immediate);
 	for(i = 0; i < sizeof this->approx1s / sizeof(struct EventList *); i++)
 		EventListClear(this->approx1s + i);
 	for(i = 0; i < sizeof this->approx8s / sizeof(struct EventList *); i++)
@@ -181,33 +175,100 @@ struct Events *Events(void) {
 	return this;
 }
 
-static void run_event_list(struct Events *const this,
+static void run_event_list(struct Events *const events,
 	struct EventList *const list) {
-	assert(this && list);
-	
+	assert(events && list);
+	EventListBiForEach(list, (EventBiAction)&event_call, events);
+	/* {event_call} strips away their backing, so this call is important! */
+	EventListClear(list);
 }
 
 /** Fire off {Events} that have happened. */
 void EventsUpdate(struct Events *const this) {
-	const unsigned now = TimerGetGameTime(), time;
+	struct EventList *chosen;
+	struct { unsigned cur, end; int done; } t1s, t8s, t64s;
+	const unsigned now = TimerGetGameTime();
+	enum { T64S, T8S, T1S } granularity = T64S;
 	if(!this) return;
-	run_event_list(this, &this->now);
-	for(time = ; i < 7; i++) {
-		run_events();
+	/* Always run events that are immediate asap. */
+	run_event_list(this, &this->immediate);
+	/* Applies the timer with a granularity of whatever; all are [0, 7].
+	 fixme: Meh, could be better. */
+	t64s.cur = (this->update & (7 << 16)) >> 16;
+	t64s.end = (now & (7 << 16)) >> 16;
+	t8s.cur  = (this->update & (7 << 13)) >> 13;
+	t8s.end  = (now & (7 << 13)) >> 13;
+	t1s.cur  = (this->update & (7 << 10)) >> 10;
+	t1s.end  = (now & (7 << 10)) >> 10;
+	t1s.done = t8s.done && (t1s.cur == t1s.end);
+	do {
+		switch(granularity) {
+			case T64S: t64s.done = (t64s.cur == t64s.end);
+			case T8S:  t8s.done  = t64s.done && (t8s.cur == t8s.end);
+			case T1S:  t1s.done  = t8s.done && (t1s.cur == t1s.end);
+		}
+		if(t1s.cur != 7) {
+			chosen = this->approx1s + t1s.cur++;
+			granularity = T1S;
+		} else {
+			t1s.cur = 0;
+			if(t8s.cur != 7) {
+				chosen = this->approx8s + t8s.cur++;
+				granularity = T8S;
+			} else {
+				t8s.cur = 0;
+				chosen = this->approx64s + t64s.cur++;
+				t64s.cur &= 7;
+				granularity = T64S;
+			}
+		}
+		run_event_list(this, chosen);
+	} while(!t1s.done);
+}
+
+static struct EventList *fit_future(struct Events *const this,
+	const unsigned ms_future) {
+	struct EventList *list = 0;
+	const unsigned ms = TimerGetGameTime() + ms_future;
+	unsigned select;
+	enum { T64S, T8S, T1S, IMM } granularity;
+	assert(this);
+	if(ms_future < 0x200) {
+		granularity = IMM;
+		select = 0;
+	} else if(ms_future < 0x2200) {
+		granularity = T1S;
+		select = (ms >> 10) & 7 + (ms & 1023 > 512) ? 1 : 0;
+	} else if(ms_future < 0x11000) {
+		granularity = T8S;
+		select = (ms >> 13) & 7 + (ms & 8191 > 4096) ? 1 : 0;
+	} else if(ms_future < 0x88000) {
+		granularity = T64S;
+		select = (ms >> 16) & 7 + (ms & 65535 > 32768) ? 1 : 0;
+	} else {
+		granularity = T64S;
+		select = ((TimerGetGameTime() >> 16) + 7) & 7;
 	}
+	return list;
+}
+
+int EventsRunnable(struct Events *const this, const unsigned ms_future,
+	const Runnable run) {
+	struct EventList *list;
+	if(!this || !run) return 0;
+	list = fit_future(this, ms_future);
 }
 
 
-void delay_delete();
 
-EventPool_(&removes);
-EventPool_(&delays);
 
-|| !(delays = EventPool())
-|| !(removes = EventPool())
-static void Event_migrate(const struct Migrate *const migrate);
-static struct EventPool *delays, *removes;
 
+
+
+
+
+
+#if 0
 /* These are the types of delays. */
 
 /** Called from \see{Event_transfer}.
@@ -226,7 +287,7 @@ static void lazy_update_fg_bin(struct Sprite *const this) {
 static void Event_transfer(struct Sprite *const sprite) {
 	struct Event *d;
 	if(!(d = EventPoolNew(delays))) { fprintf(stderr, "Event error: %s.\n",
-											  EventPoolGetError(delays)); return; }
+		EventPoolGetError(delays)); return; }
 	d->action = &lazy_update_fg_bin;
 	d->sprite = sprite;
 }
@@ -240,7 +301,7 @@ static void lazy_delete(struct Sprite *const this) {
 static void Event_delete(struct Sprite *const sprite) {
 	struct Event *d;
 	if(!(d = EventPoolNew(removes))) { fprintf(stderr, "Event error: %s.\n",
-											   EventPoolGetError(removes)); return; }
+		EventPoolGetError(removes)); return; }
 	d->action = &lazy_delete;
 	d->sprite = sprite;
 }
@@ -259,3 +320,4 @@ static void Event_migrate_sprite(struct Event *const this,
 	assert(this && migrate);
 	SpriteMigrate(migrate, &this->sprite);
 }
+#endif

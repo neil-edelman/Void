@@ -16,7 +16,7 @@
 #include <stdio.h> /* fprintf */
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
 #include "../general/Orcish.h" /* for human-readable ship names */
-#include "../general/Delays.h" /* for delays */
+#include "../general/Events.h" /* for delays */
 #include "../system/Key.h" /* keys for input */
 #include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "../system/Timer.h" /* for expiring */
@@ -144,7 +144,7 @@ struct Gate {
 /** Sprites all together. */
 static struct Sprites {
 	struct SpriteList bins[BIN_BIN_FG_SIZE + 1]; /* [] + holding bin */
-	struct Delays *delays;
+	struct Events *events;
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
@@ -325,26 +325,22 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_human,
 	(SpriteFloatAccessor)&ship_get_mass
-};
-static const struct SpriteVt ship_ai_vt = {
+}, ship_ai_vt = {
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_dumb_ai,
 	(SpriteFloatAccessor)&ship_get_mass
-};
-static const struct SpriteVt debris_vt = {
+}, debris_vt = {
 	(SpriteToString)&debris_to_string,
 	(SpriteAction)&debris_delete,
 	(SpriteAction)&debris_update,
 	(SpriteFloatAccessor)&debris_get_mass
-};
-static const struct SpriteVt wmd_vt = {
+}, wmd_vt = {
 	(SpriteToString)&wmd_to_string,
 	(SpriteAction)&wmd_delete,
 	(SpriteAction)&wmd_update,
 	(SpriteFloatAccessor)&wmd_get_mass
-};
-static const struct SpriteVt gate_vt = {
+}, gate_vt = {
 	(SpriteToString)&gate_to_string,
 	(SpriteAction)&gate_delete,
 	(SpriteAction)&gate_update,
@@ -383,29 +379,32 @@ void Sprites_(void) {
 /** @return True if the sprite buffers have been set up. */
 int Sprites(void) {
 	unsigned i;
-	enum { NO, SHIP, DEBRIS, WMD, GATE } e = NO;
+	enum { NO, EVENT, SHIP, DEBRIS, WMD, GATE } e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
 	if(!(sprites = malloc(sizeof *sprites)))
 		{ perror("Sprites"); Sprites_(); return 0; }
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(sprites->bins + i);
+	sprites->delays = 0;
 	sprites->ships = 0;
 	sprites->debris = 0;
 	sprites->wmds = 0;
 	sprites->gates = 0;
 	do {
+		if(!(sprites->events = Events())) { e = EVENT; break; }
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
 		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
 		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
 		if(!(sprites->gates = GatePool(&bin_migrate, sprites))) { e=GATE;break;}
 	} while(0); switch(e) {
 		case NO: break;
-		case SHIP: ea = "Ship", eb = ShipPoolGetError(sprites->ships); break;
-		case DEBRIS: ea = "Debris",eb=DebrisPoolGetError(sprites->debris);break;
-		case WMD: ea = "Wmd", eb = WmdPoolGetError(sprites->wmds); break;
-		case GATE: ea = "Gate", eb = GatePoolGetError(sprites->gates); break;
+		case DELAY: ea = "delays", eb = "couldn't get delays"; break;
+		case SHIP: ea = "ships", eb = ShipPoolGetError(sprites->ships); break;
+		case DEBRIS: ea = "debris",eb=DebrisPoolGetError(sprites->debris);break;
+		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
+		case GATE: ea = "gates", eb = GatePoolGetError(sprites->gates); break;
 	} if(e) {
-		fprintf(stderr, "Sprites %s: %s.\n", ea, eb);
+		fprintf(stderr, "Sprites %s buffer: %s.\n", ea, eb);
 		Sprites_();
 		return 0;
 	}

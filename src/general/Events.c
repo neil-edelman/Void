@@ -30,8 +30,6 @@ struct Event { struct EventVt *vt; };
 #include "../templates/List.h"
 
 /** {Runnable} is an {Event}. */
-typedef void (*Runnable)(void);
-
 struct Runnable {
 	struct EventListNode event;
 	Runnable run;
@@ -42,8 +40,6 @@ struct Runnable {
 #include "../templates/Pool.h"
 
 /** {IntConsumer} is an {Event}. */
-typedef void (*IntConsumer)(const int);
-
 struct IntConsumer {
 	struct EventListNode event;
 	IntConsumer accept;
@@ -54,10 +50,7 @@ struct IntConsumer {
 #define POOL_TYPE struct IntConsumer
 #include "../templates/Pool.h"
 
-struct Sprite;
 /** {SpriteConsumer} is an {Event}. */
-typedef void (*SpriteConsumer)(struct Sprite *const);
-
 struct SpriteConsumer {
 	struct EventListNode event;
 	SpriteConsumer accept;
@@ -69,14 +62,13 @@ struct SpriteConsumer {
 #include "../templates/Pool.h"
 
 /** Events are fit to various bins depending on the length of the delay. Longer
- delays will be more granular and less-resolution. Maximum delay is,
- \${1.024s * 64 * 8 * (min/60s) <= 8.74min} */
+ delays will be more granular and less-resolution. */
 struct Events;
 struct Events {
 	unsigned update; /* time */
 	struct EventList immediate;
-	struct EventList approx1s[7]; /* the {1s} falls though to {8s}, etc. */
-	struct EventList approx8s[7];
+	struct EventList approx1s[8];
+	struct EventList approx8s[8];
 	struct EventList approx64s[8];
 	struct RunnablePool *runnables;
 	struct IntConsumerPool *int_consumers;
@@ -194,25 +186,24 @@ void EventsUpdate(struct Events *const this) {
 	run_event_list(this, &this->immediate);
 	/* Applies the timer with a granularity of whatever; all are [0, 7].
 	 fixme: Meh, could be better. */
-	t64s.cur = (this->update & (7 << 16)) >> 16;
-	t64s.end = (now & (7 << 16)) >> 16;
-	t8s.cur  = (this->update & (7 << 13)) >> 13;
-	t8s.end  = (now & (7 << 13)) >> 13;
-	t1s.cur  = (this->update & (7 << 10)) >> 10;
-	t1s.end  = (now & (7 << 10)) >> 10;
-	t1s.done = t8s.done && (t1s.cur == t1s.end);
+	t64s.cur = (this->update >> 16) & 7;
+	t64s.end = (now >> 16) & 7;
+	t8s.cur  = (this->update >> 13) & 7;
+	t8s.end  = (now >> 13) & 7;
+	t1s.cur  = (this->update >> 10) & 7;
+	t1s.end  = (now >> 10) & 7;
 	do {
 		switch(granularity) {
 			case T64S: t64s.done = (t64s.cur == t64s.end);
 			case T8S:  t8s.done  = t64s.done && (t8s.cur == t8s.end);
 			case T1S:  t1s.done  = t8s.done && (t1s.cur == t1s.end);
 		}
-		if(t1s.cur != 7) {
+		if(t1s.cur < 8) {
 			chosen = this->approx1s + t1s.cur++;
 			granularity = T1S;
 		} else {
 			t1s.cur = 0;
-			if(t8s.cur != 7) {
+			if(t8s.cur != 8) {
 				chosen = this->approx8s + t8s.cur++;
 				granularity = T8S;
 			} else {
@@ -228,35 +219,39 @@ void EventsUpdate(struct Events *const this) {
 
 static struct EventList *fit_future(struct Events *const this,
 	const unsigned ms_future) {
-	struct EventList *list = 0;
-	const unsigned ms = TimerGetGameTime() + ms_future;
+	const unsigned ms_now = TimerGetGameTime(), ms = ms_now + ms_future;
 	unsigned select;
-	enum { T64S, T8S, T1S, IMM } granularity;
+	struct EventList *list;
 	assert(this);
 	if(ms_future < 0x200) {
-		granularity = IMM;
+		list = &this->immediate;
 		select = 0;
 	} else if(ms_future < 0x2200) {
-		granularity = T1S;
-		select = (ms >> 10) & 7 + (ms & 1023 > 512) ? 1 : 0;
+		list = this->approx1s;
+		select = ((ms >> 10) & 7) + ((ms & (0x400 - 1)) > 0x200) ? 1 : 0;
 	} else if(ms_future < 0x11000) {
-		granularity = T8S;
-		select = (ms >> 13) & 7 + (ms & 8191 > 4096) ? 1 : 0;
+		list = this->approx8s;
+		select = ((ms >> 13) & 7) + ((ms & (0x2000 - 1)) > 0x1000) ? 1 : 0;
 	} else if(ms_future < 0x88000) {
-		granularity = T64S;
-		select = (ms >> 16) & 7 + (ms & 65535 > 32768) ? 1 : 0;
-	} else {
-		granularity = T64S;
-		select = ((TimerGetGameTime() >> 16) + 7) & 7;
+		list = this->approx64s;
+		select = ((ms >> 16) & 7) + ((ms & (0x10000 - 1)) > 0x8000) ? 1 : 0;
+	} else { /* Maximum delay is, \${1.024s * 64 * 8 * (min/60s) <= 8.74min} */
+		list = this->approx64s;
+		select = ((ms_now >> 16) + 7) & 7;
 	}
-	return list;
+	assert(select < 8);
+	return list + select;
 }
 
-int EventsRunnable(struct Events *const this, const unsigned ms_future,
+int EventsRunnable(struct Events *const events, const unsigned ms_future,
 	const Runnable run) {
-	struct EventList *list;
+	struct Runnable *this;
 	if(!this || !run) return 0;
-	list = fit_future(this, ms_future);
+	if(!(this = RunnablePoolNew(events->runnables))) { fprintf(stderr,
+		"EventsRunnable: %s.\n", RunnablePoolGetError(events->runnables));
+		return 0; }
+	EventListPush(fit_future(events, ms_future), &this->event);
+	return 1;
 }
 
 

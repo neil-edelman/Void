@@ -17,6 +17,7 @@
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
 #include "../general/Orcish.h" /* for human-readable ship names */
 #include "../general/Events.h" /* for delays */
+#include "../general/Bins.h" /* for bins */
 #include "../system/Key.h" /* keys for input */
 #include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "../system/Timer.h" /* for expiring */
@@ -61,11 +62,6 @@ static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_TO_STRING &sprite_to_string
 #include "../templates/List.h"
 
-/* Temporary pointers a subset of {bins}; defines {BinPool}, {BinPoolNode}. */
-/*#define POOL_NAME Bin
-#define POOL_TYPE struct SpriteList *
-#include "../templates/Pool.h"*/
-
 /* Collisions between sprites to apply later. This is a pool that sprites can
  use. Defines {CollisionPool}, {CollisionPoolNode}. */
 struct Collision {
@@ -81,7 +77,7 @@ struct Collision {
  another bin, or delete a sprite, or whatever; this causes causality problems
  for iteration. We introduce a delay function that is called right after the
  loop for dealing with that. Defines {DelayPool}, {DelayPoolNode}. */
-struct Delay {
+/*struct Delay {
 	SpriteAction action;
 	struct Sprite *sprite;
 };
@@ -92,7 +88,7 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 #define POOL_NAME Delay
 #define POOL_TYPE struct Delay
 #define POOL_TO_STRING &delay_to_string
-#include "../templates/Pool.h"
+#include "../templates/Pool.h"*/
 
 /* Declare {ShipVt}. */
 struct ShipVt;
@@ -144,12 +140,13 @@ struct Gate {
 /** Sprites all together. */
 static struct Sprites {
 	struct SpriteList bins[BIN_BIN_FG_SIZE + 1]; /* [] + holding bin */
-	struct Events *events;
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
 	float dt_ms; /* constantly updating frame time */
+	struct Events *events;
+	struct SpriteBins *onscreen;
 } *sprites;
 
 
@@ -284,7 +281,7 @@ static void debris_update(struct Debris *const this) {
 /** @implements <Wmd>Action
  @fixme Replace delete with more dramatic death. */
 static void wmd_update(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) delay_delete(&this->sprite.data);
+	if(TimerIsTime(this->expires)) /*delay_delete(&this->sprite.data)*/;
 }
 /** @implements <Gate>Action */
 static void gate_update(struct Gate *const this) {
@@ -369,6 +366,8 @@ void Sprites_(void) {
 	unsigned i;
 	if(!sprites) return;
 	for(i = 0; i < BIN_BIN_FG_SIZE + 1; i++) SpriteListClear(sprites->bins + i);
+	SpriteBins_(&sprites->onscreen);
+	Events_(&sprites->events);
 	GatePool_(&sprites->gates);
 	WmdPool_(&sprites->wmds);
 	DebrisPool_(&sprites->debris);
@@ -379,30 +378,33 @@ void Sprites_(void) {
 /** @return True if the sprite buffers have been set up. */
 int Sprites(void) {
 	unsigned i;
-	enum { NO, EVENT, SHIP, DEBRIS, WMD, GATE } e = NO;
+	enum { NO, SHIP, DEBRIS, WMD, GATE, EVENT, BIN } e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
 	if(!(sprites = malloc(sizeof *sprites)))
 		{ perror("Sprites"); Sprites_(); return 0; }
 	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(sprites->bins + i);
-	sprites->delays = 0;
 	sprites->ships = 0;
 	sprites->debris = 0;
 	sprites->wmds = 0;
 	sprites->gates = 0;
+	sprites->events = 0;
+	sprites->onscreen = 0;
 	do {
-		if(!(sprites->events = Events())) { e = EVENT; break; }
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
 		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
 		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
 		if(!(sprites->gates = GatePool(&bin_migrate, sprites))) { e=GATE;break;}
+		if(!(sprites->events = Events())) { e = EVENT; break; }
+		if(!(sprites->onscreen = SpriteBins())) { e = BIN; break; }
 	} while(0); switch(e) {
 		case NO: break;
-		case DELAY: ea = "delays", eb = "couldn't get delays"; break;
 		case SHIP: ea = "ships", eb = ShipPoolGetError(sprites->ships); break;
 		case DEBRIS: ea = "debris",eb=DebrisPoolGetError(sprites->debris);break;
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
 		case GATE: ea = "gates", eb = GatePoolGetError(sprites->gates); break;
+		case EVENT: ea = "delays", eb = "couldn't get delays"; break;
+		case BIN: ea = "bins", eb = "couldn't get bins"; break;
 	} if(e) {
 		fprintf(stderr, "Sprites %s buffer: %s.\n", ea, eb);
 		Sprites_();
@@ -604,6 +606,11 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	 occur, this causes the camera to jerk, but it's better than always
 	 lagging? */
 	if(target) DrawSetCamera((struct Vec2f *)&target->x);
+	{
+		struct Rectangle4f rect;
+		DrawGetScreen(&rect);
+		SpriteBinsAdd(sprites->onscreen, &rect);
+	}
 	/* Each frame, calculate the bins that are visible and stuff. */
 	new_bins();
 	/* The {holding_bin} is an invisible {bin} that sprites go to spawn and not

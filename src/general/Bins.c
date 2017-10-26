@@ -2,21 +2,124 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- Testing the bins. A {Bin} is like a hash bucket, but instead of hashing, it's
- determined by where in space you are. This allows you to do stuff like drawing
- and AI for onscreen bins and treat the faraway bins with statistical mechanics.
- Which allows you to have a lot of sprites -> ships, weapons -> more epic.
+ A {Bin} is like a 2D hash bucket for space. Several {Bins} {Sprite}'s can be
+ iterated over.
 
- @title		Bin
+ @title		Bins
  @author	Neil
  @std		C89/90
- @version	3.4, 2017-05 generics
- @since		3.3, 2016-01
- 3.2, 2015-06
- @fixme Collision resolution wonky. */
+ @version	2017-10 Broke off from Sprites.
+ @since		2017-05 Generics.
+			2016-01
+			2015-06 */
 
-#include "Bin.h"
+#include <stdio.h> /* stderr */
+#include "../general/OrthoMath.h" /* Rectangle4f, etc */
+#include "Bins.h"
 
+
+
+/***************** Declare types. ****************/
+
+struct SpriteList;
+#define POOL_NAME SpriteBin
+#define POOL_TYPE struct SpriteList *
+#include "../templates/Pool.h"
+
+struct FarList;
+#define POOL_NAME FarBin
+#define POOL_TYPE struct FarList *
+#include "../templates/Pool.h"
+
+/** Alias. */
+struct SpriteBins {
+	struct SpriteBinPool pool;
+};
+
+/** Alias. */
+struct FarBins { struct FarBinPool pool; };
+
+void SpriteBins_(struct SpriteBins **const pthis) {
+	struct SpriteBins *this;
+	struct SpriteBinPool *pool;
+	if(!pthis || !(this = *pthis)) return;
+	pool = &this->pool;
+	SpriteBinPool_(&pool);
+	this = *pthis = 0;
+}
+
+void FarBins_(struct FarBins **const pthis) {
+	struct FarBins *this;
+	struct FarBinPool *pool;
+	if(!pthis || !(this = *pthis)) return;
+	pool = &this->pool;
+	FarBinPool_(&pool);
+	this = *pthis = 0;
+}
+
+struct SpriteBins *SpriteBins(void) {
+	struct SpriteBins *this = (struct SpriteBins *)SpriteBinPool(0, 0);
+	if(!this) fprintf(stderr, "SpriteBins: %s.\n", SpriteBinPoolGetError(0));
+	return this;
+}
+
+struct FarBins *FarBins(void) {
+	struct FarBins *this = (struct FarBins *)FarBinPool(0, 0);
+	if(!this) fprintf(stderr, "FarBins: %s.\n", FarBinPoolGetError(0));
+	return this;
+}
+
+void SpriteBinsClear(struct SpriteBins *const this) {
+	if(!this) return;
+	SpriteBinPoolClear(&this->pool);
+}
+
+void FarBinsClear(struct FarBins *const this) {
+	if(!this) return;
+	FarBinPoolClear(&this->pool);
+}
+
+/** @return Success. */
+int SpriteBinsAdd(struct SpriteBins *const this,
+	struct SpriteList **const bins, struct Rectangle4f *const rect) {
+	struct SpriteBinPool *pool;
+	struct SpriteList **bin;
+	struct Rectangle4i bin4;
+	struct Vec2i bin2i;
+	if(!this || !rect) return 0;
+	pool = &this->pool;
+	Rectangle4f_to_fg_bin4(rect, &bin4);
+	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
+		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
+			/*printf("sprite bin2i(%u, %u)\n", bin2i.x, bin2i.y);*/
+			if(!(bin = SpriteBinPoolNew(pool))) { fprintf(stderr,
+				"SpriteBinsAdd: %s.\n", SpriteBinPoolGetError(pool)); return 0;}
+			bin = bins + bin2i_to_fg_bin(bin2i);
+			/*bin_to_Vec2i(bin2i_to_fg_bin(bin2i), &bin_pos);
+			fprintf(gnu_glob, "set arrow from %f,%f to %d,%d lw 0.2 "
+			 "lc rgb \"#CCEEEE\" front;\n",
+			 this->x_5.x, this->x_5.y, bin_pos.x, bin_pos.y);*/
+		}
+	}
+	return 1;
+}
+
+/** @return One of the {SpriteList *} bins or null if there are no bins left. */
+const struct SpriteList *SpriteBinsTake(struct SpriteBins *const this) {
+	struct SpriteBinPool *pool;
+	struct SpriteList **entry;
+	if(!this) return 0;
+	pool = &this->pool;
+	entry = SpriteBinPoolElement(pool);
+	SpriteBinPoolRemove(pool, entry);
+	if(!entry) return 0;
+	return *entry;
+}
+/* fixme:
+ while((bin = SpriteBinsTake(visible))) SpriteListForEach(bin, &draw); */
+
+
+#if 0
 BinPool_(&sprite_bins);
 BinPool_(&bg_bins);
 BinPool_(&update_bins);
@@ -97,3 +200,4 @@ if(!(draw_bins = BinPool())
    static void clear_holding_bin(void) {
 	   SpriteListForEach(holding_bin, &clear_holding_sprite);
    }
+#endif

@@ -10,7 +10,7 @@
 #include "../Print.h"
 #include "../system/Draw.h"
 #include "Game.h"
-#include "Sprite.h"
+#include "Sprites.h"
 #include "Event.h"
 #include "Zone.h"
 

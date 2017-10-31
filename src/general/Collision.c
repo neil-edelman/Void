@@ -13,6 +13,8 @@
 #include "../general/OrthoMath.h" /* Vectors. */
 #include "Collision.h"
 
+#if 0
+
 CollisionPool_(&collisions);
 
 /* Collision is a self-referential stack; this always must be here. */
@@ -304,4 +306,4 @@ static void timestep(void) {
 	sprites->x.theta += sprites->v.theta /* omega */ * dt_ms;
 	branch_cut_pi_pi(&sprites->x.theta);
 }
-
+#endif

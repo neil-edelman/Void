@@ -11,8 +11,9 @@
 			2016-01
 			2015-11 */
 
+#include <stdio.h> /* perror fprintf stderr */
 #include <assert.h>
-#include "../system/Timer.c"
+#include "../system/Timer.h"
 #include "Events.h"
 
 

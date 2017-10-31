@@ -27,7 +27,7 @@
 #define BINS_SIDE_SIZE (64)
 #define BINS_SIZE (BINS_SIDE_SIZE * BINS_SIDE_SIZE)
 /* fixme: These are orthogonal, they should be collapsed into one. */
-enum { HOLDING_BIN = BINS_SIZE, TRANSFERS_BIN }; /* special bins */
+enum { HOLDING_BIN = BINS_SIZE }; /* special bins */
 static const float bin_space = 256.0f;
 
 /* This is used for small floating-point values. The value doesn't have any
@@ -149,7 +149,7 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 
 /** Sprites all together. */
 static struct Sprites {
-	struct SpriteList bins[BINS_SIZE], holding, transfers;
+	struct SpriteList bins[BINS_SIZE], holding;
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
@@ -210,7 +210,6 @@ static void sprite_delete(struct Sprite *const this) {
 	} else {
 		switch(this->bin) {
 			case HOLDING_BIN: bin = &sprites->holding; break;
-			case TRANSFERS_BIN: bin = &sprites->transfers; break;
 			default:
 				fprintf(stderr, "Bin out of range %u!\n", this->bin); return;
 		}
@@ -382,7 +381,6 @@ static void bin_migrate(void *const sprites_void,
 		SpriteListMigrate(sprites_pass->bins + i, migrate);
 	}
 	SpriteListMigrate(&sprites_pass->holding, migrate);
-	SpriteListMigrate(&sprites_pass->transfers, migrate);
 }
 
 /** Destructor. */
@@ -391,7 +389,6 @@ void Sprites_(void) {
 	if(!sprites) return;
 	for(i = 0; i < BINS_SIZE; i++) SpriteListClear(sprites->bins + i);
 	SpriteListClear(&sprites->holding);
-	SpriteListClear(&sprites->transfers);
 	Bins_(&sprites->foreground);
 	GatePool_(&sprites->gates);
 	WmdPool_(&sprites->wmds);
@@ -410,7 +407,6 @@ int Sprites(void) {
 		{ perror("Sprites"); Sprites_(); return 0; }
 	for(i = 0; i < BINS_SIZE; i++) SpriteListClear(sprites->bins + i);
 	SpriteListClear(&sprites->holding);
-	SpriteListClear(&sprites->transfers);
 	sprites->ships = 0;
 	sprites->debris = 0;
 	sprites->wmds = 0;
@@ -629,8 +625,8 @@ static void add_sprite_bins(struct Bins *const bins) {
 	BinsSetRectangle(bins, &rect);
 }
 
-/** The spawned sprites while iterating go into the holding bin. This sends
- them into their proper bins. Called from \see{SpritesUpdate}. */
+/** The spawned and transfer sprites while iterating go into the holding bin.
+ This sends them into their proper bins. Called from \see{SpritesUpdate}. */
 static void clear_holding_bin(void) {
 	assert(sprites);
 	struct Sprite *sprite;
@@ -677,8 +673,8 @@ static void extrapolate(struct Sprite *const this) {
 		SpriteListRemove(sprites->bins + this->bin, this);
 		/* I don't think that this matters, we could set it to {bin} and save
 		 the trouble of recalculating, but it feels dirty. */
-		this->bin = TRANSFERS_BIN;
-		SpriteListPush(&sprites->transfers, (struct SpriteListNode *)this);
+		this->bin = HOLDING_BIN;
+		SpriteListPush(&sprites->holding, (struct SpriteListNode *)this);
 	}
 }
 
@@ -693,16 +689,18 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	/* Update with the passed parameter. */
 	sprites->dt_ms = dt_ms;
 	/* Centre on the sprite that was passed, if it is available. */
-	/* \see{SpriteUpdate} has a fixed camera position; apply input before the
-	 update so we can predict what the camera is going to do; when collisions
-	 occur, this causes the camera to jerk, but it's better than always
-	 lagging? */
 	if(target) DrawSetCamera((struct Vec2f *)&target->x);
+	/* Foreground drawables are a function of screen position. */
 	add_sprite_bins(sprites->foreground);
+	/* Newly spawned sprites. */
 	clear_holding_bin();
+	/* Dynamics. */
 	for_each_screen(&extrapolate);
+	/* {extrapolate} puts the sprites that have wandered out of their bins in
+	 the holding bin as well. */
+	clear_holding_bin();
 
-	
+#if 0
 	if(!DelayPoolIsEmpty(delays)) {
 		/*BinPoolForEach(draw_bins, &Bin_print);*/
 		printf("Delay: %s.\n", DelayPoolToString(delays));
@@ -720,7 +718,11 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	 \see{extrapolate} and \see{collide}. */
 	for_each_update(&timestep);
 	CollisionPoolClear(collisions);
+#endif
 }
+
+
+#if 0
 
 /** @implements <Bin*, InfoOutput*>DiAction */
 static void draw_bin_literally(struct SpriteList **const pthis, void *const pout_void) {
@@ -883,7 +885,7 @@ void SpritesOut(void) {
 		SpriteListUnorderBiForEach(bins + i, &print_sprite_data, &out);
 }
 
-
+#endif
 
 
 

@@ -13,8 +13,8 @@
 #include <math.h>   /* sqrtf fminf fmodf atan2f */
 #include "../../build/Auto.h"
 #include "../Print.h"
-#include "../game/Sprite.h"
-#include "../game/Far.h"
+#include "../game/Sprites.h"
+#include "../game/Fars.h"
 #include "../game/Light.h"
 #include "../game/Game.h"       /* shield display */
 #include "../../external/lodepng.h"  /* texture() */

@@ -26,8 +26,7 @@
 
 #define BINS_SIDE_SIZE (64)
 #define BINS_SIZE (BINS_SIDE_SIZE * BINS_SIDE_SIZE)
-/* fixme: These are orthogonal, they should be collapsed into one. */
-enum { HOLDING_BIN = BINS_SIZE }; /* special bins */
+enum { HOLDING_BIN = BINS_SIZE }; /* Special bins must match {Sprites}. */
 static const float bin_space = 256.0f;
 
 /* This is used for small floating-point values. The value doesn't have any
@@ -149,6 +148,7 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 
 /** Sprites all together. */
 static struct Sprites {
+	/* The order of this list must mach the enum. */
 	struct SpriteList bins[BINS_SIZE], holding;
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
@@ -203,18 +203,8 @@ static void gate_to_string(const struct Gate *this, char (*const a)[12]) {
 
 /** @implements SpritesAction */
 static void sprite_delete(struct Sprite *const this) {
-	struct SpriteList *bin = 0;
 	assert(sprites && this);
-	if(this->bin < BINS_SIZE) {
-		bin = sprites->bins + this->bin;
-	} else {
-		switch(this->bin) {
-			case HOLDING_BIN: bin = &sprites->holding; break;
-			default:
-				fprintf(stderr, "Bin out of range %u!\n", this->bin); return;
-		}
-	}
-	SpriteListRemove(bin, this);
+	SpriteListRemove(sprites->bins + this->bin, this); /* Safe-ish. */
 	this->vt->delete(this);
 }
 /** @implements <Ship>Action */

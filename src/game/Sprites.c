@@ -231,8 +231,44 @@ static void sprite_update(struct Sprite *const this) {
 	assert(this);
 	this->vt->update(this);
 }
+static void shoot(struct Ship *const ship);
 /** @implements <Ship>Action */
 static void ship_update_human(struct Ship *const this) { UNUSED(this); }
+/** Called at beginning of frame with one ship, {player}. (fixme; hmm)
+ @implements <Ship>Action */
+static void ship_player(struct Ship *const this) {
+	const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
+	const int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
+	const int ms_shoot = KeyTime(32); /* fixme */
+	/* fixme: This is for all. :[ */
+	if(ms_acceleration > 0) { /* not a forklift */
+		struct Vec2f v = { this->sprite.data.v.x, this->sprite.data.v.y };
+		float a = ms_acceleration * this->acceleration, speed2;
+		v.x += cosf(this->sprite.data.x.theta) * a;
+		v.y += sinf(this->sprite.data.x.theta) * a;
+		if((speed2 = v.x * v.x + v.y * v.y) > this->max_speed2) {
+			float correction = sqrtf(this->max_speed2 / speed2);
+			v.x *= correction, v.y *= correction;
+		}
+		this->sprite.data.v.x = v.x, this->sprite.data.v.y = v.y;
+	}
+	if(ms_turning) {
+		float t = ms_turning * this->turn * turn_acceleration;
+		this->sprite.data.v.theta += t;
+		if(this->sprite.data.v.theta < -this->turn) {
+			this->sprite.data.v.theta = -this->turn;
+		} else if(this->sprite.data.v.theta > this->turn) {
+			this->sprite.data.v.theta = this->turn;
+		}
+	} else {
+		/* \${turn_damping_per_ms^dt_ms}
+		 Taylor: d^25 + d^25(t-25)log d + O((t-25)^2).
+		 @fixme What about extreme values? */
+		this->sprite.data.v.theta *= turn_damping_per_25ms
+		- turn_damping_1st_order * (sprites->dt_ms - 25.0f);
+	}
+	if(ms_shoot) shoot(this);
+}
 /** @implements <Ship>Action */
 static void ship_update_dumb_ai(struct Ship *const this) {
 	assert(this);
@@ -570,42 +606,6 @@ static void shoot(struct Ship *const ship) {
 	ship->ms_recharge_wmd = TimerGetGameTime() + ship->wmd->ms_recharge;
 }
 
-/** Called at beginning of frame with one ship, {player}. (fixme; hmm)
- @implements <Ship>Action */
-static void ship_player(struct Ship *const this) {
-	const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
-	const int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
-	const int ms_shoot = KeyTime(32); /* fixme */
-	/* fixme: This is for all. :[ */
-	if(ms_acceleration > 0) { /* not a forklift */
-		struct Vec2f v = { this->sprite.data.v.x, this->sprite.data.v.y };
-		float a = ms_acceleration * this->acceleration, speed2;
-		v.x += cosf(this->sprite.data.x.theta) * a;
-		v.y += sinf(this->sprite.data.x.theta) * a;
-		if((speed2 = v.x * v.x + v.y * v.y) > this->max_speed2) {
-			float correction = sqrtf(this->max_speed2 / speed2);
-			v.x *= correction, v.y *= correction;
-		}
-		this->sprite.data.v.x = v.x, this->sprite.data.v.y = v.y;
-	}
-	if(ms_turning) {
-		float t = ms_turning * this->turn * turn_acceleration;
-		this->sprite.data.v.theta += t;
-		if(this->sprite.data.v.theta < -this->turn) {
-			this->sprite.data.v.theta = -this->turn;
-		} else if(this->sprite.data.v.theta > this->turn) {
-			this->sprite.data.v.theta = this->turn;
-		}
-	} else {
-		/* \${turn_damping_per_ms^dt_ms}
-		 Taylor: d^25 + d^25(t-25)log d + O((t-25)^2).
-		 @fixme What about extreme values? */
-		this->sprite.data.v.theta *= turn_damping_per_25ms
-		- turn_damping_1st_order * (sprites->dt_ms - 25.0f);
-	}
-	if(ms_shoot) shoot(this);
-}
-
 /** Each frame, calculate the bins that are visible. Called from
  @see{SpritesUpdate}. */
 static void add_sprite_bins(struct Bins *const bins) {
@@ -711,6 +711,30 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 #endif
 }
 
+/* Messy messy; this is because function-pointers don't necessarily have the
+ same size. */
+struct ContainsLambertOutput { const LambertOutput out; };
+/** Called from \see{draw_bin}.
+ @implements <Sprite, ContainsLambertOutput>BiAction */
+static void draw_sprite(struct Sprite *const this, void *const param) {
+	const struct ContainsLambertOutput *const clo = param;
+	assert(sprites && param);
+	clo->out(&this->x, this->image, this->normals);
+}
+/** Called from \see{SpritesDrawForeground}.
+ @implements BinsAction */
+static void draw_bin(const unsigned idx, void *const param) {
+	assert(sprites && idx < BINS_SIZE && param);
+	SpriteListBiForEach(sprites->bins + idx, &draw_sprite, param);
+}
+/** Must call \see{SpriteUpdate} before this, because it sets
+ {sprites.foreground}. Use when the Lambert GPU shader is loaded. */
+void SpritesDrawForeground(const LambertOutput draw) {
+	struct ContainsLambertOutput container = { draw };
+	assert(sprites && draw);
+	BinsBiForEach(sprites->foreground, &draw_bin, &container);
+}
+
 
 #if 0
 
@@ -736,23 +760,6 @@ void SpritesDrawInfo(InfoOutput draw) {
 	/*draw(&a, hair);*/
 }
 
-/** @implements <Sprite, LambertOutput*>BiAction */
-static void draw_sprite(struct Sprite *const sprites, void *const pout_void) {
-	const LambertOutput *const pout = pout_void, out = *pout;
-	assert(sprites && out);
-	out(&sprites->x, sprites->image, sprites->normals);
-}
-/** @implements <Bin*, LambertOutput*>BiAction */
-static void draw_bin(struct SpriteList **const pthis, void *const pout_void) {
-	struct SpriteList *const sprites = *pthis;
-	assert(pthis && sprites);
-	SpriteListUnorderBiForEach(sprites, &draw_sprite, pout_void);
-}
-/** Must call \see{SpriteUpdate} before this, because it updates everything.
- Use when the Lambert GPU shader is loaded. */
-void SpritesDrawLambert(LambertOutput draw) {
-	BinPoolBiForEach(draw_bins, &draw_bin, &draw);
-}
 /** Use when the Far GPU shader is loaded. */
 void SpritesDrawFar(LambertOutput draw) {
 	BinPoolBiForEach(bg_bins, &draw_bin, &draw);

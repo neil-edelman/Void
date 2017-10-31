@@ -74,7 +74,7 @@ int Game(void) {
 	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &fps);
 	KeyRegister('t',  &gametime);
-	KeyRegister('1',  &SpritesPlot);
+	/******KeyRegister('1',  &SpritesPlot);************/
 	/*KeyRegister('a',  &position);
 	KeyRegister('l',  &LightList);*/
 	/*KeyRegister('s',  &SpriteList);*/

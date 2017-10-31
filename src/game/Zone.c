@@ -65,29 +65,30 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* clear all objects */
 	/*SpriteRemoveIf(&remove_all_except_player);*/
 	EventRemoveIf(&remove_all_events_except);
-	PlanetoidClear();
+	/*PlanetoidClear();*/
 
 	/* set drawing elements */
 	DrawSetBackground("Dorado.jpeg");
 	/* fixme: set sunlight */
 
-	Planetoid(sz->ois1);
+	/*Planetoid(sz->ois1);
 	Planetoid(sz->ois2);
-	Planetoid(sz->ois3);
+	Planetoid(sz->ois3);*/
 
-	Gate(sz->gate1);
+	/*Gate(sz->gate1);*/
 
 	/* update the current zone */
 	current_zone = sz;
 
 	/* some asteroids */
-	for(i = 0; i < 70/*00*/; i++) Debris(asteroid, 0);
+	for(i = 0; i < 70/*00*/; i++) SpritesDebris(asteroid, 0);
 
 	/* sprinkle some ships */
-	for(i = 0; i < 1000; i++) Ship(blob_class, 0, AI_DUMB);
+	for(i = 0; i < 1000; i++) SpritesShip(blob_class, 0, AI_DUMB);
 
 }
 
+#if 0
 /** Zone change with the {gate}. */
 void ZoneChange(const struct Gate *const gate) {
 #if 0
@@ -161,3 +162,5 @@ void ZoneChange(const struct Gate *const gate) {
 	SpriteSetVelocity(player, player_vx, player_vy);
 #endif
 }
+
+#endif

@@ -27,8 +27,8 @@ struct Debris *SpritesDebris(const struct AutoDebris *const class,
 struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 	const struct Ship *const from);
 struct Gate *SpritesGate(const struct AutoGate *const class);
-
 void SpritesUpdate(const int dt_ms, struct Sprite *const target);
+void SpritesDrawForeground(const LambertOutput draw);
 
 
 /* fixme: stubs */

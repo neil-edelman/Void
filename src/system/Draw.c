@@ -557,7 +557,7 @@ static void display(void) {
 	/* Draw far objects. */
 	glUseProgram(auto_Far_shader.compiled);
 	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
-	SpritesDrawFar(&far_lambert);
+	/*SpritesDrawFar(&far_lambert);*/
 
 	/* Set up lights, draw sprites in foreground. */
 	glUseProgram(auto_Lambert_shader.compiled);
@@ -569,12 +569,12 @@ static void display(void) {
 		glUniform3fv(auto_Lambert_shader.point_colour, lights,
 			(GLfloat *)LightGetColourArray());
 	}
-	SpritesDrawLambert(&display_lambert);
+	SpritesDrawForeground(&display_lambert);
 
 	/* Display info on top. */
 	glUseProgram(auto_Info_shader.compiled);
 	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
-	SpritesDrawInfo(&display_info);
+	/*SpritesDrawInfo(&display_info);*/
 
 	/* Reset texture for next frame. */
 	old_texture = 0;

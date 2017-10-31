@@ -26,6 +26,7 @@
 
 #define BINS_SIDE_SIZE (64)
 #define BINS_SIZE (BINS_SIDE_SIZE * BINS_SIDE_SIZE)
+/* fixme: These are orthogonal, they should be collapsed into one. */
 enum { HOLDING_BIN = BINS_SIZE, TRANSFERS_BIN }; /* special bins */
 static const float bin_space = 256.0f;
 
@@ -629,7 +630,7 @@ static void add_sprite_bins(struct Bins *const bins) {
 }
 
 /** The spawned sprites while iterating go into the holding bin. This sends
- them into thier proper bins. Called from \see{SpritesUpdate}. */
+ them into their proper bins. Called from \see{SpritesUpdate}. */
 static void clear_holding_bin(void) {
 	assert(sprites);
 	struct Sprite *sprite;
@@ -665,20 +666,24 @@ static void extrapolate(struct Sprite *const this) {
 	this->box.y_max = this->x.y + this->bounding;
 	if(this->dx.y < 0) this->box.y_min += this->dx.y;
 	else this->box.y_max += this->dx.y;
-	/* Wandered out of the bin? Mark it as such; you don't want to move it
-	 right away, because this is called in {SpriteListForEach}. */
 	bin = BinsVector(sprites->foreground, &this->x_5);
-	/* fixme: should {bin} be stored so we don't uselessly calculate it again?*/
+	/* This happens when the sprite wanders out of the bin. The reason we don't
+	 stick it in it's new bin immediately, is because the other bin may still
+	 be on the iterating stack, causing it to call it again (x n.) */
 	if(bin != this->bin) {
-		size_t *ref;
 		char a[12];
 		this->vt->to_string(this, &a);
 		printf("Sprite %s has transferred bins %u -> %u.\n", a, this->bin, bin);
-		/////////////// this is a problem :[
-		if(!(ref = RefPoolNew(sprites->transfers))) { fprintf(stderr,
-			"Transfers: %s.\n", RefPoolGetError(sprites->transfers)); }
-		else *ref = this; <- not enough info size_t
+		SpriteListRemove(sprites->bins + this->bin, this);
+		/* I don't think that this matters, we could set it to {bin} and save
+		 the trouble of recalculating, but it feels dirty. */
+		this->bin = TRANSFERS_BIN;
+		SpriteListPush(&sprites->transfers, (struct SpriteListNode *)this);
 	}
+}
+
+static void for_each_screen(const SpriteAction action) {
+	assert(action);
 }
 
 /** Update each frame.
@@ -693,13 +698,11 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	 occur, this causes the camera to jerk, but it's better than always
 	 lagging? */
 	if(target) DrawSetCamera((struct Vec2f *)&target->x);
-	add_sprite_bins(sprites->onscreen);
+	add_sprite_bins(sprites->foreground);
 	clear_holding_bin();
-	/* Calculate the future positions and transfer the sprites that have
-	 escaped their bin or been deleted. The reason we have {delays} and
-	 {removes} is that a remove deletes the sprite, which is not further
-	 usable. */
-	for_each_update(&extrapolate);
+	for_each_screen(&extrapolate);
+
+	
 	if(!DelayPoolIsEmpty(delays)) {
 		/*BinPoolForEach(draw_bins, &Bin_print);*/
 		printf("Delay: %s.\n", DelayPoolToString(delays));

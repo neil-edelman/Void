@@ -16,13 +16,18 @@
 #include <stdio.h> /* fprintf */
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
 #include "../general/Orcish.h" /* for human-readable ship names */
-#include "../general/Events.h" /* for delays */
+/*#include "../general/Events.h"*/ /* for delays */
 #include "../general/Bins.h" /* for bins */
 #include "../system/Key.h" /* keys for input */
 #include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "../system/Timer.h" /* for expiring */
 #include "Light.h" /* for glowing */
 #include "Sprites.h"
+
+#define BINS_SIDE_SIZE (64)
+#define BINS_SIZE (BINS_SIDE_SIZE * BINS_SIDE_SIZE)
+enum { HOLDING_BIN = BINS_SIZE, TRANSFERS_BIN }; /* special bins */
+static const float bin_space = 256.0f;
 
 /* This is used for small floating-point values. The value doesn't have any
  significance. */
@@ -50,45 +55,17 @@ struct Sprite {
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
 	struct Collision *collision_set; /* temporary, \in collisions */
-	unsigned bin; /* which bin is it in, set by {x_5} */
+	unsigned bin; /* which bin is it in, set by {x_5}, or {no_bin} */
 	struct Ortho3f x, v; /* where it is and where it is going */
 	struct Vec2f dx, x_5; /* temporary values */
-	float bounding, bounding1; /* bounding1 is temporary */
-	/*struct Rectangle4f box;*/ /* fixme: temp bounding box; tighter bounds */
+	float bounding; /* radius, fixed to function of the image */
+	struct Rectangle4f box; /* bounding box between one frame and the next */
 };
 static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_NAME Sprite
 #define LIST_TYPE struct Sprite
 #define LIST_TO_STRING &sprite_to_string
 #include "../templates/List.h"
-
-/* Collisions between sprites to apply later. This is a pool that sprites can
- use. Defines {CollisionPool}, {CollisionPoolNode}. */
-struct Collision {
-	struct Collision *next;
-	struct Vec2f v;
-	float t;
-};
-#define POOL_NAME Collision
-#define POOL_TYPE struct Collision
-#include "../templates/Pool.h"
-
-/** While {SpriteListForEach} is running, we may have to transfer a sprite to
- another bin, or delete a sprite, or whatever; this causes causality problems
- for iteration. We introduce a delay function that is called right after the
- loop for dealing with that. Defines {DelayPool}, {DelayPoolNode}. */
-/*struct Delay {
-	SpriteAction action;
-	struct Sprite *sprite;
-};
-static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
-	assert(this);
-	sprite_to_string(this->sprite, a);
-}
-#define POOL_NAME Delay
-#define POOL_TYPE struct Delay
-#define POOL_TO_STRING &delay_to_string
-#include "../templates/Pool.h"*/
 
 /* Declare {ShipVt}. */
 struct ShipVt;
@@ -137,16 +114,47 @@ struct Gate {
 #define POOL_TYPE struct Gate
 #include "../templates/Pool.h"
 
+/* Collisions between sprites to apply later. This is a pool that sprites can
+ use. Defines {CollisionPool}, {CollisionPoolNode}. */
+/*struct Collision {
+	struct Collision *next;
+	struct Vec2f v;
+	float t;
+};
+#define POOL_NAME Collision
+#define POOL_TYPE struct Collision
+#include "../templates/Pool.h"*/
+
+/** While {SpriteListForEach} is running, we may have to transfer a sprite to
+ another bin, or delete a sprite, or whatever; this causes causality problems
+ for iteration. We introduce a delay function that is called right after the
+ loop for dealing with that. Defines {DelayPool}, {DelayPoolNode}. */
+/*struct Delay {
+	SpriteAction action;
+	struct Sprite *sprite;
+};
+static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
+	assert(this);
+	sprite_to_string(this->sprite, a);
+}
+#define POOL_NAME Delay
+#define POOL_TYPE struct Delay
+#define POOL_TO_STRING &delay_to_string
+#include "../templates/Pool.h"*/
+
+/*#define POOL_NAME Ref
+#define POOL_TYPE size_t
+#include "../templates/Pool.h"*/
+
 /** Sprites all together. */
 static struct Sprites {
-	struct SpriteList bins[BIN_BIN_FG_SIZE + 1]; /* [] + holding bin */
+	struct SpriteList bins[BINS_SIZE], holding, transfers;
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
 	float dt_ms; /* constantly updating frame time */
-	struct Events *events;
-	struct SpriteBins *onscreen;
+	struct Bins *foreground;
 } *sprites;
 
 
@@ -194,32 +202,45 @@ static void gate_to_string(const struct Gate *this, char (*const a)[12]) {
 
 /** @implements SpritesAction */
 static void sprite_delete(struct Sprite *const this) {
+	struct SpriteList *bin = 0;
 	assert(sprites && this);
+	if(this->bin < BINS_SIZE) {
+		bin = sprites->bins + this->bin;
+	} else {
+		switch(this->bin) {
+			case HOLDING_BIN: bin = &sprites->holding; break;
+			case TRANSFERS_BIN: bin = &sprites->transfers; break;
+			default:
+				fprintf(stderr, "Bin out of range %u!\n", this->bin); return;
+		}
+	}
+	SpriteListRemove(bin, this);
 	this->vt->delete(this);
 }
 /** @implements <Ship>Action */
 static void ship_delete(struct Ship *const this) {
-	SpriteListRemove(sprites->bins + this->sprite.data.bin, &this->sprite.data);
 	ShipPoolRemove(sprites->ships, this);
 }
 /** @implements <Debris>Action */
 static void debris_delete(struct Debris *const this) {
-	SpriteListRemove(sprites->bins + this->sprite.data.bin, &this->sprite.data);
 	DebrisPoolRemove(sprites->debris, this);
 }
 /** @implements <Wmd>Action */
 static void wmd_delete(struct Wmd *const this) {
 	Light_(&this->light);
-	SpriteListRemove(sprites->bins + this->sprite.data.bin, &this->sprite.data);
 	WmdPoolRemove(sprites->wmds, this);
 }
 /** @implements <Gate>Action */
 static void gate_delete(struct Gate *const this) {
-	SpriteListRemove(sprites->bins + this->sprite.data.bin, &this->sprite.data);
 	GatePoolRemove(sprites->gates, this);
 }
 
 
+/** @implements <Sprite>Action */
+static void sprite_update(struct Sprite *const this) {
+	assert(this);
+	this->vt->update(this);
+}
 /** @implements <Ship>Action */
 static void ship_update_human(struct Ship *const this) { UNUSED(this); }
 /** @implements <Ship>Action */
@@ -356,18 +377,21 @@ static void bin_migrate(void *const sprites_void,
 	struct Sprites *const sprites_pass = sprites_void;
 	unsigned i;
 	assert(sprites_pass && sprites_pass == sprites && migrate);
-	for(i = 0; i < BIN_BIN_FG_SIZE; i++) {
+	for(i = 0; i < BINS_SIZE; i++) {
 		SpriteListMigrate(sprites_pass->bins + i, migrate);
 	}
+	SpriteListMigrate(&sprites_pass->holding, migrate);
+	SpriteListMigrate(&sprites_pass->transfers, migrate);
 }
 
 /** Destructor. */
 void Sprites_(void) {
 	unsigned i;
 	if(!sprites) return;
-	for(i = 0; i < BIN_BIN_FG_SIZE + 1; i++) SpriteListClear(sprites->bins + i);
-	SpriteBins_(&sprites->onscreen);
-	Events_(&sprites->events);
+	for(i = 0; i < BINS_SIZE; i++) SpriteListClear(sprites->bins + i);
+	SpriteListClear(&sprites->holding);
+	SpriteListClear(&sprites->transfers);
+	Bins_(&sprites->foreground);
 	GatePool_(&sprites->gates);
 	WmdPool_(&sprites->wmds);
 	DebrisPool_(&sprites->debris);
@@ -378,32 +402,32 @@ void Sprites_(void) {
 /** @return True if the sprite buffers have been set up. */
 int Sprites(void) {
 	unsigned i;
-	enum { NO, SHIP, DEBRIS, WMD, GATE, EVENT, BIN } e = NO;
+	enum { NO, SHIP, DEBRIS, WMD, GATE, BIN } e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
 	if(!(sprites = malloc(sizeof *sprites)))
 		{ perror("Sprites"); Sprites_(); return 0; }
-	for(i = 0; i < BIN_BIN_FG_SIZE; i++) SpriteListClear(sprites->bins + i);
+	for(i = 0; i < BINS_SIZE; i++) SpriteListClear(sprites->bins + i);
+	SpriteListClear(&sprites->holding);
+	SpriteListClear(&sprites->transfers);
 	sprites->ships = 0;
 	sprites->debris = 0;
 	sprites->wmds = 0;
 	sprites->gates = 0;
-	sprites->events = 0;
-	sprites->onscreen = 0;
+	sprites->foreground = 0;
 	do {
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
 		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
 		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
 		if(!(sprites->gates = GatePool(&bin_migrate, sprites))) { e=GATE;break;}
-		if(!(sprites->events = Events())) { e = EVENT; break; }
-		if(!(sprites->onscreen = SpriteBins())) { e = BIN; break; }
+		if(!(sprites->foreground = Bins(BINS_SIDE_SIZE, bin_space)))
+			{ e = BIN; break; }
 	} while(0); switch(e) {
 		case NO: break;
 		case SHIP: ea = "ships", eb = ShipPoolGetError(sprites->ships); break;
 		case DEBRIS: ea = "debris",eb=DebrisPoolGetError(sprites->debris);break;
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
 		case GATE: ea = "gates", eb = GatePoolGetError(sprites->gates); break;
-		case EVENT: ea = "delays", eb = "couldn't get delays"; break;
 		case BIN: ea = "bins", eb = "couldn't get bins"; break;
 	} if(e) {
 		fprintf(stderr, "Sprites %s buffer: %s.\n", ea, eb);
@@ -431,7 +455,7 @@ static void sprite_filler(struct Sprite *const this,
 	this->image   = as->image;
 	this->normals = as->normals;
 	this->collision_set = 0;
-	this->bin     = BIN_BIN_FG_SIZE; /* holding bin */
+	this->bin     = HOLDING_BIN;
 	if(x) {
 		Ortho3f_assign(&this->x, x);
 	} else {
@@ -440,9 +464,10 @@ static void sprite_filler(struct Sprite *const this,
 	this->dx.x = this->dx.y = 0.0f;
 	this->x_5.x = this->x.x, this->x_5.y = this->x.y;
 	Ortho3f_filler_zero(&this->v);
-	this->bounding = this->bounding1 = (as->image->width >= as->image->height ?
+	this->bounding = (as->image->width >= as->image->height ?
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
-	SpriteListPush(sprites->bins + this->bin, (struct SpriteListNode *)this);
+	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
+	SpriteListPush(&sprites->holding, (struct SpriteListNode *)this);
 }
 
 /** Creates a new {Ship}. */
@@ -594,6 +619,68 @@ static void ship_player(struct Ship *const this) {
 	if(ms_shoot) shoot(this);
 }
 
+/** Each frame, calculate the bins that are visible. Called from
+ @see{SpritesUpdate}. */
+static void add_sprite_bins(struct Bins *const bins) {
+	struct Rectangle4f rect;
+	assert(bins);
+	DrawGetScreen(&rect);
+	BinsSetRectangle(bins, &rect);
+}
+
+/** The spawned sprites while iterating go into the holding bin. This sends
+ them into thier proper bins. Called from \see{SpritesUpdate}. */
+static void clear_holding_bin(void) {
+	assert(sprites);
+	struct Sprite *sprite;
+	while((sprite = SpriteListGetLast(&sprites->holding))) {
+		SpriteListRemove(&sprites->holding, sprite);
+		sprite->bin = BinsVector(sprites->foreground, &sprite->x_5);
+		SpriteListPush(sprites->bins + sprite->bin,
+			(struct SpriteListNode *)sprite);
+	}
+}
+
+/** Moves the sprite. Calculates temporary values, {dx}, {x_5}, and {box}.
+ Half-way through the frame, {x_5}, is used to divide the sprites into bins;
+ {transfers} is used to stick sprites that have overflowed their bin, and
+ should be dealt with next.
+ @implements <Sprite>Action */
+static void extrapolate(struct Sprite *const this) {
+	unsigned bin;
+	assert(sprites && this);
+	sprite_update(this);
+	/* Kinematics. */
+	this->dx.x = this->v.x * sprites->dt_ms;
+	this->dx.y = this->v.y * sprites->dt_ms;
+	/* Determines into which bin it should be. */
+	this->x_5.x = this->x.x + 0.5f * this->dx.x;
+	this->x_5.y = this->x.y + 0.5f * this->dx.y;
+	/* Dynamic bounding rectangle. */
+	this->box.x_min = this->x.x - this->bounding;
+	this->box.x_max = this->x.x + this->bounding;
+	if(this->dx.x < 0) this->box.x_min += this->dx.x;
+	else this->box.x_max += this->dx.x;
+	this->box.y_min = this->x.y - this->bounding;
+	this->box.y_max = this->x.y + this->bounding;
+	if(this->dx.y < 0) this->box.y_min += this->dx.y;
+	else this->box.y_max += this->dx.y;
+	/* Wandered out of the bin? Mark it as such; you don't want to move it
+	 right away, because this is called in {SpriteListForEach}. */
+	bin = BinsVector(sprites->foreground, &this->x_5);
+	/* fixme: should {bin} be stored so we don't uselessly calculate it again?*/
+	if(bin != this->bin) {
+		size_t *ref;
+		char a[12];
+		this->vt->to_string(this, &a);
+		printf("Sprite %s has transferred bins %u -> %u.\n", a, this->bin, bin);
+		/////////////// this is a problem :[
+		if(!(ref = RefPoolNew(sprites->transfers))) { fprintf(stderr,
+			"Transfers: %s.\n", RefPoolGetError(sprites->transfers)); }
+		else *ref = this; <- not enough info size_t
+	}
+}
+
 /** Update each frame.
  @param target: What the camera focuses on; could be null. */
 void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
@@ -606,16 +693,7 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	 occur, this causes the camera to jerk, but it's better than always
 	 lagging? */
 	if(target) DrawSetCamera((struct Vec2f *)&target->x);
-	{
-		struct Rectangle4f rect;
-		DrawGetScreen(&rect);
-		SpriteBinsAdd(sprites->onscreen, &rect);
-	}
-	/* Each frame, calculate the bins that are visible and stuff. */
-	new_bins();
-	/* The {holding_bin} is an invisible {bin} that sprites go to spawn and not
-	 have to worry about weather they are going to be iterated this frame.
-	 Transfer all the {holding_bin} to actual {bins}. */
+	add_sprite_bins(sprites->onscreen);
 	clear_holding_bin();
 	/* Calculate the future positions and transfer the sprites that have
 	 escaped their bin or been deleted. The reason we have {delays} and

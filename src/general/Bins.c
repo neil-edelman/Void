@@ -2,8 +2,7 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- A {Bin} is like a 2D hash bucket for space. Several {Bins} {Sprite}'s can be
- iterated over.
+ Used to map a floating point zero-centred position into an array.
 
  @title		Bins
  @author	Neil
@@ -14,87 +13,82 @@
 			2015-06 */
 
 #include <stdio.h> /* stderr */
+#include <limits.h> /* INT_MAX */
 #include "../general/OrthoMath.h" /* Rectangle4f, etc */
 #include "Bins.h"
 
+static const float epsilon = 0.0005f;
 
-
-/***************** Declare types. ****************/
-
-struct SpriteList;
-#define POOL_NAME SpriteBin
-#define POOL_TYPE struct SpriteList *
+#define POOL_NAME Bin
+#define POOL_TYPE int
 #include "../templates/Pool.h"
 
-struct FarList;
-#define POOL_NAME FarBin
-#define POOL_TYPE struct FarList *
-#include "../templates/Pool.h"
-
-/** Alias. */
-struct SpriteBins {
-	struct SpriteBinPool pool;
+struct Bins {
+	int side_size;
+	float half_space, one_each_bin;
+	struct BinPool *pool;
 };
 
-/** Alias. */
-struct FarBins { struct FarBinPool pool; };
-
-void SpriteBins_(struct SpriteBins **const pthis) {
-	struct SpriteBins *this;
-	struct SpriteBinPool *pool;
+void Bins_(struct Bins **const pthis) {
+	struct Bins *this;
 	if(!pthis || !(this = *pthis)) return;
-	pool = &this->pool;
-	SpriteBinPool_(&pool);
+	BinPool_(&this->pool);
 	this = *pthis = 0;
 }
 
-void FarBins_(struct FarBins **const pthis) {
-	struct FarBins *this;
-	struct FarBinPool *pool;
-	if(!pthis || !(this = *pthis)) return;
-	pool = &this->pool;
-	FarBinPool_(&pool);
-	this = *pthis = 0;
-}
-
-struct SpriteBins *SpriteBins(void) {
-	struct SpriteBins *this = (struct SpriteBins *)SpriteBinPool(0, 0);
-	if(!this) fprintf(stderr, "SpriteBins: %s.\n", SpriteBinPoolGetError(0));
+/** @param side_size: The size of a side; the {BinsTake} returns
+ {[0, side_size^2-1]}.
+ @param each_bin: How much space per bin.
+ @fixme Have max values. */
+struct Bins *Bins(const size_t side_size, const float each_bin) {
+	struct Bins *this;
+	if(!side_size || side_size > INT_MAX || each_bin < epsilon)
+		{ fprintf(stderr, "Bins: parameters out of range.\n"); return 0; }
+	if(!(this = malloc(sizeof *this))) { perror("Bins"); Bins_(&this);return 0;}
+	this->side_size = (int)side_size;
+	this->half_space = (float)side_size * each_bin / 2.0f;
+	this->one_each_bin = 1.0f / each_bin;
+	if(!(this->pool = BinPool(0, 0))) { fprintf(stderr, "Bins: %s.\n",
+		BinPoolGetError(0)); Bins_(&this); return 0; }
 	return this;
 }
 
-struct FarBins *FarBins(void) {
-	struct FarBins *this = (struct FarBins *)FarBinPool(0, 0);
-	if(!this) fprintf(stderr, "FarBins: %s.\n", FarBinPoolGetError(0));
-	return this;
-}
-
-void SpriteBinsClear(struct SpriteBins *const this) {
-	if(!this) return;
-	SpriteBinPoolClear(&this->pool);
-}
-
-void FarBinsClear(struct FarBins *const this) {
-	if(!this) return;
-	FarBinPoolClear(&this->pool);
+unsigned BinsVector(struct Bins *const this, struct Vec2f *const vec) {
+	struct Vec2i v2i;
+	if(!this || !vec) return 0;
+	v2i.x = (vec->x + this->half_space) * this->one_each_bin;
+	if(v2i.x < 0) v2i.x = 0;
+	else if(v2i.x >= this->side_size) v2i.x = this->side_size - 1;
+	v2i.y = (vec->y + this->half_space) * this->one_each_bin;
+	if(v2i.y < 0) v2i.y = 0;
+	else if(v2i.y >= this->side_size) v2i.y = this->side_size - 1;
+	return v2i.y * this->side_size + v2i.x;
 }
 
 /** @return Success. */
-int SpriteBinsAdd(struct SpriteBins *const this,
-	struct SpriteList **const bins, struct Rectangle4f *const rect) {
-	struct SpriteBinPool *pool;
-	struct SpriteList **bin;
+int BinsSetRectangle(struct Bins *const this, struct Rectangle4f *const rect) {
 	struct Rectangle4i bin4;
 	struct Vec2i bin2i;
+	int *bin;
 	if(!this || !rect) return 0;
-	pool = &this->pool;
-	Rectangle4f_to_fg_bin4(rect, &bin4);
+	BinPoolClear(this->pool);
+	/* Map floating point rectangle {rect} to index rectangle {bin4}. */
+	bin4.x_min = (rect->x_min + this->half_space) * this->one_each_bin;
+	if(bin4.x_min < 0) bin4.x_min = 0;
+	bin4.x_max = (rect->x_max + this->half_space) * this->one_each_bin;
+	if(bin4.x_max >= this->side_size) bin4.x_max = this->side_size - 1;
+	bin4.y_min = (rect->y_min + this->half_space) * this->one_each_bin;
+	if(bin4.y_min < 0) bin4.y_min = 0;
+	bin4.y_max = (rect->y_max + this->half_space) * this->one_each_bin;
+	if(bin4.y_max >= this->side_size) bin4.y_max = this->side_size - 1;
+	/* Generally goes faster when you follow the scan-lines; not sure whether
+	 this is so important with buffering. */
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
 			/*printf("sprite bin2i(%u, %u)\n", bin2i.x, bin2i.y);*/
-			if(!(bin = SpriteBinPoolNew(pool))) { fprintf(stderr,
-				"SpriteBinsAdd: %s.\n", SpriteBinPoolGetError(pool)); return 0;}
-			bin = bins + bin2i_to_fg_bin(bin2i);
+			if(!(bin = BinPoolNew(this->pool))) { fprintf(stderr,
+				"BinsAdd: %s.\n", BinPoolGetError(this->pool)); return 0; }
+			*bin = bin2i.y * this->side_size + bin2i.x;
 			/*bin_to_Vec2i(bin2i_to_fg_bin(bin2i), &bin_pos);
 			fprintf(gnu_glob, "set arrow from %f,%f to %d,%d lw 0.2 "
 			 "lc rgb \"#CCEEEE\" front;\n",
@@ -104,19 +98,16 @@ int SpriteBinsAdd(struct SpriteBins *const this,
 	return 1;
 }
 
-/** @return One of the {SpriteList *} bins or null if there are no bins left. */
-const struct SpriteList *SpriteBinsTake(struct SpriteBins *const this) {
-	struct SpriteBinPool *pool;
-	struct SpriteList **entry;
-	if(!this) return 0;
-	pool = &this->pool;
-	entry = SpriteBinPoolElement(pool);
-	SpriteBinPoolRemove(pool, entry);
-	if(!entry) return 0;
-	return *entry;
+/** @param pbin: The variable pointed-to is set to an element index if {Bins}
+ had more elements, in the range {[0, size_side^2-1]}.
+ @return Whether the {Bins} had an element. */
+void BinsForEach(struct Bins *const this, const BinsAction action) {
+	size_t i = 0;
+	if(!this || !action) return;
+	while(BinPoolIsElement(this->pool, i))
+		action(*BinPoolGetElement(this->pool, i));
 }
-/* fixme:
- while((bin = SpriteBinsTake(visible))) SpriteListForEach(bin, &draw); */
+
 
 
 #if 0

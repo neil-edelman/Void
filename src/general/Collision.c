@@ -57,39 +57,6 @@ static void Collision_migrate(const struct Migrate *const migrate) {
 	BinPoolBiForEach(draw_bins, &Bin_migrate_collisions, (void *const)migrate);
 }
 
-/** Moves the sprite. Calculates temporary values, {dx}, {x_5}, and
- {bounding1}. Half-way through the frame, {x_5}, is used to divide the sprites
- into bins; {transfers} is used to stick sprites that have overflowed their
- bin, and should be dealt with next.
- @return If it was destroyed, return false.
- @implements <Sprite>Predicate */
-static void extrapolate(struct Sprite *const this) {
-	unsigned bin;
-	assert(this);
-	/* Do whatever the sprite parent class does. It returns false if deleted. */
-	this->vt->update(this);
-	/* Kinematics. */
-	this->dx.x = this->v.x * dt_ms;
-	this->dx.y = this->v.y * dt_ms;
-	/* Determines into which bin it should be. */
-	this->x_5.x = this->x.x + 0.5f * this->dx.x;
-	this->x_5.y = this->x.y + 0.5f * this->dx.y;
-	/* Expanded bounding circle that takes the velocity into account. */
-	this->bounding1 = this->bounding + 0.5f * sqrtf(this->dx.x * this->dx.x
-													+ this->dx.y * this->dx.y);
-	/* Wandered out of the bin? Mark it as such; you don't want to move it
-	 right away, because this is called in sequence. */
-	Vec2f_to_fg_bin(&this->x_5, &bin);
-	/* fixme: should {bin} be stored so we don't uselessly calculate it
-	 again? */
-	if(bin != this->bin) {
-		char a[12];
-		this->vt->to_string(this, &a);
-		printf("Sprite %s transfers.\n", a);
-		Delay_transfer(this);
-	}
-}
-
 /* branch cut (-Pi,Pi]? */
 
 /** Called from \see{elastic_bounce}. */

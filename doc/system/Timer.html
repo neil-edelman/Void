@@ -44,7 +44,8 @@ Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
 General Public License, see copying.txt.
 </p>
 <p>
-This is an idempotent class dealing with the interface to OpenGL.
+This is an idempotent class dealing with the interface to OpenGL. Time is
+represented with <em>unsigned</em> that loops around.
 </p>
 <dl>
 	<dt>author</dt>
@@ -155,9 +156,9 @@ The value is a positive number.
 <dl>
 	<dt>return</dt>
 	<dd>If the game time is greater or equal t. Only game time is
-				represented as a circular list; 'greater than' is not really
-				defined, so as long as it's (t - INT_MIN, t] it's considered
-				'in.' This defines a limit of an interval of 24.85 days.</dd>
+ represented as a circular list; 'greater than' is not really defined, so as
+ long as it's (t - INT_MIN, t] it's considered 'in.' This defines a limit of an
+ interval of 24.85 days.</dd>
 </dl>
 </div>
 

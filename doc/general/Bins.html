@@ -1,0 +1,140 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title>Bins</title>
+</head>
+
+
+<body>
+
+<h1>Bins</h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<p>
+2017 Neil Edelman, distributed under the terms of the GNU General
+Public License 3, see copying.txt, or
+<a href = "https://opensource.org/licenses/GPL-3.0">https://opensource.org/licenses/GPL-3.0</a>.
+</p>
+<p>
+Used to map a floating point zero-centred position into an array.
+</p>
+<dl>
+	<dt>minimum standard</dt>
+	<dd>C89/90</dd>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>version</dt>
+	<dd>2017-10 Broke off from Sprites.</dd>
+	<dt>since</dt>
+	<dd>2017-05 Generics.
+			2016-01
+			2015-06</dd>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "static struct SpriteList bins[BIN_BIN_FG_SIZE + 1]"><!-- --></a>
+<h3>static struct SpriteList bins[BIN_BIN_FG_SIZE + 1]</h3>
+<pre><b>static struct SpriteList bins[BIN_BIN_FG_SIZE + 1]</b></pre>
+<p>
+Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath.h">OrthoMath.h</a>.
+</p>
+<dl>
+</dl>
+</div>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>struct Bins *</td>
+	<td><a href = "#Bins">Bins</a></td>
+	<td>const size_t side_size, const float each_bin</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#BinsSetRectangle">BinsSetRectangle</a></td>
+	<td>struct Bins *const this, struct Rectangle4f *const rect</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#BinsBiForEach">BinsBiForEach</a></td>
+	<td>struct Bins *const this, const BinsBiAction action,
+	void *const param</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Bins"><!-- --></a>
+<h3>Bins</h3>
+<pre>struct Bins * <b>Bins</b> (const size_t side_size, const float each_bin)</pre>
+<dl>
+	<dt>parameter: side_size</dt>
+	<dd>The size of a side; the <em>BinsTake</em> returns
+ <em>[0, side_size^2-1]</em>.</dd>
+	<dt>parameter: each_bin</dt>
+	<dd>How much space per bin.</dd>
+	<dt>fixme</dt>
+	<dd>Have max values.</dd>
+</dl>
+</div>
+
+<div><a name = "BinsSetRectangle"><!-- --></a>
+<h3>BinsSetRectangle</h3>
+<pre>int <b>BinsSetRectangle</b> (struct Bins *const this, struct Rectangle4f *const rect)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>Success.</dd>
+</dl>
+</div>
+
+<div><a name = "BinsBiForEach"><!-- --></a>
+<h3>BinsBiForEach</h3>
+<pre>void <b>BinsBiForEach</b> (struct Bins *const this, const BinsBiAction action,
+	void *const param)</pre>
+<dl>
+	<dt>parameter: pbin</dt>
+	<dd>The variable pointed-to is set to an element index if <em>Bins</em>
+ had more elements, in the range <em>[0, size_side^2-1]</em>.</dd>
+	<dt>return</dt>
+	<dd>Whether the <em>Bins</em> had an element.</dd>
+</dl>
+</div>
+
+
+</body>
+</html>

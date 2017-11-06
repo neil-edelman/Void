@@ -1,0 +1,431 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title>Sprites</title>
+</head>
+
+
+<body>
+
+<h1>Sprites</h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<p>
+2017 Neil Edelman, distributed under the terms of the GNU General
+Public License 3, see copying.txt, or
+<a href = "https://opensource.org/licenses/GPL-3.0">https://opensource.org/licenses/GPL-3.0</a>.
+</p>
+<p>
+Sprites is a polymorphic static structure. Initialise it with <em>Sprites</em> and
+before exiting, when all references have been resolved, <em>Sprites_</em>.
+</p>
+<p>
+While <em>SpriteListForEach</em> is running, we may have to transfer a sprite to
+another bin, or delete a sprite, or whatever; this causes causality problems
+for iteration. We introduce a delay function that is called right after the
+loop for dealing with that. Defines <em>DelayPool</em>, <em>DelayPoolNode</em>.
+</p>
+<dl>
+	<dt>minimum standard</dt>
+	<dd>C89/90</dd>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>version</dt>
+	<dd>2017-10 Broke into smaller pieces.</dd>
+	<dt>since</dt>
+	<dd>2017-05 Generics.
+			2016-01
+			2015-06</dd>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "struct Sprite"><!-- --></a>
+<h3>struct Sprite</h3>
+<pre><b>struct Sprite</b> {
+	const struct SpriteVt *vt; /* virtual table pointer */
+	const struct AutoImage *image, *normals; /* what the sprite is */
+	struct Collision *collision_set; /* temporary, \in collisions */
+	unsigned bin; /* which bin is it in, set by {x_5}, or {no_bin} */
+	struct Ortho3f x, v; /* where it is and where it is going */
+	struct Vec2f dx, x_5; /* temporary values */
+	float bounding; /* radius, fixed to function of the image */
+	struct Rectangle4f box; /* bounding box between one frame and the next */
+}</pre>
+<p>
+Define abstract <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Ship"><!-- --></a>
+<h3>struct Ship</h3>
+<pre><b>struct Ship</b> {
+	struct SpriteListNode sprite;
+	struct ShipVt *vt;
+	float mass;
+	float shield, ms_recharge, max_speed2, acceleration, turn;
+	char name[16];
+	const struct AutoWmdType *wmd;
+	unsigned ms_recharge_wmd;
+}</pre>
+<p>
+Define <em>ShipPool</em> and <em>ShipPoolNode</em>, a subclass of <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "static struct Sprites"><!-- --></a>
+<h3>static struct Sprites</h3>
+<pre><b>static struct Sprites</b> {
+	/* The order of this list must mach the enum. */
+	struct SpriteList bins[BINS_SIZE], holding;
+	struct ShipPool *ships;
+	struct DebrisPool *debris;
+	struct WmdPool *wmds;
+	struct GatePool *gates;
+	float dt_ms; /* constantly updating frame time */
+	struct Bins *foreground;
+}</pre>
+<p>
+Sprites all together.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct SpriteVt"><!-- --></a>
+<h3>struct SpriteVt</h3>
+<pre><b>struct SpriteVt</b> {
+	SpriteToString to_string;
+	SpriteAction delete, update;
+	SpriteFloatAccessor get_mass;
+}</pre>
+<p>
+Define <em>SpriteVt</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct ColourData"><!-- --></a>
+<h3>struct ColourData</h3>
+<pre><b>struct ColourData</b> {
+	FILE *fp;
+	const char *colour;
+	unsigned object;
+}</pre>
+<p>
+For communication with <em>gnu_draw_bins</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Ship"><!-- --></a>
+<h3>struct Ship</h3>
+<pre><b>struct Ship</b> {
+	struct SpriteListNode sprite;
+	const struct AutoShipClass *class;
+	unsigned     ms_recharge_wmd; /* ms */
+	unsigned     ms_recharge_hit; /* ms */
+	struct Event *event_recharge;
+	int          hit, max_hit; /* GJ */
+	float        max_speed2;
+	float        acceleration;
+	float        turn; /* deg/s -> rad/ms */
+	float        turn_acceleration;
+	float        horizon;
+	enum SpriteBehaviour behaviour;
+	char         name[16];
+}</pre>
+<p>
+Define <em>Ship</em> as a subclass of <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Wmd"><!-- --></a>
+<h3>struct Wmd</h3>
+<pre><b>struct Wmd</b> {
+	struct SpriteListNode sprite;
+	const struct AutoWmdType *class;
+	const struct Sprite *from;
+	float mass;
+	unsigned expires;
+	unsigned light;
+}</pre>
+<p>
+Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Sprites_">Sprites_</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#Sprites">Sprites</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>struct Ship *</td>
+	<td><a href = "#SpritesShip">SpritesShip</a></td>
+	<td>const struct AutoShipClass *const class,
+	const struct Ortho3f *const x, const enum AiType ai</td>
+</tr>
+<tr>
+	<td>struct Debris *</td>
+	<td><a href = "#SpritesDebris">SpritesDebris</a></td>
+	<td>const struct AutoDebris *const class,
+	const struct Ortho3f *const x</td>
+</tr>
+<tr>
+	<td>struct Wmd *</td>
+	<td><a href = "#SpritesWmd">SpritesWmd</a></td>
+	<td>const struct AutoWmdType *const class,
+	const struct Ship *const from</td>
+</tr>
+<tr>
+	<td>struct Gate *</td>
+	<td><a href = "#SpritesGate">SpritesGate</a></td>
+	<td>const struct AutoGate *const class</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesUpdate">SpritesUpdate</a></td>
+	<td>const int dt_ms, struct Sprite *const target</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesDrawForeground">SpritesDrawForeground</a></td>
+	<td>const LambertOutput draw</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesDrawInfo">SpritesDrawInfo</a></td>
+	<td>InfoOutput draw</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesDrawFar">SpritesDrawFar</a></td>
+	<td>LambertOutput draw</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesPlot">SpritesPlot</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesOut">SpritesOut</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>const struct AutoSpaceZone *</td>
+	<td><a href = "#GateGetTo">GateGetTo</a></td>
+	<td>const struct Gate *const sprites</td>
+</tr>
+<tr>
+	<td>struct Gate *</td>
+	<td><a href = "#GateFind">GateFind</a></td>
+	<td>struct AutoSpaceZone *const to</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Sprites_"><!-- --></a>
+<h3>Sprites_</h3>
+<pre>void <b>Sprites_</b> (void)</pre>
+<p>
+Destructor.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "Sprites"><!-- --></a>
+<h3>Sprites</h3>
+<pre>int <b>Sprites</b> (void)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>True if the sprite buffers have been set up.</dd>
+</dl>
+</div>
+
+<div><a name = "SpritesShip"><!-- --></a>
+<h3>SpritesShip</h3>
+<pre>struct Ship * <b>SpritesShip</b> (const struct AutoShipClass *const class,
+	const struct Ortho3f *const x, const enum AiType ai)</pre>
+<p>
+Creates a new <em>Ship</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesDebris"><!-- --></a>
+<h3>SpritesDebris</h3>
+<pre>struct Debris * <b>SpritesDebris</b> (const struct AutoDebris *const class,
+	const struct Ortho3f *const x)</pre>
+<p>
+Creates a new <em>Debris</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesWmd"><!-- --></a>
+<h3>SpritesWmd</h3>
+<pre>struct Wmd * <b>SpritesWmd</b> (const struct AutoWmdType *const class,
+	const struct Ship *const from)</pre>
+<p>
+Creates a new <em>Wmd</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesGate"><!-- --></a>
+<h3>SpritesGate</h3>
+<pre>struct Gate * <b>SpritesGate</b> (const struct AutoGate *const class)</pre>
+<p>
+Creates a new <em>Gate</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesUpdate"><!-- --></a>
+<h3>SpritesUpdate</h3>
+<pre>void <b>SpritesUpdate</b> (const int dt_ms, struct Sprite *const target)</pre>
+<p>
+Update each frame.
+</p>
+<dl>
+	<dt>parameter: target</dt>
+	<dd>What the camera focuses on; could be null.</dd>
+</dl>
+</div>
+
+<div><a name = "SpritesDrawForeground"><!-- --></a>
+<h3>SpritesDrawForeground</h3>
+<pre>void <b>SpritesDrawForeground</b> (const LambertOutput draw)</pre>
+<p>
+Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it sets
+<em>sprites.foreground</em>. Use when the Lambert GPU shader is loaded.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesDrawInfo"><!-- --></a>
+<h3>SpritesDrawInfo</h3>
+<pre>void <b>SpritesDrawInfo</b> (InfoOutput draw)</pre>
+<p>
+Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it updates everything.
+Use when the Info GPU shader is loaded.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesDrawFar"><!-- --></a>
+<h3>SpritesDrawFar</h3>
+<pre>void <b>SpritesDrawFar</b> (LambertOutput draw)</pre>
+<p>
+Use when the Far GPU shader is loaded.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesPlot"><!-- --></a>
+<h3>SpritesPlot</h3>
+<pre>void <b>SpritesPlot</b> (void)</pre>
+<p>
+Debugging plot.
+</p>
+<dl>
+	<dt>implements</dt>
+	<dd>Action</dd>
+</dl>
+</div>
+
+<div><a name = "SpritesOut"><!-- --></a>
+<h3>SpritesOut</h3>
+<pre>void <b>SpritesOut</b> (void)</pre>
+<p>
+Output sprites.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "GateGetTo"><!-- --></a>
+<h3>GateGetTo</h3>
+<pre>const struct AutoSpaceZone * <b>GateGetTo</b> (const struct Gate *const sprites)</pre>
+<p>
+Gets a SpaceZone that it goes to, if it exists.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "GateFind"><!-- --></a>
+<h3>GateFind</h3>
+<pre>struct Gate * <b>GateFind</b> (struct AutoSpaceZone *const to)</pre>
+<p>
+Linear search for <em>gates</em> that go to a specific place.
+</p>
+<dl>
+</dl>
+</div>
+
+
+</body>
+</html>

@@ -15,9 +15,9 @@
 #include "../../build/Auto.h"
 #include "../Print.h"
 #include "Sprites.h"
-#include "Event.h"
 #include "Zone.h"
 #include "Light.h"
+#include "../general/Events.h"
 #include "../system/Key.h"
 #include "../system/Window.h"
 #include "../system/Draw.h"
@@ -33,7 +33,8 @@ extern const int max_auto_gate;
 static int is_started;
 
 /* public struct */
-struct Game {
+static struct Game {
+	struct Events *events;
 	struct Ship *player; /* camera moves with this */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
@@ -64,9 +65,11 @@ static void gametime(void);
 int Game(void) {
 	struct Ortho3f position = { 0.0f, 0.0f, 0.0f };
 
-	if(is_started) return -1;
+	if(is_started) return 1;
 
-	if(!Sprites()) return 0;
+	if(!Sprites()) return 0; /* Start up Sprites subsystem. */
+	/*if(!(game.events = Events())) { Game_(); return 0; }*/
+	game.events = 0;
 
 	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
 	KeyRegister(27,   &quit);
@@ -112,15 +115,19 @@ void Game_(void) {
 	debug("~Game: over.\n");
 	is_started = 0;
 	Sprites_();
+	Events_(&game.events);
 }
 
 /** updates the gameplay */
 void GameUpdate(const int dt_ms) {
+	printf("GameUpdate %d.\n", dt_ms);
 	if(!is_started) return;
 	/* Collision detect, move sprites, center on the player; a lot of work. */
-	SpritesUpdate(dt_ms, game.player);
+	SpritesUpdate(dt_ms, (struct Sprite *)game.player);
+	printf("GameUpdate::SpritesUpdate.\n");
 	/* check events */
-	/*EventDispatch();*/
+	EventsUpdate(game.events);
+	printf("GameUpdate::EventsUpdate.\n");
 }
 
 struct Ship *GameGetPlayer(void) {

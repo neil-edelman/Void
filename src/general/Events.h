@@ -6,6 +6,7 @@ struct Events;
 
 void Events_(struct Events **const pthis);
 struct Events *Events(void);
+void EventsClear(struct Events *const this);
 void EventsUpdate(struct Events *const this);
 int EventsRunnable(struct Events *const events, const unsigned ms_future,
 	const Runnable run);

@@ -437,6 +437,7 @@ int Sprites(void) {
 	sprites->debris = 0;
 	sprites->wmds = 0;
 	sprites->gates = 0;
+	sprites->dt_ms = 20;
 	sprites->foreground = 0;
 	do {
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}

@@ -119,7 +119,7 @@ static const struct EventVt
 
 /******************** Type functions. ******************/
 
-/** Used in {Events_} and {Events}. */
+/** Used in {Events_}, {Events}, and {EventsClear}. */
 static void clear_events(struct Events *const this) {
 	unsigned i;
 	assert(this);
@@ -135,7 +135,7 @@ static void clear_events(struct Events *const this) {
 /** Destructor. */
 void Events_(struct Events **const pthis) {
 	struct Events *this;
-	if(!pthis || (this = *pthis)) return;
+	if(!pthis || !(this = *pthis)) return;
 	clear_events(this);
 	SpriteConsumerPool_(&this->sprite_consumers);
 	IntConsumerPool_(&this->int_consumers);
@@ -166,6 +166,15 @@ struct Events *Events(void) {
 		Events_(&this);
 	}
 	return this;
+}
+
+/** Clears all events. */
+void EventsClear(struct Events *const this) {
+	if(!this) return;
+	clear_events(this);
+	RunnablePoolClear(this->runnables);
+	IntConsumerPoolClear(this->int_consumers);
+	SpriteConsumerPoolClear(this->sprite_consumers);
 }
 
 static void run_event_list(struct Events *const events,
@@ -294,7 +303,7 @@ static void lazy_delete(struct Sprite *const this) {
 	assert(this);
 	this->vt->delete(this);
 }
-static void Event_delete(struct Sprite *const sprite) {
+static void event_delete(struct Sprite *const sprite) {
 	struct Event *d;
 	if(!(d = EventPoolNew(removes))) { fprintf(stderr, "Event error: %s.\n",
 		EventPoolGetError(removes)); return; }
@@ -303,15 +312,15 @@ static void Event_delete(struct Sprite *const sprite) {
 }
 
 /** This applies the delay. */
-static void Event_evaluate(struct Event *const this) {
+static void event_evaluate(struct Event *const this) {
 	assert(this && this->action);
 	this->action(this->sprite);
 }
 
 /** Called by \see{Event_migrate}.
  @implements <Transfer, Migrate>BiAction */
-static void Event_migrate_sprite(struct Event *const this,
-								 void *const migrate_void) {
+static void event_migrate_sprite(struct Event *const this,
+	void *const migrate_void) {
 	const struct Migrate *const migrate = migrate_void;
 	assert(this && migrate);
 	SpriteMigrate(migrate, &this->sprite);

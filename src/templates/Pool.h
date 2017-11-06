@@ -384,7 +384,7 @@ static struct T_(Pool) *T_(Pool)(const Migrate migrate, void *const parent) {
 		pool_global_errno_copy = 0;
 		return 0;
 	}
-	if(!(this = malloc(sizeof(struct T_(Pool))))) {
+	if(!(this = malloc(sizeof *this))) {
 		pool_global_error = POOL_ERRNO;
 		pool_global_errno_copy = errno;
 		return 0;

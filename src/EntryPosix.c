@@ -36,30 +36,24 @@ static void usage(void);
  @param argv the arguments
  @return     either EXIT_SUCCESS or EXIT_FAILURE */
 int main(int argc, char **argv) {
-
 	/* fixme: more options! (ie, load game, etc) */
 	if(argc > 1) {
 		usage();
 		return EXIT_SUCCESS;
 	}
-
 	/* we generally don't have return because glutMainLoop() never does */
 	if(atexit(&main_)) perror("atexit");
-
 	/* entropy increase */
 	srand((unsigned)clock());
-
 	/* start up subsystems; window has to be first; timer ms */
 	if(!Window(programme, argc, argv)
 		|| !Key()
 		|| !Sprites()
 		|| !Draw()
-	    || !Game()) return EXIT_FAILURE;
-
+		|| !Game()) return EXIT_FAILURE;
 	/* hand over control to the grahics library */
 	TimerRun();
 	WindowGo();
-
 	/* never get here */
 	return EXIT_FAILURE;
 }

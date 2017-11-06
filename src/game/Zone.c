@@ -8,10 +8,10 @@
 #include <math.h>	/* M_PI */
 #include "../../build/Auto.h"
 #include "../Print.h"
+#include "../general/Events.h"
 #include "../system/Draw.h"
 #include "Game.h"
 #include "Sprites.h"
-#include "Event.h"
 #include "Zone.h"
 
 #ifndef M_PI
@@ -36,6 +36,7 @@ extern const float de_sitter;
 
 const struct AutoSpaceZone *current_zone;
 
+#if 0
 /** @fixme Player should be on it's own. */
 static int remove_all_except_player(struct Sprite *const this) {
 	const struct Ship *const player = GameGetPlayer();
@@ -48,6 +49,7 @@ static int remove_all_events_except(struct Event *const victim) {
 	return 0;/*fixme ShipGetEventRecharge(GameGetPlayer()) != victim
 	&& EventGetConsumerAccept(victim) != (void (*)(void *))&ZoneChange;*/
 }
+#endif
 
 /* public */
 
@@ -64,7 +66,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 	/* clear all objects */
 	/*SpriteRemoveIf(&remove_all_except_player);*/
-	EventRemoveIf(&remove_all_events_except);
+	/*EventRemoveIf(&remove_all_events_except);*/
 	/*PlanetoidClear();*/
 
 	/* set drawing elements */
@@ -80,11 +82,13 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* update the current zone */
 	current_zone = sz;
 
+#if 0
 	/* some asteroids */
 	for(i = 0; i < 70/*00*/; i++) SpritesDebris(asteroid, 0);
 
 	/* sprinkle some ships */
 	for(i = 0; i < 1000; i++) SpritesShip(blob_class, 0, AI_DUMB);
+#endif
 
 }
 

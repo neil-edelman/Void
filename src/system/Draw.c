@@ -525,8 +525,7 @@ static void display(void) {
 	 hardware, this will actually make things slower. So always do the clear."
 	 I'm not using those features, thought! and the screen cover is complete, I
 	 don't see how doing extra work for nothing is going to make it faster.
-	 "A technique," haha, it was pretty ubiquitous; only newbies cleared the
-	 screen. */
+	 "A technique," more like a mistake if you don't. */
 
 	/* use sprites; triangle strips, two to form a square, vertex buffer,
 	 [-0.5, 0.5 : -0.5, 0.5] */
@@ -554,6 +553,7 @@ static void display(void) {
 	}
 	glEnable(GL_BLEND);
 
+#if 0
 	/* Draw far objects. */
 	glUseProgram(auto_Far_shader.compiled);
 	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
@@ -575,6 +575,7 @@ static void display(void) {
 	glUseProgram(auto_Info_shader.compiled);
 	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
 	/*SpritesDrawInfo(&display_info);*/
+#endif
 
 	/* Reset texture for next frame. */
 	old_texture = 0;

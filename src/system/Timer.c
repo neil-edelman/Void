@@ -41,7 +41,8 @@ void TimerRun(void) {
 	last_time   =  time;
 	is_running  =  -1;
 	debug("Timer: starting timer with %ums paused, %ums programme, "
-		"%ums game.\n", paused_time, last_time, TimerGetGameTime());
+		"%ums game. Aiming for %ums frametime.\n", paused_time, last_time,
+		TimerGetGameTime(), frametime_ms);
 
 	glutTimerFunc(frametime_ms, &update, 0);
 

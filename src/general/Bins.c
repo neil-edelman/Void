@@ -106,7 +106,7 @@ void BinsBiForEach(struct Bins *const this, const BinsBiAction action,
 	size_t i = 0;
 	if(!this || !action) return;
 	while(BinPoolIsElement(this->pool, i))
-		action(*BinPoolGetElement(this->pool, i), param);
+		action(*BinPoolGetElement(this->pool, i++), param);
 }
 
 

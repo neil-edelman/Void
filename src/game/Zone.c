@@ -82,7 +82,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* update the current zone */
 	current_zone = sz;
 
-#if 0
+#if 1
 	/* some asteroids */
 	for(i = 0; i < 70/*00*/; i++) SpritesDebris(asteroid, 0);
 

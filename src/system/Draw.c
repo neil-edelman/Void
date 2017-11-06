@@ -553,7 +553,6 @@ static void display(void) {
 	}
 	glEnable(GL_BLEND);
 
-#if 0
 	/* Draw far objects. */
 	glUseProgram(auto_Far_shader.compiled);
 	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
@@ -575,7 +574,6 @@ static void display(void) {
 	glUseProgram(auto_Info_shader.compiled);
 	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
 	/*SpritesDrawInfo(&display_info);*/
-#endif
 
 	/* Reset texture for next frame. */
 	old_texture = 0;

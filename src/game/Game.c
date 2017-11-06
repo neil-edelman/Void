@@ -68,8 +68,7 @@ int Game(void) {
 	if(is_started) return 1;
 
 	if(!Sprites()) return 0; /* Start up Sprites subsystem. */
-	/*if(!(game.events = Events())) { Game_(); return 0; }*/
-	game.events = 0;
+	if(!(game.events = Events())) { Game_(); return 0; }
 
 	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
 	KeyRegister(27,   &quit);
@@ -98,8 +97,9 @@ int Game(void) {
 	DrawSetShield("Bar.png");
 
 	Zone(game.start);
-	/*Event(0, 2000, 1000, FN_RUNNABLE, &position);*/
 	game.player = SpritesShip(game.nautilus, &position, AI_HUMAN);
+
+	EventsRunnable(game.events, 2000, &fps);
 
 	debug("Game: on.\n");
 	is_started = -1;
@@ -120,14 +120,11 @@ void Game_(void) {
 
 /** updates the gameplay */
 void GameUpdate(const int dt_ms) {
-	printf("GameUpdate %d.\n", dt_ms);
 	if(!is_started) return;
 	/* Collision detect, move sprites, center on the player; a lot of work. */
 	SpritesUpdate(dt_ms, (struct Sprite *)game.player);
-	printf("GameUpdate::SpritesUpdate.\n");
 	/* check events */
 	EventsUpdate(game.events);
-	printf("GameUpdate::EventsUpdate.\n");
 }
 
 struct Ship *GameGetPlayer(void) {

@@ -24,7 +24,7 @@
 struct Event;
 struct EventVt;
 struct EventList;
-struct Event { struct EventVt *vt; };
+struct Event { const struct EventVt *vt; };
 
 #define LIST_NAME Event
 #define LIST_TYPE struct Event
@@ -124,11 +124,11 @@ static void clear_events(struct Events *const this) {
 	unsigned i;
 	assert(this);
 	EventListClear(&this->immediate);
-	for(i = 0; i < sizeof this->approx1s / sizeof(struct EventList *); i++)
+	for(i = 0; i < sizeof this->approx1s / sizeof *this->approx1s; i++)
 		EventListClear(this->approx1s + i);
-	for(i = 0; i < sizeof this->approx8s / sizeof(struct EventList *); i++)
+	for(i = 0; i < sizeof this->approx8s / sizeof *this->approx8s; i++)
 		EventListClear(this->approx8s + i);
-	for(i = 0; i < sizeof this->approx64s / sizeof(struct EventList *); i++)
+	for(i = 0; i < sizeof this->approx64s / sizeof *this->approx64s; i++)
 		EventListClear(this->approx64s + i);
 }
 
@@ -167,6 +167,63 @@ struct Events *Events(void) {
 	}
 	return this;
 }
+
+
+
+/*************** Sub-type constructors. ******************/
+
+/** Fits into a bin. */
+static struct EventList *fit_future(struct Events *const this,
+	const unsigned ms_future) {
+	const unsigned ms_now = TimerGetGameTime(), ms = ms_now + ms_future;
+	unsigned select;
+	struct EventList *list;
+	assert(this);
+	if(ms_future < 0x200) {
+		list = &this->immediate;
+		select = 0;
+	} else if(ms_future < 0x2200) {
+		list = this->approx1s;
+		select = ((ms >> 10) & 7) + ((ms & (0x400 - 1)) > 0x200) ? 1 : 0;
+	} else if(ms_future < 0x11000) {
+		list = this->approx8s;
+		select = ((ms >> 13) & 7) + ((ms & (0x2000 - 1)) > 0x1000) ? 1 : 0;
+	} else if(ms_future < 0x88000) {
+		list = this->approx64s;
+		select = ((ms >> 16) & 7) + ((ms & (0x10000 - 1)) > 0x8000) ? 1 : 0;
+	} else { /* Maximum delay is, \${1.024s * 64 * 8 * (min/60s) <= 8.74min} */
+		list = this->approx64s;
+		select = ((ms_now >> 16) + 7) & 7;
+	}
+	assert(select < 8);
+	return list + select;
+}
+
+/** Abstract sprite constructor. */
+static void event_filler(struct Events *const events, struct Event *const this,
+	const unsigned ms_future, const struct EventVt *const vt) {
+	assert(events && this && vt);
+	this->vt = vt;
+	EventListPush(fit_future(events, ms_future), (struct EventListNode *)this);
+}
+
+/** Creates a new {Runnable}. */
+int EventsRunnable(struct Events *const events, const unsigned ms_future,
+	const Runnable run) {
+	struct Runnable *this;
+	if(!events || !run) return 0;
+	if(!(this = RunnablePoolNew(events->runnables))) { fprintf(stderr,
+		"EventsRunnable: %s.\n", RunnablePoolGetError(events->runnables));
+		return 0; }
+	this->run = run;
+	event_filler(events, &this->event.data, ms_future, &runnable_vt);
+	return 1;
+}
+
+
+
+
+
 
 /** Clears all events. */
 void EventsClear(struct Events *const this) {
@@ -227,42 +284,6 @@ void EventsUpdate(struct Events *const this) {
 	} while(!t1s.done);
 }
 
-static struct EventList *fit_future(struct Events *const this,
-	const unsigned ms_future) {
-	const unsigned ms_now = TimerGetGameTime(), ms = ms_now + ms_future;
-	unsigned select;
-	struct EventList *list;
-	assert(this);
-	if(ms_future < 0x200) {
-		list = &this->immediate;
-		select = 0;
-	} else if(ms_future < 0x2200) {
-		list = this->approx1s;
-		select = ((ms >> 10) & 7) + ((ms & (0x400 - 1)) > 0x200) ? 1 : 0;
-	} else if(ms_future < 0x11000) {
-		list = this->approx8s;
-		select = ((ms >> 13) & 7) + ((ms & (0x2000 - 1)) > 0x1000) ? 1 : 0;
-	} else if(ms_future < 0x88000) {
-		list = this->approx64s;
-		select = ((ms >> 16) & 7) + ((ms & (0x10000 - 1)) > 0x8000) ? 1 : 0;
-	} else { /* Maximum delay is, \${1.024s * 64 * 8 * (min/60s) <= 8.74min} */
-		list = this->approx64s;
-		select = ((ms_now >> 16) + 7) & 7;
-	}
-	assert(select < 8);
-	return list + select;
-}
-
-int EventsRunnable(struct Events *const events, const unsigned ms_future,
-	const Runnable run) {
-	struct Runnable *this;
-	if(!this || !run) return 0;
-	if(!(this = RunnablePoolNew(events->runnables))) { fprintf(stderr,
-		"EventsRunnable: %s.\n", RunnablePoolGetError(events->runnables));
-		return 0; }
-	EventListPush(fit_future(events, ms_future), &this->event);
-	return 1;
-}
 
 
 

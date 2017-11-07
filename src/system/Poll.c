@@ -24,40 +24,29 @@ struct PollKey {
 
 struct PollAxis {
 	unsigned decrease, increase;
-	unsigned ms;
+	int ms;
 };
 
 /** The complete input pattern that we need to poll for. */
-struct Poll {
+static struct Poll {
 	struct PollAxis move_x, move_y;
 	struct PollKey shoot;
-};
-
-/** Destructor. */
-void Poll_(struct Poll **const pthis) {
-	struct Poll *this;
-	if(!pthis || (this = *pthis)) return;
-	free(this);
-	this = *pthis = 0;
-}
+} poll;
 
 /** Constructor.
  @param pkeys: A pointer to a serialised key-map. */
-struct Poll *Poll(const unsigned (*const pkeys)[5]) {
-	struct Poll *this;
+void Poll(const unsigned (*const pkeys)[5]) {
 	const unsigned *k;
-	if(!pkeys || !(k = *pkeys)) return 0;
-	if(!(this = malloc(sizeof *this)))
-		{ perror("Input"); Poll_(&this); return 0; }
-	this->move_x.decrease = k[0];
-	this->move_x.increase = k[1];
-	this->move_x.ms = 0;
-	this->move_y.decrease = k[2];
-	this->move_y.increase = k[3];
-	this->move_y.ms = 0;
-	this->shoot.press = k[4];
-	this->shoot.ms = 0;
-	return this;
+	if(!pkeys || !(k = *pkeys))
+		{ fprintf(stderr, "Poll: called without keys array.\n"); return; }
+	poll.move_x.decrease = k[0];
+	poll.move_x.increase = k[1];
+	poll.move_x.ms = 0;
+	poll.move_y.decrease = k[2];
+	poll.move_y.increase = k[3];
+	poll.move_y.ms = 0;
+	poll.shoot.press = k[4];
+	poll.shoot.ms = 0;
 }
 
 static void press(struct PollKey *k) {
@@ -68,13 +57,20 @@ static void axis(struct PollAxis *a) {
 	a->ms = KeyTime(a->increase) - KeyTime(a->decrease);
 }
 
-void PollUpdate(struct Poll *const this) {
-	if(!this) return;
-	axis(&this->move_x);
-	axis(&this->move_y);
-	press(&this->shoot);
-	if(this->move_x.ms) printf("X: %d.\n", this->move_x.ms);
+/** Should be called every frame to update the joystick-like keys. */
+void PollUpdate(void) {
+	axis(&poll.move_x);
+	axis(&poll.move_y);
+	press(&poll.shoot);
+	if(poll.move_x.ms) printf("X: %d.\n", poll.move_x.ms);
 }
+
+/** Accessor. */
+int PollGetRight(void) { return poll.move_x.ms; }
+/** Accessor. */
+int PollGetUp(void) { return poll.move_y.ms; }
+/** Accessor. */
+int PollGetShoot(void) { return poll.shoot.ms; }
 
 #if 0
 static void ship_player(struct Ship *const this) {

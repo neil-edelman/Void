@@ -1,5 +1,7 @@
 struct Poll;
 
-void Poll_(struct Poll **const pthis);
-struct Poll *Poll(const unsigned (*const pkeys)[5]);
-void PollUpdate(struct Poll *const this);
+void Poll(const unsigned (*const pkeys)[5]);
+void PollUpdate(void);
+int PollGetRight(void);
+int PollGetUp(void);
+int PollGetShoot(void);

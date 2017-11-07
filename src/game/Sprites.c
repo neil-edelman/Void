@@ -18,7 +18,7 @@
 #include "../general/Orcish.h" /* for human-readable ship names */
 /*#include "../general/Events.h"*/ /* for delays */
 #include "../general/Bins.h" /* for bins */
-#include "../system/Key.h" /* keys for input */
+#include "../system/Poll.h" /* input */
 #include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "../system/Timer.h" /* for expiring */
 #include "Light.h" /* for glowing */
@@ -237,9 +237,9 @@ static void ship_update_human(struct Ship *const this) { UNUSED(this); }
 /** Called at beginning of frame with one ship, {player}. (fixme; hmm)
  @implements <Ship>Action */
 static void ship_player(struct Ship *const this) {
-	const int ms_turning = KeyTime(k_left) - KeyTime(k_right);
-	const int ms_acceleration = KeyTime(k_up) - KeyTime(k_down);
-	const int ms_shoot = KeyTime(32); /* fixme */
+	const int ms_turning = -PollGetRight();
+	const int ms_acceleration = PollGetUp();
+	const int ms_shoot = PollGetShoot(); /* fixme */
 	/* fixme: This is for all. :[ */
 	if(ms_acceleration > 0) { /* not a forklift */
 		struct Vec2f v = { this->sprite.data.v.x, this->sprite.data.v.y };

@@ -36,7 +36,6 @@ static int is_started;
 /* public struct */
 static struct Game {
 	struct Events *events;
-	struct Poll *poll;
 	struct Ship *player; /* camera moves with this */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
@@ -72,7 +71,6 @@ int Game(void) {
 	if(is_started) return 1;
 
 	game.events = 0;
-	game.poll = 0;
 	game.player = 0;
 	/* game elements */
 	if(!(game.asteroid = AutoDebrisSearch("Asteroid"))
@@ -85,7 +83,6 @@ int Game(void) {
 
 	do {
 		if(!(game.events = Events())) { e = "event"; break; }
-		if(!(game.poll = Poll(&keys))) { e = "poll"; break; }
 	} while(0); if(e) {
 		debug("Game: couldn't start %s.\n", e); Game_();
 		return 0;
@@ -104,6 +101,7 @@ int Game(void) {
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
+	Poll(&keys);
 
 	/* set drawing elements */
 	DrawSetShield("Bar.png");
@@ -126,7 +124,6 @@ void Game_(void) {
 
 	debug("~Game: over.\n");
 	is_started = 0;
-	Poll_(&game.poll);
 	Events_(&game.events);
 }
 
@@ -134,7 +131,7 @@ void Game_(void) {
 void GameUpdate(const int dt_ms) {
 	if(!is_started) return;
 	/* Update keys. */
-	PollUpdate(game.poll);
+	PollUpdate();
 	/* Collision detect, move sprites, center on the player; a lot of work. */
 	SpritesUpdate(dt_ms, (struct Sprite *)game.player);
 	/* check events */

@@ -90,9 +90,8 @@ Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath
 </tr>
 <tr>
 	<td>void</td>
-	<td><a href = "#BinsBiForEach">BinsBiForEach</a></td>
-	<td>struct Bins *const this, const BinsBiAction action,
-	void *const param</td>
+	<td><a href = "#BinsForEach">BinsForEach</a></td>
+	<td>struct Bins *const this, const BinsAction action</td>
 </tr>
 </table>
 
@@ -122,10 +121,9 @@ Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath
 </dl>
 </div>
 
-<div><a name = "BinsBiForEach"><!-- --></a>
-<h3>BinsBiForEach</h3>
-<pre>void <b>BinsBiForEach</b> (struct Bins *const this, const BinsBiAction action,
-	void *const param)</pre>
+<div><a name = "BinsForEach"><!-- --></a>
+<h3>BinsForEach</h3>
+<pre>void <b>BinsForEach</b> (struct Bins *const this, const BinsAction action)</pre>
 <dl>
 	<dt>parameter: pbin</dt>
 	<dd>The variable pointed-to is set to an element index if <em>Bins</em>

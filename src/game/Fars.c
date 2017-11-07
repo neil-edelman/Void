@@ -147,14 +147,13 @@ static void far_filler(struct Fars *const fars, struct Far *const this,
 	this->x.y = class->y;
 	this->x.theta = 0.0f;
 	Vec2f_to_bg_bin((struct Vec2f *)&this->x, &this->bin);
-	FarListPush(fars->bins + this->bin, (struct FarListNode *)this);
+	FarListPush(fars->bins + this->bin, this);
 }
 
 /** Extends {far_filler}. */
 struct Planetoid *FarsPlanetoid(struct Fars *const fars,
 	const struct AutoObjectInSpace *const class) {
 	struct Planetoid *this;
-	struct Ortho3f x;
 	if(!fars || !class) return 0;
 	assert(class->sprite && class->name);
 	if(!(this = PlanetoidPoolNew(fars->planetoids)))
@@ -162,6 +161,6 @@ struct Planetoid *FarsPlanetoid(struct Fars *const fars,
 		PlanetoidPoolGetError(fars->planetoids)); return 0; }
 	far_filler(fars, &this->far.data, &planetoid_vt, class);
 	this->name = class->name;
-	printf("Planetoid %s at (%f, %f)!!!\n", this->name, x.x, x.y);
+	printf("Planetoid %s!!!\n", this->name);
 	return this;
 }

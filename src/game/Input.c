@@ -41,10 +41,10 @@ void Input_(struct Input **const pthis) {
 
 /** Constructor.
  @param pkeys: A pointer to a serialised key-map. */
-struct Input *Input(unsigned (*const pkeys)[5]) {
+struct Input *Input(const unsigned (*const pkeys)[5]) {
 	struct Input *this;
-	unsigned *k;
-	if(!pkeys || (k = *pkeys)) return 0;
+	const unsigned *k;
+	if(!pkeys || !(k = *pkeys)) return 0;
 	if(!(this = malloc(sizeof *this)))
 		{ perror("Input"); Input_(&this); return 0; }
 	this->move_x.decrease = k[0];
@@ -71,6 +71,7 @@ void InputPoll(struct Input *const this) {
 	axis(&this->move_x);
 	axis(&this->move_y);
 	press(&this->shoot);
+	printf("X: %d.\n", this->move_x.ms);
 }
 
 #if 0

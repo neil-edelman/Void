@@ -139,6 +139,12 @@ delays will be more granular and less-resolution.
 	<td>void</td>
 </tr>
 <tr>
+	<td>int</td>
+	<td><a href = "#EventsRunnable">EventsRunnable</a></td>
+	<td>struct Events *const events, const unsigned ms_future,
+	const Runnable run</td>
+</tr>
+<tr>
 	<td>void</td>
 	<td><a href = "#EventsClear">EventsClear</a></td>
 	<td>struct Events *const this</td>
@@ -168,6 +174,17 @@ Destructor.
 <pre>struct Events * <b>Events</b> (void)</pre>
 <p>
 Events pool constructor.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "EventsRunnable"><!-- --></a>
+<h3>EventsRunnable</h3>
+<pre>int <b>EventsRunnable</b> (struct Events *const events, const unsigned ms_future,
+	const Runnable run)</pre>
+<p>
+Creates a new <em>Runnable</em>.
 </p>
 <dl>
 </dl>

@@ -101,6 +101,12 @@ int BinsSetRectangle(struct Bins *const this, struct Rectangle4f *const rect) {
 /** @param pbin: The variable pointed-to is set to an element index if {Bins}
  had more elements, in the range {[0, size_side^2-1]}.
  @return Whether the {Bins} had an element. */
+void BinsForEach(struct Bins *const this, const BinsAction action) {
+	size_t i = 0;
+	if(!this || !action) return;
+	while(BinPoolIsElement(this->pool, i))
+		action(*BinPoolGetElement(this->pool, i++));
+}
 void BinsBiForEach(struct Bins *const this, const BinsBiAction action,
 	void *const param) {
 	size_t i = 0;
@@ -108,6 +114,7 @@ void BinsBiForEach(struct Bins *const this, const BinsBiAction action,
 	while(BinPoolIsElement(this->pool, i))
 		action(*BinPoolGetElement(this->pool, i++), param);
 }
+
 
 
 

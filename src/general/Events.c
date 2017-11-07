@@ -204,7 +204,7 @@ static void event_filler(struct Events *const events, struct Event *const this,
 	const unsigned ms_future, const struct EventVt *const vt) {
 	assert(events && this && vt);
 	this->vt = vt;
-	EventListPush(fit_future(events, ms_future), (struct EventListNode *)this);
+	EventListPush(fit_future(events, ms_future), this);
 }
 
 /** Creates a new {Runnable}. */

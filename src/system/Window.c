@@ -22,7 +22,7 @@ static const int    warn_texture_size = 1024;
 static int    is_started;
 static time_t last_error;
 
-/** Gets the window started.
+/** Gets the window started. There is no destructor.
  @param title	The title of the window (can be null.)
  @param argc
  @param argv	main() program arguments; passed to glutInit().

@@ -272,7 +272,7 @@ static void ship_player(struct Ship *const this) {
 /** @implements <Ship>Action */
 static void ship_update_dumb_ai(struct Ship *const this) {
 	assert(this);
-	this->sprite.data.v.theta = 0.0002f;
+	this->sprite.data.v.theta = 0.2f;
 }
 #if 0
 static void ship_update_ai(struct Ship *const this) {
@@ -491,7 +491,7 @@ static void sprite_filler(struct Sprite *const this,
 	this->bounding = (as->image->width >= as->image->height ?
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
-	SpriteListPush(&sprites->holding, (struct SpriteListNode *)this);
+	SpriteListPush(&sprites->holding, this);
 }
 
 /** Creates a new {Ship}. */
@@ -624,8 +624,7 @@ static void clear_holding_bin(void) {
 	while((sprite = SpriteListGetLast(&sprites->holding))) {
 		SpriteListRemove(&sprites->holding, sprite);
 		sprite->bin = BinsVector(sprites->foreground, &sprite->x_5);
-		SpriteListPush(sprites->bins + sprite->bin,
-			(struct SpriteListNode *)sprite);
+		SpriteListPush(sprites->bins + sprite->bin, sprite);
 	}
 }
 
@@ -665,14 +664,13 @@ static void extrapolate(struct Sprite *const this) {
 		/* I don't think that this matters, we could set it to {bin} and save
 		 the trouble of recalculating, but it feels dirty. */
 		this->bin = HOLDING_BIN;
-		SpriteListPush(&sprites->holding, (struct SpriteListNode *)this);
+		SpriteListPush(&sprites->holding, this);
 	}
 }
-
-static void for_each_screen(const SpriteAction action) {
-	assert(action);
+static void extrapolate_bin(const unsigned idx) {
+	assert(sprites);
+	SpriteListForEach(sprites->bins + idx, &extrapolate);
 }
-
 /** Update each frame.
  @param target: What the camera focuses on; could be null. */
 void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
@@ -686,7 +684,7 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	/* Newly spawned sprites. */
 	clear_holding_bin();
 	/* Dynamics. */
-	for_each_screen(&extrapolate);
+	BinsForEach(sprites->foreground, &extrapolate_bin);
 	/* {extrapolate} puts the sprites that have wandered out of their bins in
 	 the holding bin as well. */
 	clear_holding_bin();

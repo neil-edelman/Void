@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
  @allow */
 static void main_(void) {
 	TimerPause();
+	/* There is no Window_(). */
 	Game_();
 	Draw_();
 	Sprites_();

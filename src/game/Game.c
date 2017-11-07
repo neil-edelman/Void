@@ -17,6 +17,7 @@
 #include "Sprites.h"
 #include "Zone.h"
 #include "Light.h"
+#include "Input.h"
 #include "../general/Events.h"
 #include "../system/Key.h"
 #include "../system/Window.h"
@@ -35,6 +36,7 @@ static int is_started;
 /* public struct */
 static struct Game {
 	struct Events *events;
+	struct Input *input;
 	struct Ship *player; /* camera moves with this */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
@@ -61,14 +63,33 @@ static void gametime(void);
 
 /* public */
 
-/** constructor */
+/** Constructor. */
 int Game(void) {
 	struct Ortho3f position = { 0.0f, 0.0f, 0.0f };
+	const unsigned keys[] = { k_left, k_right, k_down, k_up, 32 };
+	const char *e = 0;
 
 	if(is_started) return 1;
 
-	if(!Sprites()) return 0; /* Start up Sprites subsystem. */
-	if(!(game.events = Events())) { Game_(); return 0; }
+	game.events = 0;
+	game.input = 0;
+	game.player = 0;
+	/* game elements */
+	if(!(game.asteroid = AutoDebrisSearch("Asteroid"))
+		|| !(game.nautilus = AutoShipClassSearch("Fox"))
+		|| !(game.scorpion = AutoShipClassSearch("Blob"))
+		|| !(game.start    = AutoSpaceZoneSearch("Earth"))) {
+		debug("Game: couldn't find required game elements.\n");
+		return 0;
+	};
+
+	do {
+		if(!(game.events = Events())) { e = "event"; break; }
+		if(!(game.input = Input(&keys))) { e = "input"; break; }
+	} while(0); if(e) {
+		debug("Game: couldn't start %s.\n", e); Game_();
+		return 0;
+	}
 
 	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
 	KeyRegister(27,   &quit);
@@ -84,15 +105,6 @@ int Game(void) {
 	if(KeyPress('f'))  printf("Foo!\n");
 	if(KeyPress('a'))  SpritePrint("Game::update");*/
 
-	/* game elements */
-	if(!(game.asteroid = AutoDebrisSearch("Asteroid"))
-		|| !(game.nautilus = AutoShipClassSearch("Fox"))
-		|| !(game.scorpion = AutoShipClassSearch("Blob"))
-		|| !(game.start    = AutoSpaceZoneSearch("Earth"))) {
-		debug("Game: couldn't find required game elements.\n");
-		return 0;
-	};
-
 	/* set drawing elements */
 	DrawSetShield("Bar.png");
 
@@ -102,7 +114,7 @@ int Game(void) {
 	EventsRunnable(game.events, 2000, &fps);
 
 	debug("Game: on.\n");
-	is_started = -1;
+	is_started = 1;
 
 	return -1;
 }
@@ -114,7 +126,7 @@ void Game_(void) {
 
 	debug("~Game: over.\n");
 	is_started = 0;
-	Sprites_();
+	Input_(&game.input);
 	Events_(&game.events);
 }
 

@@ -2,9 +2,11 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- Input takes the serialised unsigned int array and creates a key map.
+ {Poll} takes the serialised unsigned int array and creates a constant key map.
+ Takes {Key.c} and makes it polling for axis information. This creates another
+ layer that is passed to sprites.
 
- @title		Input
+ @title		Poll
  @author	Neil
  @std		C89/90
  @version	2017-10 Broke off from {Sprite}. */
@@ -12,8 +14,8 @@
 #include <stdlib.h> /* malloc */
 #include <stdio.h> /* perror */
 #include "../general/OrthoMath.h"
-#include "../system/Key.h"
-#include "Input.h"
+#include "Key.h"
+#include "Poll.h"
 
 struct PollKey {
 	unsigned press;
@@ -25,15 +27,15 @@ struct PollAxis {
 	unsigned ms;
 };
 
-/** The complete input pattern. */
-struct Input {
+/** The complete input pattern that we need to poll for. */
+struct Poll {
 	struct PollAxis move_x, move_y;
 	struct PollKey shoot;
 };
 
 /** Destructor. */
-void Input_(struct Input **const pthis) {
-	struct Input *this;
+void Poll_(struct Poll **const pthis) {
+	struct Poll *this;
 	if(!pthis || (this = *pthis)) return;
 	free(this);
 	this = *pthis = 0;
@@ -41,12 +43,12 @@ void Input_(struct Input **const pthis) {
 
 /** Constructor.
  @param pkeys: A pointer to a serialised key-map. */
-struct Input *Input(const unsigned (*const pkeys)[5]) {
-	struct Input *this;
+struct Poll *Poll(const unsigned (*const pkeys)[5]) {
+	struct Poll *this;
 	const unsigned *k;
 	if(!pkeys || !(k = *pkeys)) return 0;
 	if(!(this = malloc(sizeof *this)))
-		{ perror("Input"); Input_(&this); return 0; }
+		{ perror("Input"); Poll_(&this); return 0; }
 	this->move_x.decrease = k[0];
 	this->move_x.increase = k[1];
 	this->move_x.ms = 0;
@@ -66,12 +68,12 @@ static void axis(struct PollAxis *a) {
 	a->ms = KeyTime(a->increase) - KeyTime(a->decrease);
 }
 
-void InputPoll(struct Input *const this) {
+void PollUpdate(struct Poll *const this) {
 	if(!this) return;
 	axis(&this->move_x);
 	axis(&this->move_y);
 	press(&this->shoot);
-	printf("X: %d.\n", this->move_x.ms);
+	if(this->move_x.ms) printf("X: %d.\n", this->move_x.ms);
 }
 
 #if 0

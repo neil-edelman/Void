@@ -17,9 +17,9 @@
 #include "Sprites.h"
 #include "Zone.h"
 #include "Light.h"
-#include "Input.h"
 #include "../general/Events.h"
 #include "../system/Key.h"
+#include "../system/Poll.h"
 #include "../system/Window.h"
 #include "../system/Draw.h"
 #include "../system/Timer.h" /* only for reporting framerate */
@@ -36,7 +36,7 @@ static int is_started;
 /* public struct */
 static struct Game {
 	struct Events *events;
-	struct Input *input;
+	struct Poll *poll;
 	struct Ship *player; /* camera moves with this */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
@@ -72,7 +72,7 @@ int Game(void) {
 	if(is_started) return 1;
 
 	game.events = 0;
-	game.input = 0;
+	game.poll = 0;
 	game.player = 0;
 	/* game elements */
 	if(!(game.asteroid = AutoDebrisSearch("Asteroid"))
@@ -85,7 +85,7 @@ int Game(void) {
 
 	do {
 		if(!(game.events = Events())) { e = "event"; break; }
-		if(!(game.input = Input(&keys))) { e = "input"; break; }
+		if(!(game.poll = Poll(&keys))) { e = "poll"; break; }
 	} while(0); if(e) {
 		debug("Game: couldn't start %s.\n", e); Game_();
 		return 0;
@@ -126,13 +126,15 @@ void Game_(void) {
 
 	debug("~Game: over.\n");
 	is_started = 0;
-	Input_(&game.input);
+	Poll_(&game.poll);
 	Events_(&game.events);
 }
 
 /** updates the gameplay */
 void GameUpdate(const int dt_ms) {
 	if(!is_started) return;
+	/* Update keys. */
+	PollUpdate(game.poll);
 	/* Collision detect, move sprites, center on the player; a lot of work. */
 	SpritesUpdate(dt_ms, (struct Sprite *)game.player);
 	/* check events */

@@ -29,11 +29,9 @@ static void key_up(unsigned char k, int x, int y);
 static void key_down_special(int k, int x, int y);
 static void key_up_special(int k, int x, int y);
 
-static const int key_delay = 300; /* ms; depreceated */
-
 /** Attach the static keys to the Window depending on whether the Timer is
  active (poll) or not (direct to functions.)
- @return	Success? */
+ @return Success? */
 int Key(void) {
 	glutKeyboardFunc(&key_down);
 	glutKeyboardUpFunc(&key_up);
@@ -59,7 +57,7 @@ int KeyTime(const int key) {
 	if(key < 0 || key >= KEY_MAX) return 0;
 	k = &keys[key];
 	if(k->state) {
-		int ct  = glutGet(GLUT_ELAPSED_TIME);/*TimerLastTime(); <- too granular?*/
+		int ct  = glutGet(GLUT_ELAPSED_TIME);/*TimerLastTime();<-too granular?*/
 		time    = ct - k->down + k->integral;
 		k->down = ct;
 	} else {
@@ -67,28 +65,6 @@ int KeyTime(const int key) {
 	}
 	k->integral = 0;
 	return time;
-}
-
-/** Key press, with repeat rate (destructive.) You probably don't want this
- because it is polling.
- @param key		The key.
- @return		Boolean, whether it's pressed or not.
- @deprecated	Use asynchronous @see{KeyRegister}. */
-int KeyPress(const int key) {
-	int time;
-	struct Key *k;
-
-	if(key < 0 || key >= KEY_MAX) return 0;
-	k = &keys[key];
-	if(k->state || k->integral) {
-		k->integral = 0;
-		time = glutGet(GLUT_ELAPSED_TIME);
-		if(time > k->time + key_delay) {
-			k->time = time;
-			return -1;
-		}
-	}
-	return 0;
 }
 
 /** GLUT_ to internal keys.
@@ -121,9 +97,7 @@ static enum Keys glut_to_keys(const int k) {
 	}
 }
 
-/* fixme: have key_delay in between calling? */
-
-/** callback for glutKeyboardFunc */
+/** Callback for {glutKeyboardFunc}. */
 static void key_down(unsigned char k, int x, int y) {
 	struct Key *key = &keys[k];
 	if(key->state) return;
@@ -134,17 +108,17 @@ static void key_down(unsigned char k, int x, int y) {
 	UNUSED(x), UNUSED(y);
 }
 
-/** callback for glutKeyboardUpFunc */
+/** Callback for {glutKeyboardUpFunc}. */
 static void key_up(unsigned char k, int x, int y) {
 	struct Key *key = &keys[k];
 	if(!key->state) return;
 	key->state = 0;
 	key->integral += glutGet(GLUT_ELAPSED_TIME) - key->down;
-	pedantic("key_up: key %d pressed %d ms at end of frame.\n", k, key->integral);
+	pedantic("key_up: key %d pressed %d ms at end of frame.\n",k,key->integral);
 	UNUSED(x), UNUSED(y);
 }
 
-/** callback for glutSpecialFunc */
+/** Callback for {glutSpecialFunc}. */
 static void key_down_special(int k, int x, int y) {
 	struct Key *key = &keys[glut_to_keys(k)];
 	if(key->state) return;
@@ -155,12 +129,13 @@ static void key_down_special(int k, int x, int y) {
 	UNUSED(x), UNUSED(y);
 }
 
-/** callback for glutSpecialUpFunc */
+/** Callback for {glutSpecialUpFunc}. */
 static void key_up_special(int k, int x, int y) {
 	struct Key *key = &keys[glut_to_keys(k)];
 	if(!key->state) return;
 	key->state = 0;
 	key->integral += glutGet(GLUT_ELAPSED_TIME) - key->down;
-	pedantic("key_up_special: key %d pressed %d ms at end of frame.\n", k, key->integral);
+	pedantic("key_up_special: key %d pressed %d ms at end of frame.\n", k,
+		key->integral);
 	UNUSED(x), UNUSED(y);
 }

@@ -2,7 +2,8 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- Used to map a floating point zero-centred position into an array.
+ Used to map a floating point zero-centred position into an array of discrete
+ size.
 
  @title		Bins
  @author	Neil

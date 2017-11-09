@@ -80,11 +80,6 @@ This is an idempotent class dealing with the interface to OpenGL.
 	<td><a href = "#KeyTime">KeyTime</a></td>
 	<td>const int key</td>
 </tr>
-<tr>
-	<td>int</td>
-	<td><a href = "#KeyPress">KeyPress</a></td>
-	<td>const int key</td>
-</tr>
 </table>
 
 
@@ -124,23 +119,6 @@ Polls how long the key has been pressed, without repeat rate. Destructive.
 	<dd>The key.</dd>
 	<dt>return</dt>
 	<dd>Number of ms.</dd>
-</dl>
-</div>
-
-<div><a name = "KeyPress"><!-- --></a>
-<h3>KeyPress</h3>
-<pre>int <b>KeyPress</b> (const int key)</pre>
-<p>
-Key press, with repeat rate (destructive.) You probably don't want this
-because it is polling.
-</p>
-<dl>
-	<dt>parameter: key</dt>
-	<dd>The key.</dd>
-	<dt>return</dt>
-	<dd>Boolean, whether it's pressed or not.</dd>
-	<dt>deprecated</dt>
-	<dd>Use asynchronous @see<em>KeyRegister</em>.</dd>
 </dl>
 </div>
 

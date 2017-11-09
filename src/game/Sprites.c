@@ -26,7 +26,7 @@
 
 #define BINS_SIDE_SIZE (64)
 #define BINS_SIZE (BINS_SIDE_SIZE * BINS_SIDE_SIZE)
-enum { HOLDING_BIN = BINS_SIZE }; /* Special bins must match {Sprites}. */
+enum { HOLDING_BIN = BINS_SIZE }; /* Bins must match entries in {Sprites}. */
 static const float bin_space = 256.0f;
 
 /* This is used for small floating-point values. The value doesn't have any
@@ -233,10 +233,7 @@ static void sprite_update(struct Sprite *const this) {
 }
 static void shoot(struct Ship *const ship);
 /** @implements <Ship>Action */
-static void ship_update_human(struct Ship *const this) { UNUSED(this); }
-/** Called at beginning of frame with one ship, {player}. (fixme; hmm)
- @implements <Ship>Action */
-static void ship_player(struct Ship *const this) {
+static void ship_update_human(struct Ship *const this) {
 	const int ms_turning = -PollGetRight();
 	const int ms_acceleration = PollGetUp();
 	const int ms_shoot = PollGetShoot(); /* fixme */
@@ -260,19 +257,20 @@ static void ship_player(struct Ship *const this) {
 		} else if(this->sprite.data.v.theta > this->turn) {
 			this->sprite.data.v.theta = this->turn;
 		}
+		fprintf(stderr, "Turn %f.\n", this->sprite.data.v.theta);
 	} else {
 		/* \${turn_damping_per_ms^dt_ms}
 		 Taylor: d^25 + d^25(t-25)log d + O((t-25)^2).
 		 @fixme What about extreme values? */
 		this->sprite.data.v.theta *= turn_damping_per_25ms
-		- turn_damping_1st_order * (sprites->dt_ms - 25.0f);
+			- turn_damping_1st_order * (sprites->dt_ms - 25.0f);
 	}
 	if(ms_shoot) shoot(this);
 }
 /** @implements <Ship>Action */
 static void ship_update_dumb_ai(struct Ship *const this) {
 	assert(this);
-	this->sprite.data.v.theta = 0.2f;
+	this->sprite.data.v.theta = 0.0002f;
 }
 #if 0
 static void ship_update_ai(struct Ship *const this) {
@@ -608,7 +606,7 @@ static void shoot(struct Ship *const ship) {
 }
 
 /** Each frame, calculate the bins that are visible. Called from
- @see{SpritesUpdate}. */
+ \see{SpritesUpdate}. */
 static void add_sprite_bins(struct Bins *const bins) {
 	struct Rectangle4f rect;
 	assert(bins);
@@ -631,7 +629,7 @@ static void clear_holding_bin(void) {
 /** Moves the sprite. Calculates temporary values, {dx}, {x_5}, and {box}.
  Half-way through the frame, {x_5}, is used to divide the sprites into bins;
  {transfers} is used to stick sprites that have overflowed their bin, and
- should be dealt with next.
+ should be dealt with next. Called in \see{extrapolate_bin}.
  @implements <Sprite>Action */
 static void extrapolate(struct Sprite *const this) {
 	unsigned bin;
@@ -667,10 +665,66 @@ static void extrapolate(struct Sprite *const this) {
 		SpriteListPush(&sprites->holding, this);
 	}
 }
+/** Called in \see{SpritesUpdate}.
+ @implements <Bin>Action */
 static void extrapolate_bin(const unsigned idx) {
 	assert(sprites);
 	SpriteListForEach(sprites->bins + idx, &extrapolate);
 }
+
+/* Branch cut to the principal branch (-Pi,Pi] for numerical stability. We
+ should really use normalised {ints}, so this would not be a problem, but
+ {OpenGl} doesn't like that. Called from \see{timestep}. */
+static void branch_cut_pi_pi(float *theta_ptr) {
+	assert(theta_ptr);
+	*theta_ptr -= M_2PI_F * floorf((*theta_ptr + M_PI_F) / M_2PI_F);
+}
+/** Relies on \see{extrapolate}; all pre-computation is finalised in this step
+ and values are advanced. Collisions are used up and need to be cleared after.
+ Called from \see{timestep_bin}.
+ @implements <Sprite>Action */
+static void timestep(struct Sprite *const this) {
+	const float t_full = sprites->dt_ms;
+	float t0 = sprites->dt_ms;
+	struct Vec2f v1 = { 0.0f, 0.0f };
+#if 0
+	struct Collision *c;
+	struct Vec2f v1 = { 0.0f, 0.0f }, d;
+	assert(sprites);
+	/* The earliest time to collision and sum the collisions together. */
+	for(c = sprites->collision_set; c; c = c->next) {
+		/*char a[12];*/
+		d.x = sprites->x.x + sprites->v.x * c->t;
+		d.y = sprites->x.y + sprites->v.y * c->t;
+		/*fprintf(gnu_glob, "set arrow from %f,%f to %f,%f lw 0.5 "
+		 "lc rgb \"#EE66AA\" front;\n", d.x, d.y,
+		 d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));*/
+		/*this->vt->to_string(this, &a);
+		 printf("%s collides at %.1f and ends up going (%.1f, %.1f).\n", a,
+		 c->t, c->v.x * 1000.0f, c->v.y * 1000.0f);*/
+		if(c->t < t0) t0 = c->t;
+		v1.x += c->v.x, v1.y += c->v.y;
+		/* fixme: stability! do a linear search O(n) to pick out the 2 most
+		 recent, then divide by, { 1, 2, 4, 4, 4, . . . }? */
+	}
+#endif
+	this->x.x = this->x.x + this->v.x * t0 + v1.x * (t_full - t0);
+	this->x.y = this->x.y + this->v.y * t0 + v1.y * (t_full - t0);
+	/*if(sprites->collision_set) {
+		sprites->collision_set = 0;
+		sprites->v.x = v1.x, sprites->v.y = v1.y;
+	}*/
+	/* Angular velocity. */
+	this->x.theta += this->v.theta /* omega */ * t_full;
+	branch_cut_pi_pi(&this->x.theta);
+}
+/** Called in \see{SpritesUpdate}.
+ @implements <Bin>Action */
+static void timestep_bin(const unsigned idx) {
+	assert(sprites);
+	SpriteListForEach(sprites->bins + idx, &timestep);
+}
+
 /** Update each frame.
  @param target: What the camera focuses on; could be null. */
 void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
@@ -688,7 +742,8 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	/* {extrapolate} puts the sprites that have wandered out of their bins in
 	 the holding bin as well. */
 	clear_holding_bin();
-
+	/* Timestep. */
+	BinsForEach(sprites->foreground, &timestep_bin);
 #if 0
 	if(!DelayPoolIsEmpty(delays)) {
 		/*BinPoolForEach(draw_bins, &Bin_print);*/
@@ -733,6 +788,17 @@ void SpritesDrawForeground(const LambertOutput draw) {
 	assert(sprites && draw);
 	BinsBiForEach(sprites->foreground, &draw_bin, &container);
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 #if 0
@@ -1013,106 +1079,6 @@ static void gate_action(struct Gate *const sprites) {
 	UNUSED(sprites);
 }
 
-/** @implements <Sprite>Action */
-static void sprite_update(struct Sprite *const sprites) {
-	sprites->vt->update(sprites);
-}
-
-/* Compute bounding boxes of where the sprite wants to go this frame,
- containing the projected circle along a vector {x -> x + v*dt}. This is the
- first step in collision detection. */
-static void collide_extrapolate(struct Sprite *const sprites) {
-	/* where they should be if there's no collision */
-	sprites->r1.x = sprites->r.x + sprites->v.x * dt_ms;
-	sprites->r1.y = sprites->r.y + sprites->v.y * dt_ms;
-	/* clamp */
-	if(sprites->r1.x > de_sitter)       sprites->r1.x = de_sitter;
-	else if(sprites->r1.x < -de_sitter) sprites->r1.x = -de_sitter;
-	if(sprites->r1.y > de_sitter)       sprites->r1.y = de_sitter;
-	else if(sprites->r1.y < -de_sitter) sprites->r1.y = -de_sitter;
-	/* extend the bounding box along the circle's trajectory */
-	if(sprites->r.x <= sprites->r1.x) {
-		sprites->box.x_min = sprites->r.x  - sprites->bounding - bin_half_space;
-		sprites->box.x_max = sprites->r1.x + sprites->bounding + bin_half_space;
-	} else {
-		sprites->box.x_min = sprites->r1.x - sprites->bounding - bin_half_space;
-		sprites->box.x_max = sprites->r.x  + sprites->bounding + bin_half_space;
-	}
-	if(sprites->r.y <= sprites->r1.y) {
-		sprites->box.y_min = sprites->r.y  - sprites->bounding - bin_half_space;
-		sprites->box.y_max = sprites->r1.y + sprites->bounding + bin_half_space;
-	} else {
-		sprites->box.y_min = sprites->r1.y - sprites->bounding - bin_half_space;
-		sprites->box.y_max = sprites->r.y  + sprites->bounding + bin_half_space;
-	}
-}
-
-/** Used after \see{collide_extrapolate} on all the sprites you want to check.
- Uses Hahn–Banach separation theorem and the ordered list of projections on the
- {x} and {y} axis to build up a list of possible colliders based on their
- bounding box of where it moved this frame. Calls \see{collide_circles} for any
- candidites. */
-static void collide_boxes(struct Sprite *const sprites) {
-	/* assume it can be in a maximum of four bins at once as it travels? */
-	/*...*/
-#if 0
-	struct Sprite *b, *b_adj_y;
-	float t0;
-	if(!sprites) return;
-	/* mark x */
-	for(b = sprites->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
-		if(sprites < b && sprites->x_min < b->x_max) b->is_selected = -1;
-	}
-	for(b = sprites->next_x; b && b->x <= explore_x_max; b = b->next_x) {
-		if(sprites < b && sprites->x_max > b->x_min) b->is_selected = -1;
-	}
-	/* consider y and maybe add it to the list of colliders */
-	for(b = sprites->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
-		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
-		if(b->is_selected
-			&& sprites->y_min < b->y_max
-			&& (response = collision_matrix[b->sp_type][sprites->sp_type])
-			&& collide_circles(sprites->x, sprites->y, sprites->x1, sprites->y1, b->x,
-			b->y, b->x1, b->y1, sprites->bounding + b->bounding, &t0))
-			response(sprites, b, t0);
-		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
-	}
-	for(b = sprites->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
-		b_adj_y = b->next_y;
-		if(b->is_selected
-			&& sprites->y_max > b->y_min
-			&& (response = collision_matrix[b->sp_type][sprites->sp_type])
-			&& collide_circles(sprites->x, sprites->y, sprites->x1, sprites->y1, b->x,
-			b->y, b->x1, b->y1, sprites->bounding + b->bounding, &t0))
-			response(sprites, b, t0);
-		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
-	}
-	/* uhh, yes? I took this code from SpriteUpdate */
-	if(!s->no_collisions) {
-		/* no collisions; apply position change, calculated above */
-		s->x = s->x1;
-		s->y = s->y1;
-	} else {
-		/* if you skip this step, it's unstable on multiple collisions */
-		const float one_collide = 1.0f / s->no_collisions;
-		const float s_vx1 = s->vx1 * one_collide;
-		const float s_vy1 = s->vy1 * one_collide;
-		/* before and after collision;  */
-		s->x += (s->vx * s->t0_dt_collide + s_vx1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-		s->y += (s->vy * s->t0_dt_collide + s_vy1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-		s->vx = s_vx1;
-		s->vy = s_vy1;
-		/* unmark for next frame */
-		s->no_collisions = 0;
-		/* apply De Sitter spacetime? already done? */
-		if(s->x      < -de_sitter) s->x =  de_sitter - 20.0f;
-		else if(s->x >  de_sitter) s->x = -de_sitter + 20.0f;
-		if(s->y      < -de_sitter) s->y =  de_sitter - 20.0f;
-		else if(s->y >  de_sitter) s->y = -de_sitter + 20.0f;
-	}
-	/* bin change */
-#endif
-}
 
 
 /** @implements <Ship>Action */
@@ -1147,12 +1113,6 @@ void ShipRechage(struct Ship *const sprites, const int recharge) {
 	}
 }
 
-
-
-
-
-
-
 /** Gets a SpaceZone that it goes to, if it exists. */
 const struct AutoSpaceZone *GateGetTo(const struct Gate *const sprites) {
 	if(!sprites) return 0;
@@ -1172,199 +1132,6 @@ struct Gate *GateFind(struct AutoSpaceZone *const to) {
 	return GatePoolShortCircuit(gates, &find_gate);
 }
 
-/* branch cut (-Pi,Pi] */
-/* branch cut (-Pi,Pi] */
-
-/** Elastic collision between circles; called from {@see collide} with
- {@code t0_dt} from {@see collide_circles}. Use this when we've determined that
- {@code Sprite a} collides with {@code Sprite b} at {@code t0_dt}, where
- Sprites' {@code x, y} are at time 0 and {@code x1, y1} are at time 1 (we will
- not get here, just going towards.) Velocities are {@code vx, vy} and this
- function is responsible for setting {@code vx1, vy1}, after the collision.
- Also, it may alter (fudge) the positions a little to avoid interpenetration.
- @param a		Sprite a.
- @param b		Sprite b.
- @param t0_dt	The fraction of the frame that the collision occurs, [0, 1]. */
-static void elastic_bounce(struct Sprite *u, struct Sprite *v, const float t0_dt) {
-	/* interpolate position of collision */
-	const struct Vec2f a = {
-		u->r.x * t0_dt + u->r1.x * (1.0f - t0_dt),
-		u->r.y * t0_dt + u->r1.y * (1.0f - t0_dt)
-	}, b = {
-		v->r.x * t0_dt + v->r1.x * (1.0f - t0_dt),
-		v->r.y * t0_dt + v->r1.y * (1.0f - t0_dt)
-	},
-	/* delta */
-	d = {
-		b.x - a.x,
-		b.y - a.y
-	};
-	/* normal at point of impact; fixme: iffy infinities */
-	const float n_d2 = d.x * d.x + d.y * d.y;
-	const float n_n  = (n_d2 < epsilon) ? 1.0f / epsilon : 1.0f / sqrtf(n_d2);
-	const struct Vec2f n = {
-		d.x * n_n,
-		d.y * n_n
-	};
-	/* a's velocity, normal direction */
-	const float a_nrm_s = u->v.x * n.x + u->v.y * n.y;
-	const struct Vec2f a_nrm = {
-		a_nrm_s * n.x,
-		a_nrm_s * n.y
-	},
-	/* a's velocity, tangent direction */
-	a_tan = {
-		u->v.x - a_nrm.x,
-		u->v.y - a_nrm.y
-	};
-	/* b's velocity, normal direction */
-	const float b_nrm_s = v->v.x * n.x + v->v.y * n.y;
-	const struct Vec2f b_nrm = {
-		b_nrm_s * n.x,
-		b_nrm_s * n.y
-	},
-	/* b's velocity, tangent direction */
-	b_tan = {
-		v->v.x - b_nrm.x,
-		v->v.y - b_nrm.y
-	};
-	/* mass (assume all mass is positive!) */
-	const float a_m = u->mass, b_m = v->mass;
-	const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
-	/* elastic collision */
-	const struct Vec2f a_v = {
-		a_tan.x + (a_nrm.x*diff_m + 2*b_m*b_nrm.x) * invsum_m,
-		a_tan.y + (a_nrm.y*diff_m + 2*b_m*b_nrm.y) * invsum_m
-	}, b_v = {
-		(-b_nrm.x*diff_m + 2*a_m*a_nrm.x) * invsum_m + b_tan.x,
-		(-b_nrm.y*diff_m + 2*a_m*a_nrm.y) * invsum_m + b_tan.y
-	};
-	/* check for sanity */
-	const float bounding = u->bounding + v->bounding;
-	/* fixme: float stored in memory? */
-
-	/*pedantic("elasitic_bounce: colision between %s--%s norm_d %f; sum_r %f, %f--%ft\n",
-		SpriteToString(u), SpriteToString(v), sqrtf(n_d2), bounding, a_m, b_m);*/
-
-	/* interpenetation; happens about half the time because of IEEE754 numerics,
-	 which could be on one side or the other; also, sprites that just appear,
-	 multiple collisions interfering, and gremlins; you absolutely do not want
-	 objects to get stuck orbiting each other (fixme: this happens) */
-	if(n_d2 < bounding * bounding) {
-		const float push = (bounding - sqrtf(n_d2)) * 0.5f;
-		pedantic("elastic_bounce: \\pushing sprites %f distance apart\n", push);
-		u->r.x -= n.x * push;
-		u->r.y -= n.y * push;
-		v->r.x += n.x * push;
-		v->r.y += n.y * push;
-	}
-
-	if(!u->no_collisions) {
-		/* first collision */
-		u->no_collisions = 1;
-		u->t0_dt_collide = t0_dt;
-		u->v1.x = a_v.x;
-		u->v1.y = a_v.y;
-	} else {
-		/* there are multiple collisions, rebound from the 1st one and add */
-		/* fixme: shouldn't it be all inside? */
-		if(t0_dt < u->t0_dt_collide) u->t0_dt_collide = t0_dt;
-		u->v1.x += a_v.x;
-		u->v1.y += a_v.y;
-		u->no_collisions++;
-		/*pedantic(" \\%u collisions %s (%s.)\n", u->no_collisions, SpriteToString(u), SpriteToString(v));*/
-	}
-	if(!v->no_collisions) {
-		/* first collision */
-		v->no_collisions = 1;
-		v->t0_dt_collide = t0_dt;
-		v->v1.x          = b_v.x;
-		v->v1.y          = b_v.y;
-	} else {
-		/* there are multiple collisions, rebound from the 1st one and add */
-		if(t0_dt < v->t0_dt_collide) v->t0_dt_collide = t0_dt;
-		v->v1.x          += b_v.x;
-		v->v1.y          += b_v.y;
-		v->no_collisions++;
-		/*pedantic(" \\%u collisions %s (%s.)\n", v->no_collisions, SpriteToString(v), SpriteToString(u));*/
-	}
-
-}
-
-/** Pushes a from angle, amount.
- @param a		The object you want to push.
- @param angle	Standard co\:ordainates, radians, angle.
- @param impulse	tonne pixels / ms */
-static void push(struct Sprite *a, const float angle, const float impulse) {
-	const float deltav = a->mass ? impulse / a->mass : 1.0f; /* pixel / s */
-	a->v.x += cosf(angle) * deltav;
-	a->v.y += sinf(angle) * deltav;
-}
-
-/* type collisions; can not modify list of Sprites as it is in the middle of
- x/ylist or delete! */
-
-#if 0
-
-static void shp_shp(struct Sprite *a, struct Sprite *b, const float d0) {
-	elastic_bounce(a, b, d0);
-}
-
-static void deb_deb(struct Sprite *a, struct Sprite *b, const float d0) {
-	elastic_bounce(a, b, d0);
-}
-
-static void shp_deb(struct Sprite *s, struct Sprite *d, const float d0) {
-	/*printf("shpdeb: collide Shp(Spr%u): Deb(Spr%u)\n", SpriteGetId(s), SpriteGetId(d));*/
-	elastic_bounce(s, d, d0);
-	/*d->vx += 32.0f * (2.0f * rand() / RAND_MAX - 1.0f);
-	d->vy += 32.0f * (2.0f * rand() / RAND_MAX - 1.0f);*/
-}
-
-static void deb_shp(struct Sprite *d, struct Sprite *s, const float d0) {
-	shp_deb(s, d, d0);
-}
-
-static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
-	/*pedantic("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));*/
-	/* avoid inifinite destruction loop */
-	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
-	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
-	SpriteRecharge(d, -SpriteGetDamage(w));
-	SpriteDestroy(w);
-	UNUSED(d0);
-}
-
-static void deb_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
-	wmd_deb(w, d, d0);
-}
-
-static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
-	pedantic("wmd_shp: %s -- %s\n", SpriteToString(w), SpriteToString(s));
-	/* avoid inifinite destruction loop */
-	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
-	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
-	SpriteRecharge(s, -SpriteGetDamage(w));
-	SpriteDestroy(w);
-	UNUSED(d0);
-}
-
-static void shp_wmd(struct Sprite *s, struct Sprite *w, const float d0) {
-	wmd_shp(w, s, d0);
-}
-
-static void shp_eth(struct Sprite *s, struct Sprite *e, const float d0) {
-	/*void (*fn)(struct Sprite *const, struct Sprite *);*/
-	/*Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));*/
-	/*if((fn = EtherealGetCallback(eth))) fn(eth, s);*/
-	/* while in iterate! danger! */
-	if(e->sp.ethereal.callback) e->sp.ethereal.callback(e, s);
-	UNUSED(d0);
-}
-
-static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
-	shp_eth(s, e, d0);
-}
 
 /** can be a callback for an Ethereal, whenever it collides with a Ship.
  IT CAN'T MODIFY THE LIST */
@@ -1395,7 +1162,5 @@ static void gate_travel(struct Gate *const gate, struct Ship *this) {
 	/* fixme: unreliable */
 	this->sp.this.horizon = proj;
 }
-
-#endif
 
 #endif

@@ -64,16 +64,6 @@ size.
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
 
-<div><a name = "static struct SpriteList bins[BIN_BIN_FG_SIZE + 1]"><!-- --></a>
-<h3>static struct SpriteList bins[BIN_BIN_FG_SIZE + 1]</h3>
-<pre><b>static struct SpriteList bins[BIN_BIN_FG_SIZE + 1]</b></pre>
-<p>
-Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath.h">OrthoMath.h</a>.
-</p>
-<dl>
-</dl>
-</div>
-
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>
 
@@ -86,13 +76,26 @@ Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath
 </tr>
 <tr>
 	<td>int</td>
-	<td><a href = "#BinsSetRectangle">BinsSetRectangle</a></td>
-	<td>struct Bins *const this, struct Rectangle4f *const rect</td>
+	<td><a href = "#BinsSetScreenRectangle">BinsSetScreenRectangle</a></td>
+	<td>struct Bins *const this,
+	struct Rectangle4f *const rect</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#BinsSetSpriteRectangle">BinsSetSpriteRectangle</a></td>
+	<td>struct Bins *const this,
+	struct Rectangle4f *const rect</td>
 </tr>
 <tr>
 	<td>void</td>
-	<td><a href = "#BinsForEach">BinsForEach</a></td>
+	<td><a href = "#BinsForEachScreen">BinsForEachScreen</a></td>
 	<td>struct Bins *const this, const BinsAction action</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#BinsSpriteForEach">BinsSpriteForEach</a></td>
+	<td>struct Bins *const this,
+	struct Sprite *const sprite, const BinsSpriteAction action</td>
 </tr>
 </table>
 
@@ -113,24 +116,50 @@ Every sprite has one <em>bin</em> based on their position. <a href = "#OrthoMath
 </dl>
 </div>
 
-<div><a name = "BinsSetRectangle"><!-- --></a>
-<h3>BinsSetRectangle</h3>
-<pre>int <b>BinsSetRectangle</b> (struct Bins *const this, struct Rectangle4f *const rect)</pre>
+<div><a name = "BinsSetScreenRectangle"><!-- --></a>
+<h3>BinsSetScreenRectangle</h3>
+<pre>int <b>BinsSetScreenRectangle</b> (struct Bins *const this,
+	struct Rectangle4f *const rect)</pre>
+<p>
+Set screen rectangle.
+</p>
 <dl>
 	<dt>return</dt>
 	<dd>Success.</dd>
 </dl>
 </div>
 
-<div><a name = "BinsForEach"><!-- --></a>
-<h3>BinsForEach</h3>
-<pre>void <b>BinsForEach</b> (struct Bins *const this, const BinsAction action)</pre>
+<div><a name = "BinsSetSpriteRectangle"><!-- --></a>
+<h3>BinsSetSpriteRectangle</h3>
+<pre>int <b>BinsSetSpriteRectangle</b> (struct Bins *const this,
+	struct Rectangle4f *const rect)</pre>
+<p>
+Set sprite rectangle.
+</p>
 <dl>
-	<dt>parameter: pbin</dt>
-	<dd>The variable pointed-to is set to an element index if <em>Bins</em>
- had more elements, in the range <em>[0, size_side^2-1]</em>.</dd>
 	<dt>return</dt>
-	<dd>Whether the <em>Bins</em> had an element.</dd>
+	<dd>Success.</dd>
+</dl>
+</div>
+
+<div><a name = "BinsForEachScreen"><!-- --></a>
+<h3>BinsForEachScreen</h3>
+<pre>void <b>BinsForEachScreen</b> (struct Bins *const this, const BinsAction action)</pre>
+<p>
+For each bin on screen.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "BinsSpriteForEach"><!-- --></a>
+<h3>BinsSpriteForEach</h3>
+<pre>void <b>BinsSpriteForEach</b> (struct Bins *const this,
+	struct Sprite *const sprite, const BinsSpriteAction action)</pre>
+<p>
+For each bin crossing the sprite.
+</p>
+<dl>
 </dl>
 </div>
 

@@ -48,12 +48,6 @@ Public License 3, see copying.txt, or
 Sprites is a polymorphic static structure. Initialise it with <em>Sprites</em> and
 before exiting, when all references have been resolved, <em>Sprites_</em>.
 </p>
-<p>
-While <em>SpriteListForEach</em> is running, we may have to transfer a sprite to
-another bin, or delete a sprite, or whatever; this causes causality problems
-for iteration. We introduce a delay function that is called right after the
-loop for dealing with that. Defines <em>DelayPool</em>, <em>DelayPoolNode</em>.
-</p>
 <dl>
 	<dt>minimum standard</dt>
 	<dd>C89/90</dd>
@@ -75,12 +69,14 @@ loop for dealing with that. Defines <em>DelayPool</em>, <em>DelayPoolNode</em>.
 <pre><b>struct Sprite</b> {
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
-	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
+	float bounding; /* radius, fixed to function of the image */
 	unsigned bin; /* which bin is it in, set by {x_5}, or {no_bin} */
 	struct Ortho3f x, v; /* where it is and where it is going */
-	struct Vec2f dx, x_5; /* temporary values */
-	float bounding; /* radius, fixed to function of the image */
+	/* fixme: all the following are exclusive to sprites that are active; make
+	 a temporary structure to hold them? */
+	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
+	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
 }</pre>
 <p>
 Define abstract <em>Sprite</em>.
@@ -107,17 +103,89 @@ Define <em>ShipPool</em> and <em>ShipPoolNode</em>, a subclass of <em>Sprite</em
 </dl>
 </div>
 
+<div><a name = "struct Debris"><!-- --></a>
+<h3>struct Debris</h3>
+<pre><b>struct Debris</b> {
+	struct SpriteListNode sprite;
+	float mass;
+}</pre>
+<p>
+Define <em>DebrisPool</em> and <em>DebrisPoolNode</em>, a subclass of <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Wmd"><!-- --></a>
+<h3>struct Wmd</h3>
+<pre><b>struct Wmd</b> {
+	struct SpriteListNode sprite;
+	const struct AutoWmdType *class;
+	const struct Sprite *from;
+	float mass;
+	unsigned expires;
+	unsigned light;
+}</pre>
+<p>
+Define <em>WmdPool</em> and <em>WmdPoolNode</em>, a subclass of <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Gate"><!-- --></a>
+<h3>struct Gate</h3>
+<pre><b>struct Gate</b> {
+	struct SpriteListNode sprite;
+	const struct AutoSpaceZone *to;
+}</pre>
+<p>
+Define <em>GatePool</em> and <em>GatePoolNode</em>, a subclass of <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Collision"><!-- --></a>
+<h3>struct Collision</h3>
+<pre><b>struct Collision</b> {
+	struct Collision *next;
+	struct Vec2f v;
+	float t;
+}</pre>
+<p>
+Collisions between sprites to apply later. This is a pool that sprites can
+use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Bin"><!-- --></a>
+<h3>struct Bin</h3>
+<pre><b>struct Bin</b> {
+	struct SpriteList sprites;
+	struct RefPool *covers;
+}</pre>
+<p>
+Used in <em>Sprites</em>.
+</p>
+<dl>
+</dl>
+</div>
+
 <div><a name = "static struct Sprites"><!-- --></a>
 <h3>static struct Sprites</h3>
 <pre><b>static struct Sprites</b> {
-	/* The order of this list must mach the enum. */
-	struct SpriteList bins[BINS_SIZE], holding;
+	struct Bin bins[BINS_SIZE];
+	/* Backing for the {SpriteList} in the {Bin}s. */
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
-	float dt_ms; /* constantly updating frame time */
-	struct Bins *foreground;
+	/* Constantly updating frame time. */
+	float dt_ms;
+	struct Bins *foreground_bins;
 	struct CollisionPool *collisions;
 }</pre>
 <p>
@@ -242,7 +310,7 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 <tr>
 	<td>void</td>
 	<td><a href = "#SpritesDrawForeground">SpritesDrawForeground</a></td>
-	<td>const LambertOutput draw</td>
+	<td>void</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -355,7 +423,7 @@ Update each frame.
 
 <div><a name = "SpritesDrawForeground"><!-- --></a>
 <h3>SpritesDrawForeground</h3>
-<pre>void <b>SpritesDrawForeground</b> (const LambertOutput draw)</pre>
+<pre>void <b>SpritesDrawForeground</b> (void)</pre>
 <p>
 Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it sets
 <em>sprites.foreground</em>. Use when the Lambert GPU shader is loaded.

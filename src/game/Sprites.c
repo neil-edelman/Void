@@ -26,7 +26,6 @@
 
 #define BINS_SIDE_SIZE (64)
 #define BINS_SIZE (BINS_SIDE_SIZE * BINS_SIDE_SIZE)
-enum { HOLDING_BIN = BINS_SIZE }; /* Bins must match entries in {Sprites}. */
 static const float bin_space = 256.0f;
 
 /* This is used for small floating-point values. The value doesn't have any
@@ -57,9 +56,9 @@ struct Sprite {
 	float bounding; /* radius, fixed to function of the image */
 	unsigned bin; /* which bin is it in, set by {x_5}, or {no_bin} */
 	struct Ortho3f x, v; /* where it is and where it is going */
-	/* fixme: all the following are excusive to sprites that are active; make a
-	 temporary structure to hold them? */
-	struct Vec2f dx, x_5; /* temporary values */
+	/* fixme: all the following are exclusive to sprites that are active; make
+	 a temporary structure to hold them? */
+	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
 	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
 };
@@ -157,8 +156,7 @@ struct Bin {
 
 /** Sprites all together. */
 static struct Sprites {
-	/* The order of this list must mach the enum. */
-	struct Bin bins[BINS_SIZE], holding;
+	struct Bin bins[BINS_SIZE];
 	/* Backing for the {SpriteList} in the {Bin}s. */
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
@@ -423,8 +421,6 @@ static void bin_migrate(void *const sprites_void,
 		SpriteListMigrate(&sprites_pass->bins[i].sprites, migrate);
 		RefPoolMigrateEach(sprites_pass->bins[i].covers,&cover_migrate,migrate);
 	}
-	SpriteListMigrate(&sprites_pass->holding.sprites, migrate);
-	RefPoolMigrateEach(sprites_pass->holding.covers, &cover_migrate, migrate);
 }
 /** Called from \see{collision_migrate}.
  @implements <Sprite>ListMigrateElement */
@@ -447,8 +443,6 @@ static void collision_migrate(void *const sprites_void,
 		SpriteListMigrateEach(&sprites_pass->bins[i].sprites,
 			&collision_migrate_sprite, migrate);
 	}
-	SpriteListMigrateEach(&sprites_pass->holding.sprites,
-		&collision_migrate_sprite, migrate);
 }
 
 /** Destructor. */
@@ -459,7 +453,6 @@ void Sprites_(void) {
 		SpriteListClear(&sprites->bins[i].sprites);
 		RefPool_(&sprites->bins[i].covers);
 	}
-	SpriteListClear(&sprites->holding.sprites);
 	CollisionPool_(&sprites->collisions);
 	Bins_(&sprites->foreground_bins);
 	GatePool_(&sprites->gates);
@@ -481,8 +474,6 @@ int Sprites(void) {
 		SpriteListClear(&sprites->bins[i].sprites);
 		sprites->bins[i].covers = 0;
 	}
-	SpriteListClear(&sprites->holding.sprites);
-	sprites->holding.covers = 0;
 	sprites->ships = 0;
 	sprites->debris = 0;
 	sprites->wmds = 0;
@@ -494,7 +485,6 @@ int Sprites(void) {
 		for(i = 0; i < BINS_SIZE; i++) {
 			if(!(sprites->bins[i].covers = RefPool(0, 0))) { e = BINS; break; }
 		} if(e) break;
-		if(!(sprites->holding.covers = RefPool(0, 0))) { e = BINS; break; }
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
 		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
 		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
@@ -540,18 +530,17 @@ static void sprite_filler(struct Sprite *const this,
 	this->normals = as->normals;
 	this->bounding = (as->image->width >= as->image->height ?
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
-	this->bin     = HOLDING_BIN;
 	if(x) {
 		Ortho3f_assign(&this->x, x);
 	} else {
 		Ortho3f_filler_fg(&this->x);
 	}
+	this->bin  = BinsGetOrtho(sprites->foreground_bins, &this->x);
 	this->dx.x = this->dx.y = 0.0f;
-	this->x_5.x = this->x.x, this->x_5.y = this->x.y;
 	Ortho3f_filler_zero(&this->v);
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
 	this->collisions = 0;
-	SpriteListPush(&sprites->holding.sprites, this);
+	SpriteListPush(&sprites->bins[this->bin].sprites, this);
 }
 
 /** Creates a new {Ship}. */
@@ -667,42 +656,27 @@ static void shoot(struct Ship *const ship) {
 	ship->ms_recharge_wmd = TimerGetGameTime() + ship->wmd->ms_recharge;
 }
 
-/** Each frame, calculate the bins that are visible. Called from
- \see{SpritesUpdate}. */
-static void add_sprite_bins(struct Bins *const bins) {
-	struct Rectangle4f rect;
-	assert(bins);
-	DrawGetScreen(&rect);
-	BinsSetScreenRectangle(bins, &rect);
+/** Called in \see{extrapolate}.
+ @implements BinsSpriteAction */
+static void put_cover(const unsigned bin, struct Sprite *this) {
+	struct Sprite **cover;
+	char a[12];
+	assert(this && bin < BINS_SIZE);
+	if(!(cover = RefPoolNew(sprites->bins[bin].covers))) { fprintf(stderr,
+		"put_cover: %s.\n", RefPoolGetError(sprites->bins[bin].covers));return;}
+	cover = &this;
+	sprite_to_string(this, &a);
+	printf("put_cover: %s -> %u.\n", a, bin);
 }
-
-/** The spawned and transfer sprites while iterating go into the holding bin.
- This sends them into their proper bins. Called from \see{SpritesUpdate}. */
-static void clear_holding_bin(void) {
-	assert(sprites);
-	struct Sprite *sprite;
-	while((sprite = SpriteListGetLast(&sprites->holding.sprites))) {
-		SpriteListRemove(&sprites->holding.sprites, sprite);
-		sprite->bin = BinsVector(sprites->foreground_bins, &sprite->x_5);
-		SpriteListPush(&sprites->bins[sprite->bin].sprites, sprite);
-	}
-}
-
-/** Moves the sprite. Calculates temporary values, {dx}, {x_5}, and {box}.
- Half-way through the frame, {x_5}, is used to divide the sprites into bins;
- {transfers} is used to stick sprites that have overflowed their bin, and
- should be dealt with next. Called in \see{extrapolate_bin}.
+/** Moves the sprite. Calculates temporary values, {dx}, and {box}; sticks it
+ into the appropriate {covers}. Called in \see{extrapolate_bin}.
  @implements <Sprite>Action */
 static void extrapolate(struct Sprite *const this) {
-	unsigned bin;
 	assert(sprites && this);
 	sprite_update(this);
 	/* Kinematics. */
 	this->dx.x = this->v.x * sprites->dt_ms;
 	this->dx.y = this->v.y * sprites->dt_ms;
-	/* Determines into which bin it should be. fixme: clamp/exp. */
-	this->x_5.x = this->x.x + 0.5f * this->dx.x;
-	this->x_5.y = this->x.y + 0.5f * this->dx.y;
 	/* Dynamic bounding rectangle. */
 	this->box.x_min = this->x.x - this->bounding;
 	this->box.x_max = this->x.x + this->bounding;
@@ -712,20 +686,10 @@ static void extrapolate(struct Sprite *const this) {
 	this->box.y_max = this->x.y + this->bounding;
 	if(this->dx.y < 0) this->box.y_min += this->dx.y;
 	else this->box.y_max += this->dx.y;
-	bin = BinsVector(sprites->foreground_bins, &this->x_5);
-	/* This happens when the sprite wanders out of the bin. The reason we don't
-	 stick it in it's new bin immediately, is because the other bin may still
-	 be on the iterating stack, causing it to call it again, x n. */
-	if(bin != this->bin) {
-		char a[12];
-		this->vt->to_string(this, &a);
-		printf("Sprite %s has transferred bins %u -> %u.\n", a, this->bin, bin);
-		SpriteListRemove(&sprites->bins[this->bin].sprites, this);
-		/* I don't think that this matters, we could set it to {bin} and save
-		 the trouble of recalculating, but it feels dirty. */
-		this->bin = HOLDING_BIN;
-		SpriteListPush(&sprites->holding.sprites, this);
-	}
+	/* Put it into appropriate {covers}. This is like a hashmap in space, but
+	 it is spread out, so it may cover multiple bins. */
+	BinsSetSpriteRectangle(sprites->foreground_bins, &this->box);
+	BinsSpriteForEachSprite(sprites->foreground_bins, this, &put_cover);
 }
 /** Called in \see{SpritesUpdate}.
  @implements <Bin>Action */
@@ -749,6 +713,7 @@ static void timestep(struct Sprite *const this) {
 	const float t_full = sprites->dt_ms;
 	float t0 = sprites->dt_ms;
 	struct Vec2f v1 = { 0.0f, 0.0f };
+	unsigned bin;
 #if 0
 	struct Collision *c;
 	struct Vec2f v1 = { 0.0f, 0.0f }, d;
@@ -779,6 +744,16 @@ static void timestep(struct Sprite *const this) {
 	/* Angular velocity. */
 	this->x.theta += this->v.theta /* omega */ * t_full;
 	branch_cut_pi_pi(&this->x.theta);
+	bin = BinsGetOrtho(sprites->foreground_bins, &this->x);
+	/* This happens when the sprite wanders out of the bin. */
+	if(bin != this->bin) {
+		char a[12];
+		this->vt->to_string(this, &a);
+		printf("Sprite %s has transferred bins %u -> %u.\n", a, this->bin, bin);
+		SpriteListRemove(&sprites->bins[this->bin].sprites, this);
+		this->bin = bin;
+		SpriteListPush(&sprites->bins[bin].sprites, this);
+	}
 }
 /** Called in \see{SpritesUpdate}.
  @implements <Bin>Action */
@@ -798,19 +773,19 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	sprites->dt_ms = dt_ms;
 	/* Centre on the sprite that was passed, if it is available. */
 	if(target) DrawSetCamera((struct Vec2f *)&target->x);
-	/* Foreground drawables are a function of screen position. */
-	add_sprite_bins(sprites->foreground_bins);
-	/* Newly spawned sprites. */
-	clear_holding_bin();
-	/* Dynamics. */
+	/* Foreground drawable sprites are a function of screen position. */
+	{ 	struct Rectangle4f rect;
+		DrawGetScreen(&rect);
+		BinsSetScreenRectangle(sprites->foreground_bins, &rect); }
+	/* Dynamics; puts temp values in {cover}. */
 	BinsForEachScreen(sprites->foreground_bins, &extrapolate_bin);
-	/* {extrapolate} puts the sprites that have wandered out of their bins in
-	 the holding bin as well. */
-	clear_holding_bin();
-	/* Collision has to be called after {extrapolate}. */
+	/* Collision has to be called after {extrapolate}; (fixme: really?) */
 	BinsForEachScreen(sprites->foreground_bins, &collide_bin);
-	/* Timestep. */
+	/* Time-step. */
 	BinsForEachScreen(sprites->foreground_bins, &timestep_bin);
+	/* Clear temp {cover}. */
+	{ int i; for(i = 0; i < BINS_SIZE; i++)
+		RefPoolClear(sprites->bins[i].covers); }
 #if 0
 	if(!DelayPoolIsEmpty(delays)) {
 		/*BinPoolForEach(draw_bins, &Bin_print);*/

@@ -61,13 +61,13 @@ struct Bins *Bins(const size_t side_size, const float each_bin) {
 	return this;
 }
 
-unsigned BinsVector(struct Bins *const this, struct Vec2f *const vec) {
+unsigned BinsGetOrtho(struct Bins *const this, struct Ortho3f *const o) {
 	struct Vec2i v2i;
-	if(!this || !vec) return 0;
-	v2i.x = (vec->x + this->half_space) * this->one_each_bin;
+	if(!this || !o) return 0;
+	v2i.x = (o->x + this->half_space) * this->one_each_bin;
 	if(v2i.x < 0) v2i.x = 0;
 	else if(v2i.x >= this->side_size) v2i.x = this->side_size - 1;
-	v2i.y = (vec->y + this->half_space) * this->one_each_bin;
+	v2i.y = (o->y + this->half_space) * this->one_each_bin;
 	if(v2i.y < 0) v2i.y = 0;
 	else if(v2i.y >= this->side_size) v2i.y = this->side_size - 1;
 	return v2i.y * this->side_size + v2i.x;
@@ -124,23 +124,22 @@ int BinsSetSpriteRectangle(struct Bins *const this,
 	return set_rect_layer(this, rect, this->pool[BIN_LAYER_SPRITE]);
 }
 
-/** Private code for \see{BinsForEach*}. */
-static void for_each(struct Bins *const this, const BinsAction action,
-	struct BinPool *const layer) {
+/** For each bin on screen. */
+void BinsForEachScreen(struct Bins *const this, const BinsAction action) {
+	if(!this || !action) return;
 	size_t i = 0;
-	assert(this && action && layer); /* layer \in this, don't check for this */
+	struct BinPool *const layer = this->pool[BIN_LAYER_SCREEN];
+	if(!this || !action) return;
 	while(BinPoolIsElement(layer, i))
 		action(*BinPoolGetElement(layer, i++));
 }
 
-/** For each bin on screen. */
-void BinsForEachScreen(struct Bins *const this, const BinsAction action) {
-	if(!this || !action) return;
-	for_each(this, action, this->pool[BIN_LAYER_SCREEN]);
-}
-
 /** For each bin crossing the sprite. */
-void BinsForEachSprite(struct Bins *const this, const BinsAction action) {
-	if(!this || !action) return;
-	for_each(this, action, this->pool[BIN_LAYER_SPRITE]);
+void BinsSpriteForEachSprite(struct Bins *const this,
+	struct Sprite *const sprite, const BinsSpriteAction action) {
+	size_t i = 0;
+	struct BinPool *const layer = this->pool[BIN_LAYER_SPRITE];
+	if(!this || !action || !sprite) return;
+	while(BinPoolIsElement(layer, i))
+		action(*BinPoolGetElement(layer, i++), sprite);
 }

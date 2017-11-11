@@ -75,7 +75,7 @@ loop for dealing with that. Defines <em>DelayPool</em>, <em>DelayPoolNode</em>.
 <pre><b>struct Sprite</b> {
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
-	struct Collision *collision_set; /* temporary, \in collisions */
+	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
 	unsigned bin; /* which bin is it in, set by {x_5}, or {no_bin} */
 	struct Ortho3f x, v; /* where it is and where it is going */
 	struct Vec2f dx, x_5; /* temporary values */
@@ -118,6 +118,7 @@ Define <em>ShipPool</em> and <em>ShipPoolNode</em>, a subclass of <em>Sprite</em
 	struct GatePool *gates;
 	float dt_ms; /* constantly updating frame time */
 	struct Bins *foreground;
+	struct CollisionPool *collisions;
 }</pre>
 <p>
 Sprites all together.

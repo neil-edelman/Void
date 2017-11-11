@@ -2,73 +2,24 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- Collision detection and resolution.
+ Collision detection and resolution. Part of {Sprites}, but too long; sort of
+ hacky.
 
- @title		Sprites
+ @title		SpritesCollide
  @author	Neil
  @std		C89/90
  @version	2017-10 Broke off from Sprites.
  @fixme Collision resolution wonky. */
 
-#include "../general/OrthoMath.h" /* Vectors. */
-#include "Collision.h"
-
 #if 0
-
-CollisionPool_(&collisions);
-
-/* Collision is a self-referential stack; this always must be here. */
-/*CollisionPoolPoolMigrate(collisions, &Collision_migrate);*/
-|| !(collisions = CollisionPool())
-static struct CollisionPool *collisions;
-/** This is a stack. The {Pool} doesn't know that {Collision} is
- self-referential, so we have to inject code into the {realloc};
- \see{Collision_migrate}.
- @implements <Sprite, Migrate>DiAction */
-static void Sprite_migrate_collisions(struct Sprite *const this,
-									  void *const migrate_void) {
-	const struct Migrate *const migrate = migrate_void;
-	struct Collision *c;
-	char a[12];
-	assert(this && migrate);
-	Sprite_to_string(this, &a);
-	if(!this->collision_set) return;
-	CollisionMigrate(migrate, &this->collision_set);
-	/*printf(" %s: [%p, %p]->%lu: ", a,
-	 migrate->begin, migrate->end, (unsigned long)migrate->delta);*/
-	/*c = this->collision_set, printf("(collision (%.1f, %.1f):%.1f)", c->v.x, c->v.y, c->t);*/
-	for(c = this->collision_set; c->next; c = c->next) {
-		CollisionMigrate(migrate, &c->next);
-		/*printf("(next (%.1f, %.1f):%.1f)", c->v.x, c->v.y, c->t);*/
-	}
-	/*printf(".\n");*/
-	/*this->collision_set = 0;*/
-}
-/** @implements <Bin, Migrate>BiAction */
-static void Bin_migrate_collisions(struct SpriteList **const pthis,
-								   void *const migrate_void) {
-	struct SpriteList *const this = *pthis;
-	assert(pthis && this && migrate_void);
-	SpriteListBiForEach(this, &Sprite_migrate_collisions, migrate_void);
-}
-/** @implements Migrate */
-static void Collision_migrate(const struct Migrate *const migrate) {
-	printf("Collision migrate [%p, %p]->%lu.\n", migrate->begin,
-		   migrate->end, (unsigned long)migrate->delta);
-	BinPoolBiForEach(update_bins, &Bin_migrate_collisions, (void *const)migrate);
-	BinPoolBiForEach(draw_bins, &Bin_migrate_collisions, (void *const)migrate);
-}
-
-/* branch cut (-Pi,Pi]? */
-
 /** Called from \see{elastic_bounce}. */
 static void apply_bounce_later(struct Sprite *const this,
-							   const struct Vec2f *const v, const float t) {
+	const struct Vec2f *const v, const float t) {
 	struct Collision *const c = CollisionPoolNew(collisions);
 	char a[12];
 	assert(this && v && t >= 0.0f && t <= dt_ms);
 	if(!c) { fprintf(stderr, "Collision set: %s.\n",
-					 CollisionPoolGetError(collisions)); return; }
+		CollisionPoolGetError(collisions)); return; }
 	c->next = this->collision_set;
 	c->v.x = v->x, c->v.y = v->y;
 	c->t = t;
@@ -149,6 +100,8 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	apply_bounce_later(b, &v, t0_dt);
 }
 
+
+
 /** Called from \see{sprite_sprite_collide} to give the next level of detail
  with time.
  @param t0_ptr: If true, sets the time of collision past the current frame in
@@ -212,7 +165,7 @@ static int collide_circles(const struct Sprite *const a,
  \see{collide_circles} to introduce time.
  @implements <Sprite, Sprite>BiAction */
 static void sprite_sprite_collide(struct Sprite *const this,
-	void *const void_that) {
+								  void *const void_that) {
 	struct Sprite *const that = void_that;
 	struct Vec2f diff;
 	float bounding1, t0;
@@ -264,51 +217,22 @@ static void collide(struct Sprite *const this) {
 	BinPoolBiForEach(sprite_bins, &bin_sprite_collide, this);
 }
 
-/* Branch cut to the principal branch (-Pi,Pi] for numerical stability. We
- should really use normalised {ints}, so this would not be a problem, but
- {OpenGl} doesn't like that. */
-static void branch_cut_pi_pi(float *theta_ptr) {
-	assert(theta_ptr);
-	*theta_ptr -= M_2PI_F * floorf((*theta_ptr + M_PI_F) / M_2PI_F);
+
+#endif
+
+/** For each {Sprite}, make a temporary collides list. Called from
+ \see{collide_bin}. */
+static void collide(struct Sprite *const this) {
+	BinsSetSpriteRectangle(sprites->foreground_bins, &this->box);
+}
+/** This is the function that's calling everything else. Call after
+ {extrapolate}, needs values. */
+static void collide_bin(unsigned bin) {
+	SpriteListForEach(sprites->bins + bin, &collide);
 }
 
-/** Relies on \see{extrapolate}; all pre-computation is finalised in this step
- and values are advanced. Collisions are used up and need to be cleared after.
- @implements <Sprite>Action */
-static void timestep(void) {
-	struct Collision *c;
-	float t0 = dt_ms;
-	struct Vec2f v1 = { 0.0f, 0.0f }, d;
-	assert(sprites);
-	/* The earliest time to collision and sum the collisions together. */
-	for(c = sprites->collision_set; c; c = c->next) {
-		/*char a[12];*/
-		d.x = sprites->x.x + sprites->v.x * c->t;
-		d.y = sprites->x.y + sprites->v.y * c->t;
-		/*fprintf(gnu_glob, "set arrow from %f,%f to %f,%f lw 0.5 "
-		 "lc rgb \"#EE66AA\" front;\n", d.x, d.y,
-		 d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));*/
-		/*this->vt->to_string(this, &a);
-		 printf("%s collides at %.1f and ends up going (%.1f, %.1f).\n", a,
-		 c->t, c->v.x * 1000.0f, c->v.y * 1000.0f);*/
-		if(c->t < t0) t0 = c->t;
-		v1.x += c->v.x, v1.y += c->v.y;
-		/* fixme: stability! do a linear search O(n) to pick out the 2 most
-		 recent, then divide by, { 1, 2, 4, 4, 4, . . . }? */
-	}
-	sprites->x.x = sprites->x.x + sprites->v.x * t0 + v1.x * (dt_ms - t0);
-	sprites->x.y = sprites->x.y + sprites->v.y * t0 + v1.y * (dt_ms - t0);
-	if(sprites->collision_set) {
-		sprites->collision_set = 0;
-		sprites->v.x = v1.x, sprites->v.y = v1.y;
-	}
-	/* Angular velocity. */
-	sprites->x.theta += sprites->v.theta /* omega */ * dt_ms;
-	branch_cut_pi_pi(&sprites->x.theta);
-}
+#if 0
 
-/* branch cut (-Pi,Pi] */
-/* branch cut (-Pi,Pi] */
 
 /** Elastic collision between circles; called from \see{collide} with
  {@code t0_dt} from \see{collide_circles}. Use this when we've determined that
@@ -497,40 +421,6 @@ static void shp_eth(struct Sprite *s, struct Sprite *e, const float d0) {
 
 static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
 	shp_eth(s, e, d0);
-}
-
-/** @implements <Sprite>Action */
-static void sprite_update(struct Sprite *const sprites) {
-	sprites->vt->update(sprites);
-}
-
-/* Compute bounding boxes of where the sprite wants to go this frame,
- containing the projected circle along a vector {x -> x + v*dt}. This is the
- first step in collision detection. */
-static void collide_extrapolate(struct Sprite *const sprites) {
-	/* where they should be if there's no collision */
-	sprites->r1.x = sprites->r.x + sprites->v.x * dt_ms;
-	sprites->r1.y = sprites->r.y + sprites->v.y * dt_ms;
-	/* clamp */
-	if(sprites->r1.x > de_sitter)       sprites->r1.x = de_sitter;
-	else if(sprites->r1.x < -de_sitter) sprites->r1.x = -de_sitter;
-	if(sprites->r1.y > de_sitter)       sprites->r1.y = de_sitter;
-	else if(sprites->r1.y < -de_sitter) sprites->r1.y = -de_sitter;
-	/* extend the bounding box along the circle's trajectory */
-	if(sprites->r.x <= sprites->r1.x) {
-		sprites->box.x_min = sprites->r.x  - sprites->bounding - bin_half_space;
-		sprites->box.x_max = sprites->r1.x + sprites->bounding + bin_half_space;
-	} else {
-		sprites->box.x_min = sprites->r1.x - sprites->bounding - bin_half_space;
-		sprites->box.x_max = sprites->r.x  + sprites->bounding + bin_half_space;
-	}
-	if(sprites->r.y <= sprites->r1.y) {
-		sprites->box.y_min = sprites->r.y  - sprites->bounding - bin_half_space;
-		sprites->box.y_max = sprites->r1.y + sprites->bounding + bin_half_space;
-	} else {
-		sprites->box.y_min = sprites->r1.y - sprites->bounding - bin_half_space;
-		sprites->box.y_max = sprites->r.y  + sprites->bounding + bin_half_space;
-	}
 }
 
 /** Used after \see{collide_extrapolate} on all the sprites you want to check.

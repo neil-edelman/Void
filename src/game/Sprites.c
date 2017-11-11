@@ -54,12 +54,14 @@ struct Collision;
 struct Sprite {
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
-	struct Collision *collision_set; /* temporary, \in collisions */
+	float bounding; /* radius, fixed to function of the image */
 	unsigned bin; /* which bin is it in, set by {x_5}, or {no_bin} */
 	struct Ortho3f x, v; /* where it is and where it is going */
+	/* fixme: all the following are excusive to sprites that are active; make a
+	 temporary structure to hold them? */
 	struct Vec2f dx, x_5; /* temporary values */
-	float bounding; /* radius, fixed to function of the image */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
+	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
 };
 static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_NAME Sprite
@@ -116,14 +118,14 @@ struct Gate {
 
 /* Collisions between sprites to apply later. This is a pool that sprites can
  use. Defines {CollisionPool}, {CollisionPoolNode}. */
-/*struct Collision {
+struct Collision {
 	struct Collision *next;
 	struct Vec2f v;
 	float t;
 };
 #define POOL_NAME Collision
 #define POOL_TYPE struct Collision
-#include "../templates/Pool.h"*/
+#include "../templates/Pool.h"
 
 /** While {SpriteListForEach} is running, we may have to transfer a sprite to
  another bin, or delete a sprite, or whatever; this causes causality problems
@@ -142,9 +144,10 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 #define POOL_TO_STRING &delay_to_string
 #include "../templates/Pool.h"*/
 
-/*#define POOL_NAME Ref
-#define POOL_TYPE size_t
-#include "../templates/Pool.h"*/
+/*struct Bin {
+	struct SpriteList sprites;
+	...
+};*/
 
 /** Sprites all together. */
 static struct Sprites {
@@ -155,7 +158,8 @@ static struct Sprites {
 	struct WmdPool *wmds;
 	struct GatePool *gates;
 	float dt_ms; /* constantly updating frame time */
-	struct Bins *foreground;
+	struct Bins *foreground_bins;
+	struct CollisionPool *collisions;
 } *sprites;
 
 
@@ -406,6 +410,30 @@ static void bin_migrate(void *const sprites_void,
 	}
 	SpriteListMigrate(&sprites_pass->holding, migrate);
 }
+/** Called from \see{collision_migrate}.
+ @implements <Sprite>ListMigrateElement */
+static void collision_migrate_sprite(struct Sprite *const this,
+	const struct Migrate *const migrate) {
+	struct Collision *c;
+	assert(this && migrate);
+	for(c = this->collisions; c; c = c->next)
+		CollisionPoolMigratePointer(&c, migrate);
+}
+/** @param sprites_void: We don't need this because there's only one static.
+ Should always equal {sprites}.
+ @implements Migrate */
+static void collision_migrate(void *const sprites_void,
+	const struct Migrate *const migrate) {
+	struct Sprites *const sprites_pass = sprites_void;
+	unsigned i;
+	assert(sprites_pass && sprites_pass == sprites && migrate);
+	for(i = 0; i < BINS_SIZE; i++) {
+		SpriteListMigrateEach(sprites_pass->bins + i,
+			&collision_migrate_sprite, migrate);
+	}
+	SpriteListMigrateEach(&sprites_pass->holding,
+		&collision_migrate_sprite, migrate);
+}
 
 /** Destructor. */
 void Sprites_(void) {
@@ -413,7 +441,8 @@ void Sprites_(void) {
 	if(!sprites) return;
 	for(i = 0; i < BINS_SIZE; i++) SpriteListClear(sprites->bins + i);
 	SpriteListClear(&sprites->holding);
-	Bins_(&sprites->foreground);
+	CollisionPool_(&sprites->collisions);
+	Bins_(&sprites->foreground_bins);
 	GatePool_(&sprites->gates);
 	WmdPool_(&sprites->wmds);
 	DebrisPool_(&sprites->debris);
@@ -424,7 +453,7 @@ void Sprites_(void) {
 /** @return True if the sprite buffers have been set up. */
 int Sprites(void) {
 	unsigned i;
-	enum { NO, SHIP, DEBRIS, WMD, GATE, BIN } e = NO;
+	enum { NO, SHIP, DEBRIS, WMD, GATE, BIN, COLLISION } e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
 	if(!(sprites = malloc(sizeof *sprites)))
@@ -436,14 +465,17 @@ int Sprites(void) {
 	sprites->wmds = 0;
 	sprites->gates = 0;
 	sprites->dt_ms = 20;
-	sprites->foreground = 0;
+	sprites->foreground_bins = 0;
+	sprites->collisions = 0;
 	do {
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
 		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
 		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
 		if(!(sprites->gates = GatePool(&bin_migrate, sprites))) { e=GATE;break;}
-		if(!(sprites->foreground = Bins(BINS_SIDE_SIZE, bin_space)))
+		if(!(sprites->foreground_bins = Bins(BINS_SIDE_SIZE, bin_space)))
 			{ e = BIN; break; }
+		if(!(sprites->collisions = CollisionPool(&collision_migrate, sprites)))
+			{ e = COLLISION; break; }
 	} while(0); switch(e) {
 		case NO: break;
 		case SHIP: ea = "ships", eb = ShipPoolGetError(sprites->ships); break;
@@ -451,6 +483,8 @@ int Sprites(void) {
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
 		case GATE: ea = "gates", eb = GatePoolGetError(sprites->gates); break;
 		case BIN: ea = "bins", eb = "couldn't get bins"; break;
+		case COLLISION: ea = "collision",
+			eb = CollisionPoolGetError(sprites->collisions); break;
 	} if(e) {
 		fprintf(stderr, "Sprites %s buffer: %s.\n", ea, eb);
 		Sprites_();
@@ -476,7 +510,8 @@ static void sprite_filler(struct Sprite *const this,
 	this->vt      = vt;
 	this->image   = as->image;
 	this->normals = as->normals;
-	this->collision_set = 0;
+	this->bounding = (as->image->width >= as->image->height ?
+		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
 	this->bin     = HOLDING_BIN;
 	if(x) {
 		Ortho3f_assign(&this->x, x);
@@ -486,9 +521,8 @@ static void sprite_filler(struct Sprite *const this,
 	this->dx.x = this->dx.y = 0.0f;
 	this->x_5.x = this->x.x, this->x_5.y = this->x.y;
 	Ortho3f_filler_zero(&this->v);
-	this->bounding = (as->image->width >= as->image->height ?
-		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
+	this->collisions = 0;
 	SpriteListPush(&sprites->holding, this);
 }
 
@@ -611,7 +645,7 @@ static void add_sprite_bins(struct Bins *const bins) {
 	struct Rectangle4f rect;
 	assert(bins);
 	DrawGetScreen(&rect);
-	BinsSetRectangle(bins, &rect);
+	BinsSetScreenRectangle(bins, &rect);
 }
 
 /** The spawned and transfer sprites while iterating go into the holding bin.
@@ -621,7 +655,7 @@ static void clear_holding_bin(void) {
 	struct Sprite *sprite;
 	while((sprite = SpriteListGetLast(&sprites->holding))) {
 		SpriteListRemove(&sprites->holding, sprite);
-		sprite->bin = BinsVector(sprites->foreground, &sprite->x_5);
+		sprite->bin = BinsVector(sprites->foreground_bins, &sprite->x_5);
 		SpriteListPush(sprites->bins + sprite->bin, sprite);
 	}
 }
@@ -638,7 +672,7 @@ static void extrapolate(struct Sprite *const this) {
 	/* Kinematics. */
 	this->dx.x = this->v.x * sprites->dt_ms;
 	this->dx.y = this->v.y * sprites->dt_ms;
-	/* Determines into which bin it should be. */
+	/* Determines into which bin it should be. fixme: clamp/exp. */
 	this->x_5.x = this->x.x + 0.5f * this->dx.x;
 	this->x_5.y = this->x.y + 0.5f * this->dx.y;
 	/* Dynamic bounding rectangle. */
@@ -650,10 +684,10 @@ static void extrapolate(struct Sprite *const this) {
 	this->box.y_max = this->x.y + this->bounding;
 	if(this->dx.y < 0) this->box.y_min += this->dx.y;
 	else this->box.y_max += this->dx.y;
-	bin = BinsVector(sprites->foreground, &this->x_5);
+	bin = BinsVector(sprites->foreground_bins, &this->x_5);
 	/* This happens when the sprite wanders out of the bin. The reason we don't
 	 stick it in it's new bin immediately, is because the other bin may still
-	 be on the iterating stack, causing it to call it again (x n.) */
+	 be on the iterating stack, causing it to call it again, x n. */
 	if(bin != this->bin) {
 		char a[12];
 		this->vt->to_string(this, &a);
@@ -725,6 +759,9 @@ static void timestep_bin(const unsigned idx) {
 	SpriteListForEach(sprites->bins + idx, &timestep);
 }
 
+/* This is where \see{collide_bin} is located; but lots of helper functions. */
+#include "SpritesCollide.h"
+
 /** Update each frame.
  @param target: What the camera focuses on; could be null. */
 void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
@@ -734,16 +771,18 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	/* Centre on the sprite that was passed, if it is available. */
 	if(target) DrawSetCamera((struct Vec2f *)&target->x);
 	/* Foreground drawables are a function of screen position. */
-	add_sprite_bins(sprites->foreground);
+	add_sprite_bins(sprites->foreground_bins);
 	/* Newly spawned sprites. */
 	clear_holding_bin();
 	/* Dynamics. */
-	BinsForEach(sprites->foreground, &extrapolate_bin);
+	BinsForEachScreen(sprites->foreground_bins, &extrapolate_bin);
 	/* {extrapolate} puts the sprites that have wandered out of their bins in
 	 the holding bin as well. */
 	clear_holding_bin();
+	/* Collision has to be called after {extrapolate}. */
+	BinsForEachScreen(sprites->foreground_bins, &collide_bin);
 	/* Timestep. */
-	BinsForEach(sprites->foreground, &timestep_bin);
+	BinsForEachScreen(sprites->foreground_bins, &timestep_bin);
 #if 0
 	if(!DelayPoolIsEmpty(delays)) {
 		/*BinPoolForEach(draw_bins, &Bin_print);*/
@@ -765,28 +804,25 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 #endif
 }
 
-/* Messy messy; this is because function-pointers don't necessarily have the
- same size. */
-struct ContainsLambertOutput { const LambertOutput out; };
+/* fixme: this is bullshit. have it all in Draw? */
+
 /** Called from \see{draw_bin}.
  @implements <Sprite, ContainsLambertOutput>BiAction */
-static void draw_sprite(struct Sprite *const this, void *const param) {
-	const struct ContainsLambertOutput *const clo = param;
-	assert(sprites && param);
-	clo->out(&this->x, this->image, this->normals);
+static void draw_sprite(struct Sprite *const this) {
+	assert(sprites);
+	DrawDisplayLambert(&this->x, this->image, this->normals);
 }
 /** Called from \see{SpritesDrawForeground}.
  @implements BinsAction */
-static void draw_bin(const unsigned idx, void *const param) {
-	assert(sprites && idx < BINS_SIZE && param);
-	SpriteListBiForEach(sprites->bins + idx, &draw_sprite, param);
+static void draw_bin(const unsigned idx) {
+	assert(sprites && idx < BINS_SIZE);
+	SpriteListForEach(sprites->bins + idx, &draw_sprite);
 }
 /** Must call \see{SpriteUpdate} before this, because it sets
  {sprites.foreground}. Use when the Lambert GPU shader is loaded. */
-void SpritesDrawForeground(const LambertOutput draw) {
-	struct ContainsLambertOutput container = { draw };
-	assert(sprites && draw);
-	BinsBiForEach(sprites->foreground, &draw_bin, &container);
+void SpritesDrawForeground(void) {
+	if(!sprites) return;
+	BinsForEachScreen(sprites->foreground_bins, &draw_bin);
 }
 
 

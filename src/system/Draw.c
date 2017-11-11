@@ -461,8 +461,9 @@ int draw_is_print_sprites;
 static unsigned old_texture;
 
 /** Only used as a callback from \see{display} while OpenGL is using Lambert.
+ For \see{SpritesDrawForground}.
  @implements LambertOutput */
-static void display_lambert(const struct Ortho3f *const x,
+/*inline <- oy fixme*/ void DrawDisplayLambert(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor) {
 	assert(x && tex && nor);
 	if(old_texture != tex->texture) {
@@ -568,7 +569,7 @@ static void display(void) {
 		glUniform3fv(auto_Lambert_shader.point_colour, lights,
 			(GLfloat *)LightGetColourArray());
 	}
-	SpritesDrawForeground(&display_lambert);
+	SpritesDrawForeground();
 
 	/* Display info on top. */
 	glUseProgram(auto_Info_shader.compiled);

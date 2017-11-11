@@ -69,6 +69,11 @@ static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_TO_STRING &sprite_to_string
 #include "../templates/List.h"
 
+/* Pool of reference to sprites. */
+#define POOL_NAME Ref
+#define POOL_TYPE struct Sprite *
+#include "../templates/Pool.h"
+
 /* Declare {ShipVt}. */
 struct ShipVt;
 /** Define {ShipPool} and {ShipPoolNode}, a subclass of {Sprite}. */
@@ -85,7 +90,7 @@ struct Ship {
 #define POOL_TYPE struct Ship
 #include "../templates/Pool.h"
 
-/* Define {DebrisPool} and {DebrisPoolNode}, a subclass of {Sprite}. */
+/** Define {DebrisPool} and {DebrisPoolNode}, a subclass of {Sprite}. */
 struct Debris {
 	struct SpriteListNode sprite;
 	float mass;
@@ -94,7 +99,7 @@ struct Debris {
 #define POOL_TYPE struct Debris
 #include "../templates/Pool.h"
 
-/* Define {WmdPool} and {WmdPoolNode}, a subclass of {Sprite}. */
+/** Define {WmdPool} and {WmdPoolNode}, a subclass of {Sprite}. */
 struct Wmd {
 	struct SpriteListNode sprite;
 	const struct AutoWmdType *class;
@@ -107,7 +112,7 @@ struct Wmd {
 #define POOL_TYPE struct Wmd
 #include "../templates/Pool.h"
 
-/* Define {GatePool} and {GatePoolNode}, a subclass of {Sprite}. */
+/** Define {GatePool} and {GatePoolNode}, a subclass of {Sprite}. */
 struct Gate {
 	struct SpriteListNode sprite;
 	const struct AutoSpaceZone *to;
@@ -116,7 +121,7 @@ struct Gate {
 #define POOL_TYPE struct Gate
 #include "../templates/Pool.h"
 
-/* Collisions between sprites to apply later. This is a pool that sprites can
+/** Collisions between sprites to apply later. This is a pool that sprites can
  use. Defines {CollisionPool}, {CollisionPoolNode}. */
 struct Collision {
 	struct Collision *next;
@@ -127,7 +132,7 @@ struct Collision {
 #define POOL_TYPE struct Collision
 #include "../templates/Pool.h"
 
-/** While {SpriteListForEach} is running, we may have to transfer a sprite to
+/* * While {SpriteListForEach} is running, we may have to transfer a sprite to
  another bin, or delete a sprite, or whatever; this causes causality problems
  for iteration. We introduce a delay function that is called right after the
  loop for dealing with that. Defines {DelayPool}, {DelayPoolNode}. */
@@ -144,20 +149,23 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 #define POOL_TO_STRING &delay_to_string
 #include "../templates/Pool.h"*/
 
-/*struct Bin {
+/** Used in {Sprites}. */
+struct Bin {
 	struct SpriteList sprites;
-	...
-};*/
+	struct RefPool *covers;
+};
 
 /** Sprites all together. */
 static struct Sprites {
 	/* The order of this list must mach the enum. */
-	struct SpriteList bins[BINS_SIZE], holding;
+	struct Bin bins[BINS_SIZE], holding;
+	/* Backing for the {SpriteList} in the {Bin}s. */
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
-	float dt_ms; /* constantly updating frame time */
+	/* Constantly updating frame time. */
+	float dt_ms;
 	struct Bins *foreground_bins;
 	struct CollisionPool *collisions;
 } *sprites;
@@ -208,7 +216,7 @@ static void gate_to_string(const struct Gate *this, char (*const a)[12]) {
 /** @implements SpritesAction */
 static void sprite_delete(struct Sprite *const this) {
 	assert(sprites && this);
-	SpriteListRemove(sprites->bins + this->bin, this); /* Safe-ish. */
+	SpriteListRemove(&sprites->bins[this->bin].sprites, this); /* Safe-ish. */
 	this->vt->delete(this);
 }
 /** @implements <Ship>Action */
@@ -397,6 +405,12 @@ static const struct SpriteVt ship_human_vt = {
 
 /****************** Type functions. **************/
 
+/** Called from {bin_migrate}.
+ @implements <Ref>Migrate */
+static void cover_migrate(struct Sprite **const this,
+	const struct Migrate *const migrate) {
+	SpriteListMigratePointer(this, migrate);
+}
 /** @param sprites_void: We don't need this because there's only one static.
  Should always equal {sprites}.
  @implements Migrate */
@@ -406,9 +420,11 @@ static void bin_migrate(void *const sprites_void,
 	unsigned i;
 	assert(sprites_pass && sprites_pass == sprites && migrate);
 	for(i = 0; i < BINS_SIZE; i++) {
-		SpriteListMigrate(sprites_pass->bins + i, migrate);
+		SpriteListMigrate(&sprites_pass->bins[i].sprites, migrate);
+		RefPoolMigrateEach(sprites_pass->bins[i].covers,&cover_migrate,migrate);
 	}
-	SpriteListMigrate(&sprites_pass->holding, migrate);
+	SpriteListMigrate(&sprites_pass->holding.sprites, migrate);
+	RefPoolMigrateEach(sprites_pass->holding.covers, &cover_migrate, migrate);
 }
 /** Called from \see{collision_migrate}.
  @implements <Sprite>ListMigrateElement */
@@ -428,10 +444,10 @@ static void collision_migrate(void *const sprites_void,
 	unsigned i;
 	assert(sprites_pass && sprites_pass == sprites && migrate);
 	for(i = 0; i < BINS_SIZE; i++) {
-		SpriteListMigrateEach(sprites_pass->bins + i,
+		SpriteListMigrateEach(&sprites_pass->bins[i].sprites,
 			&collision_migrate_sprite, migrate);
 	}
-	SpriteListMigrateEach(&sprites_pass->holding,
+	SpriteListMigrateEach(&sprites_pass->holding.sprites,
 		&collision_migrate_sprite, migrate);
 }
 
@@ -439,8 +455,11 @@ static void collision_migrate(void *const sprites_void,
 void Sprites_(void) {
 	unsigned i;
 	if(!sprites) return;
-	for(i = 0; i < BINS_SIZE; i++) SpriteListClear(sprites->bins + i);
-	SpriteListClear(&sprites->holding);
+	for(i = 0; i < BINS_SIZE; i++) {
+		SpriteListClear(&sprites->bins[i].sprites);
+		RefPool_(&sprites->bins[i].covers);
+	}
+	SpriteListClear(&sprites->holding.sprites);
 	CollisionPool_(&sprites->collisions);
 	Bins_(&sprites->foreground_bins);
 	GatePool_(&sprites->gates);
@@ -453,13 +472,17 @@ void Sprites_(void) {
 /** @return True if the sprite buffers have been set up. */
 int Sprites(void) {
 	unsigned i;
-	enum { NO, SHIP, DEBRIS, WMD, GATE, BIN, COLLISION } e = NO;
+	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, BIN, COLLISION } e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
 	if(!(sprites = malloc(sizeof *sprites)))
 		{ perror("Sprites"); Sprites_(); return 0; }
-	for(i = 0; i < BINS_SIZE; i++) SpriteListClear(sprites->bins + i);
-	SpriteListClear(&sprites->holding);
+	for(i = 0; i < BINS_SIZE; i++) {
+		SpriteListClear(&sprites->bins[i].sprites);
+		sprites->bins[i].covers = 0;
+	}
+	SpriteListClear(&sprites->holding.sprites);
+	sprites->holding.covers = 0;
 	sprites->ships = 0;
 	sprites->debris = 0;
 	sprites->wmds = 0;
@@ -468,6 +491,10 @@ int Sprites(void) {
 	sprites->foreground_bins = 0;
 	sprites->collisions = 0;
 	do {
+		for(i = 0; i < BINS_SIZE; i++) {
+			if(!(sprites->bins[i].covers = RefPool(0, 0))) { e = BINS; break; }
+		} if(e) break;
+		if(!(sprites->holding.covers = RefPool(0, 0))) { e = BINS; break; }
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
 		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
 		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
@@ -478,6 +505,7 @@ int Sprites(void) {
 			{ e = COLLISION; break; }
 	} while(0); switch(e) {
 		case NO: break;
+		case BINS: ea = "bins", eb = RefPoolGetError(0); break;
 		case SHIP: ea = "ships", eb = ShipPoolGetError(sprites->ships); break;
 		case DEBRIS: ea = "debris",eb=DebrisPoolGetError(sprites->debris);break;
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
@@ -523,7 +551,7 @@ static void sprite_filler(struct Sprite *const this,
 	Ortho3f_filler_zero(&this->v);
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
 	this->collisions = 0;
-	SpriteListPush(&sprites->holding, this);
+	SpriteListPush(&sprites->holding.sprites, this);
 }
 
 /** Creates a new {Ship}. */
@@ -653,10 +681,10 @@ static void add_sprite_bins(struct Bins *const bins) {
 static void clear_holding_bin(void) {
 	assert(sprites);
 	struct Sprite *sprite;
-	while((sprite = SpriteListGetLast(&sprites->holding))) {
-		SpriteListRemove(&sprites->holding, sprite);
+	while((sprite = SpriteListGetLast(&sprites->holding.sprites))) {
+		SpriteListRemove(&sprites->holding.sprites, sprite);
 		sprite->bin = BinsVector(sprites->foreground_bins, &sprite->x_5);
-		SpriteListPush(sprites->bins + sprite->bin, sprite);
+		SpriteListPush(&sprites->bins[sprite->bin].sprites, sprite);
 	}
 }
 
@@ -692,18 +720,18 @@ static void extrapolate(struct Sprite *const this) {
 		char a[12];
 		this->vt->to_string(this, &a);
 		printf("Sprite %s has transferred bins %u -> %u.\n", a, this->bin, bin);
-		SpriteListRemove(sprites->bins + this->bin, this);
+		SpriteListRemove(&sprites->bins[this->bin].sprites, this);
 		/* I don't think that this matters, we could set it to {bin} and save
 		 the trouble of recalculating, but it feels dirty. */
 		this->bin = HOLDING_BIN;
-		SpriteListPush(&sprites->holding, this);
+		SpriteListPush(&sprites->holding.sprites, this);
 	}
 }
 /** Called in \see{SpritesUpdate}.
  @implements <Bin>Action */
 static void extrapolate_bin(const unsigned idx) {
 	assert(sprites);
-	SpriteListForEach(sprites->bins + idx, &extrapolate);
+	SpriteListForEach(&sprites->bins[idx].sprites, &extrapolate);
 }
 
 /* Branch cut to the principal branch (-Pi,Pi] for numerical stability. We
@@ -756,7 +784,7 @@ static void timestep(struct Sprite *const this) {
  @implements <Bin>Action */
 static void timestep_bin(const unsigned idx) {
 	assert(sprites);
-	SpriteListForEach(sprites->bins + idx, &timestep);
+	SpriteListForEach(&sprites->bins[idx].sprites, &timestep);
 }
 
 /* This is where \see{collide_bin} is located; but lots of helper functions. */
@@ -816,7 +844,7 @@ static void draw_sprite(struct Sprite *const this) {
  @implements BinsAction */
 static void draw_bin(const unsigned idx) {
 	assert(sprites && idx < BINS_SIZE);
-	SpriteListForEach(sprites->bins + idx, &draw_sprite);
+	SpriteListForEach(&sprites->bins[idx].sprites, &draw_sprite);
 }
 /** Must call \see{SpriteUpdate} before this, because it sets
  {sprites.foreground}. Use when the Lambert GPU shader is loaded. */

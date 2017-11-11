@@ -228,7 +228,7 @@ static void collide(struct Sprite *const this) {
 /** This is the function that's calling everything else. Call after
  {extrapolate}, needs values. */
 static void collide_bin(unsigned bin) {
-	SpriteListForEach(sprites->bins + bin, &collide);
+	SpriteListForEach(&sprites->bins[bin].sprites, &collide);
 }
 
 #if 0

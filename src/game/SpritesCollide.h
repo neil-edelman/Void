@@ -3,7 +3,8 @@
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
  Collision detection and resolution. Part of {Sprites}, but too long; sort of
- hacky.
+ hacky. The course grained functions are at the bottom, calling the
+ fine-grained and response as it moves to the top.
 
  @title		SpritesCollide
  @author	Neil
@@ -194,43 +195,79 @@ static void sprite_sprite_collide(struct Sprite *const this,
 	elastic_bounce(this, that, t0);
 	/*printf("%.1f ms: %s, %s collide at (%.1f, %.1f)\n", t0, a, b, this->x.x, this->x.y);*/
 }
-/** @implements <Bin, Sprite *>BiAction */
-static void bin_sprite_collide(struct SpriteList **const pthis,
-							   void *const target_param) {
-	struct SpriteList *const this = *pthis;
-	struct Sprite *const target = target_param;
-	struct Vec2i b2;
-	const unsigned b = (unsigned)(this - bins);
-	bin_to_fg_bin2i(b, &b2);
-	/*printf("bin_collide_sprite: bin %u (%u, %u) Sprite: (%f, %f).\n", b, b2.x,
-	 b2.y, target->x.x, target->x.y);*/
-	SpriteListUnorderBiForEach(this, &sprite_sprite_collide, target);
-}
-/** The sprites have been ordered by their {x_5}. Now we can do collisions.
- This places a list of {Collide} in the sprite.
- @implements <Sprite>Action */
-static void collide(struct Sprite *const this) {
-	/*SpriteBiAction biact = &collision_detection_and_response;*/
-	/*printf("--Sprite bins:\n");*/
-	sprite_new_bins(this);
-	/*printf("--Checking:\n");*/
-	BinPoolBiForEach(sprite_bins, &bin_sprite_collide, this);
-}
 
-
+/** Used after \see{collide_extrapolate} on all the sprites you want to check.
+ Uses  and the ordered list of projections on the
+ {x} and {y} axis to build up a list of possible colliders based on their
+ bounding box of where it moved this frame. Calls \see{collide_circles} for any
+ candidites. */
+static void collide_boxes(struct Sprite *const sprites) {
+	struct Sprite *b, *b_adj_y;
+	float t0;
+	/* consider y and maybe add it to the list of colliders */
+	for(b = sprites->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
+		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
+		if(b->is_selected
+		   && sprites->y_min < b->y_max
+		   && (response = collision_matrix[b->sp_type][sprites->sp_type])
+		   && collide_circles(sprites->x, sprites->y, sprites->x1, sprites->y1, b->x,
+							  b->y, b->x1, b->y1, sprites->bounding + b->bounding, &t0))
+			response(sprites, b, t0);
+		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
+	}
+	for(b = sprites->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
+		b_adj_y = b->next_y;
+		if(b->is_selected
+		   && sprites->y_max > b->y_min
+		   && (response = collision_matrix[b->sp_type][sprites->sp_type])
+		   && collide_circles(sprites->x, sprites->y, sprites->x1, sprites->y1, b->x,
+							  b->y, b->x1, b->y1, sprites->bounding + b->bounding, &t0))
+			response(sprites, b, t0);
+		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
+	}
+	/* uhh, yes? I took this code from SpriteUpdate */
+	if(!s->no_collisions) {
+		/* no collisions; apply position change, calculated above */
+		s->x = s->x1;
+		s->y = s->y1;
+	} else {
+		/* if you skip this step, it's unstable on multiple collisions */
+		const float one_collide = 1.0f / s->no_collisions;
+		const float s_vx1 = s->vx1 * one_collide;
+		const float s_vy1 = s->vy1 * one_collide;
+		/* before and after collision;  */
+		s->x += (s->vx * s->t0_dt_collide + s_vx1 * (1.0f - s->t0_dt_collide)) * dt_ms;
+		s->y += (s->vy * s->t0_dt_collide + s_vy1 * (1.0f - s->t0_dt_collide)) * dt_ms;
+		s->vx = s_vx1;
+		s->vy = s_vy1;
+		/* unmark for next frame */
+		s->no_collisions = 0;
+		/* apply De Sitter spacetime? already done? */
+		if(s->x      < -de_sitter) s->x =  de_sitter - 20.0f;
+		else if(s->x >  de_sitter) s->x = -de_sitter + 20.0f;
+		if(s->y      < -de_sitter) s->y =  de_sitter - 20.0f;
+		else if(s->y >  de_sitter) s->y = -de_sitter + 20.0f;
+	}
+	/* bin change */
+}
 #endif
 
-/** For each {Sprite}, make a temporary collides list. Called from
+/** This first applies the most course-grained collision detection in
+ two-dimensional space, Hahn–Banach separation theorem using {box}. If passed,
+ calls \see{collide_circles} to introduce time. Called from
  \see{collide_bin}. */
 static void collide(struct Sprite *const a, struct Sprite *const b) {
 	char str_a[12], str_b[12];
 	assert(a && b);
+	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
+	if(!(a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
+		b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) return;
 	sprite_to_string(a, &str_a);
 	sprite_to_string(b, &str_b);
 	printf("[%s, %s]\n", str_a, str_b);
 }
 /** This is the function that's calling everything else. Call after
- {extrapolate}, needs {covers}. */
+ {extrapolate}; needs and consumes {covers}. */
 static void collide_bin(unsigned bin) {
 	struct RefStack *const ref = sprites->bins[bin].covers;
 	struct Sprite **elem_a, **elem_b;
@@ -439,71 +476,6 @@ static void shp_eth(struct Sprite *s, struct Sprite *e, const float d0) {
 
 static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
 	shp_eth(s, e, d0);
-}
-
-/** Used after \see{collide_extrapolate} on all the sprites you want to check.
- Uses Hahn–Banach separation theorem and the ordered list of projections on the
- {x} and {y} axis to build up a list of possible colliders based on their
- bounding box of where it moved this frame. Calls \see{collide_circles} for any
- candidites. */
-static void collide_boxes(struct Sprite *const sprites) {
-	/* assume it can be in a maximum of four bins at once as it travels? */
-	/*...*/
-	struct Sprite *b, *b_adj_y;
-	float t0;
-	if(!sprites) return;
-	/* mark x */
-	for(b = sprites->prev_x; b && b->x >= explore_x_min; b = b->prev_x) {
-		if(sprites < b && sprites->x_min < b->x_max) b->is_selected = -1;
-	}
-	for(b = sprites->next_x; b && b->x <= explore_x_max; b = b->next_x) {
-		if(sprites < b && sprites->x_max > b->x_min) b->is_selected = -1;
-	}
-	/* consider y and maybe add it to the list of colliders */
-	for(b = sprites->prev_y; b && b->y >= explore_y_min; b = b_adj_y) {
-		b_adj_y = b->prev_y; /* b can be deleted; make a copy */
-		if(b->is_selected
-		   && sprites->y_min < b->y_max
-		   && (response = collision_matrix[b->sp_type][sprites->sp_type])
-		   && collide_circles(sprites->x, sprites->y, sprites->x1, sprites->y1, b->x,
-							  b->y, b->x1, b->y1, sprites->bounding + b->bounding, &t0))
-			response(sprites, b, t0);
-		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
-	}
-	for(b = sprites->next_y; b && b->y <= explore_y_max; b = b_adj_y) {
-		b_adj_y = b->next_y;
-		if(b->is_selected
-		   && sprites->y_max > b->y_min
-		   && (response = collision_matrix[b->sp_type][sprites->sp_type])
-		   && collide_circles(sprites->x, sprites->y, sprites->x1, sprites->y1, b->x,
-							  b->y, b->x1, b->y1, sprites->bounding + b->bounding, &t0))
-			response(sprites, b, t0);
-		/*debug("Collision %s--%s\n", SpriteToString(a), SpriteToString(b));*/
-	}
-	/* uhh, yes? I took this code from SpriteUpdate */
-	if(!s->no_collisions) {
-		/* no collisions; apply position change, calculated above */
-		s->x = s->x1;
-		s->y = s->y1;
-	} else {
-		/* if you skip this step, it's unstable on multiple collisions */
-		const float one_collide = 1.0f / s->no_collisions;
-		const float s_vx1 = s->vx1 * one_collide;
-		const float s_vy1 = s->vy1 * one_collide;
-		/* before and after collision;  */
-		s->x += (s->vx * s->t0_dt_collide + s_vx1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-		s->y += (s->vy * s->t0_dt_collide + s_vy1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-		s->vx = s_vx1;
-		s->vy = s_vy1;
-		/* unmark for next frame */
-		s->no_collisions = 0;
-		/* apply De Sitter spacetime? already done? */
-		if(s->x      < -de_sitter) s->x =  de_sitter - 20.0f;
-		else if(s->x >  de_sitter) s->x = -de_sitter + 20.0f;
-		if(s->y      < -de_sitter) s->y =  de_sitter - 20.0f;
-		else if(s->y >  de_sitter) s->y = -de_sitter + 20.0f;
-	}
-	/* bin change */
 }
 
 #endif

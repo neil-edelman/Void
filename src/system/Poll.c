@@ -62,7 +62,6 @@ void PollUpdate(void) {
 	axis(&poll.move_x);
 	axis(&poll.move_y);
 	press(&poll.shoot);
-	if(poll.move_x.ms) printf("X: %d.\n", poll.move_x.ms);
 }
 
 /** Accessor. */

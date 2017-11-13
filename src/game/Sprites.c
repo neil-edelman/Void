@@ -68,10 +68,10 @@ static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_TO_STRING &sprite_to_string
 #include "../templates/List.h"
 
-/* Pool of reference to sprites. */
-#define POOL_NAME Ref
-#define POOL_TYPE struct Sprite *
-#include "../templates/Pool.h"
+/* Temporary reference to sprites. */
+#define STACK_NAME Ref
+#define STACK_TYPE struct Sprite *
+#include "../templates/Stack.h"
 
 /* Declare {ShipVt}. */
 struct ShipVt;
@@ -151,7 +151,7 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 /** Used in {Sprites}. */
 struct Bin {
 	struct SpriteList sprites;
-	struct RefPool *covers;
+	struct RefStack *covers;
 };
 
 /** Sprites all together. */
@@ -419,7 +419,8 @@ static void bin_migrate(void *const sprites_void,
 	assert(sprites_pass && sprites_pass == sprites && migrate);
 	for(i = 0; i < BINS_SIZE; i++) {
 		SpriteListMigrate(&sprites_pass->bins[i].sprites, migrate);
-		RefPoolMigrateEach(sprites_pass->bins[i].covers,&cover_migrate,migrate);
+		RefStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
+			migrate);
 	}
 }
 /** Called from \see{collision_migrate}.
@@ -451,7 +452,7 @@ void Sprites_(void) {
 	if(!sprites) return;
 	for(i = 0; i < BINS_SIZE; i++) {
 		SpriteListClear(&sprites->bins[i].sprites);
-		RefPool_(&sprites->bins[i].covers);
+		RefStack_(&sprites->bins[i].covers);
 	}
 	CollisionPool_(&sprites->collisions);
 	Bins_(&sprites->foreground_bins);
@@ -483,7 +484,7 @@ int Sprites(void) {
 	sprites->collisions = 0;
 	do {
 		for(i = 0; i < BINS_SIZE; i++) {
-			if(!(sprites->bins[i].covers = RefPool(0, 0))) { e = BINS; break; }
+			if(!(sprites->bins[i].covers = RefStack())) { e = BINS; break; }
 		} if(e) break;
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
 		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
@@ -495,7 +496,7 @@ int Sprites(void) {
 			{ e = COLLISION; break; }
 	} while(0); switch(e) {
 		case NO: break;
-		case BINS: ea = "bins", eb = RefPoolGetError(0); break;
+		case BINS: ea = "bins", eb = RefStackGetError(0); break;
 		case SHIP: ea = "ships", eb = ShipPoolGetError(sprites->ships); break;
 		case DEBRIS: ea = "debris",eb=DebrisPoolGetError(sprites->debris);break;
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
@@ -662,11 +663,11 @@ static void put_cover(const unsigned bin, struct Sprite *this) {
 	struct Sprite **cover;
 	char a[12];
 	assert(this && bin < BINS_SIZE);
-	if(!(cover = RefPoolNew(sprites->bins[bin].covers))) { fprintf(stderr,
-		"put_cover: %s.\n", RefPoolGetError(sprites->bins[bin].covers));return;}
-	cover = &this;
+	if(!(cover = RefStackNew(sprites->bins[bin].covers))) { fprintf(stderr,
+		"put_cover: %s.\n",RefStackGetError(sprites->bins[bin].covers));return;}
+	*cover = this;
 	sprite_to_string(this, &a);
-	printf("put_cover: %s -> %u.\n", a, bin);
+	/*printf("put_cover: %s -> %u.\n", a, bin);*/
 }
 /** Moves the sprite. Calculates temporary values, {dx}, and {box}; sticks it
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
@@ -777,15 +778,15 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	{ 	struct Rectangle4f rect;
 		DrawGetScreen(&rect);
 		BinsSetScreenRectangle(sprites->foreground_bins, &rect); }
-	/* Dynamics; puts temp values in {cover}. */
+	/* Dynamics; puts temp values in {cover} for collisions. */
 	BinsForEachScreen(sprites->foreground_bins, &extrapolate_bin);
 	/* Collision has to be called after {extrapolate}; (fixme: really?) */
 	BinsForEachScreen(sprites->foreground_bins, &collide_bin);
 	/* Time-step. */
 	BinsForEachScreen(sprites->foreground_bins, &timestep_bin);
-	/* Clear temp {cover}. */
+	/* Clear temp {cover}. (fixme: no) */
 	{ int i; for(i = 0; i < BINS_SIZE; i++)
-		RefPoolClear(sprites->bins[i].covers); }
+		RefStackClear(sprites->bins[i].covers); }
 #if 0
 	if(!DelayPoolIsEmpty(delays)) {
 		/*BinPoolForEach(draw_bins, &Bin_print);*/

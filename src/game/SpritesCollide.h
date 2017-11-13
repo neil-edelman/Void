@@ -222,13 +222,31 @@ static void collide(struct Sprite *const this) {
 
 /** For each {Sprite}, make a temporary collides list. Called from
  \see{collide_bin}. */
-static void collide(struct Sprite *const this) {
-	BinsSetSpriteRectangle(sprites->foreground_bins, &this->box);
+static void collide(struct Sprite *const a, struct Sprite *const b) {
+	char str_a[12], str_b[12];
+	assert(a && b);
+	sprite_to_string(a, &str_a);
+	sprite_to_string(b, &str_b);
+	printf("[%s, %s]\n", str_a, str_b);
 }
 /** This is the function that's calling everything else. Call after
- {extrapolate}, needs values. */
+ {extrapolate}, needs {covers}. */
 static void collide_bin(unsigned bin) {
-	SpriteListForEach(&sprites->bins[bin].sprites, &collide);
+	struct RefStack *const ref = sprites->bins[bin].covers;
+	struct Sprite **elem_a, **elem_b;
+	size_t index_b;
+	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
+	/* This is {O({covers}^2)/2} within the bin. {a} is poped . . . */
+	while((elem_a = RefStackPop(ref))) {
+		/* . . . then {b} goes down the list. */
+		if(!(index_b = RefStackGetSize(ref))) break;
+		do {
+			index_b--;
+			elem_b = RefStackGetElement(ref, index_b);
+			assert(elem_a && elem_b);
+			collide(*elem_a, *elem_b);
+		} while(index_b);
+	}
 }
 
 #if 0

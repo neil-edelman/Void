@@ -28,6 +28,12 @@
 #define BINS_SIZE (BINS_SIDE_SIZE * BINS_SIDE_SIZE)
 static const float bin_space = 256.0f;
 
+enum CollisionMask {
+	MASK_SHIP = 1,
+	MASK_POINT_DEFENSE = 2,
+	MASK_DEBIS = 4
+};
+
 /* This is used for small floating-point values. The value doesn't have any
  significance. */
 static const float epsilon = 0.0005f;
@@ -54,10 +60,10 @@ struct Sprite {
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
 	float bounding; /* radius, fixed to function of the image */
-	unsigned bin; /* which bin is it in, set by {x_5}, or {no_bin} */
 	struct Ortho3f x, v; /* where it is and where it is going */
-	/* fixme: all the following are exclusive to sprites that are active; make
-	 a temporary structure to hold them? */
+	unsigned bin; /* which bin is it in, set by {x} */
+	enum CollisionMask mask_self, mask_others; /* for collision detection */
+	/* the following are temporory: */
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
 	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
@@ -120,17 +126,6 @@ struct Gate {
 #define POOL_TYPE struct Gate
 #include "../templates/Pool.h"
 
-/** Collisions between sprites to apply later. This is a pool that sprites can
- use. Defines {CollisionPool}, {CollisionPoolNode}. */
-struct Collision {
-	struct Collision *next;
-	struct Vec2f v;
-	float t;
-};
-#define POOL_NAME Collision
-#define POOL_TYPE struct Collision
-#include "../templates/Pool.h"
-
 /* * While {SpriteListForEach} is running, we may have to transfer a sprite to
  another bin, or delete a sprite, or whatever; this causes causality problems
  for iteration. We introduce a delay function that is called right after the
@@ -147,6 +142,17 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 #define POOL_TYPE struct Delay
 #define POOL_TO_STRING &delay_to_string
 #include "../templates/Pool.h"*/
+
+/** Collisions between sprites to apply later. This is a pool that sprites can
+ use. Defines {CollisionPool}, {CollisionPoolNode}. */
+struct Collision {
+	struct Collision *next;
+	struct Vec2f v;
+	float t;
+};
+#define POOL_NAME Collision
+#define POOL_TYPE struct Collision
+#include "../templates/Pool.h"
 
 /** Used in {Sprites}. */
 struct Bin {
@@ -241,92 +247,8 @@ static void sprite_update(struct Sprite *const this) {
 	assert(this);
 	this->vt->update(this);
 }
-static void shoot(struct Ship *const ship);
-/** @implements <Ship>Action */
-static void ship_update_human(struct Ship *const this) {
-	const int ms_turning = -PollGetRight();
-	const int ms_acceleration = PollGetUp();
-	const int ms_shoot = PollGetShoot(); /* fixme */
-	/* fixme: This is for all. :[ */
-	if(ms_acceleration > 0) { /* not a forklift */
-		struct Vec2f v = { this->sprite.data.v.x, this->sprite.data.v.y };
-		float a = ms_acceleration * this->acceleration, speed2;
-		v.x += cosf(this->sprite.data.x.theta) * a;
-		v.y += sinf(this->sprite.data.x.theta) * a;
-		if((speed2 = v.x * v.x + v.y * v.y) > this->max_speed2) {
-			float correction = sqrtf(this->max_speed2 / speed2);
-			v.x *= correction, v.y *= correction;
-		}
-		this->sprite.data.v.x = v.x, this->sprite.data.v.y = v.y;
-	}
-	if(ms_turning) {
-		float t = ms_turning * this->turn * turn_acceleration;
-		this->sprite.data.v.theta += t;
-		if(this->sprite.data.v.theta < -this->turn) {
-			this->sprite.data.v.theta = -this->turn;
-		} else if(this->sprite.data.v.theta > this->turn) {
-			this->sprite.data.v.theta = this->turn;
-		}
-	} else {
-		/* \${turn_damping_per_ms^dt_ms}
-		 Taylor: d^25 + d^25(t-25)log d + O((t-25)^2).
-		 @fixme What about extreme values? */
-		this->sprite.data.v.theta *= turn_damping_per_25ms
-			- turn_damping_1st_order * (sprites->dt_ms - 25.0f);
-	}
-	if(ms_shoot) shoot(this);
-}
-/** @implements <Ship>Action */
-static void ship_update_dumb_ai(struct Ship *const this) {
-	assert(this);
-	this->sprite.data.v.theta = 0.0002f;
-}
-#if 0
-static void ship_update_ai(struct Ship *const this) {
-	const struct Ship *const b = GameGetPlayer();
-	struct Vec2f c;
-	float d_2, theta, t;
-	int turning = 0, acceleration = 0;
-	
-	if(!b) return; /* fixme */
-	c.x = b->sprite.data.r.x - this->sprite.data.r.x;
-	c.y = b->sprite.data.r.y - this->sprite.data.r.y;
-	d_2   = c.x * c.x + c.y * c.y;
-	theta = atan2f(c.y, c.x);
-	/* the ai ship aims where it thinks the player will be when it's shot gets
-	 there, approx - too hard to beat! */
-	/*target.x = ship[SHIP_PLAYER].p.x - Sin[ship[SHIP_PLAYER].r] * ship[SHIP_PLAYER].inertia.x * (disttoenemy / WEPSPEED) - ship[1].inertia.x;
-	 target.y = ship[SHIP_PLAYER].p.y + Cos[ship[SHIP_PLAYER].r] * ship[SHIP_PLAYER].inertia.y * (disttoenemy / WEPSPEED) - ship[1].inertia.y;
-	 disttoenemy = hypot(target.x - ship[SHIP_CPU].p.x, target.y - ship[SHIP_CPU].p.y);*/
-	/* t is the error of where wants vs where it's at */
-	t = theta - this->sprite.data.r.theta;
-	if(t >= M_PI_F) { /* keep it in the branch cut */
-		t -= M_2PI_F;
-	} else if(t < -M_PI_F) {
-		t += M_2PI_F;
-	}
-	/* too close; ai only does one thing at once, or else it would be hard */
-	if(d_2 < shp_ai_too_close) {
-		if(t < 0) t += (float)M_PI_F;
-		else      t -= (float)M_PI_F;
-	}
-	/* turn */
-	if(t < -shp_ai_turn || t > shp_ai_turn) {
-		turning = (int)(t * shp_ai_turn_constant);
-		/*if(turning * dt_s fixme */
-		/*if(t < 0) {
-		 t += (float)M_PI_F;
-		 } else {
-		 t -= (float)M_PI_F;
-		 }*/
-	} else if(d_2 > shp_ai_too_close && d_2 < shp_ai_too_far) {
-		ShipShoot(this);
-	} else if(t > -shp_ai_turn_sloppy && t < shp_ai_turn_sloppy) {
-		acceleration = shp_ai_speed;
-	}
-	ShipInput(this, turning, acceleration);
-}
-#endif
+/* Includes {ship_update*} Human/AI. */
+#include "SpritesAi.h"
 /** Does nothing; just debris.
  @implements <Debris>Action */
 static void debris_update(struct Debris *const this) {
@@ -523,7 +445,8 @@ int Sprites(void) {
  @fixme I don't like random velocity. */
 static void sprite_filler(struct Sprite *const this,
 	const struct SpriteVt *const vt, const struct AutoSprite *const as,
-	const struct Ortho3f *x) {
+	const struct Ortho3f *x, const enum CollisionMask mask_self,
+	const enum CollisionMask mask_others) {
 	assert(sprites && this && vt && as);
 	this->vt      = vt;
 	this->image   = as->image;
@@ -535,11 +458,14 @@ static void sprite_filler(struct Sprite *const this,
 	} else {
 		Ortho3f_filler_fg(&this->x);
 	}
-	this->bin  = BinsGetOrtho(sprites->foreground_bins, &this->x);
-	this->dx.x = this->dx.y = 0.0f;
 	Ortho3f_filler_zero(&this->v);
+	this->bin  = BinsGetOrtho(sprites->foreground_bins, &this->x);
+	this->mask_self = mask_self;
+	this->mask_others = mask_others;
+	this->dx.x = this->dx.y = 0.0f;
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
 	this->collisions = 0;
+	/* Put this in space. */
 	SpriteListPush(&sprites->bins[this->bin].sprites, this);
 }
 
@@ -568,7 +494,8 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	Orcish(this->name, sizeof this->name);
 	this->wmd = class->weapon;
 	this->ms_recharge_wmd = 0;
-	sprite_filler(&this->sprite.data, vt, class->sprite, x);
+	sprite_filler(&this->sprite.data, vt, class->sprite, x, MASK_SHIP,
+		MASK_SHIP | MASK_POINT_DEFENSE | MASK_DEBIS);
 	return this;
 }
 
@@ -582,7 +509,8 @@ struct Debris *SpritesDebris(const struct AutoDebris *const class,
 		{ fprintf(stderr, "SpriteDebris: %s.\n",
 		DebrisPoolGetError(sprites->debris)); return 0; }
 	this->mass = class->mass;
-	sprite_filler(&this->sprite.data, &debris_vt, class->sprite, x);
+	sprite_filler(&this->sprite.data, &debris_vt, class->sprite, x, MASK_DEBIS,
+		MASK_SHIP | MASK_POINT_DEFENSE | MASK_DEBIS);
 	return this;
 }
 
@@ -610,7 +538,8 @@ struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 	this->from = &from->sprite.data;
 	this->mass = class->impact_mass;
 	this->expires = TimerGetGameTime() + class->ms_range;
-	sprite_filler(&this->sprite.data, &wmd_vt, class->sprite, &x);
+	sprite_filler(&this->sprite.data, &wmd_vt, class->sprite, &x,
+		MASK_POINT_DEFENSE /* fixme */, MASK_SHIP | MASK_DEBIS);
 	{
 		const float length = sqrtf(class->r * class->r + class->g * class->g
 			+ class->b * class->b);
@@ -635,7 +564,7 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 		{ fprintf(stderr, "SpritesGate: %s.\n",
 		GatePoolGetError(sprites->gates)); return 0; }
 	this->to = class->to;
-	sprite_filler(&this->sprite.data, &gate_vt, gate_sprite, &x);
+	sprite_filler(&this->sprite.data, &gate_vt, gate_sprite, &x, 0, 0);
 	return this;
 }
 
@@ -643,18 +572,7 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 
 
 
-
 /*************** Functions. *****************/
-
-/** This is used by AI and humans.
- @fixme Simplistic, shoot on frame. */
-static void shoot(struct Ship *const ship) {
-	assert(ship && ship->wmd);
-	if(!TimerIsTime(ship->ms_recharge_wmd)) return;
-	printf("Phew!\n");
-	SpritesWmd(ship->wmd, ship);
-	ship->ms_recharge_wmd = TimerGetGameTime() + ship->wmd->ms_recharge;
-}
 
 /** Called in \see{extrapolate}.
  @implements BinsSpriteAction */

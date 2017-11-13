@@ -70,10 +70,10 @@ before exiting, when all references have been resolved, <em>Sprites_</em>.
 	const struct SpriteVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* what the sprite is */
 	float bounding; /* radius, fixed to function of the image */
-	unsigned bin; /* which bin is it in, set by {x_5}, or {no_bin} */
 	struct Ortho3f x, v; /* where it is and where it is going */
-	/* fixme: all the following are exclusive to sprites that are active; make
-	 a temporary structure to hold them? */
+	unsigned bin; /* which bin is it in, set by {x} */
+	enum CollisionMask mask_self, mask_others; /* for collision detection */
+	/* the following are temporory: */
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
 	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
@@ -165,7 +165,7 @@ use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>.
 <h3>struct Bin</h3>
 <pre><b>struct Bin</b> {
 	struct SpriteList sprites;
-	struct RefPool *covers;
+	struct RefStack *covers;
 }</pre>
 <p>
 Used in <em>Sprites</em>.

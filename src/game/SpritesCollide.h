@@ -103,63 +103,6 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 
 
 
-/** Called from \see{sprite_sprite_collide} to give the next level of detail
- with time.
- @param t0_ptr: If true, sets the time of collision past the current frame in
- {ms}.
- @return If {u} and {v} collided. */
-static int collide_circles(const struct Sprite *const a,
-						   const struct Sprite *const b, float *t0_ptr) {
-	/* t \in [0,1]
-	 u = a.dx
-	 v = b.dx
-	 if(v-u ~= 0) t = doesn't matter, parallel-ish
-	 p(t) = a0 + ut
-	 q(t) = b0 + vt
-	 distance(t)   = |q(t) - p(t)|
-	 distance^2(t) = (q(t) - p(t))^2
-	 = ((b0+vt) - (a0+ut))^2
-	 = ((b0-a0) + (v-u)t)^2
-	 = (v-u)*(v-u)t^2 + 2(b0-a0)*(v-u)t + (b0-a0)*(b0-a0)
-	 0 = 2(v-u)*(v-u)t_min + 2(b0-a0)*(v-u)
-	 t_min = -(b0-a0)*(v-u)/(v-u)*(v-u)
-	 this is an optimisation, if t \notin [0,frame] then pick the closest; if
-	 distance^2(t_min) < r^2 then we have a collision, which happened at t0,
-	 r^2 = (v-u)*(v-u)t0^2 + 2(b0-a0)*(v-u)t0 + (b0-a0)*(b0-a0)
-	 t0 = [-2(b0-a0)*(v-u) - sqrt((2(b0-a0)*(v-u))^2
-	 - 4((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / 2(v-u)*(v-u)
-	 t0 = [-(b0-a0)*(v-u) - sqrt(((b0-a0)*(v-u))^2
-	 - ((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / (v-u)*(v-u) */
-	/* fixme: float stored in memory? can this be more performant? with
-	 doubles? eww overkill */
-	struct Vec2f v, z, dist;
-	float t, v2, vz, z2, dist_2, det;
-	const float r = a->bounding + b->bounding;
-	assert(a && b && t0_ptr);
-	v.x = a->v.x - b->v.x, v.y = a->v.y - b->v.y;
-	z.x = a->x.x - b->x.x, z.y = a->x.y - b->x.y;
-	v2 = v.x * v.x + v.y * v.y;
-	vz = v.x * z.x + v.y * z.y;
-	/* Time of closest approach. */
-	if(v2 < epsilon) {
-		t = 0.0f;
-	} else {
-		t = -vz / v2;
-		if(     t < 0.0f)  t = 0.0f;
-		else if(t > dt_ms) t = dt_ms;
-	}
-	/* Distance(t_min). */
-	dist.x = z.x + v.x * t, dist.y = z.y + v.y * t;
-	dist_2 = dist.x * dist.x + dist.y * dist.y;
-	if(dist_2 >= r * r) return 0;
-	/* The first root or zero is when the collision happens. */
-	z2 = z.x * z.x + z.y * z.y;
-	det = (vz * vz - v2 * (z2 - r * r));
-	t = (det <= 0.0f) ? 0.0f : (-vz - sqrtf(det)) / v2;
-	if(t < 0.0f) t = 0.0f; /* bounded, dist < r^2 */
-	*t0_ptr = t;
-	return 1;
-}
 
 /** This first applies the most course-grained collision detection in pure
  two-dimensional space using {x_5} and {bounding1}. If passed, calls
@@ -252,19 +195,70 @@ static void collide_boxes(struct Sprite *const sprites) {
 }
 #endif
 
-/** This first applies the most course-grained collision detection in
- two-dimensional space, Hahn–Banach separation theorem using {box}. If passed,
- calls \see{collide_circles} to introduce time. Called from
- \see{collide_bin}. */
-static void collide(struct Sprite *const a, struct Sprite *const b) {
+
+/** Checks whether two sprites intersect using inclined cylinders in
+ three-dimensions, where the third dimension is linearly-interpolated time.
+ Called from \see{collide_boxes}. */
+static void collide_circles(const struct Sprite *const a,
+	const struct Sprite *const b) {
+	/* 	         u = a.dx
+	             v = b.dx
+	 if(v-u ~= 0) t doesn't matter, parallel-ish
+	          p(t) = a0 + ut
+	          q(t) = b0 + vt
+	 distance(t)   = |q(t) - p(t)|
+	 distance^2(t) = (q(t) - p(t))^2
+	               = ((b0+vt) - (a0+ut))^2
+	               = ((b0-a0) + (v-u)t)^2
+	               = (v-u)*(v-u)t^2 + 2(b0-a0)*(v-u)t + (b0-a0)*(b0-a0)
+	             0 = 2(v-u)*(v-u)t_min + 2(b0-a0)*(v-u)
+	         t_min = -(b0-a0)*(v-u)/(v-u)*(v-u)
+	 this is an optimisation, if t \notin [0,frame] then pick the closest; if
+	 distance^2(t_min) < r^2 then we have a collision, which happened at t0,
+	           r^2 = (v-u)*(v-u)t0^2 + 2(b0-a0)*(v-u)t0 + (b0-a0)*(b0-a0)
+	            t0 = [-2(b0-a0)*(v-u) - \sqrt((2(b0-a0)*(v-u))^2
+	                   - 4((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / 2(v-u)*(v-u)
+	            t0 = [-(b0-a0)*(v-u) - \sqrt(((b0-a0)*(v-u))^2
+	                   - ((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / (v-u)*(v-u) */
+	struct Vec2f v, z, dist;
+	float t, v2, vz, z2, dist_2, det;
+	const float r = a->bounding + b->bounding;
 	char str_a[12], str_b[12];
 	assert(a && b);
-	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
-	if(!(a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
-		b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) return;
+	v.x = a->v.x - b->v.x, v.y = a->v.y - b->v.y;
+	z.x = a->x.x - b->x.x, z.y = a->x.y - b->x.y;
+	v2 = v.x * v.x + v.y * v.y;
+	vz = v.x * z.x + v.y * z.y;
+	/* Time of closest approach. */
+	if(v2 < epsilon) {
+		t = 0.0f;
+	} else {
+		t = -vz / v2;
+		if(     t < 0.0f)           t = 0.0f;
+		else if(t > sprites->dt_ms) t = sprites->dt_ms;
+	}
+	/* Distance(t_min). */
+	dist.x = z.x + v.x * t, dist.y = z.y + v.y * t;
+	dist_2 = dist.x * dist.x + dist.y * dist.y;
+	if(dist_2 >= r * r) return;
+	/* The first root or zero is when the collision happens. */
+	z2 = z.x * z.x + z.y * z.y;
+	det = (vz * vz - v2 * (z2 - r * r));
+	t = (det <= 0.0f) ? 0.0f : (-vz - sqrtf(det)) / v2;
+	if(t < 0.0f) t = 0.0f; /* bounded, dist < r^2 */
 	sprite_to_string(a, &str_a);
 	sprite_to_string(b, &str_b);
-	printf("[%s, %s]\n", str_a, str_b);
+	printf("[%s, %s] collide at %fms into the frame.\n", str_a, str_b, t);
+}
+/** This first applies the most course-grained collision detection in
+ two-dimensional space, Hahn–Banach separation theorem using {box}. If passed,
+ calls \see{collide_circles}. Called from \see{collide_bin}. */
+static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
+	assert(a && b);
+	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
+	if((a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
+		b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max))
+		collide_circles(a, b);
 }
 /** This is the function that's calling everything else. Call after
  {extrapolate}; needs and consumes {covers}. */
@@ -281,7 +275,7 @@ static void collide_bin(unsigned bin) {
 			index_b--;
 			elem_b = RefStackGetElement(ref, index_b);
 			assert(elem_a && elem_b);
-			collide(*elem_a, *elem_b);
+			collide_boxes(*elem_a, *elem_b);
 		} while(index_b);
 	}
 }

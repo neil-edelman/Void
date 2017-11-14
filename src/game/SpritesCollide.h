@@ -101,11 +101,11 @@ elastic_bounce(this, that, t0);
  @param b		Sprite b.
  @param t0_dt	The fraction of the frame that the collision occurs, [0, 1]. */
 static void elastic_bounce(const struct Sprite *const a,
-	const struct Sprite *const b, const float t0) {
+	const struct Sprite *const b, const float t) {
 	char str_a[12], str_b[12];
 	sprite_to_string(a, &str_a);
 	sprite_to_string(b, &str_b);
-	printf("[%s, %s] collide at %fms into the frame.\n", str_a, str_b, t0);
+	printf("[%s, %s] collide at %fms into the frame.\n", str_a, str_b, t);
 #if 0
 	struct Vec2f ac, bc, c, a_nrm, a_tan, b_nrm, b_tan, v;
 	float nrm, dist_c_2, dist_c, min;
@@ -302,8 +302,7 @@ static void collide_circles(const struct Sprite *const a,
 	det = (vz * vz - v2 * (z2 - r * r));
 	t = (det <= 0.0f) ? 0.0f : (-vz - sqrtf(det)) / v2;
 	if(t < 0.0f) t = 0.0f; /* bounded, dist < r^2 */
-	/* fixme: ahh shit, now we need to mark them or something from
-	 preventing them from being checked again in different boxes! */
+	/* fixme: collision matrix. */
 	elastic_bounce(a, b, t);
 }
 /** This first applies the most course-grained collision detection in
@@ -312,14 +311,9 @@ static void collide_circles(const struct Sprite *const a,
 static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 	assert(a && b);
 	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
-	if((a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
-		b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) {
-		char str_a[12], str_b[12];
-		sprite_to_string(a, &str_a);
-		sprite_to_string(b, &str_b);
-		printf("[%s, %s] may collide.\n", str_a, str_b);
-		collide_circles(a, b);
-	}
+	if(!(a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
+		 b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) return;
+	collide_circles(a, b);
 }
 /** This is the function that's calling everything else. Call after
  {extrapolate}; needs and consumes {covers}. */
@@ -343,7 +337,7 @@ static void collide_bin(unsigned bin) {
 				continue;
 			/* fixme: have a hashmap that checks whether they have been checked
 			 before? or associate a Sprite with collisions? */
-			collide_boxes(*elem_a, *elem_b);
+			collide_boxes(a, b);
 		} while(index_b);
 	}
 }

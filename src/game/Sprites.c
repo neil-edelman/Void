@@ -704,28 +704,10 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	/* Clear temp {cover}. (fixme: no) */
 	{ int i; for(i = 0; i < BINS_SIZE; i++)
 		RefStackClear(sprites->bins[i].covers); }
-#if 0
-	if(!DelayPoolIsEmpty(delays)) {
-		/*BinPoolForEach(draw_bins, &Bin_print);*/
-		printf("Delay: %s.\n", DelayPoolToString(delays));
-	}
-	if(!DelayPoolIsEmpty(removes)) {
-		/*BinPoolForEach(draw_bins, &Bin_print);*/
-		printf("Remove: %s.\n", DelayPoolToString(removes));
-	}
-	DelayPoolForEach(delays, &Delay_evaluate), DelayPoolClear(delays);
-	DelayPoolForEach(removes, &Delay_evaluate), DelayPoolClear(removes);
-	/* fixme: place things in to drawing area. */
-	/* Collision relies on the values calculated in \see{extrapolate}. */
-	for_each_update(&collide);
-	/* Final time-step where new values are calculated. Takes data from
-	 \see{extrapolate} and \see{collide}. */
-	for_each_update(&timestep);
-	CollisionPoolClear(collisions);
-#endif
+	CollisionPoolClear(sprites->collisions);
 }
 
-/* fixme: this is bullshit. have it all in Draw? */
+/* fixme: This is bullshit. Have it all in Draw? */
 
 /** Called from \see{draw_bin}.
  @implements <Sprite, ContainsLambertOutput>BiAction */

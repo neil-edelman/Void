@@ -65,7 +65,7 @@ struct Sprite {
 	/* The following are temporary: */
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
-	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
+	struct Collision *collision; /* temporary, \in {sprites.collisions} */
 };
 static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_NAME Sprite
@@ -156,8 +156,6 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 /** Collisions between sprites to apply later. This is a pool that sprites can
  use. Defines {CollisionPool}, {CollisionPoolNode}. */
 struct Collision {
-	struct Collision *next;
-	struct Sprite *sprite;
 	struct Vec2f v;
 	float t;
 };
@@ -407,10 +405,8 @@ static void bin_migrate(void *const sprites_void,
  @implements <Sprite>ListMigrateElement */
 static void collision_migrate_sprite(struct Sprite *const this,
 	const struct Migrate *const migrate) {
-	struct Collision *c;
 	assert(this && migrate);
-	for(c = this->collisions; c; c = c->next)
-		CollisionPoolMigratePointer(&c, migrate);
+	if(this->collision) CollisionPoolMigratePointer(&this->collision, migrate);
 }
 /** @param sprites_void: We don't need this because there's only one static.
  Should always equal {sprites}.
@@ -425,6 +421,8 @@ static void collision_migrate(void *const sprites_void,
 			&collision_migrate_sprite, migrate);
 	}
 }
+/*static void collision_migrate_collision() {
+}*/
 
 /** Destructor. */
 void Sprites_(void) {
@@ -519,7 +517,7 @@ static void sprite_filler(struct Sprite *const this,
 	this->bin  = LayerGetOrtho(sprites->layer, &this->x);
 	this->dx.x = this->dx.y = 0.0f;
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
-	this->collisions = 0;
+	this->collision = 0;
 	/* Put this in space. */
 	SpriteListPush(&sprites->bins[this->bin].sprites, this);
 }

@@ -90,6 +90,8 @@ elastic_bounce(this, that, t0);
 
 #endif
 
+int is_redundant;
+
 /** Elastic collision between circles; called from \see{collide} with
  {@code t0_dt} from \see{collide_circles}. Use this when we've determined that
  {@code Sprite a} collides with {@code Sprite b} at {@code t0_dt}, where
@@ -243,7 +245,8 @@ static void elastic_bounce(const struct Sprite *const a,
 		assert(a && b && t >= 0);
 		sprite_to_string(a, &str_a);
 		sprite_to_string(b, &str_b);
-		printf("[%s, %s] collide at %fms into the frame.\n", str_a, str_b, t);
+		printf("[%s, %s] collide at %fms into the frame%s.\n", str_a, str_b, t,
+			   is_redundant ? " (redundant)" : "");
 	}
 }
 
@@ -306,16 +309,18 @@ static void collide_bin(unsigned bin) {
 		/* . . . then {b} goes down the list. */
 		if(!(index_b = CoverStackGetSize(cover))) break;
 		do {
+			is_redundant = 0;
 			index_b--;
 			cover_b = CoverStackGetElement(cover, index_b);
 			assert(cover_a && cover_b);
+			/* Another {bin} takes care of it? */
+			if(!cover_a->is_corner && !cover_b->is_corner) is_redundant = 1;/*continue;*/
 			a = cover_a->sprite, b = cover_b->sprite;
 			assert(a && b);
 			/* Mostly for weapons that ignore collisions with themselves. */
 			if(!(sprite_get_self_mask(a) & sprite_get_others_mask(b))
 				&& !(sprite_get_others_mask(a) & sprite_get_self_mask(b)))
 				continue;
-			/* Another {bin} takes care of it? */
 			/*if((!(vec.x <= min->x) && a right && b right)
 			 || (!(vec.y <= min->y) && a bottom && b bottom)) */
 			collide_boxes(a, b);

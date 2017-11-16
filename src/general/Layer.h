@@ -4,7 +4,7 @@ struct Rectangle4f;
 struct Sprite;
 struct Layer;
 typedef void (*LayerAction)(const unsigned);
-typedef void (*LayerSpriteAction)(const unsigned, struct Sprite *);
+typedef void (*LayerNoSpriteAction)(const unsigned, unsigned, struct Sprite *);
 
 void Layer_(struct Layer **const pthis);
 struct Layer *Layer(const size_t size_side, const float each_bin);
@@ -15,6 +15,6 @@ int LayerSetSpriteRectangle(struct Layer *const this,
 	struct Rectangle4f *const rect);
 void LayerForEachScreen(struct Layer *const this, const LayerAction action);
 void LayerSpriteForEachSprite(struct Layer *const this,
-	struct Sprite *const sprite, const LayerSpriteAction action);
+	struct Sprite *const sprite, const LayerNoSpriteAction action);
 int LayerIsResponsable(const struct Layer *const this,
 	const struct Sprite *const a, const struct Sprite *const b);

@@ -626,11 +626,9 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 
 /*************** Functions. *****************/
 
-int hack_put_cover_is_corner;
-
 /** Called in \see{extrapolate}.
- @implements LayerSpriteAction */
-static void put_cover(const unsigned bin, struct Sprite *this) {
+ @implements LayerNoSpriteAction */
+static void put_cover(const unsigned bin, unsigned no, struct Sprite *this) {
 	struct Cover *cover;
 	/*char a[12];*/
 	assert(this && bin < LAYER_SIZE);
@@ -638,7 +636,7 @@ static void put_cover(const unsigned bin, struct Sprite *this) {
 		{ fprintf(stderr, "put_cover: %s.\n",
 		CoverStackGetError(sprites->bins[bin].covers)); return;}
 	cover->sprite = this;
-	cover->is_corner = hack_put_cover_is_corner, hack_put_cover_is_corner = 0;
+	cover->is_corner = !no;
 	/*sprite_to_string(this, &a);
 	printf("put_cover: %s -> %u.\n", a, bin);*/
 }
@@ -663,7 +661,6 @@ static void extrapolate(struct Sprite *const this) {
 	/* Put it into appropriate {covers}. This is like a hashmap in space, but
 	 it is spread out, so it may cover multiple bins. */
 	LayerSetSpriteRectangle(sprites->layer, &this->box);
-	hack_put_cover_is_corner = 1;
 	LayerSpriteForEachSprite(sprites->layer, this, &put_cover);
 }
 /** Called in \see{SpritesUpdate}.

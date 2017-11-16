@@ -72,8 +72,7 @@ before exiting, when all references have been resolved, <em>Sprites_</em>.
 	float bounding; /* radius, fixed to function of the image */
 	struct Ortho3f x, v; /* where it is and where it is going */
 	unsigned bin; /* which bin is it in, set by {x} */
-	enum CollisionMask mask_self, mask_others; /* for collision detection */
-	/* the following are temporory: */
+	/* The following are temporary: */
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
 	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
@@ -146,10 +145,27 @@ Define <em>GatePool</em> and <em>GatePoolNode</em>, a subclass of <em>Sprite</em
 </dl>
 </div>
 
+<div><a name = "struct Cover"><!-- --></a>
+<h3>struct Cover</h3>
+<pre><b>struct Cover</b> {
+	struct Sprite *sprite;
+	int is_corner;
+}</pre>
+<p>
+Define a temporary reference to sprites for collision-detection; these will
+go in each bin that is covered by the sprite and be consumed by the functions
+responsible. The sprite cannot be modified during this operation to simplify
+processing.
+</p>
+<dl>
+</dl>
+</div>
+
 <div><a name = "struct Collision"><!-- --></a>
 <h3>struct Collision</h3>
 <pre><b>struct Collision</b> {
 	struct Collision *next;
+	struct Sprite *sprite;
 	struct Vec2f v;
 	float t;
 }</pre>
@@ -165,7 +181,7 @@ use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>.
 <h3>struct Bin</h3>
 <pre><b>struct Bin</b> {
 	struct SpriteList sprites;
-	struct RefStack *covers;
+	struct CoverStack *covers;
 }</pre>
 <p>
 Used in <em>Sprites</em>.
@@ -177,15 +193,16 @@ Used in <em>Sprites</em>.
 <div><a name = "static struct Sprites"><!-- --></a>
 <h3>static struct Sprites</h3>
 <pre><b>static struct Sprites</b> {
-	struct Bin bins[BINS_SIZE];
+	struct Bin bins[LAYER_SIZE];
 	/* Backing for the {SpriteList} in the {Bin}s. */
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
+	/* Contains calculations for the {bins}. */
+	struct Layer *layer;
 	/* Constantly updating frame time. */
 	float dt_ms;
-	struct Bins *foreground_bins;
 	struct CollisionPool *collisions;
 }</pre>
 <p>
@@ -201,6 +218,7 @@ Sprites all together.
 	SpriteToString to_string;
 	SpriteAction delete, update;
 	SpriteFloatAccessor get_mass;
+	SpriteMaskAccessor get_self_mask, get_others_mask;
 }</pre>
 <p>
 Define <em>SpriteVt</em>.

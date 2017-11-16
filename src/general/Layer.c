@@ -153,11 +153,11 @@ void LayerForEachScreen(struct Layer *const this, const LayerAction action) {
 
 /** For each bin crossing the sprite; used for collision-detection. */
 void LayerSpriteForEachSprite(struct Layer *const this,
-	struct Sprite *const sprite, const LayerSpriteAction action) {
+	struct Sprite *const sprite, const LayerNoSpriteAction action) {
 	struct IntStack *step;
-	size_t i, size;
+	unsigned i, size;
 	if(!this || !sprite || !action) return;
 	step = this->step[LAYER_SPRITE];
-	size = IntStackGetSize(step);
-	for(i = 0; i < size; i++) action(*IntStackGetElement(step, i), sprite);
+	size = (unsigned)IntStackGetSize(step); /* Unsafe. Meh. */
+	for(i = 0; i < size; i++) action(*IntStackGetElement(step, i), i, sprite);
 }

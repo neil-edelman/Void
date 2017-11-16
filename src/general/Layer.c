@@ -24,20 +24,20 @@ static const float epsilon = 0.0005f;
 #define STACK_TYPE int
 #include "../templates/Stack.h"
 
-enum { LAYER_SCREEN, LAYER_SPRITE, LAYER_NO };
+enum LayerStep { LAYER_SCREEN, LAYER_SPRITE, LAYER_NO };
 
 struct Layer {
 	int side_size;
 	float half_space, one_each_bin;
-	struct Vec2i min_screen; /* For collision detection. */
-	struct IntStack *pool[LAYER_NO];
+	struct Rectangle4i screen;
+	struct IntStack *step[LAYER_NO];
 };
 
 void Layer_(struct Layer **const pthis) {
 	struct Layer *this;
 	unsigned i;
 	if(!pthis || !(this = *pthis)) return;
-	for(i = 0; i < LAYER_NO; i++) IntStack_(&this->pool[i]);
+	for(i = 0; i < LAYER_NO; i++) IntStack_(&this->step[i]);
 	this = *pthis = 0;
 }
 
@@ -50,20 +50,20 @@ struct Layer *Layer(const size_t side_size, const float each_bin) {
 	unsigned i;
 	if(!side_size || side_size > INT_MAX || each_bin < epsilon)
 		{ fprintf(stderr, "Layer: parameters out of range.\n"); return 0; }
-	if(!(this = malloc(sizeof *this))) { perror("Layer"); Layer_(&this);return 0;}
+	if(!(this = malloc(sizeof *this))) {perror("Layer");Layer_(&this);return 0;}
 	this->side_size = (int)side_size;
 	this->half_space = (float)side_size * each_bin / 2.0f;
 	this->one_each_bin = 1.0f / each_bin;
-	this->min_screen.x = 0, this->min_screen.y = 0;
-	this->pool[0] = this->pool[1] = 0;
+	Rectangle4i_init(&this->screen);
+	for(i = 0; i < LAYER_NO; i++) this->step[i] = 0;
 	for(i = 0; i < LAYER_NO; i++) {
-		if(!(this->pool[i] = IntStack())) { fprintf(stderr, "Layer: %s.\n",
+		if(!(this->step[i] = IntStack())) { fprintf(stderr, "Layer: %s.\n",
 			IntStackGetError(0)); Layer_(&this); return 0; }
 	}
 	return this;
 }
 
-unsigned LayerGetOrtho(const struct Layer *const this, struct Ortho3f *const o) {
+unsigned LayerGetOrtho(const struct Layer *const this, struct Ortho3f *const o){
 	struct Vec2i v2i;
 	if(!this || !o) return 0;
 	v2i.x = (o->x + this->half_space) * this->one_each_bin;
@@ -81,29 +81,40 @@ unsigned LayerGetOrtho(const struct Layer *const this, struct Ortho3f *const o) 
  @param min: Optional.
  @return Success. */
 static int set_rect_layer(struct Layer *const this,
-	struct Rectangle4f *const rect, struct IntStack *const layer,
-	struct Vec2i *const min) {
+	struct Rectangle4f *const rect, const enum LayerStep layer_step) {
 	struct Rectangle4i bin4;
 	struct Vec2i bin2i;
 	int *bin;
-	assert(this && rect && layer); /* ALSO layer \in this */
-	IntStackClear(layer);
+	struct IntStack *step = this->step[layer_step];
+	assert(this && rect && layer_step < LAYER_NO);
+	IntStackClear(step);
 	/* Map floating point rectangle {rect} to index rectangle {bin4}. */
 	bin4.x_min = (rect->x_min + this->half_space) * this->one_each_bin;
-	if(bin4.x_min < 0) bin4.x_min = 0;
 	bin4.x_max = (rect->x_max + this->half_space) * this->one_each_bin;
-	if(bin4.x_max >= this->side_size) bin4.x_max = this->side_size - 1;
 	bin4.y_min = (rect->y_min + this->half_space) * this->one_each_bin;
-	if(bin4.y_min < 0) bin4.y_min = 0;
 	bin4.y_max = (rect->y_max + this->half_space) * this->one_each_bin;
-	if(bin4.y_max >= this->side_size) bin4.y_max = this->side_size - 1;
+	if(layer_step == LAYER_SCREEN) {
+		if(bin4.x_min < 0) bin4.x_min = 0;
+		if(bin4.x_max >= this->side_size) bin4.x_max = this->side_size - 1;
+		if(bin4.y_min < 0) bin4.y_min = 0;
+		if(bin4.y_max >= this->side_size) bin4.y_max = this->side_size - 1;
+		/* Save the screen rectangle. */
+		Rectangle4i_assign(&this->screen, &bin4);
+	} else {
+		const struct Rectangle4i *const screen = &this->screen;
+		/* Clip it to the screen. */
+		if(bin4.x_min < screen->x_min) bin4.x_min = screen->x_min;
+		if(bin4.x_max > screen->x_max) bin4.x_max = screen->x_max;
+		if(bin4.y_min < screen->x_min) bin4.y_min = screen->y_min;
+		if(bin4.y_max > screen->y_max) bin4.y_max = screen->y_max;
+	}
 	/* Generally goes faster when you follow the scan-lines; not sure whether
-	 this is so important with buffering. */
+	 this is so important with buffering. fixme: uhm, is this pop or dequeue? */
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
 			/*printf("sprite bin2i(%u, %u)\n", bin2i.x, bin2i.y);*/
-			if(!(bin = IntStackNew(layer))) { fprintf(stderr,
-				"Layer rectangle: %s.\n", IntStackGetError(layer)); return 0; }
+			if(!(bin = IntStackNew(step))) { fprintf(stderr,
+				"Layer rectangle: %s.\n", IntStackGetError(step)); return 0; }
 			*bin = bin2i.y * this->side_size + bin2i.x;
 			/*bin_to_Vec2i(bin2i_to_fg_bin(bin2i), &bin_pos);
 			fprintf(gnu_glob, "set arrow from %f,%f to %d,%d lw 0.2 "
@@ -111,8 +122,6 @@ static int set_rect_layer(struct Layer *const this,
 				this->x_5.x, this->x_5.y, bin_pos.x, bin_pos.y);*/
 		}
 	}
-	/* Hack to get min settings of screen. */
-	if(min) min->x = bin4.x_min, min->y = bin4.y_min;
 	return 1;
 }
 
@@ -121,8 +130,7 @@ static int set_rect_layer(struct Layer *const this,
 int LayerSetScreenRectangle(struct Layer *const this,
 	struct Rectangle4f *const rect) {
 	if(!this || !rect) return 0;
-	return set_rect_layer(this, rect, this->pool[LAYER_SCREEN],
-		&this->min_screen);
+	return set_rect_layer(this, rect, LAYER_SCREEN);
 }
 
 /** Set sprite rectangle.
@@ -130,44 +138,26 @@ int LayerSetScreenRectangle(struct Layer *const this,
 int LayerSetSpriteRectangle(struct Layer *const this,
 	struct Rectangle4f *const rect) {
 	if(!this || !rect) return 0;
-	return set_rect_layer(this, rect, this->pool[LAYER_SPRITE], 0);
+	return set_rect_layer(this, rect, LAYER_SPRITE);
 }
 
-/** For each bin on screen. */
+/** For each bin on screen; used for drawing. */
 void LayerForEachScreen(struct Layer *const this, const LayerAction action) {
-	struct IntStack *layer;
+	struct IntStack *step;
 	size_t i, size;
 	if(!this || !action) return;
-	layer = this->pool[LAYER_SCREEN];
-	size = IntStackGetSize(layer);
-	for(i = 0; i < size; i++) action(*IntStackGetElement(layer, i));
+	step = this->step[LAYER_SCREEN];
+	size = IntStackGetSize(step);
+	for(i = 0; i < size; i++) action(*IntStackGetElement(step, i));
 }
 
-/** For each bin crossing the sprite. */
+/** For each bin crossing the sprite; used for collision-detection. */
 void LayerSpriteForEachSprite(struct Layer *const this,
 	struct Sprite *const sprite, const LayerSpriteAction action) {
-	struct IntStack *layer;
+	struct IntStack *step;
 	size_t i, size;
 	if(!this || !sprite || !action) return;
-	layer = this->pool[LAYER_SPRITE];
-	size = IntStackGetSize(layer);
-	for(i = 0; i < size; i++) action(*IntStackGetElement(layer, i), sprite);
-}
-
-/** Only makes sense after \see{LayerSetScreenRectangle} has been called. */
-void LayerSetResponsible(const struct Layer *const this, const unsigned bin) {
-	struct Vec2i bin2i;
-	if(!this) return vec;
-	bin2i.x = bin % this->side_size;
-	bin2i.y = bin / this->side_size;
-}
-
-/** Only makes sense after \see{LayerSetResponsible} has been called.
- @return Whether it should check the collision detection, or another bin will
- check it. */
-int LayerIsResponsible(const struct Layer *const this,
-	const struct Sprite *const a, const struct Sprite *const b) {
-	if(!this || !a || !b) return 0;
-	min_x = ();
-	min_y = ();
+	step = this->step[LAYER_SPRITE];
+	size = IntStackGetSize(step);
+	for(i = 0; i < size; i++) action(*IntStackGetElement(step, i), sprite);
 }

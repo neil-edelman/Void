@@ -294,26 +294,26 @@ static void collide_boxes(const struct Sprite *const a,
 /** This is the function that's calling everything else. Call after
  {extrapolate}; needs and consumes {covers}. */
 static void collide_bin(unsigned bin) {
-	struct RefStack *const ref = sprites->bins[bin].covers;
-	struct Sprite **elem_a, *a, **elem_b, *b;
-	const struct Vec2i *const min = BinsGetScreenMin(sprites->foreground_bins),
-		vec = BinsGetBinVector(sprites->foreground_bins, bin);
+	struct CoverStack *const cover = sprites->bins[bin].covers;
+	struct Cover *cover_a, *cover_b;
+	struct Sprite *a, *b;
 	size_t index_b;
-	assert(sprites);
-	
+	assert(sprites && bin < LAYER_SIZE);
+
 	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
 	/* This is {O({covers}^2)/2} within the bin. {a} is poped . . . */
-	while((elem_a = RefStackPop(ref))) {
+	while((cover_a = CoverStackPop(cover))) {
 		/* . . . then {b} goes down the list. */
-		if(!(index_b = RefStackGetSize(ref))) break;
+		if(!(index_b = CoverStackGetSize(cover))) break;
 		do {
 			index_b--;
-			elem_b = RefStackGetElement(ref, index_b);
-			assert(elem_a && elem_b);
-			a = *elem_a, b = *elem_b;
+			cover_b = CoverStackGetElement(cover, index_b);
+			assert(cover_a && cover_b);
+			a = cover_a->sprite, b = cover_b->sprite;
 			assert(a && b);
 			/* Mostly for weapons that ignore collisions with themselves. */
-			if(!(a->mask_self&b->mask_others) && !(a->mask_others&b->mask_self))
+			if(!(sprite_get_self_mask(a) & sprite_get_others_mask(b))
+				&& !(sprite_get_others_mask(a) & sprite_get_self_mask(b)))
 				continue;
 			/* Another {bin} takes care of it? */
 			/*if((!(vec.x <= min->x) && a right && b right)

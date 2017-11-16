@@ -17,16 +17,16 @@
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
 #include "../general/Orcish.h" /* for human-readable ship names */
 /*#include "../general/Events.h"*/ /* for delays */
-#include "../general/Bins.h" /* for bins */
+#include "../general/Layer.h" /* for descritising */
 #include "../system/Poll.h" /* input */
 #include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "../system/Timer.h" /* for expiring */
 #include "Light.h" /* for glowing */
 #include "Sprites.h"
 
-#define BINS_SIDE_SIZE (64)
-#define BINS_SIZE (BINS_SIDE_SIZE * BINS_SIDE_SIZE)
-static const float bin_space = 256.0f;
+#define LAYER_SIDE_SIZE (64)
+#define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)
+static const float layer_space = 256.0f;
 
 enum CollisionMask {
 	MASK_SHIP = 1,
@@ -62,8 +62,7 @@ struct Sprite {
 	float bounding; /* radius, fixed to function of the image */
 	struct Ortho3f x, v; /* where it is and where it is going */
 	unsigned bin; /* which bin is it in, set by {x} */
-	enum CollisionMask mask_self, mask_others; /* for collision detection */
-	/* the following are temporory: */
+	/* The following are temporary: */
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
 	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
@@ -174,15 +173,16 @@ struct Bin {
 
 /** Sprites all together. */
 static struct Sprites {
-	struct Bin bins[BINS_SIZE];
+	struct Bin bins[LAYER_SIZE];
 	/* Backing for the {SpriteList} in the {Bin}s. */
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
+	/* Contains calculations for the {bins}. */
+	struct Layer *layer;
 	/* Constantly updating frame time. */
 	float dt_ms;
-	struct Bins *foreground_bins;
 	struct CollisionPool *collisions;
 } *sprites;
 
@@ -191,12 +191,14 @@ static struct Sprites {
 /*********** Define virtual functions. ***********/
 
 typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
+typedef enum CollisionMask (*SpriteMaskAccessor)(const struct Sprite *const);
 
 /** Define {SpriteVt}. */
 struct SpriteVt {
 	SpriteToString to_string;
 	SpriteAction delete, update;
 	SpriteFloatAccessor get_mass;
+	SpriteMaskAccessor get_self_mask, get_others_mask;
 };
 
 
@@ -305,31 +307,76 @@ static float gate_get_mass(const struct Gate *const this) {
 }
 
 
+/** @implements <Sprite>MaskAccessor */
+static enum CollisionMask sprite_get_self_mask(const struct Sprite *const this){
+	assert(this);
+	return this->vt->get_self_mask(this);
+}
+/** @implements <Sprite>MaskAccessor */
+static enum CollisionMask sprite_get_others_mask(const struct Sprite *const this) {
+	assert(this);
+	return this->vt->get_others_mask(this);
+}
+static enum CollisionMask ship_get_self_mask(const struct Ship *const this) {
+	assert(this); return MASK_SHIP;
+}
+static enum CollisionMask ship_get_others_mask(const struct Ship *const this) {
+	assert(this); return MASK_SHIP | MASK_POINT_DEFENSE | MASK_DEBIS;
+}
+static enum CollisionMask debris_get_self_mask(const struct Ship *const this) {
+	assert(this); return MASK_DEBIS;
+}
+static enum CollisionMask debris_get_others_mask(const struct Ship *const this){
+	assert(this); return MASK_SHIP | MASK_POINT_DEFENSE | MASK_DEBIS;
+}
+static enum CollisionMask wmd_get_self_mask(const struct Ship *const this) {
+	assert(this); return MASK_POINT_DEFENSE; /* fixme! allow lazers. */
+}
+static enum CollisionMask wmd_get_others_mask(const struct Ship *const this){
+	assert(this); return MASK_SHIP | MASK_DEBIS;
+}
+static enum CollisionMask gate_get_self_mask(const struct Ship *const this) {
+	assert(this); return 0;
+}
+static enum CollisionMask gate_get_others_mask(const struct Ship *const this) {
+	assert(this); return 0;
+}
+
 static const struct SpriteVt ship_human_vt = {
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_human,
-	(SpriteFloatAccessor)&ship_get_mass
+	(SpriteFloatAccessor)&ship_get_mass,
+	(SpriteMaskAccessor)&ship_get_self_mask,
+	(SpriteMaskAccessor)&ship_get_others_mask
 }, ship_ai_vt = {
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_dumb_ai,
-	(SpriteFloatAccessor)&ship_get_mass
+	(SpriteFloatAccessor)&ship_get_mass,
+	(SpriteMaskAccessor)&ship_get_self_mask,
+	(SpriteMaskAccessor)&ship_get_others_mask
 }, debris_vt = {
 	(SpriteToString)&debris_to_string,
 	(SpriteAction)&debris_delete,
 	(SpriteAction)&debris_update,
-	(SpriteFloatAccessor)&debris_get_mass
+	(SpriteFloatAccessor)&debris_get_mass,
+	(SpriteMaskAccessor)&debris_get_self_mask,
+	(SpriteMaskAccessor)&debris_get_others_mask
 }, wmd_vt = {
 	(SpriteToString)&wmd_to_string,
 	(SpriteAction)&wmd_delete,
 	(SpriteAction)&wmd_update,
-	(SpriteFloatAccessor)&wmd_get_mass
+	(SpriteFloatAccessor)&wmd_get_mass,
+	(SpriteMaskAccessor)&wmd_get_self_mask,
+	(SpriteMaskAccessor)&wmd_get_others_mask
 }, gate_vt = {
 	(SpriteToString)&gate_to_string,
 	(SpriteAction)&gate_delete,
 	(SpriteAction)&gate_update,
-	(SpriteFloatAccessor)&gate_get_mass
+	(SpriteFloatAccessor)&gate_get_mass,
+	(SpriteMaskAccessor)&gate_get_self_mask,
+	(SpriteMaskAccessor)&gate_get_others_mask
 };
 
 
@@ -350,7 +397,7 @@ static void bin_migrate(void *const sprites_void,
 	struct Sprites *const sprites_pass = sprites_void;
 	unsigned i;
 	assert(sprites_pass && sprites_pass == sprites && migrate);
-	for(i = 0; i < BINS_SIZE; i++) {
+	for(i = 0; i < LAYER_SIZE; i++) {
 		SpriteListMigrate(&sprites_pass->bins[i].sprites, migrate);
 		CoverStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
 			migrate);
@@ -373,7 +420,7 @@ static void collision_migrate(void *const sprites_void,
 	struct Sprites *const sprites_pass = sprites_void;
 	unsigned i;
 	assert(sprites_pass && sprites_pass == sprites && migrate);
-	for(i = 0; i < BINS_SIZE; i++) {
+	for(i = 0; i < LAYER_SIZE; i++) {
 		SpriteListMigrateEach(&sprites_pass->bins[i].sprites,
 			&collision_migrate_sprite, migrate);
 	}
@@ -383,12 +430,12 @@ static void collision_migrate(void *const sprites_void,
 void Sprites_(void) {
 	unsigned i;
 	if(!sprites) return;
-	for(i = 0; i < BINS_SIZE; i++) {
+	for(i = 0; i < LAYER_SIZE; i++) {
 		SpriteListClear(&sprites->bins[i].sprites);
 		CoverStack_(&sprites->bins[i].covers);
 	}
 	CollisionPool_(&sprites->collisions);
-	Bins_(&sprites->foreground_bins);
+	Layer_(&sprites->layer);
 	GatePool_(&sprites->gates);
 	WmdPool_(&sprites->wmds);
 	DebrisPool_(&sprites->debris);
@@ -399,12 +446,12 @@ void Sprites_(void) {
 /** @return True if the sprite buffers have been set up. */
 int Sprites(void) {
 	unsigned i;
-	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, BIN, COLLISION } e = NO;
+	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, LAYER, COLLISION } e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
 	if(!(sprites = malloc(sizeof *sprites)))
 		{ perror("Sprites"); Sprites_(); return 0; }
-	for(i = 0; i < BINS_SIZE; i++) {
+	for(i = 0; i < LAYER_SIZE; i++) {
 		SpriteListClear(&sprites->bins[i].sprites);
 		sprites->bins[i].covers = 0;
 	}
@@ -412,19 +459,18 @@ int Sprites(void) {
 	sprites->debris = 0;
 	sprites->wmds = 0;
 	sprites->gates = 0;
+	sprites->layer = 0;
 	sprites->dt_ms = 20;
-	sprites->foreground_bins = 0;
 	sprites->collisions = 0;
 	do {
-		for(i = 0; i < BINS_SIZE; i++) {
+		for(i = 0; i < LAYER_SIZE; i++) {
 			if(!(sprites->bins[i].covers = CoverStack())) { e = BINS; break; }
 		} if(e) break;
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
 		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
 		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
 		if(!(sprites->gates = GatePool(&bin_migrate, sprites))) { e=GATE;break;}
-		if(!(sprites->foreground_bins = Bins(BINS_SIDE_SIZE, bin_space)))
-			{ e = BIN; break; }
+		if(!(sprites->layer=Layer(LAYER_SIDE_SIZE,layer_space))){e=LAYER;break;}
 		if(!(sprites->collisions = CollisionPool(&collision_migrate, sprites)))
 			{ e = COLLISION; break; }
 	} while(0); switch(e) {
@@ -434,7 +480,7 @@ int Sprites(void) {
 		case DEBRIS: ea = "debris",eb=DebrisPoolGetError(sprites->debris);break;
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
 		case GATE: ea = "gates", eb = GatePoolGetError(sprites->gates); break;
-		case BIN: ea = "bins", eb = "couldn't get bins"; break;
+		case LAYER: ea = "layer", eb = "couldn't get layer"; break;
 		case COLLISION: ea = "collision",
 			eb = CollisionPoolGetError(sprites->collisions); break;
 	} if(e) {
@@ -457,8 +503,7 @@ int Sprites(void) {
  @fixme I don't like random velocity. */
 static void sprite_filler(struct Sprite *const this,
 	const struct SpriteVt *const vt, const struct AutoSprite *const as,
-	const struct Ortho3f *x, const enum CollisionMask mask_self,
-	const enum CollisionMask mask_others) {
+	const struct Ortho3f *x) {
 	assert(sprites && this && vt && as);
 	this->vt      = vt;
 	this->image   = as->image;
@@ -471,9 +516,7 @@ static void sprite_filler(struct Sprite *const this,
 		Ortho3f_filler_fg(&this->x);
 	}
 	Ortho3f_filler_zero(&this->v);
-	this->bin  = BinsGetOrtho(sprites->foreground_bins, &this->x);
-	this->mask_self = mask_self;
-	this->mask_others = mask_others;
+	this->bin  = LayerGetOrtho(sprites->layer, &this->x);
 	this->dx.x = this->dx.y = 0.0f;
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
 	this->collisions = 0;
@@ -506,8 +549,7 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	Orcish(this->name, sizeof this->name);
 	this->wmd = class->weapon;
 	this->ms_recharge_wmd = 0;
-	sprite_filler(&this->sprite.data, vt, class->sprite, x, MASK_SHIP,
-		MASK_SHIP | MASK_POINT_DEFENSE | MASK_DEBIS);
+	sprite_filler(&this->sprite.data, vt, class->sprite, x);
 	return this;
 }
 
@@ -521,8 +563,7 @@ struct Debris *SpritesDebris(const struct AutoDebris *const class,
 		{ fprintf(stderr, "SpriteDebris: %s.\n",
 		DebrisPoolGetError(sprites->debris)); return 0; }
 	this->mass = class->mass;
-	sprite_filler(&this->sprite.data, &debris_vt, class->sprite, x, MASK_DEBIS,
-		MASK_SHIP | MASK_POINT_DEFENSE | MASK_DEBIS);
+	sprite_filler(&this->sprite.data, &debris_vt, class->sprite, x);
 	return this;
 }
 
@@ -550,8 +591,7 @@ struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 	this->from = &from->sprite.data;
 	this->mass = class->impact_mass;
 	this->expires = TimerGetGameTime() + class->ms_range;
-	sprite_filler(&this->sprite.data, &wmd_vt, class->sprite, &x,
-		MASK_POINT_DEFENSE /* fixme */, MASK_SHIP | MASK_DEBIS);
+	sprite_filler(&this->sprite.data, &wmd_vt, class->sprite, &x);
 	{
 		const float length = sqrtf(class->r * class->r + class->g * class->g
 			+ class->b * class->b);
@@ -576,7 +616,7 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 		{ fprintf(stderr, "SpritesGate: %s.\n",
 		GatePoolGetError(sprites->gates)); return 0; }
 	this->to = class->to;
-	sprite_filler(&this->sprite.data, &gate_vt, gate_sprite, &x, 0, 0);
+	sprite_filler(&this->sprite.data, &gate_vt, gate_sprite, &x);
 	return this;
 }
 
@@ -586,17 +626,21 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 
 /*************** Functions. *****************/
 
+int hack_put_cover_is_corner;
+
 /** Called in \see{extrapolate}.
- @implements BinsSpriteAction */
+ @implements LayerSpriteAction */
 static void put_cover(const unsigned bin, struct Sprite *this) {
-	struct Sprite **cover;
-	char a[12];
-	assert(this && bin < BINS_SIZE);
-	if(!(cover = CoverStackNew(sprites->bins[bin].covers))) { fprintf(stderr,
-		"put_cover: %s.\n",RefStackGetError(sprites->bins[bin].covers));return;}
-	*cover = this;
-	sprite_to_string(this, &a);
-	/*printf("put_cover: %s -> %u.\n", a, bin);*/
+	struct Cover *cover;
+	/*char a[12];*/
+	assert(this && bin < LAYER_SIZE);
+	if(!(cover = CoverStackNew(sprites->bins[bin].covers)))
+		{ fprintf(stderr, "put_cover: %s.\n",
+		CoverStackGetError(sprites->bins[bin].covers)); return;}
+	cover->sprite = this;
+	cover->is_corner = hack_put_cover_is_corner, hack_put_cover_is_corner = 0;
+	/*sprite_to_string(this, &a);
+	printf("put_cover: %s -> %u.\n", a, bin);*/
 }
 /** Moves the sprite. Calculates temporary values, {dx}, and {box}; sticks it
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
@@ -618,8 +662,9 @@ static void extrapolate(struct Sprite *const this) {
 	else this->box.y_max += this->dx.y;
 	/* Put it into appropriate {covers}. This is like a hashmap in space, but
 	 it is spread out, so it may cover multiple bins. */
-	BinsSetSpriteRectangle(sprites->foreground_bins, &this->box);
-	BinsSpriteForEachSprite(sprites->foreground_bins, this, &put_cover);
+	LayerSetSpriteRectangle(sprites->layer, &this->box);
+	hack_put_cover_is_corner = 1;
+	LayerSpriteForEachSprite(sprites->layer, this, &put_cover);
 }
 /** Called in \see{SpritesUpdate}.
  @implements <Bin>Action */
@@ -674,7 +719,7 @@ static void timestep(struct Sprite *const this) {
 	/* Angular velocity. */
 	this->x.theta += this->v.theta /* omega */ * t_full;
 	branch_cut_pi_pi(&this->x.theta);
-	bin = BinsGetOrtho(sprites->foreground_bins, &this->x);
+	bin = LayerGetOrtho(sprites->layer, &this->x);
 	/* This happens when the sprite wanders out of the bin. */
 	if(bin != this->bin) {
 		char a[12];
@@ -707,16 +752,16 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	{ 	struct Rectangle4f rect;
 		DrawGetScreen(&rect);
 		/* fixme: Add 128px for sprites off-screen but drawn. */
-		BinsSetScreenRectangle(sprites->foreground_bins, &rect); }
+		LayerSetScreenRectangle(sprites->layer, &rect); }
 	/* Dynamics; puts temp values in {cover} for collisions. */
-	BinsForEachScreen(sprites->foreground_bins, &extrapolate_bin);
+	LayerForEachScreen(sprites->layer, &extrapolate_bin);
 	/* Collision has to be called after {extrapolate}; (fixme: really?) */
-	BinsForEachScreen(sprites->foreground_bins, &collide_bin);
+	LayerForEachScreen(sprites->layer, &collide_bin);
 	/* Time-step. */
-	BinsForEachScreen(sprites->foreground_bins, &timestep_bin);
+	LayerForEachScreen(sprites->layer, &timestep_bin);
 	/* Clear temp {cover}. (fixme: no) */
-	{ int i; for(i = 0; i < BINS_SIZE; i++)
-		RefStackClear(sprites->bins[i].covers); }
+	{ int i; for(i = 0; i < LAYER_SIZE; i++)
+		CoverStackClear(sprites->bins[i].covers); }
 	CollisionPoolClear(sprites->collisions);
 }
 
@@ -729,16 +774,16 @@ static void draw_sprite(struct Sprite *const this) {
 	DrawDisplayLambert(&this->x, this->image, this->normals);
 }
 /** Called from \see{SpritesDrawForeground}.
- @implements BinsAction */
+ @implements LayerAction */
 static void draw_bin(const unsigned idx) {
-	assert(sprites && idx < BINS_SIZE);
+	assert(sprites && idx < LAYER_SIZE);
 	SpriteListForEach(&sprites->bins[idx].sprites, &draw_sprite);
 }
 /** Must call \see{SpriteUpdate} before this, because it sets
  {sprites.foreground}. Use when the Lambert GPU shader is loaded. */
 void SpritesDrawForeground(void) {
 	if(!sprites) return;
-	BinsForEachScreen(sprites->foreground_bins, &draw_bin);
+	LayerForEachScreen(sprites->layer, &draw_bin);
 }
 
 

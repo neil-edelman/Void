@@ -190,6 +190,11 @@ static void Ortho3f_clip_position(struct Ortho3f *const this) {
 /** Assigns zero. */
 static void Rectangle4f_init(struct Rectangle4f *const this) {
 	assert(this);
+	this->x_min = this->x_max = this->y_min = this->y_max = 0.0f;
+}
+/** Assigns zero. */
+static void Rectangle4i_init(struct Rectangle4i *const this) {
+	assert(this);
 	this->x_min = this->x_max = this->y_min = this->y_max = 0;
 }
 /** Assigns {that} to {this}. */
@@ -285,6 +290,7 @@ static void orthomath_unused(void) {
 	Ortho3f_filler_zero(0);
 
 	Rectangle4f_init(0);
+	Rectangle4i_init(0);
 	Rectangle4i_assign(0, 0);
 	Rectangle4f_assign(0, 0);
 	Rectangle4f_to_fg_bin4(0, 0);

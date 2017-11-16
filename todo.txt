@@ -27,8 +27,6 @@ Bug List
 -do stuff before elastic_bounce
 -more complex scene lighting
 -redeploy gates
--bounding boxes beat bounding circles in intermediary calculations
--events binned by time
 
 Features
 --------

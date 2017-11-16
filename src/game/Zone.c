@@ -84,7 +84,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 #if 1
 	/* some asteroids */
-	for(i = 0; i < 70/*00*/; i++) SpritesDebris(asteroid, 0);
+	for(i = 0; i < 7000; i++) SpritesDebris(asteroid, 0);
 
 	/* sprinkle some ships */
 	for(i = 0; i < 1000; i++) SpritesShip(blob_class, 0, AI_DUMB);

@@ -97,15 +97,9 @@ elastic_bounce(this, that, t0);
  not get here, just going towards.) Velocities are {@code vx, vy} and this
  function is responsible for setting {@code vx1, vy1}, after the collision.
  Also, it may alter (fudge) the positions a little to avoid interpenetration.
- @param a		Sprite a.
- @param b		Sprite b.
- @param t0_dt	The fraction of the frame that the collision occurs, [0, 1]. */
+ @param t: {ms} after frame that the collision occurs. */
 static void elastic_bounce(const struct Sprite *const a,
-	const struct Sprite *const b, const float t) {
-	char str_a[12], str_b[12];
-	sprite_to_string(a, &str_a);
-	sprite_to_string(b, &str_b);
-	printf("[%s, %s] collide at %fms into the frame.\n", str_a, str_b, t);
+	const struct Sprite *const b, const float t) {	
 #if 0
 	struct Vec2f ac, bc, c, a_nrm, a_tan, b_nrm, b_tan, v;
 	float nrm, dist_c_2, dist_c, min;
@@ -170,75 +164,50 @@ static void elastic_bounce(const struct Sprite *const a,
 
 	/* or */
 
-	/* interpolate position of collision */
-	const struct Vec2f a = {
-		u->r.x * t0_dt + u->r1.x * (1.0f - t0_dt),
-		u->r.y * t0_dt + u->r1.y * (1.0f - t0_dt)
-	}, b = {
-		v->r.x * t0_dt + v->r1.x * (1.0f - t0_dt),
-		v->r.y * t0_dt + v->r1.y * (1.0f - t0_dt)
-	},
-	/* delta */
-	d = {
-		b.x - a.x,
-		b.y - a.y
-	};
-	/* normal at point of impact; fixme: iffy infinities */
+#endif
+	/* Interpolate position of collision; delta. */
+	const struct Vec2f u = { a->x.x + a->v.x * t, a->x.y + a->v.y * t },
+	                   v = { b->x.x + b->v.x * t, b->x.y + b->v.y * t },
+		d = { v.x - u.x, v.y - u.y };
+	/* Normal at point of impact. */
 	const float n_d2 = d.x * d.x + d.y * d.y;
 	const float n_n  = (n_d2 < epsilon) ? 1.0f / epsilon : 1.0f / sqrtf(n_d2);
-	const struct Vec2f n = {
-		d.x * n_n,
-		d.y * n_n
-	};
-	/* a's velocity, normal direction */
-	const float a_nrm_s = u->v.x * n.x + u->v.y * n.y;
-	const struct Vec2f a_nrm = {
-		a_nrm_s * n.x,
-		a_nrm_s * n.y
-	},
-	/* a's velocity, tangent direction */
-	a_tan = {
-		u->v.x - a_nrm.x,
-		u->v.y - a_nrm.y
-	};
-	/* b's velocity, normal direction */
-	const float b_nrm_s = v->v.x * n.x + v->v.y * n.y;
-	const struct Vec2f b_nrm = {
-		b_nrm_s * n.x,
-		b_nrm_s * n.y
-	},
-	/* b's velocity, tangent direction */
-	b_tan = {
-		v->v.x - b_nrm.x,
-		v->v.y - b_nrm.y
-	};
-	/* mass (assume all mass is positive!) */
-	const float a_m = u->mass, b_m = v->mass;
+	const struct Vec2f n = { d.x * n_n, d.y * n_n };
+	/* {a}'s velocity, normal, tangent, direction. */
+	const float a_nrm_s = a->v.x * n.x + a->v.y * n.y;
+	const struct Vec2f a_nrm = { a_nrm_s * n.x, a_nrm_s * n.y },
+		a_tan = { a->v.x - a_nrm.x, a->v.y - a_nrm.y };
+	/* {b}'s velocity, normal, tangent, direction. */
+	const float b_nrm_s = b->v.x * n.x + b->v.y * n.y;
+	const struct Vec2f b_nrm = { b_nrm_s * n.x, b_nrm_s * n.y },
+		b_tan = { b->v.x - b_nrm.x, b->v.y - b_nrm.y };
+	/* Assume all mass is strictly positive. */
+	const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b);
 	const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
-	/* elastic collision */
+	/* Elastic collision. */
 	const struct Vec2f a_v = {
-		a_tan.x + (a_nrm.x*diff_m + 2*b_m*b_nrm.x) * invsum_m,
-		a_tan.y + (a_nrm.y*diff_m + 2*b_m*b_nrm.y) * invsum_m
+		a_tan.x + (a_nrm.x * diff_m + 2 * b_m * b_nrm.x) * invsum_m,
+		a_tan.y + (a_nrm.y * diff_m + 2 * b_m * b_nrm.y) * invsum_m
 	}, b_v = {
-		(-b_nrm.x*diff_m + 2*a_m*a_nrm.x) * invsum_m + b_tan.x,
-		(-b_nrm.y*diff_m + 2*a_m*a_nrm.y) * invsum_m + b_tan.y
+		b_tan.x - (b_nrm.x * diff_m - 2 * a_m * a_nrm.x) * invsum_m,
+		b_tan.y - (b_nrm.y * diff_m - 2 * a_m * a_nrm.y) * invsum_m
 	};
-	/* check for sanity */
-	const float bounding = u->bounding + v->bounding;
+	/* Check for sanity; fixme: have a different algorithm for closer than this? */
+	const float bounding = a->bounding + b->bounding;
 
-	/* interpenetation; happens about half the time because of IEEE754 numerics,
-	 which could be on one side or the other; also, sprites that just appear,
-	 multiple collisions interfering, and gremlins; you absolutely do not want
-	 objects to get stuck orbiting each other (fixme: this happens) */
+	/* inter-penetration; happens about half the time because of IEEE754
+	 numerics, which could be on one side or the other; also, sprites that just
+	 appear, multiple collisions interfering, and gremlins; you absolutely do
+	 not want objects to get stuck orbiting each other (fixme: this happens) */
 	if(n_d2 < bounding * bounding) {
-		const float push = (bounding - sqrtf(n_d2)) * 0.5f;
-		pedantic("elastic_bounce: \\pushing sprites %f distance apart\n", push);
-		u->r.x -= n.x * push;
-		u->r.y -= n.y * push;
-		v->r.x += n.x * push;
-		v->r.y += n.y * push;
+		/*const float push = (bounding - sqrtf(n_d2)) * 0.5f;
+		printf("elastic_bounce: \\pushing sprites %f distance apart\n", push);*/
+		/*a->x.x -= n.x * push;
+		a->x.y -= n.y * push;
+		b->x.x += n.x * push;
+		b->x.y += n.y * push;*/
 	}
-	
+#if 0
 	if(!u->no_collisions) {
 		/* first collision */
 		u->no_collisions = 1;
@@ -268,8 +237,14 @@ static void elastic_bounce(const struct Sprite *const a,
 		v->no_collisions++;
 		/*pedantic(" \\%u collisions %s (%s.)\n", v->no_collisions, SpriteToString(v), SpriteToString(u));*/
 	}
-	
 #endif
+	{
+		char str_a[12], str_b[12];
+		assert(a && b && t >= 0);
+		sprite_to_string(a, &str_a);
+		sprite_to_string(b, &str_b);
+		printf("[%s, %s] collide at %fms into the frame.\n", str_a, str_b, t);
+	}
 }
 
 /** Checks whether two sprites intersect using inclined cylinders in
@@ -301,14 +276,15 @@ static void collide_circles(const struct Sprite *const a,
 	z2 = z.x * z.x + z.y * z.y;
 	det = (vz * vz - v2 * (z2 - r * r));
 	t = (det <= 0.0f) ? 0.0f : (-vz - sqrtf(det)) / v2;
-	if(t < 0.0f) t = 0.0f; /* bounded, dist < r^2 */
+	if(t < 0.0f) t = 0.0f; /* bounded, dist < r^2; fixme: really want this? */
 	/* fixme: collision matrix. */
 	elastic_bounce(a, b, t);
 }
 /** This first applies the most course-grained collision detection in
  two-dimensional space, Hahn–Banach separation theorem using {box}. If passed,
  calls \see{collide_circles}. Called from \see{collide_bin}. */
-static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
+static void collide_boxes(const struct Sprite *const a,
+	const struct Sprite *const b) {
 	assert(a && b);
 	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
 	if(!(a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
@@ -320,7 +296,11 @@ static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 static void collide_bin(unsigned bin) {
 	struct RefStack *const ref = sprites->bins[bin].covers;
 	struct Sprite **elem_a, *a, **elem_b, *b;
+	const struct Vec2i *const min = BinsGetScreenMin(sprites->foreground_bins),
+		vec = BinsGetBinVector(sprites->foreground_bins, bin);
 	size_t index_b;
+	assert(sprites);
+	
 	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
 	/* This is {O({covers}^2)/2} within the bin. {a} is poped . . . */
 	while((elem_a = RefStackPop(ref))) {
@@ -332,16 +312,20 @@ static void collide_bin(unsigned bin) {
 			assert(elem_a && elem_b);
 			a = *elem_a, b = *elem_b;
 			assert(a && b);
-			/* Mostly for weapons that can not collide with each other. */
+			/* Mostly for weapons that ignore collisions with themselves. */
 			if(!(a->mask_self&b->mask_others) && !(a->mask_others&b->mask_self))
 				continue;
-			/* fixme: have a hashmap that checks whether they have been checked
-			 before? or associate a Sprite with collisions? */
+			/* Another {bin} takes care of it? */
+			/*if((!(vec.x <= min->x) && a right && b right)
+			 || (!(vec.y <= min->y) && a bottom && b bottom)) */
 			collide_boxes(a, b);
 		} while(index_b);
 	}
 }
 
+		
+		
+		
 #if 0
 
 /** Pushes a from angle, amount.

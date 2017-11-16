@@ -74,11 +74,6 @@ static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_TO_STRING &sprite_to_string
 #include "../templates/List.h"
 
-/* Temporary reference to sprites. */
-#define STACK_NAME Ref
-#define STACK_TYPE struct Sprite *
-#include "../templates/Stack.h"
-
 /* Declare {ShipVt}. */
 struct ShipVt;
 /** Define {ShipPool} and {ShipPoolNode}, a subclass of {Sprite}. */
@@ -126,6 +121,22 @@ struct Gate {
 #define POOL_TYPE struct Gate
 #include "../templates/Pool.h"
 
+
+
+/** Define a temporary reference to sprites for collision-detection; these will
+ go in each bin that is covered by the sprite and be consumed by the functions
+ responsible. The sprite cannot be modified during this operation to simplify
+ processing. */
+struct Cover {
+	struct Sprite *sprite;
+	int is_corner;
+};
+#define STACK_NAME Cover
+#define STACK_TYPE struct Cover
+#include "../templates/Stack.h"
+
+
+
 /* * While {SpriteListForEach} is running, we may have to transfer a sprite to
  another bin, or delete a sprite, or whatever; this causes causality problems
  for iteration. We introduce a delay function that is called right after the
@@ -147,6 +158,7 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
  use. Defines {CollisionPool}, {CollisionPoolNode}. */
 struct Collision {
 	struct Collision *next;
+	struct Sprite *sprite;
 	struct Vec2f v;
 	float t;
 };
@@ -157,7 +169,7 @@ struct Collision {
 /** Used in {Sprites}. */
 struct Bin {
 	struct SpriteList sprites;
-	struct RefStack *covers;
+	struct CoverStack *covers;
 };
 
 /** Sprites all together. */
@@ -325,10 +337,10 @@ static const struct SpriteVt ship_human_vt = {
 /****************** Type functions. **************/
 
 /** Called from {bin_migrate}.
- @implements <Ref>Migrate */
-static void cover_migrate(struct Sprite **const this,
+ @implements <Cover>Migrate */
+static void cover_migrate(struct Cover *const this,
 	const struct Migrate *const migrate) {
-	SpriteListMigratePointer(this, migrate);
+	SpriteListMigratePointer(&this->sprite, migrate);
 }
 /** @param sprites_void: We don't need this because there's only one static.
  Should always equal {sprites}.
@@ -340,7 +352,7 @@ static void bin_migrate(void *const sprites_void,
 	assert(sprites_pass && sprites_pass == sprites && migrate);
 	for(i = 0; i < BINS_SIZE; i++) {
 		SpriteListMigrate(&sprites_pass->bins[i].sprites, migrate);
-		RefStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
+		CoverStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
 			migrate);
 	}
 }
@@ -373,7 +385,7 @@ void Sprites_(void) {
 	if(!sprites) return;
 	for(i = 0; i < BINS_SIZE; i++) {
 		SpriteListClear(&sprites->bins[i].sprites);
-		RefStack_(&sprites->bins[i].covers);
+		CoverStack_(&sprites->bins[i].covers);
 	}
 	CollisionPool_(&sprites->collisions);
 	Bins_(&sprites->foreground_bins);
@@ -405,7 +417,7 @@ int Sprites(void) {
 	sprites->collisions = 0;
 	do {
 		for(i = 0; i < BINS_SIZE; i++) {
-			if(!(sprites->bins[i].covers = RefStack())) { e = BINS; break; }
+			if(!(sprites->bins[i].covers = CoverStack())) { e = BINS; break; }
 		} if(e) break;
 		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
 		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
@@ -417,7 +429,7 @@ int Sprites(void) {
 			{ e = COLLISION; break; }
 	} while(0); switch(e) {
 		case NO: break;
-		case BINS: ea = "bins", eb = RefStackGetError(0); break;
+		case BINS: ea = "bins", eb = CoverStackGetError(0); break; /* hack */
 		case SHIP: ea = "ships", eb = ShipPoolGetError(sprites->ships); break;
 		case DEBRIS: ea = "debris",eb=DebrisPoolGetError(sprites->debris);break;
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
@@ -580,7 +592,7 @@ static void put_cover(const unsigned bin, struct Sprite *this) {
 	struct Sprite **cover;
 	char a[12];
 	assert(this && bin < BINS_SIZE);
-	if(!(cover = RefStackNew(sprites->bins[bin].covers))) { fprintf(stderr,
+	if(!(cover = CoverStackNew(sprites->bins[bin].covers))) { fprintf(stderr,
 		"put_cover: %s.\n",RefStackGetError(sprites->bins[bin].covers));return;}
 	*cover = this;
 	sprite_to_string(this, &a);
@@ -694,6 +706,7 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	/* Foreground drawable sprites are a function of screen position. */
 	{ 	struct Rectangle4f rect;
 		DrawGetScreen(&rect);
+		/* fixme: Add 128px for sprites off-screen but drawn. */
 		BinsSetScreenRectangle(sprites->foreground_bins, &rect); }
 	/* Dynamics; puts temp values in {cover} for collisions. */
 	BinsForEachScreen(sprites->foreground_bins, &extrapolate_bin);

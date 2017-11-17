@@ -52,8 +52,8 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	}
 }
 
-/** Elastic collision between circles; called from \see{collide_circles}. Also,
- it may alter (fudge) the positions a little to avoid interpenetration.
+/** Elastic collision between circles; called from \see{collide_circles}. 
+ Degeneracy pressure pushes sprites to avoid interpenetration.
  @param t: {ms} after frame that the collision occurs. */
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	const float t) {	

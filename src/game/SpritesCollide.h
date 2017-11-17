@@ -30,66 +30,9 @@
  @title		SpritesCollide
  @author	Neil
  @std		C89/90
- @version	2017-10 Broke off from Sprites.
- @fixme Collision resolution wonky. */
+ @version	2017-10 Broke off from Sprites. */
 
-
-#if 0
-/** Called from \see{elastic_bounce}. */
-static void apply_bounce_later(struct Sprite *const this,
-	const struct Vec2f *const v, const float t) {
-	struct Collision *const c = CollisionPoolNew(collisions);
-	char a[12];
-	assert(this && v && t >= 0.0f && t <= sprites->dt_ms);
-	if(!c) { fprintf(stderr, "Collision set: %s.\n",
-		CollisionPoolGetError(collisions)); return; }
-	c->next = this->collision_set;
-	c->v.x = v->x, c->v.y = v->y;
-	c->t = t;
-	this->collision_set = c;
-	Sprite_to_string(this, &a), printf("apply_bounce_later: %s.\n", a);
-	/*for(i = this->collision_set; i; i = i->next) {
-	 printf("(%.1f, %.1f):%.1f, ", i->v.x, i->v.y, i->t);
-	 }
-	 printf("DONE\n");*/
-}
-
-/** Used after \see{collide_extrapolate} on all the sprites you want to check.
- Uses  and the ordered list of projections on the
- {x} and {y} axis to build up a list of possible colliders based on their
- bounding box of where it moved this frame. Calls \see{collide_circles} for any
- candidites. */
-	/* uhh, yes? I took this code from SpriteUpdate */
-	if(!s->no_collisions) {
-		/* no collisions; apply position change, calculated above */
-		s->x = s->x1;
-		s->y = s->y1;
-	} else {
-		/* if you skip this step, it's unstable on multiple collisions */
-		const float one_collide = 1.0f / s->no_collisions;
-		const float s_vx1 = s->vx1 * one_collide;
-		const float s_vy1 = s->vy1 * one_collide;
-		/* before and after collision;  */
-		s->x += (s->vx * s->t0_dt_collide + s_vx1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-		s->y += (s->vy * s->t0_dt_collide + s_vy1 * (1.0f - s->t0_dt_collide)) * dt_ms;
-		s->vx = s_vx1;
-		s->vy = s_vy1;
-		/* unmark for next frame */
-		s->no_collisions = 0;
-		/* apply De Sitter spacetime? already done? */
-		if(s->x      < -de_sitter) s->x =  de_sitter - 20.0f;
-		else if(s->x >  de_sitter) s->x = -de_sitter + 20.0f;
-		if(s->y      < -de_sitter) s->y =  de_sitter - 20.0f;
-		else if(s->y >  de_sitter) s->y = -de_sitter + 20.0f;
-	}
-
-/*fprintf(gnu_glob, "set arrow from %f,%f to %f,%f nohead lw 0.5 "
- "lc rgb \"red\" front;\n", this->x.x, this->x.y, that->x.x, that->x.y);*/
-/* fixme: collision matrix */
-elastic_bounce(this, that, t0);
-
-#endif
-
+/** Add a collision to the sprite; called from \see{elastic_bounce}. */
 static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	const float t) {
 	struct Collision *col;
@@ -109,23 +52,12 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	}
 }
 
-/** Elastic collision between circles; called from \see{collide} with
- {@code t0_dt} from \see{collide_circles}. Use this when we've determined that
- {@code Sprite a} collides with {@code Sprite b} at {@code t0_dt}, where
- Sprites' {@code x, y} are at time 0 and {@code x1, y1} are at time 1 (we will
- not get here, just going towards.) Velocities are {@code vx, vy} and this
- function is responsible for setting {@code vx1, vy1}, after the collision.
- Also, it may alter (fudge) the positions a little to avoid interpenetration.
+/** Elastic collision between circles; called from \see{collide_circles}. Also,
+ it may alter (fudge) the positions a little to avoid interpenetration.
  @param t: {ms} after frame that the collision occurs. */
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	const float t) {	
 #if 0
-	struct Vec2f ac, bc, c, a_nrm, a_tan, b_nrm, b_tan, v;
-	float nrm, dist_c_2, dist_c, min;
-	const float a_m = a->vt->get_mass(a), b_m = b->vt->get_mass(b),
-	diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
-	/* fixme: float stored in memory? */
-	
 	/* Check that they are not stuck together first; we absolutely do not want
 	 objects to get stuck orbiting each other. (Allow a little room?) */
 	c.x = b->x.x - a->x.x, c.y = b->x.y - a->x.y;
@@ -180,16 +112,15 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	v.y = b_tan.y + (b_nrm.y*diff_m + 2*a_m*a_nrm.y) * invsum_m;
 	assert(!isnan(v.x) && !isnan(v.y));
 	apply_bounce_later(b, &v, t0_dt);
-
-	/* or */
-
 #endif
+	/* Check for sanity; fixme: have a different algorithm for closer than this? */
 	/* Interpolate position of collision; delta. */
 	const struct Vec2f u = { a->x.x + a->v.x * t, a->x.y + a->v.y * t },
 	                   v = { b->x.x + b->v.x * t, b->x.y + b->v.y * t },
 		d = { v.x - u.x, v.y - u.y };
 	/* Normal at point of impact. */
 	const float n_d2 = d.x * d.x + d.y * d.y;
+	const float bounding = a->bounding + b->bounding;
 	const float n_n  = (n_d2 < epsilon) ? 1.0f / epsilon : 1.0f / sqrtf(n_d2);
 	const struct Vec2f n = { d.x * n_n, d.y * n_n };
 	/* {a}'s velocity, normal, tangent, direction. */
@@ -211,21 +142,16 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 		b_tan.x - (b_nrm.x * diff_m - 2 * a_m * a_nrm.x) * invsum_m,
 		b_tan.y - (b_nrm.y * diff_m - 2 * a_m * a_nrm.y) * invsum_m
 	};
-	/* Check for sanity; fixme: have a different algorithm for closer than this? */
-	const float bounding = a->bounding + b->bounding;
-
 	assert(sprites);
-	/* inter-penetration; happens about half the time because of IEEE754
-	 numerics, which could be on one side or the other; also, sprites that just
-	 appear, multiple collisions interfering, and gremlins; you absolutely do
-	 not want objects to get stuck orbiting each other (fixme: this happens) */
+	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
+	 each other. */
 	if(n_d2 < bounding * bounding) {
-		/*const float push = (bounding - sqrtf(n_d2)) * 0.5f;
-		printf("elastic_bounce: \\pushing sprites %f distance apart\n", push);*/
-		/*a->x.x -= n.x * push;
+		const float push = (bounding - sqrtf(n_d2)) * 0.55f;
+		printf("elastic_bounce: \\pushing sprites %f distance apart\n", push);
+		a->x.x -= n.x * push;
 		a->x.y -= n.y * push;
 		b->x.x += n.x * push;
-		b->x.y += n.y * push;*/
+		b->x.y += n.y * push;
 	}
 	add_bounce(a, a_v, t);
 	add_bounce(b, b_v, t);

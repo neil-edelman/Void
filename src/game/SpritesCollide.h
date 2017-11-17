@@ -90,6 +90,25 @@ elastic_bounce(this, that, t0);
 
 #endif
 
+static void add_bounce(struct Sprite *const this, const struct Vec2f v,
+	const float t) {
+	struct Collision *col;
+	assert(sprites && this);
+	if((col = this->collision)) {
+		col->v.x += v.x;
+		col->v.y += v.y;
+		if(t < col->t) col->t = t;
+	} else {
+		if(!(col = CollisionPoolNew(sprites->collisions)))
+			{ fprintf(stderr, "add_bounce: %s.\n",
+			CollisionPoolGetError(sprites->collisions)); return; }
+		col->v.x = v.x;
+		col->v.y = v.y;
+		col->t   = t;
+		this->collision = col;
+	}
+}
+
 /** Elastic collision between circles; called from \see{collide} with
  {@code t0_dt} from \see{collide_circles}. Use this when we've determined that
  {@code Sprite a} collides with {@code Sprite b} at {@code t0_dt}, where
@@ -98,8 +117,8 @@ elastic_bounce(this, that, t0);
  function is responsible for setting {@code vx1, vy1}, after the collision.
  Also, it may alter (fudge) the positions a little to avoid interpenetration.
  @param t: {ms} after frame that the collision occurs. */
-static void elastic_bounce(const struct Sprite *const a,
-	const struct Sprite *const b, const float t) {	
+static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
+	const float t) {	
 #if 0
 	struct Vec2f ac, bc, c, a_nrm, a_tan, b_nrm, b_tan, v;
 	float nrm, dist_c_2, dist_c, min;
@@ -195,6 +214,7 @@ static void elastic_bounce(const struct Sprite *const a,
 	/* Check for sanity; fixme: have a different algorithm for closer than this? */
 	const float bounding = a->bounding + b->bounding;
 
+	assert(sprites);
 	/* inter-penetration; happens about half the time because of IEEE754
 	 numerics, which could be on one side or the other; also, sprites that just
 	 appear, multiple collisions interfering, and gremlins; you absolutely do
@@ -207,51 +227,21 @@ static void elastic_bounce(const struct Sprite *const a,
 		b->x.x += n.x * push;
 		b->x.y += n.y * push;*/
 	}
-#if 0
-	if(!u->no_collisions) {
-		/* first collision */
-		u->no_collisions = 1;
-		u->t0_dt_collide = t0_dt;
-		u->v1.x = a_v.x;
-		u->v1.y = a_v.y;
-	} else {
-		/* there are multiple collisions, rebound from the 1st one and add */
-		/* fixme: shouldn't it be all inside? */
-		if(t0_dt < u->t0_dt_collide) u->t0_dt_collide = t0_dt;
-		u->v1.x += a_v.x;
-		u->v1.y += a_v.y;
-		u->no_collisions++;
-		/*pedantic(" \\%u collisions %s (%s.)\n", u->no_collisions, SpriteToString(u), SpriteToString(v));*/
-	}
-	if(!v->no_collisions) {
-		/* first collision */
-		v->no_collisions = 1;
-		v->t0_dt_collide = t0_dt;
-		v->v1.x          = b_v.x;
-		v->v1.y          = b_v.y;
-	} else {
-		/* there are multiple collisions, rebound from the 1st one and add */
-		if(t0_dt < v->t0_dt_collide) v->t0_dt_collide = t0_dt;
-		v->v1.x          += b_v.x;
-		v->v1.y          += b_v.y;
-		v->no_collisions++;
-		/*pedantic(" \\%u collisions %s (%s.)\n", v->no_collisions, SpriteToString(v), SpriteToString(u));*/
-	}
-#endif
-	{
+	add_bounce(a, a_v, t);
+	add_bounce(b, b_v, t);
+	/*{
 		char str_a[12], str_b[12];
 		assert(a && b && t >= 0);
 		sprite_to_string(a, &str_a);
 		sprite_to_string(b, &str_b);
 		printf("[%s, %s] collide at %fms into the frame.\n", str_a, str_b, t);
-	}
+	}*/
 }
 
 /** Checks whether two sprites intersect using inclined cylinders in
  three-dimensions, where the third dimension is linearly-interpolated time.
  Called from \see{collide_boxes}. */
-static void collide_circles(const struct Sprite *const a,
-	const struct Sprite *const b) {
+static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 	struct Vec2f v, z, dist;
 	float t, v2, vz, z2, dist_2, det;
 	const float r = a->bounding + b->bounding;
@@ -283,8 +273,7 @@ static void collide_circles(const struct Sprite *const a,
 /** This first applies the most course-grained collision detection in
  two-dimensional space, Hahn–Banach separation theorem using {box}. If passed,
  calls \see{collide_circles}. Called from \see{collide_bin}. */
-static void collide_boxes(const struct Sprite *const a,
-	const struct Sprite *const b) {
+static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 	assert(a && b);
 	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
 	if(!(a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&

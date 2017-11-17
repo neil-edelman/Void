@@ -421,8 +421,6 @@ static void collision_migrate(void *const sprites_void,
 			&collision_migrate_sprite, migrate);
 	}
 }
-/*static void collision_migrate_collision() {
-}*/
 
 /** Destructor. */
 void Sprites_(void) {
@@ -680,39 +678,24 @@ static void branch_cut_pi_pi(float *theta_ptr) {
  Called from \see{timestep_bin}.
  @implements <Sprite>Action */
 static void timestep(struct Sprite *const this) {
-	const float t_full = sprites->dt_ms;
-	float t0 = sprites->dt_ms;
-	struct Vec2f v1 = { 0.0f, 0.0f };
+	const float t = sprites->dt_ms;
 	unsigned bin;
-#if 0
-	struct Collision *c;
-	struct Vec2f v1 = { 0.0f, 0.0f }, d;
-	assert(sprites);
-	/* The earliest time to collision and sum the collisions together. */
-	for(c = sprites->collision_set; c; c = c->next) {
-		/*char a[12];*/
-		d.x = sprites->x.x + sprites->v.x * c->t;
-		d.y = sprites->x.y + sprites->v.y * c->t;
-		/*fprintf(gnu_glob, "set arrow from %f,%f to %f,%f lw 0.5 "
-		 "lc rgb \"#EE66AA\" front;\n", d.x, d.y,
-		 d.x + c->v.x * (1.0f - c->t), d.y + c->v.y * (1.0f - c->t));*/
-		/*this->vt->to_string(this, &a);
-		 printf("%s collides at %.1f and ends up going (%.1f, %.1f).\n", a,
-		 c->t, c->v.x * 1000.0f, c->v.y * 1000.0f);*/
-		if(c->t < t0) t0 = c->t;
-		v1.x += c->v.x, v1.y += c->v.y;
-		/* fixme: stability! do a linear search O(n) to pick out the 2 most
-		 recent, then divide by, { 1, 2, 4, 4, 4, . . . }? */
+	assert(sprites && this);
+	/* Velocity. */
+	if(this->collision) {
+		const float t0 = this->collision->t, t1 = t - t0;
+		const struct Vec2f *const v1 = &this->collision->v;
+		this->x.x = this->x.x + this->v.x * t0 + v1->x * t1;
+		this->x.y = this->x.y + this->v.y * t0 + v1->y * t1;
+		this->v.x = v1->x, this->v.y = v1->y;
+		CollisionPoolRemove(sprites->collisions, this->collision);
+		this->collision = 0;
+	} else {
+		this->x.x += this->v.x * t;
+		this->x.y += this->v.y * t;
 	}
-#endif
-	this->x.x = this->x.x + this->v.x * t0 + v1.x * (t_full - t0);
-	this->x.y = this->x.y + this->v.y * t0 + v1.y * (t_full - t0);
-	/*if(sprites->collision_set) {
-		sprites->collision_set = 0;
-		sprites->v.x = v1.x, sprites->v.y = v1.y;
-	}*/
-	/* Angular velocity. */
-	this->x.theta += this->v.theta /* omega */ * t_full;
+	/* Angular velocity -- this is {\omega}. */
+	this->x.theta += this->v.theta * t;
 	branch_cut_pi_pi(&this->x.theta);
 	bin = LayerGetOrtho(sprites->layer, &this->x);
 	/* This happens when the sprite wanders out of the bin. */

@@ -75,7 +75,7 @@ before exiting, when all references have been resolved, <em>Sprites_</em>.
 	/* The following are temporary: */
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
-	struct Collision *collisions; /* temporary, \in {sprites.collisions} */
+	struct Collision *collision; /* temporary, \in {sprites.collisions} */
 }</pre>
 <p>
 Define abstract <em>Sprite</em>.
@@ -164,8 +164,6 @@ processing.
 <div><a name = "struct Collision"><!-- --></a>
 <h3>struct Collision</h3>
 <pre><b>struct Collision</b> {
-	struct Collision *next;
-	struct Sprite *sprite;
 	struct Vec2f v;
 	float t;
 }</pre>

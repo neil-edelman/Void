@@ -156,6 +156,7 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 /** Collisions between sprites to apply later. This is a pool that sprites can
  use. Defines {CollisionPool}, {CollisionPoolNode}. */
 struct Collision {
+	unsigned no;
 	struct Vec2f v;
 	float t;
 };

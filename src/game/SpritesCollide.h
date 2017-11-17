@@ -38,13 +38,18 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	struct Collision *col;
 	assert(sprites && this);
 	if((col = this->collision)) {
-		col->v.x += v.x;
-		col->v.y += v.y;
+		/* Average the vectors for multiple collisions -- not really physical,
+		 but fast and not often seen. */
+		col->no++;
+		col->v.x += (v.x - col->v.x) / col->no;
+		col->v.y += (v.y - col->v.y) / col->no;
 		if(t < col->t) col->t = t;
 	} else {
+		/* New collision. */
 		if(!(col = CollisionPoolNew(sprites->collisions)))
 			{ fprintf(stderr, "add_bounce: %s.\n",
 			CollisionPoolGetError(sprites->collisions)); return; }
+		col->no  = 1;
 		col->v.x = v.x;
 		col->v.y = v.y;
 		col->t   = t;

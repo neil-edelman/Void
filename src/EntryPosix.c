@@ -20,6 +20,7 @@
 #include "system/Timer.h"
 #include "system/Key.h"
 #include "game/Sprites.h"
+#include "game/Fars.h"
 #include "game/Game.h"
 
 /* constants */
@@ -49,6 +50,7 @@ int main(int argc, char **argv) {
 	if(!Window(programme, argc, argv)
 		|| !Key()
 		|| !Sprites()
+		|| !Fars()
 		|| !Draw()
 		|| !Game()) return EXIT_FAILURE;
 	/* hand over control to the grahics library */
@@ -65,6 +67,7 @@ static void main_(void) {
 	/* There is no Window_(). */
 	Game_();
 	Draw_();
+	Fars_();
 	Sprites_();
 }
 

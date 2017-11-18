@@ -1,7 +1,7 @@
 struct Fars;
 
-void Fars_(struct Fars **const thisp);
-struct Fars *Fars(void);
-void FarsClear(struct Fars *const this);
-struct Planetoid *FarsPlanetoid(struct Fars *const this,
-	const struct AutoObjectInSpace *const class);
+void Fars_(void);
+int Fars(void);
+void FarsClear(void);
+struct Planetoid *FarsPlanetoid(const struct AutoObjectInSpace *const class);
+void FarsDraw(void);

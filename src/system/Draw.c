@@ -461,8 +461,8 @@ int draw_is_print_sprites;
 static unsigned old_texture;
 
 /** Only used as a callback from \see{display} while OpenGL is using Lambert.
- For \see{SpritesDrawForground}.
- @implements LambertOutput */
+ For \see{SpritesDraw}.
+ @implements DrawOutput */
 /*inline <- oy fixme*/ void DrawDisplayLambert(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor) {
 	assert(x && tex && nor);
@@ -479,9 +479,10 @@ static unsigned old_texture;
 	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
 }
 
-/** Only used as a callback from \see{display} while OpenGL is using Far.
- @implements FarOutput */
-static void far_lambert(const struct Ortho3f *const x,
+/** Only used as a callback from \see{display} while OpenGL is using Far. For
+ \see{FarsDraw}.
+ @implements DrawOutput */
+void DrawDisplayFar(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor) {
 	assert(x && tex && nor);
 	if(old_texture != tex->texture) {
@@ -552,13 +553,15 @@ static void display(void) {
 		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
 		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_bg.first, vbo_info_bg.count);
 	}
+
 	glEnable(GL_BLEND);
 
 	/* Draw far objects. */
 	glUseProgram(auto_Far_shader.compiled);
 	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
-	/*SpritesDrawFar(&far_lambert);*/
+	FarsDraw();
 
+	
 	/* Set up lights, draw sprites in foreground. */
 	glUseProgram(auto_Lambert_shader.compiled);
 	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
@@ -569,7 +572,7 @@ static void display(void) {
 		glUniform3fv(auto_Lambert_shader.point_colour, lights,
 			(GLfloat *)LightGetColourArray());
 	}
-	SpritesDrawForeground();
+	SpritesDraw();
 
 	/* Display info on top. */
 	glUseProgram(auto_Info_shader.compiled);

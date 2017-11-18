@@ -28,6 +28,7 @@
 #define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)
 static const float layer_space = 256.0f;
 
+/* fixme: hmmm, simpler? */
 enum CollisionMask {
 	MASK_SHIP = 1,
 	MASK_POINT_DEFENSE = 2,
@@ -508,11 +509,11 @@ static void sprite_filler(struct Sprite *const this,
 	this->bounding = (as->image->width >= as->image->height ?
 		as->image->width : as->image->height) / 2.0f; /* fixme: Crude. */
 	if(x) {
-		Ortho3f_assign(&this->x, x);
+		ortho3f_assign(&this->x, x);
 	} else {
-		Ortho3f_filler_fg(&this->x);
+		LayerSetRandom(sprites->layer, &this->x);
 	}
-	Ortho3f_filler_zero(&this->v);
+	ortho3f_init(&this->v);
 	this->bin  = LayerGetOrtho(sprites->layer, &this->x);
 	this->dx.x = this->dx.y = 0.0f;
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
@@ -752,15 +753,15 @@ static void draw_sprite(struct Sprite *const this) {
 	assert(sprites);
 	DrawDisplayLambert(&this->x, this->image, this->normals);
 }
-/** Called from \see{SpritesDrawForeground}.
+/** Called from \see{SpritesDraw}.
  @implements LayerAction */
 static void draw_bin(const unsigned idx) {
 	assert(sprites && idx < LAYER_SIZE);
 	SpriteListForEach(&sprites->bins[idx].sprites, &draw_sprite);
 }
 /** Must call \see{SpriteUpdate} before this, because it sets
- {sprites.foreground}. Use when the Lambert GPU shader is loaded. */
-void SpritesDrawForeground(void) {
+ {sprites.layer}. Use when the Lambert GPU shader is loaded. */
+void SpritesDraw(void) {
 	if(!sprites) return;
 	LayerForEachScreen(sprites->layer, &draw_bin);
 }

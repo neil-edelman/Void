@@ -12,9 +12,13 @@
 #include <assert.h>
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
 #include "../general/OrthoMath.h" /* for measurements and types */
+#include "../general/Layer.h" /* for descritising */
+#include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "Fars.h"
 
-
+#define LAYER_SIDE_SIZE (3)
+#define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)
+static const float layer_space = 1024.0f;
 
 /**************** Declare types. **************/
 
@@ -44,10 +48,11 @@ struct Planetoid {
 #include "../templates/Pool.h"
 
 /** Fars all together. */
-struct Fars {
-	struct FarList bins[BIN_BIN_BG_SIZE];
+static struct Fars {
+	struct FarList bins[LAYER_SIZE];
 	struct PlanetoidPool *planetoids;
-};
+	struct Layer *layer;
+} *fars;
 
 
 
@@ -64,7 +69,7 @@ static void far_to_string(const struct Far *this, char (*const a)[12]) {
 	this->vt->to_string(this, a);
 }
 /** @implements <Planetoid>ToString */
-static void Planetoid_to_string(const struct Planetoid *this,
+static void planetoid_to_string(const struct Planetoid *this,
 	char (*const a)[12]) {
 	sprintf(*a, "%.11s", this->name);
 }
@@ -78,7 +83,7 @@ static void Planetoid_delete(struct Planetoid *const this) {
 #endif
 
 static const struct FarVt planetoid_vt = {
-	(FarToString)&Planetoid_to_string
+	(FarToString)&planetoid_to_string
 };
 
 
@@ -88,48 +93,58 @@ static const struct FarVt planetoid_vt = {
 /** @implements Migrate */
 static void bin_migrate(void *const fars_void,
 	const struct Migrate *const migrate) {
-	struct Fars *const fars = fars_void;
+	struct Fars *const fars_pass = fars_void;
 	unsigned i;
-	assert(fars && migrate);
-	for(i = 0; i < BIN_BIN_BG_SIZE; i++) {
-		FarListMigrate(fars->bins + i, migrate);
+	assert(fars_pass && fars_pass == fars && migrate);
+	for(i = 0; i < LAYER_SIZE; i++) {
+		FarListMigrate(fars_pass->bins + i, migrate);
 	}
 }
 
 /** Destructor. */
-void Fars_(struct Fars **const thisp) {
-	struct Fars *this;
+void Fars_(void) {
 	unsigned i;
-	if(!thisp || (this = *thisp)) return;
-	for(i = 0; i < BIN_BIN_BG_SIZE; i++) FarListClear(this->bins + i);
-	PlanetoidPool_(&this->planetoids);
-	this = *thisp = 0;
+	if(!fars) return;
+	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars->bins + i);
+	PlanetoidPool_(&fars->planetoids);
+	free(fars), fars = 0;
 }
 
 /** Constructor.
  @return New {Fars}. */
-struct Fars *Fars(void) {
-	struct Fars *this;
+int Fars(void) {
 	unsigned i;
-	if(!(this = malloc(sizeof *this)))
-		{ perror("Fars"); Fars_(&this); return 0; }
-	for(i = 0; i < BIN_BIN_BG_SIZE; i++) FarListClear(this->bins + i);
-	this->planetoids = 0;
-	if(!(this->planetoids = PlanetoidPool(&bin_migrate, this))) {
-		fprintf(stderr,
-			"Fars.Planetoid: %s.\n", PlanetoidPoolGetError(this->planetoids));
-		Fars_(&this);
+	enum { NO, PLANETOID, LAYER } e = NO;
+	const char *ea = 0, *eb = 0;
+	if(fars) return 1;
+	if(!(fars = malloc(sizeof *fars)))
+		{ perror("Fars"); Fars_(); return 0; }
+	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars->bins + i);
+	fars->planetoids = 0;
+	fars->layer = 0;
+	do {
+		if(!(fars->planetoids = PlanetoidPool(&bin_migrate, fars)))
+			{ e = PLANETOID; break; }
+		if(!(fars->layer = Layer(LAYER_SIDE_SIZE, layer_space))){e=LAYER;break;}
+	} while(0); switch(e) {
+		case NO: break;
+		case PLANETOID: ea = "planetoids",
+			eb = PlanetoidPoolGetError(fars->planetoids); break;
+		case LAYER: ea = "layer", eb = "couldn't get layer"; break;
+	} if(e) {
+		fprintf(stderr, "Fars %s buffer: %s.\n", ea, eb);
+		Fars_();
 		return 0;
 	}
-	return this;
+	return 1;
 }
 
 /** Clears all planets in preparation for jump. */
-void FarsClear(struct Fars *const this) {
+void FarsClear(void) {
 	unsigned i;
-	if(!this) return;
-	for(i = 0; i < BIN_BIN_BG_SIZE; i++) FarListClear(this->bins + i);
-	PlanetoidPoolClear(this->planetoids);
+	if(!fars) return;
+	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars->bins + i);
+	PlanetoidPoolClear(fars->planetoids);
 }
 
 
@@ -137,7 +152,7 @@ void FarsClear(struct Fars *const this) {
 /*************** Sub-type constructors. ******************/
 
 /** Only called from constructors of children. */
-static void far_filler(struct Fars *const fars, struct Far *const this,
+static void far_filler(struct Far *const this,
 	const struct FarVt *const vt, const struct AutoObjectInSpace *const class) {
 	assert(fars && this && vt && class && class->sprite);
  	this->vt = vt;
@@ -146,21 +161,45 @@ static void far_filler(struct Fars *const fars, struct Far *const this,
 	this->x.x = class->x;
 	this->x.y = class->y;
 	this->x.theta = 0.0f;
-	Vec2f_to_bg_bin((struct Vec2f *)&this->x, &this->bin);
+	this->bin = LayerGetOrtho(fars->layer, &this->x);
+	printf("Far \\in Bin%u.\n", this->bin);
 	FarListPush(fars->bins + this->bin, this);
 }
 
 /** Extends {far_filler}. */
-struct Planetoid *FarsPlanetoid(struct Fars *const fars,
-	const struct AutoObjectInSpace *const class) {
+struct Planetoid *FarsPlanetoid(const struct AutoObjectInSpace *const class) {
 	struct Planetoid *this;
 	if(!fars || !class) return 0;
 	assert(class->sprite && class->name);
 	if(!(this = PlanetoidPoolNew(fars->planetoids)))
 		{ fprintf(stderr, "FarsPlanetoid: %s.\n",
 		PlanetoidPoolGetError(fars->planetoids)); return 0; }
-	far_filler(fars, &this->far.data, &planetoid_vt, class);
+	far_filler(&this->far.data, &planetoid_vt, class);
 	this->name = class->name;
-	printf("Planetoid %s!!!\n", this->name);
+	printf("***Planetoid %s is at (%.2f, %.2f).\n", this->name,
+		this->far.data.x.x, this->far.data.x.y);
 	return this;
+}
+
+/** Called from \see{draw_bin}.
+ @implements <Sprite, ContainsLambertOutput>BiAction */
+static void draw_far(struct Far *const this) {
+	assert(fars);
+	DrawDisplayFar(&this->x, this->image, this->normals);
+}
+/** Called from \see{SpritesDraw}.
+ @implements LayerAction */
+static void draw_bin(const unsigned idx) {
+	assert(fars && idx < LAYER_SIZE);
+	FarListForEach(fars->bins + idx, &draw_far);
+}
+/* Must call \see{SpriteUpdate} because it sets the camera. Use when Far GPU
+ shader is loaded. */
+void FarsDraw(void) {
+	struct Rectangle4f rect;
+	if(!fars) return;
+	DrawGetScreen(&rect);
+	/* fixme: add 1024px? */
+	LayerSetScreenRectangle(fars->layer, &rect);
+	LayerForEachScreen(fars->layer, &draw_bin);
 }

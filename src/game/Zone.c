@@ -12,6 +12,7 @@
 #include "../system/Draw.h"
 #include "Game.h"
 #include "Sprites.h"
+#include "Fars.h"
 #include "Zone.h"
 
 #ifndef M_PI
@@ -73,17 +74,18 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	DrawSetBackground("Dorado.jpeg");
 	/* fixme: set sunlight */
 
-	/*Planetoid(sz->ois1);
-	Planetoid(sz->ois2);
-	Planetoid(sz->ois3);*/
+	printf("********Zone: planets!\n");
+	FarsPlanetoid(sz->ois1);
+	FarsPlanetoid(sz->ois2);
+	FarsPlanetoid(sz->ois3);
 
-	/*Gate(sz->gate1);*/
+	SpritesGate(sz->gate1);
 
 	/* update the current zone */
 	current_zone = sz;
 
 	/* some asteroids */
-	for(i = 0; i < 64000; i++) SpritesDebris(asteroid, 0);
+	for(i = 0; i < 6400; i++) SpritesDebris(asteroid, 0);
 
 	/* sprinkle some ships */
 	for(i = 0; i < 3000; i++) SpritesShip(blob_class, 0, AI_DUMB);

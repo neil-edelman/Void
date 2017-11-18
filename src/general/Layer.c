@@ -54,7 +54,7 @@ struct Layer *Layer(const size_t side_size, const float each_bin) {
 	this->side_size = (int)side_size;
 	this->half_space = (float)side_size * each_bin / 2.0f;
 	this->one_each_bin = 1.0f / each_bin;
-	Rectangle4i_init(&this->screen);
+	rectangle4i_init(&this->screen);
 	for(i = 0; i < LAYER_NO; i++) this->step[i] = 0;
 	for(i = 0; i < LAYER_NO; i++) {
 		if(!(this->step[i] = IntStack())) { fprintf(stderr, "Layer: %s.\n",
@@ -63,6 +63,7 @@ struct Layer *Layer(const size_t side_size, const float each_bin) {
 	return this;
 }
 
+/** Returns a {bin} in {[0, side_size^2[}. */
 unsigned LayerGetOrtho(const struct Layer *const this, struct Ortho3f *const o){
 	struct Vec2i v2i;
 	if(!this || !o) return 0;
@@ -99,7 +100,7 @@ static int set_rect_layer(struct Layer *const this,
 		if(bin4.y_min < 0) bin4.y_min = 0;
 		if(bin4.y_max >= this->side_size) bin4.y_max = this->side_size - 1;
 		/* Save the screen rectangle. */
-		Rectangle4i_assign(&this->screen, &bin4);
+		rectangle4i_assign(&this->screen, &bin4);
 	} else {
 		const struct Rectangle4i *const screen = &this->screen;
 		/* Clip it to the screen. */
@@ -139,6 +140,14 @@ int LayerSetSpriteRectangle(struct Layer *const this,
 	struct Rectangle4f *const rect) {
 	if(!this || !rect) return 0;
 	return set_rect_layer(this, rect, LAYER_SPRITE);
+}
+
+/** Set random. */
+void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o) {
+	if(!this || !o) return;
+	o->x = random_pm_max(this->half_space);
+	o->y = random_pm_max(this->half_space);
+	o->theta = random_pm_max(M_PI_F);
 }
 
 /** For each bin on screen; used for drawing. */

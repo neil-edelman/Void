@@ -13,8 +13,7 @@ int LayerSetScreenRectangle(struct Layer *const this,
 	struct Rectangle4f *const rect);
 int LayerSetSpriteRectangle(struct Layer *const this,
 	struct Rectangle4f *const rect);
+void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o);
 void LayerForEachScreen(struct Layer *const this, const LayerAction action);
 void LayerSpriteForEachSprite(struct Layer *const this,
 	struct Sprite *const sprite, const LayerNoSpriteAction action);
-int LayerIsResponsable(const struct Layer *const this,
-	const struct Sprite *const a, const struct Sprite *const b);

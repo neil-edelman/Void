@@ -162,7 +162,6 @@ static void far_filler(struct Far *const this,
 	this->x.y = class->y;
 	this->x.theta = 0.0f;
 	this->bin = LayerGetOrtho(fars->layer, &this->x);
-	printf("Far \\in Bin%u.\n", this->bin);
 	FarListPush(fars->bins + this->bin, this);
 }
 
@@ -176,8 +175,6 @@ struct Planetoid *FarsPlanetoid(const struct AutoObjectInSpace *const class) {
 		PlanetoidPoolGetError(fars->planetoids)); return 0; }
 	far_filler(&this->far.data, &planetoid_vt, class);
 	this->name = class->name;
-	printf("***Planetoid %s is at (%.2f, %.2f).\n", this->name,
-		this->far.data.x.x, this->far.data.x.y);
 	return this;
 }
 

@@ -75,6 +75,11 @@ size.
 	<td>const size_t side_size, const float each_bin</td>
 </tr>
 <tr>
+	<td>unsigned</td>
+	<td><a href = "#LayerGetOrtho">LayerGetOrtho</a></td>
+	<td>const struct Layer *const this, struct Ortho3f *const o</td>
+</tr>
+<tr>
 	<td>int</td>
 	<td><a href = "#LayerSetScreenRectangle">LayerSetScreenRectangle</a></td>
 	<td>struct Layer *const this,
@@ -85,6 +90,11 @@ size.
 	<td><a href = "#LayerSetSpriteRectangle">LayerSetSpriteRectangle</a></td>
 	<td>struct Layer *const this,
 	struct Rectangle4f *const rect</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#LayerSetRandom">LayerSetRandom</a></td>
+	<td>struct Layer *const this, struct Ortho3f *const o</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -116,6 +126,16 @@ size.
 </dl>
 </div>
 
+<div><a name = "LayerGetOrtho"><!-- --></a>
+<h3>LayerGetOrtho</h3>
+<pre>unsigned <b>LayerGetOrtho</b> (const struct Layer *const this, struct Ortho3f *const o)</pre>
+<p>
+Returns a <em>bin</em> in <em>[0, side_size^2[</em>.
+</p>
+<dl>
+</dl>
+</div>
+
 <div><a name = "LayerSetScreenRectangle"><!-- --></a>
 <h3>LayerSetScreenRectangle</h3>
 <pre>int <b>LayerSetScreenRectangle</b> (struct Layer *const this,
@@ -139,6 +159,16 @@ Set sprite rectangle.
 <dl>
 	<dt>return</dt>
 	<dd>Success.</dd>
+</dl>
+</div>
+
+<div><a name = "LayerSetRandom"><!-- --></a>
+<h3>LayerSetRandom</h3>
+<pre>void <b>LayerSetRandom</b> (struct Layer *const this, struct Ortho3f *const o)</pre>
+<p>
+Set random.
+</p>
+<dl>
 </dl>
 </div>
 

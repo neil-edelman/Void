@@ -46,10 +46,6 @@ General Public License, see copying.txt.
 <p>
 This is an idempotent class dealing with the interface to OpenGL.
 </p>
-<p>
-Only used as a callback from <a href = "#display">display</a> while OpenGL is using Lambert.
-For <a href = "#SpritesDrawForground">SpritesDrawForground</a>.
-</p>
 <dl>
 	<dt>author</dt>
 	<dd>Neil</dd>
@@ -153,6 +149,18 @@ geometry, uploaded into video memory. Fixme: not fully variablised!?
 	<td><a href = "#DrawSetShield">DrawSetShield</a></td>
 	<td>const char *const key</td>
 </tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#DrawDisplayLambert">DrawDisplayLambert</a></td>
+	<td>const struct Ortho3f *const x,
+	const struct AutoImage *const tex, const struct AutoImage *const nor</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#DrawDisplayFar">DrawDisplayFar</a></td>
+	<td>const struct Ortho3f *const x,
+	const struct AutoImage *const tex, const struct AutoImage *const nor</td>
+</tr>
 </table>
 
 
@@ -221,6 +229,34 @@ Sets background to the image with key key.
 <dl>
 	<dt>parameter: str</dt>
 	<dd>Resource name to set the shield indicator.</dd>
+</dl>
+</div>
+
+<div><a name = "DrawDisplayLambert"><!-- --></a>
+<h3>DrawDisplayLambert</h3>
+<pre>void <b>DrawDisplayLambert</b> (const struct Ortho3f *const x,
+	const struct AutoImage *const tex, const struct AutoImage *const nor)</pre>
+<p>
+Only used as a callback from <a href = "#display">display</a> while OpenGL is using Lambert.
+For <a href = "#SpritesDraw">SpritesDraw</a>.
+</p>
+<dl>
+	<dt>implements</dt>
+	<dd>DrawOutput</dd>
+</dl>
+</div>
+
+<div><a name = "DrawDisplayFar"><!-- --></a>
+<h3>DrawDisplayFar</h3>
+<pre>void <b>DrawDisplayFar</b> (const struct Ortho3f *const x,
+	const struct AutoImage *const tex, const struct AutoImage *const nor)</pre>
+<p>
+Only used as a callback from <a href = "#display">display</a> while OpenGL is using Far. For
+<a href = "#FarsDraw">FarsDraw</a>.
+</p>
+<dl>
+	<dt>implements</dt>
+	<dd>DrawOutput</dd>
 </dl>
 </div>
 

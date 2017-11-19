@@ -89,11 +89,12 @@ on, is a <em>Planetoid</em>.
 </dl>
 </div>
 
-<div><a name = "struct Fars"><!-- --></a>
-<h3>struct Fars</h3>
-<pre><b>struct Fars</b> {
-	struct FarList bins[BIN_BIN_BG_SIZE];
+<div><a name = "static struct Fars"><!-- --></a>
+<h3>static struct Fars</h3>
+<pre><b>static struct Fars</b> {
+	struct FarList bins[LAYER_SIZE];
 	struct PlanetoidPool *planetoids;
+	struct Layer *layer;
 }</pre>
 <p>
 Fars all together.
@@ -122,23 +123,22 @@ Define <em>FarVt</em>.
 <tr>
 	<td>void</td>
 	<td><a href = "#Fars_">Fars_</a></td>
-	<td>struct Fars **const thisp</td>
+	<td>void</td>
 </tr>
 <tr>
-	<td>struct Fars *</td>
+	<td>int</td>
 	<td><a href = "#Fars">Fars</a></td>
 	<td>void</td>
 </tr>
 <tr>
 	<td>void</td>
 	<td><a href = "#FarsClear">FarsClear</a></td>
-	<td>struct Fars *const this</td>
+	<td>void</td>
 </tr>
 <tr>
 	<td>struct Planetoid *</td>
 	<td><a href = "#FarsPlanetoid">FarsPlanetoid</a></td>
-	<td>struct Fars *const fars,
-	const struct AutoObjectInSpace *const class</td>
+	<td>const struct AutoObjectInSpace *const class</td>
 </tr>
 </table>
 
@@ -147,7 +147,7 @@ Define <em>FarVt</em>.
 
 <div><a name = "Fars_"><!-- --></a>
 <h3>Fars_</h3>
-<pre>void <b>Fars_</b> (struct Fars **const thisp)</pre>
+<pre>void <b>Fars_</b> (void)</pre>
 <p>
 Destructor.
 </p>
@@ -157,7 +157,7 @@ Destructor.
 
 <div><a name = "Fars"><!-- --></a>
 <h3>Fars</h3>
-<pre>struct Fars * <b>Fars</b> (void)</pre>
+<pre>int <b>Fars</b> (void)</pre>
 <p>
 Constructor.
 </p>
@@ -169,7 +169,7 @@ Constructor.
 
 <div><a name = "FarsClear"><!-- --></a>
 <h3>FarsClear</h3>
-<pre>void <b>FarsClear</b> (struct Fars *const this)</pre>
+<pre>void <b>FarsClear</b> (void)</pre>
 <p>
 Clears all planets in preparation for jump.
 </p>
@@ -179,8 +179,7 @@ Clears all planets in preparation for jump.
 
 <div><a name = "FarsPlanetoid"><!-- --></a>
 <h3>FarsPlanetoid</h3>
-<pre>struct Planetoid * <b>FarsPlanetoid</b> (struct Fars *const fars,
-	const struct AutoObjectInSpace *const class)</pre>
+<pre>struct Planetoid * <b>FarsPlanetoid</b> (const struct AutoObjectInSpace *const class)</pre>
 <p>
 Extends <em>far_filler</em>.
 </p>

@@ -193,8 +193,13 @@ static struct Sprites {
 typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
 typedef enum CollisionMask (*SpriteMaskAccessor)(const struct Sprite *const);
 
+/** Sometimes, the sprite class is important; ie, {typeof(sprite)};
+ eg collision resolution. */
+enum SpriteClass { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE };
+
 /** Define {SpriteVt}. */
 struct SpriteVt {
+	enum SpriteClass class;
 	SpriteToString to_string;
 	SpriteAction delete, update;
 	SpriteFloatAccessor get_mass;
@@ -343,6 +348,7 @@ static enum CollisionMask gate_get_others_mask(const struct Ship *const this) {
 }
 
 static const struct SpriteVt ship_human_vt = {
+	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_human,
@@ -350,6 +356,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteMaskAccessor)&ship_get_self_mask,
 	(SpriteMaskAccessor)&ship_get_others_mask
 }, ship_ai_vt = {
+	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_dumb_ai,
@@ -357,6 +364,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteMaskAccessor)&ship_get_self_mask,
 	(SpriteMaskAccessor)&ship_get_others_mask
 }, debris_vt = {
+	SC_DEBRIS,
 	(SpriteToString)&debris_to_string,
 	(SpriteAction)&debris_delete,
 	(SpriteAction)&debris_update,
@@ -364,6 +372,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteMaskAccessor)&debris_get_self_mask,
 	(SpriteMaskAccessor)&debris_get_others_mask
 }, wmd_vt = {
+	SC_WMD,
 	(SpriteToString)&wmd_to_string,
 	(SpriteAction)&wmd_delete,
 	(SpriteAction)&wmd_update,
@@ -371,6 +380,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteMaskAccessor)&wmd_get_self_mask,
 	(SpriteMaskAccessor)&wmd_get_others_mask
 }, gate_vt = {
+	SC_GATE,
 	(SpriteToString)&gate_to_string,
 	(SpriteAction)&gate_delete,
 	(SpriteAction)&gate_update,

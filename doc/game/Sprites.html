@@ -164,6 +164,7 @@ processing.
 <div><a name = "struct Collision"><!-- --></a>
 <h3>struct Collision</h3>
 <pre><b>struct Collision</b> {
+	unsigned no;
 	struct Vec2f v;
 	float t;
 }</pre>
@@ -210,9 +211,21 @@ Sprites all together.
 </dl>
 </div>
 
+<div><a name = "enum SpriteClass"><!-- --></a>
+<h3>enum SpriteClass</h3>
+<pre><b>enum SpriteClass</b> { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE }</pre>
+<p>
+Sometimes, the sprite class is important; ie, <em>typeof(sprite)</em>;
+eg collision resolution.
+</p>
+<dl>
+</dl>
+</div>
+
 <div><a name = "struct SpriteVt"><!-- --></a>
 <h3>struct SpriteVt</h3>
 <pre><b>struct SpriteVt</b> {
+	enum SpriteClass class;
 	SpriteToString to_string;
 	SpriteAction delete, update;
 	SpriteFloatAccessor get_mass;
@@ -325,7 +338,7 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 </tr>
 <tr>
 	<td>void</td>
-	<td><a href = "#SpritesDrawForeground">SpritesDrawForeground</a></td>
+	<td><a href = "#SpritesDraw">SpritesDraw</a></td>
 	<td>void</td>
 </tr>
 <tr>
@@ -437,12 +450,12 @@ Update each frame.
 </dl>
 </div>
 
-<div><a name = "SpritesDrawForeground"><!-- --></a>
-<h3>SpritesDrawForeground</h3>
-<pre>void <b>SpritesDrawForeground</b> (void)</pre>
+<div><a name = "SpritesDraw"><!-- --></a>
+<h3>SpritesDraw</h3>
+<pre>void <b>SpritesDraw</b> (void)</pre>
 <p>
 Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it sets
-<em>sprites.foreground</em>. Use when the Lambert GPU shader is loaded.
+<em>sprites.layer</em>. Use when the Lambert GPU shader is loaded.
 </p>
 <dl>
 </dl>

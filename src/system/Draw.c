@@ -463,7 +463,7 @@ static unsigned old_texture;
 /** Only used as a callback from \see{display} while OpenGL is using Lambert.
  For \see{SpritesDraw}.
  @implements DrawOutput */
-/*inline <- oy fixme*/ void DrawDisplayLambert(const struct Ortho3f *const x,
+void DrawDisplayLambert(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor) {
 	assert(x && tex && nor);
 	if(old_texture != tex->texture) {
@@ -561,7 +561,6 @@ static void display(void) {
 	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
 	FarsDraw();
 
-	
 	/* Set up lights, draw sprites in foreground. */
 	glUseProgram(auto_Lambert_shader.compiled);
 	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);

@@ -109,74 +109,66 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	add_bounce(b, b_v, t);
 }
 
-#if 0
 
-/* type collisions; can not modify list of Sprites as it is in the middle of
- x/ylist or delete! */
 
-static void shp_shp(struct Sprite *a, struct Sprite *b, const float d0) {
-	elastic_bounce(a, b, d0);
-}
+/* Type collisions; can not modify list of Sprites! */
 
-static void deb_deb(struct Sprite *a, struct Sprite *b, const float d0) {
-	elastic_bounce(a, b, d0);
-}
-
-static void shp_deb(struct Sprite *s, struct Sprite *d, const float d0) {
-	/*printf("shpdeb: collide Shp(Spr%u): Deb(Spr%u)\n", SpriteGetId(s), SpriteGetId(d));*/
-	elastic_bounce(s, d, d0);
-	/*d->vx += 32.0f * (2.0f * rand() / RAND_MAX - 1.0f);
-	 d->vy += 32.0f * (2.0f * rand() / RAND_MAX - 1.0f);*/
-}
-
-static void deb_shp(struct Sprite *d, struct Sprite *s, const float d0) {
-	shp_deb(s, d, d0);
-}
-
-static void wmd_deb(struct Sprite *w, struct Sprite *d, const float d0) {
+static void wmd_debris(struct Sprite *w, struct Sprite *d, const float d0) {
 	/*pedantic("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));*/
 	/* avoid inifinite destruction loop */
-	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
+	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
 	SpriteRecharge(d, -SpriteGetDamage(w));
-	SpriteDestroy(w);
+	SpriteDestroy(w);*/
+	char a[12], b[12];
+	sprite_to_string(w, &a);
+	sprite_to_string(d, &b);
+	printf("hit %s -- %s.\n", a, b);
 	UNUSED(d0);
 }
-
-static void deb_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
-	wmd_deb(w, d, d0);
+static void debris_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
+	wmd_debris(w, d, d0);
 }
 
-static void wmd_shp(struct Sprite *w, struct Sprite *s, const float d0) {
-	pedantic("wmd_shp: %s -- %s\n", SpriteToString(w), SpriteToString(s));
+static void wmd_ship(struct Sprite *w, struct Sprite *s, const float d0) {
+	char a[12], b[12];
+	sprite_to_string(w, &a);
+	sprite_to_string(s, &b);
+	printf("wmd_shp: %s -- %s\n", a, b);
 	/* avoid inifinite destruction loop */
-	if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
+	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	SpriteRecharge(s, -SpriteGetDamage(w));
-	SpriteDestroy(w);
+	SpriteDestroy(w);*/
 	UNUSED(d0);
 }
-
-static void shp_wmd(struct Sprite *s, struct Sprite *w, const float d0) {
-	wmd_shp(w, s, d0);
+static void ship_wmd(struct Sprite *s, struct Sprite *w, const float d0) {
+	wmd_ship(w, s, d0);
 }
 
-static void shp_eth(struct Sprite *s, struct Sprite *e, const float d0) {
+static void ship_gate(struct Sprite *s, struct Sprite *g, const float d0) {
 	/*void (*fn)(struct Sprite *const, struct Sprite *);*/
 	/*Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));*/
 	/*if((fn = EtherealGetCallback(eth))) fn(eth, s);*/
 	/* while in iterate! danger! */
-	if(e->sp.ethereal.callback) e->sp.ethereal.callback(e, s);
+	/*if(e->sp.ethereal.callback) e->sp.ethereal.callback(e, s);*/
+	char a[12], b[12];
+	sprite_to_string(s, &a);
+	sprite_to_string(g, &b);
+	printf("%s is approching %s.\n", a, b);
 	UNUSED(d0);
 }
-
-static void eth_shp(struct Sprite *e, struct Sprite *s, const float d0) {
-	shp_eth(s, e, d0);
+static void gate_ship(struct Sprite *g, struct Sprite *s, const float d0) {
+	ship_gate(s, g, d0);
 }
 
-static SpriteCollision collision_matrix[][] = { {
-} };
-#endif
+/* { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE } */
+static SpriteCollision collision_matrix[][4] = {
+	{ &elastic_bounce, &elastic_bounce, &ship_wmd,       &ship_gate },
+	{ &elastic_bounce, &elastic_bounce, &elastic_bounce, 0 },
+	{ &wmd_ship,       &elastic_bounce, 0, 0 },
+	{ &gate_ship,      0, 0, 0 }
+};
 
 /** Checks whether two sprites intersect using inclined cylinders in
  three-dimensions, where the third dimension is linearly-interpolated time.
@@ -207,8 +199,8 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 	det = (vz * vz - v2 * (z2 - r * r));
 	t = (det <= 0.0f) ? 0.0f : (-vz - sqrtf(det)) / v2;
 	if(t < 0.0f) t = 0.0f; /* bounded, dist < r^2; fixme: really want this? */
-	/* fixme: collision matrix. */
-	elastic_bounce(a, b, t);
+	assert(collision_matrix[a->vt->class][b->vt->class]);
+	collision_matrix[a->vt->class][b->vt->class](a, b, t);
 }
 
 /** This first applies the most course-grained collision detection in
@@ -245,9 +237,11 @@ static void collide_bin(unsigned bin) {
 			a = cover_a->sprite, b = cover_b->sprite;
 			assert(a && b);
 			/* Mostly for weapons that ignore collisions with themselves. */
-			if(!(sprite_get_self_mask(a) & sprite_get_others_mask(b))
+			/*if(!(sprite_get_self_mask(a) & sprite_get_others_mask(b))
 				&& !(sprite_get_others_mask(a) & sprite_get_self_mask(b)))
-				continue;
+				continue;*/
+			/* If the sprites have no collision handler thing, don't bother. */
+			if(!collision_matrix[a->vt->class][b->vt->class]) continue;
 			/* Pass it to the next LOD. */
 			collide_boxes(a, b);
 		} while(index_b);

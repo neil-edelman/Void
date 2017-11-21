@@ -515,6 +515,7 @@ static void display_info(const struct Vec2f *const x,
 
 /** Callback for glutDisplayFunc; this is where all of the drawing happens. */
 static void display(void) {
+	struct Ship *player;
 	int lights;
 	/* for SpriteIterate */
 	/*struct Ortho3f x;
@@ -587,7 +588,7 @@ static void display(void) {
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {
 		struct Vec2f x;
-		struct Vec2u hit;
+		struct Vec2i hit;
 		ShipGetPosition(player, &x);
 		glUseProgram(auto_Hud_shader.compiled);
 		glBindTexture(GL_TEXTURE_2D, shield_tex);

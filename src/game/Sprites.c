@@ -28,13 +28,6 @@
 #define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)
 static const float layer_space = 256.0f;
 
-/* fixme: hmmm, simpler? */
-enum CollisionMask {
-	MASK_SHIP = 1,
-	MASK_POINT_DEFENSE = 2,
-	MASK_DEBIS = 4
-};
-
 /* This is used for small floating-point values. The value doesn't have any
  significance. */
 static const float epsilon = 0.0005f;
@@ -191,7 +184,6 @@ static struct Sprites {
 /*********** Define virtual functions. ***********/
 
 typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
-typedef enum CollisionMask (*SpriteMaskAccessor)(const struct Sprite *const);
 
 /** Sometimes, the sprite class is important; ie, {typeof(sprite)};
  eg collision resolution. */
@@ -203,7 +195,6 @@ struct SpriteVt {
 	SpriteToString to_string;
 	SpriteAction delete, update;
 	SpriteFloatAccessor get_mass;
-	SpriteMaskAccessor get_self_mask, get_others_mask;
 };
 
 
@@ -312,81 +303,36 @@ static float gate_get_mass(const struct Gate *const this) {
 }
 
 
-/** @implements <Sprite>MaskAccessor */
-static enum CollisionMask sprite_get_self_mask(const struct Sprite *const this){
-	assert(this);
-	return this->vt->get_self_mask(this);
-}
-/** @implements <Sprite>MaskAccessor */
-static enum CollisionMask sprite_get_others_mask(const struct Sprite *const this) {
-	assert(this);
-	return this->vt->get_others_mask(this);
-}
-static enum CollisionMask ship_get_self_mask(const struct Ship *const this) {
-	assert(this); return MASK_SHIP;
-}
-static enum CollisionMask ship_get_others_mask(const struct Ship *const this) {
-	assert(this); return MASK_SHIP | MASK_POINT_DEFENSE | MASK_DEBIS;
-}
-static enum CollisionMask debris_get_self_mask(const struct Ship *const this) {
-	assert(this); return MASK_DEBIS;
-}
-static enum CollisionMask debris_get_others_mask(const struct Ship *const this){
-	assert(this); return MASK_SHIP | MASK_POINT_DEFENSE | MASK_DEBIS;
-}
-static enum CollisionMask wmd_get_self_mask(const struct Ship *const this) {
-	assert(this); return MASK_POINT_DEFENSE; /* fixme! allow lazers. */
-}
-static enum CollisionMask wmd_get_others_mask(const struct Ship *const this){
-	assert(this); return MASK_SHIP | MASK_DEBIS;
-}
-static enum CollisionMask gate_get_self_mask(const struct Ship *const this) {
-	assert(this); return 0;
-}
-static enum CollisionMask gate_get_others_mask(const struct Ship *const this) {
-	assert(this); return 0;
-}
-
 static const struct SpriteVt ship_human_vt = {
 	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_human,
-	(SpriteFloatAccessor)&ship_get_mass,
-	(SpriteMaskAccessor)&ship_get_self_mask,
-	(SpriteMaskAccessor)&ship_get_others_mask
+	(SpriteFloatAccessor)&ship_get_mass
 }, ship_ai_vt = {
 	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_dumb_ai,
-	(SpriteFloatAccessor)&ship_get_mass,
-	(SpriteMaskAccessor)&ship_get_self_mask,
-	(SpriteMaskAccessor)&ship_get_others_mask
+	(SpriteFloatAccessor)&ship_get_mass
 }, debris_vt = {
 	SC_DEBRIS,
 	(SpriteToString)&debris_to_string,
 	(SpriteAction)&debris_delete,
 	(SpriteAction)&debris_update,
-	(SpriteFloatAccessor)&debris_get_mass,
-	(SpriteMaskAccessor)&debris_get_self_mask,
-	(SpriteMaskAccessor)&debris_get_others_mask
+	(SpriteFloatAccessor)&debris_get_mass
 }, wmd_vt = {
 	SC_WMD,
 	(SpriteToString)&wmd_to_string,
 	(SpriteAction)&wmd_delete,
 	(SpriteAction)&wmd_update,
-	(SpriteFloatAccessor)&wmd_get_mass,
-	(SpriteMaskAccessor)&wmd_get_self_mask,
-	(SpriteMaskAccessor)&wmd_get_others_mask
+	(SpriteFloatAccessor)&wmd_get_mass
 }, gate_vt = {
 	SC_GATE,
 	(SpriteToString)&gate_to_string,
 	(SpriteAction)&gate_delete,
 	(SpriteAction)&gate_update,
-	(SpriteFloatAccessor)&gate_get_mass,
-	(SpriteMaskAccessor)&gate_get_self_mask,
-	(SpriteMaskAccessor)&gate_get_others_mask
+	(SpriteFloatAccessor)&gate_get_mass
 };
 
 

@@ -78,6 +78,7 @@ struct Ship {
 	char name[16];
 	const struct AutoWmdType *wmd;
 	unsigned ms_recharge_wmd;
+	float dist_to_horizon;
 };
 #define POOL_NAME Ship
 #define POOL_TYPE struct Ship
@@ -503,6 +504,7 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	Orcish(this->name, sizeof this->name);
 	this->wmd = class->weapon;
 	this->ms_recharge_wmd = 0;
+	this->dist_to_horizon = 0.0f;
 	sprite_filler(&this->sprite.data, vt, class->sprite, x);
 	return this;
 }
@@ -658,9 +660,8 @@ static void timestep(struct Sprite *const this) {
 	bin = LayerGetOrtho(sprites->layer, &this->x);
 	/* This happens when the sprite wanders out of the bin. */
 	if(bin != this->bin) {
-		char a[12];
-		this->vt->to_string(this, &a);
-		printf("Sprite %s has transferred bins %u -> %u.\n", a, this->bin, bin);
+		/*char a[12]; this->vt->to_string(this, &a); printf("Sprite %s has "
+			"transferred bins %u -> %u.\n", a, this->bin, bin);*/
 		SpriteListRemove(&sprites->bins[this->bin].sprites, this);
 		this->bin = bin;
 		SpriteListPush(&sprites->bins[bin].sprites, this);

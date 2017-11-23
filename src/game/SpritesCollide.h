@@ -32,10 +32,11 @@
  @std		C89/90
  @version	2017-10 Broke off from Sprites. */
 
+/** Collision handlers. */
 typedef void (*SpriteCollision)(struct Sprite *const, struct Sprite *const,
 	const float);
 
-/** Add a collision to the sprite; called from \see{elastic_bounce}. */
+/** Add a collision to the sprite; called from collision handlers. */
 static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	const float t) {
 	struct Collision *col;
@@ -60,40 +61,10 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	}
 }
 
-/** This is like {b} has an infinite mass.
- @implements SpriteCollision */
-static void elastic_bounce_a(struct Sprite *const a, struct Sprite *const b,
-	const float t) {
-	/* Interpolate position of collision; delta. */
-	const struct Vec2f u = { a->x.x + a->v.x * t, a->x.y + a->v.y * t },
-	                   v = { b->x.x + b->v.x * t, b->x.y + b->v.y * t },
-		d = { v.x - u.x, v.y - u.y };
-	/* Normal at point of impact. */
-	const float d_mag = sqrtf(d.x * d.x + d.y * d.y);
-	const struct Vec2f d_hat = { (d_mag < epsilon) ? 1.0f : d.x / d_mag,
-	                             (d_mag < epsilon) ? 0.0f : d.y / d_mag };
-	/* {a}'s velocity, normal, tangent, direction. */
-	const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
-	const struct Vec2f a_nrm = { a_nrm_s * d_hat.x, a_nrm_s * d_hat.y },
-	                   a_tan = { a->v.x - a_nrm.x,  a->v.y - a_nrm.y };
-	/* {a} bounces off {b}. fixme: This has been experimentally confirmed.
-	 Prove this. */
-	const struct Vec2f a_v = { a_tan.x - a_nrm.x, a_tan.y - a_nrm.y };
-	assert(sprites);
-	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
-	 each other. */
-	if(d_mag < a->bounding + b->bounding) {
-		const float push = (a->bounding + b->bounding - d_mag) * 1.1f;
-		printf("elastic_bounce_a: \\pushing sprites %f distance apart\n", push);
-		a->x.x += d_hat.x * push;
-		a->x.y += d_hat.y * push;
-	}
-	add_bounce(a, a_v, t);
-}
-static void elastic_bounce_b(struct Sprite *const a, struct Sprite *const b,
-	const float t) {
-	elastic_bounce_a(b, a, t);
-}
+
+
+/* Collisions handlers; can not modify list of {Sprites}! Contained in
+ \see{collision_matrix}. */
 
 /** Elastic collision between circles; called from \see{collision_matrix}. 
  Degeneracy pressure pushes sprites to avoid interpenetration.
@@ -130,10 +101,11 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	};
 	assert(sprites);
 	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
-	 each other. */
+	 each other. Happens all the time. */
 	if(d_mag < a->bounding + b->bounding) {
 		const float push = (a->bounding + b->bounding - d_mag) * 0.55f;
-		printf("elastic_bounce: \\pushing sprites %f distance apart\n", push);
+		/*printf("elastic_bounce: \\pushing sprites %f distance apart\n",
+			push);*/
 		a->x.x -= d_hat.x * push;
 		a->x.y -= d_hat.y * push;
 		b->x.x += d_hat.x * push;
@@ -142,12 +114,45 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	add_bounce(a, a_v, t);
 	add_bounce(b, b_v, t);
 }
+/** This is like {b} has an infinite mass.
+ @implements SpriteCollision */
+static void elastic_bounce_a(struct Sprite *const a, struct Sprite *const b,
+	const float t) {
+	/* Interpolate position of collision; delta. */
+	const struct Vec2f u = { a->x.x + a->v.x * t, a->x.y + a->v.y * t },
+	                   v = { b->x.x + b->v.x * t, b->x.y + b->v.y * t },
+		d = { v.x - u.x, v.y - u.y };
+	/* Normal at point of impact. */
+	const float d_mag = sqrtf(d.x * d.x + d.y * d.y);
+	const struct Vec2f d_hat = { (d_mag < epsilon) ? 1.0f : d.x / d_mag,
+	                             (d_mag < epsilon) ? 0.0f : d.y / d_mag };
+	/* {a}'s velocity, normal, tangent, direction. */
+	const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
+	const struct Vec2f a_nrm = { a_nrm_s * d_hat.x, a_nrm_s * d_hat.y },
+	                   a_tan = { a->v.x - a_nrm.x,  a->v.y - a_nrm.y };
+	/* {a} bounces off {b}. fixme: This has been experimentally confirmed.
+	 Prove this. */
+	const struct Vec2f a_v = { a_tan.x - a_nrm.x, a_tan.y - a_nrm.y };
+	assert(sprites);
+	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
+	 each other. */
+	if(d_mag < a->bounding + b->bounding) {
+		const float push = (a->bounding + b->bounding - d_mag) * 1.1f;
+		/*printf("elastic_bounce_a: \\pushing sprites %f distance apart\n",
+			push);*/
+		a->x.x += d_hat.x * push;
+		a->x.y += d_hat.y * push;
+	}
+	add_bounce(a, a_v, t);
+}
+/** @implements SpriteCollision */
+static void elastic_bounce_b(struct Sprite *const a, struct Sprite *const b,
+	const float t) {
+	elastic_bounce_a(b, a, t);
+}
 
-
-
-/* Type collisions; can not modify list of Sprites! */
-
-static void wmd_debris(struct Sprite *w, struct Sprite *d, const float d0) {
+/** @implements SpriteCollision */
+static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	/*pedantic("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));*/
 	/* avoid inifinite destruction loop */
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
@@ -158,13 +163,15 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float d0) {
 	sprite_to_string(w, &a);
 	sprite_to_string(d, &b);
 	printf("hit %s -- %s.\n", a, b);
-	UNUSED(d0);
+	UNUSED(t);
 }
-static void debris_wmd(struct Sprite *d, struct Sprite *w, const float d0) {
-	wmd_debris(w, d, d0);
+/** @implements SpriteCollision */
+static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
+	wmd_debris(w, d, t);
 }
 
-static void wmd_ship(struct Sprite *w, struct Sprite *s, const float d0) {
+/** @implements SpriteCollision */
+static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
 	char a[12], b[12];
 	sprite_to_string(w, &a);
 	sprite_to_string(s, &b);
@@ -174,40 +181,67 @@ static void wmd_ship(struct Sprite *w, struct Sprite *s, const float d0) {
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	SpriteRecharge(s, -SpriteGetDamage(w));*/
 	sprite_delete(w);
-	UNUSED(d0);
+	UNUSED(t);
 }
-static void ship_wmd(struct Sprite *s, struct Sprite *w, const float d0) {
-	wmd_ship(w, s, d0);
+/** @implements SpriteCollision */
+static void ship_wmd(struct Sprite *s, struct Sprite *w, const float t) {
+	wmd_ship(w, s, t);
 }
 
-static void ship_gate(struct Sprite *s, struct Sprite *g, const float d0) {
+/** @implements SpriteCollision */
+static void ship_gate(struct Sprite *s, struct Sprite *g, const float t) {
 	/*void (*fn)(struct Sprite *const, struct Sprite *);*/
 	/*Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));*/
 	/*if((fn = EtherealGetCallback(eth))) fn(eth, s);*/
 	/* while in iterate! danger! */
 	/*if(e->sp.ethereal.callback) e->sp.ethereal.callback(e, s);*/
-	char a[12], b[12];
-	sprite_to_string(s, &a);
-	sprite_to_string(g, &b);
-	printf("%s is approching %s.\n", a, b);
-	UNUSED(d0);
+	struct Ship *const ship = (struct Ship *)s;
+	float x, y, /*vx, vy,*/ gate_norm_x, gate_norm_y, proj/*, h*/;
+	assert(s && g && s->vt->class == SC_SHIP);
+	x = s->x.x - g->x.x;
+	y = s->x.y - g->x.y;
+	gate_norm_x = cosf(g->x.theta);
+	gate_norm_y = sinf(g->x.theta);
+	proj = x * gate_norm_x + y * gate_norm_y;
+	if(ship->dist_to_horizon > 0 && proj < 0) {
+		char a[12], b[12];
+		sprite_to_string(s, &a);
+		sprite_to_string(g, &b);
+		printf("ship_into_gate: %s crossed into the event horizon of %s.\n",a,b);
+#if 0
+		if(ship == GameGetPlayer()) {
+			/* trasport to zone immediately */
+			Event(0, 0, 0, FN_CONSUMER, &ZoneChange, g);
+		} else {
+			/* disappear */
+			/* fixme: test! */
+		}
+#endif
+	}/* else*/
+	/* fixme: unreliable */
+	ship->dist_to_horizon = proj;
+	UNUSED(t);
 }
-static void gate_ship(struct Sprite *g, struct Sprite *s, const float d0) {
-	ship_gate(s, g, d0);
+/** @implements SpriteCollision */
+static void gate_ship(struct Sprite *g, struct Sprite *s, const float t) {
+	ship_gate(s, g, t);
 }
 
 /* What sort of collisions the subclasses of Sprites engage in. This is set by
  the sprite class, { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE }. */
 static const SpriteCollision collision_matrix[][4] = {
-	{ &elastic_bounce, &elastic_bounce,   &ship_wmd,       &ship_gate },
-	{ &elastic_bounce, &elastic_bounce,   &elastic_bounce, &elastic_bounce_a },
-	{ &wmd_ship,       &elastic_bounce,   0, 0 },
-	{ &gate_ship,      &elastic_bounce_b, 0, 0 }
+	{ &elastic_bounce, &elastic_bounce,   &ship_wmd,   &ship_gate },
+	{ &elastic_bounce, &elastic_bounce,   &debris_wmd, &elastic_bounce_a },
+	{ &wmd_ship,       &wmd_debris,       0,           0 },
+	{ &gate_ship,      &elastic_bounce_b, 0,           0 }
 };
+
+
 
 /** Checks whether two sprites intersect using inclined cylinders in
  three-dimensions, where the third dimension is linearly-interpolated time.
- Called from \see{collide_boxes}. */
+ Called from \see{collide_boxes}. If we have a collision, calls the functions
+ contained in the {collision_matrix}. */
 static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 	struct Vec2f v, z, dist;
 	float t, v2, vz, z2, dist_2, det;

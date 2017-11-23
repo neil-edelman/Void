@@ -196,8 +196,9 @@ static void gate_ship(struct Sprite *g, struct Sprite *s, const float d0) {
 	ship_gate(s, g, d0);
 }
 
-/* { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE } */
-static SpriteCollision collision_matrix[][4] = {
+/* What sort of collisions the subclasses of Sprites engage in. This is set by
+ the sprite class, { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE }. */
+static const SpriteCollision collision_matrix[][4] = {
 	{ &elastic_bounce, &elastic_bounce,   &ship_wmd,       &ship_gate },
 	{ &elastic_bounce, &elastic_bounce,   &elastic_bounce, &elastic_bounce_a },
 	{ &wmd_ship,       &elastic_bounce,   0, 0 },

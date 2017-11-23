@@ -60,29 +60,63 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	}
 }
 
-/** Elastic collision between circles; called from \see{collide_circles}. 
- Degeneracy pressure pushes sprites to avoid interpenetration.
- @param t: {ms} after frame that the collision occurs.
+/** This is like {b} has an infinite mass.
  @implements SpriteCollision */
-static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
-	const float t) {	
+static void elastic_bounce_a(struct Sprite *const a, struct Sprite *const b,
+	const float t) {
 	/* Interpolate position of collision; delta. */
 	const struct Vec2f u = { a->x.x + a->v.x * t, a->x.y + a->v.y * t },
 	                   v = { b->x.x + b->v.x * t, b->x.y + b->v.y * t },
 		d = { v.x - u.x, v.y - u.y };
 	/* Normal at point of impact. */
-	const float n_d2 = d.x * d.x + d.y * d.y;
-	const float bounding = a->bounding + b->bounding;
-	const float n_n  = (n_d2 < epsilon) ? 1.0f / epsilon : 1.0f / sqrtf(n_d2);
-	const struct Vec2f n = { d.x * n_n, d.y * n_n };
+	const float d_mag = sqrtf(d.x * d.x + d.y * d.y);
+	const struct Vec2f d_hat = { (d_mag < epsilon) ? 1.0f : d.x / d_mag,
+	                             (d_mag < epsilon) ? 0.0f : d.y / d_mag };
 	/* {a}'s velocity, normal, tangent, direction. */
-	const float a_nrm_s = a->v.x * n.x + a->v.y * n.y;
-	const struct Vec2f a_nrm = { a_nrm_s * n.x, a_nrm_s * n.y },
-		a_tan = { a->v.x - a_nrm.x, a->v.y - a_nrm.y };
+	const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
+	const struct Vec2f a_nrm = { a_nrm_s * d_hat.x, a_nrm_s * d_hat.y },
+	                   a_tan = { a->v.x - a_nrm.x,  a->v.y - a_nrm.y };
+	/* {a} bounces off {b}. fixme: This has been experimentally confirmed.
+	 Prove this. */
+	const struct Vec2f a_v = { a_tan.x - a_nrm.x, a_tan.y - a_nrm.y };
+	assert(sprites);
+	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
+	 each other. */
+	if(d_mag < a->bounding + b->bounding) {
+		const float push = (a->bounding + b->bounding - d_mag) * 1.1f;
+		printf("elastic_bounce_a: \\pushing sprites %f distance apart\n", push);
+		a->x.x += d_hat.x * push;
+		a->x.y += d_hat.y * push;
+	}
+	add_bounce(a, a_v, t);
+}
+static void elastic_bounce_b(struct Sprite *const a, struct Sprite *const b,
+	const float t) {
+	elastic_bounce_a(b, a, t);
+}
+
+/** Elastic collision between circles; called from \see{collision_matrix}. 
+ Degeneracy pressure pushes sprites to avoid interpenetration.
+ @param t: {ms} after frame that the collision occurs.
+ @implements SpriteCollision */
+static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
+	const float t) {
+	/* Interpolate position of collision; delta. */
+	const struct Vec2f u = { a->x.x + a->v.x * t, a->x.y + a->v.y * t },
+	                   v = { b->x.x + b->v.x * t, b->x.y + b->v.y * t },
+		d = { v.x - u.x, v.y - u.y };
+	/* Normal at point of impact. */
+	const float d_mag = sqrtf(d.x * d.x + d.y * d.y);
+	const struct Vec2f d_hat = { (d_mag < epsilon) ? 1.0f : d.x / d_mag,
+	                             (d_mag < epsilon) ? 0.0f : d.y / d_mag };
+	/* {a}'s velocity, normal, tangent, direction. */
+	const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
+	const struct Vec2f a_nrm = { a_nrm_s * d_hat.x, a_nrm_s * d_hat.y },
+	                   a_tan = { a->v.x - a_nrm.x,  a->v.y - a_nrm.y };
 	/* {b}'s velocity, normal, tangent, direction. */
-	const float b_nrm_s = b->v.x * n.x + b->v.y * n.y;
-	const struct Vec2f b_nrm = { b_nrm_s * n.x, b_nrm_s * n.y },
-		b_tan = { b->v.x - b_nrm.x, b->v.y - b_nrm.y };
+	const float b_nrm_s = b->v.x * d_hat.x + b->v.y * d_hat.y;
+	const struct Vec2f b_nrm = { b_nrm_s * d_hat.x, b_nrm_s * d_hat.y },
+	                   b_tan = { b->v.x - b_nrm.x, b->v.y - b_nrm.y };
 	/* Assume all mass is strictly positive. */
 	const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b);
 	const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
@@ -97,13 +131,13 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	assert(sprites);
 	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
 	 each other. */
-	if(n_d2 < bounding * bounding) {
-		const float push = (bounding - sqrtf(n_d2)) * 0.55f;
+	if(d_mag < a->bounding + b->bounding) {
+		const float push = (a->bounding + b->bounding - d_mag) * 0.55f;
 		printf("elastic_bounce: \\pushing sprites %f distance apart\n", push);
-		a->x.x -= n.x * push;
-		a->x.y -= n.y * push;
-		b->x.x += n.x * push;
-		b->x.y += n.y * push;
+		a->x.x -= d_hat.x * push;
+		a->x.y -= d_hat.y * push;
+		b->x.x += d_hat.x * push;
+		b->x.y += d_hat.y * push;
 	}
 	add_bounce(a, a_v, t);
 	add_bounce(b, b_v, t);
@@ -138,8 +172,8 @@ static void wmd_ship(struct Sprite *w, struct Sprite *s, const float d0) {
 	/* avoid inifinite destruction loop */
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
-	SpriteRecharge(s, -SpriteGetDamage(w));
-	SpriteDestroy(w);*/
+	SpriteRecharge(s, -SpriteGetDamage(w));*/
+	sprite_delete(w);
 	UNUSED(d0);
 }
 static void ship_wmd(struct Sprite *s, struct Sprite *w, const float d0) {
@@ -164,10 +198,10 @@ static void gate_ship(struct Sprite *g, struct Sprite *s, const float d0) {
 
 /* { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE } */
 static SpriteCollision collision_matrix[][4] = {
-	{ &elastic_bounce, &elastic_bounce, &ship_wmd,       &ship_gate },
-	{ &elastic_bounce, &elastic_bounce, &elastic_bounce, 0 },
-	{ &wmd_ship,       &elastic_bounce, 0, 0 },
-	{ &gate_ship,      0, 0, 0 }
+	{ &elastic_bounce, &elastic_bounce,   &ship_wmd,       &ship_gate },
+	{ &elastic_bounce, &elastic_bounce,   &elastic_bounce, &elastic_bounce_a },
+	{ &wmd_ship,       &elastic_bounce,   0, 0 },
+	{ &gate_ship,      &elastic_bounce_b, 0, 0 }
 };
 
 /** Checks whether two sprites intersect using inclined cylinders in

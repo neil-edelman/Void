@@ -438,7 +438,7 @@ int Sprites(void) {
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
 		case GATE: ea = "gates", eb = GatePoolGetError(sprites->gates); break;
 		case LAYER: ea = "layer", eb = "couldn't get layer"; break;
-		case COLLISION: ea = "collision",
+		case COLLISION: ea = "collisions",
 			eb = CollisionStackGetError(sprites->collisions); break;
 	} if(e) {
 		fprintf(stderr, "Sprites %s buffer: %s.\n", ea, eb);
@@ -496,6 +496,7 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	if(!(this = ShipPoolNew(sprites->ships)))
 		{ fprintf(stderr, "SpritesShip: %s.\n",
 		ShipPoolGetError(sprites->ships)); return 0; }
+	sprite_filler(&this->sprite.data, vt, class->sprite, x);
 	this->mass = class->mass;
 	this->shield = class->shield;
 	this->ms_recharge = class->ms_recharge;
@@ -507,7 +508,6 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	this->wmd = class->weapon;
 	this->ms_recharge_wmd = 0;
 	this->dist_to_horizon = 0.0f;
-	sprite_filler(&this->sprite.data, vt, class->sprite, x);
 	return this;
 }
 
@@ -520,8 +520,8 @@ struct Debris *SpritesDebris(const struct AutoDebris *const class,
 	if(!(this = DebrisPoolNew(sprites->debris)))
 		{ fprintf(stderr, "SpriteDebris: %s.\n",
 		DebrisPoolGetError(sprites->debris)); return 0; }
-	this->mass = class->mass;
 	sprite_filler(&this->sprite.data, &debris_vt, class->sprite, x);
+	this->mass = class->mass;
 	return this;
 }
 
@@ -543,13 +543,13 @@ struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 	if(!(this = WmdPoolNew(sprites->wmds)))
 		{ fprintf(stderr, "SpritesWmd: %s.\n",
 		WmdPoolGetError(sprites->wmds)); return 0; }
+	sprite_filler(&this->sprite.data, &wmd_vt, class->sprite, &x);
 	/* Speed is in [px/s], want it [px/ms]. */
 	this->sprite.data.v.x = from->sprite.data.v.x + dir.x * class->speed*0.001f;
 	this->sprite.data.v.y = from->sprite.data.v.y + dir.y * class->speed*0.001f;
 	this->from = &from->sprite.data;
 	this->mass = class->impact_mass;
 	this->expires = TimerGetGameTime() + class->ms_range;
-	sprite_filler(&this->sprite.data, &wmd_vt, class->sprite, &x);
 	{
 		const float length = sqrtf(class->r * class->r + class->g * class->g
 			+ class->b * class->b);
@@ -573,8 +573,8 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 	if(!(this = GatePoolNew(sprites->gates)))
 		{ fprintf(stderr, "SpritesGate: %s.\n",
 		GatePoolGetError(sprites->gates)); return 0; }
-	this->to = class->to;
 	sprite_filler(&this->sprite.data, &gate_vt, gate_sprite, &x);
+	this->to = class->to;
 	return this;
 }
 

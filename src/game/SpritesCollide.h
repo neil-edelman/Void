@@ -130,8 +130,7 @@ static void elastic_bounce_a(struct Sprite *const a, struct Sprite *const b,
 	const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
 	const struct Vec2f a_nrm = { a_nrm_s * d_hat.x, a_nrm_s * d_hat.y },
 	                   a_tan = { a->v.x - a_nrm.x,  a->v.y - a_nrm.y };
-	/* {a} bounces off {b}. fixme: This has been experimentally confirmed.
-	 Prove this. */
+	/* {a} bounces off {b}. fixme: Prove this. fixme: It's wrong. */
 	const struct Vec2f a_v = { a_tan.x - a_nrm.x, a_tan.y - a_nrm.y };
 	assert(sprites);
 	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
@@ -162,7 +161,8 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	sprite_to_string(w, &a);
 	sprite_to_string(d, &b);
 	printf("hit %s -- %s.\n", a, b);*/
-	elastic_bounce_a(d, w, t);
+	printf("BOOM!\n");
+	elastic_bounce(d, w, t); /* _a <- fixme: {elastic_bounce_a} is wonky. */
 	sprite_delete(w);
 }
 /** @implements SpriteCollision */

@@ -149,15 +149,17 @@ static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
 #include "../templates/Pool.h"*/
 
 /** Collisions between sprites to apply later. This is a pool that sprites can
- use. Defines {CollisionPool}, {CollisionPoolNode}. */
+ use. Defines {CollisionPool}, {CollisionPoolNode}. {Pool} is used instead of
+ {Stack} because we must have migrate. */
 struct Collision {
 	unsigned no;
 	struct Vec2f v;
 	float t;
 };
-#define POOL_NAME Collision
-#define POOL_TYPE struct Collision
-#include "../templates/Pool.h"
+#define STACK_NAME Collision
+#define STACK_TYPE struct Collision
+#define STACK_MIGRATE
+#include "../templates/Stack.h"
 
 /** Used in {Sprites}. */
 struct Bin {
@@ -177,7 +179,7 @@ static struct Sprites {
 	struct Layer *layer;
 	/* Constantly updating frame time. */
 	float dt_ms;
-	struct CollisionPool *collisions;
+	struct CollisionStack *collisions;
 } *sprites;
 
 
@@ -268,7 +270,7 @@ static void debris_update(struct Debris *const this) {
 /** @implements <Wmd>Action
  @fixme Replace delete with more dramatic death. */
 static void wmd_update(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) /*delay_delete(&this->sprite.data)*/;
+	if(TimerIsTime(this->expires)) sprite_delete(&this->sprite.data);
 }
 /** @implements <Gate>Action */
 static void gate_update(struct Gate *const this) {
@@ -295,12 +297,12 @@ static float debris_get_mass(const struct Debris *const this) {
 /** @implements <Debris>FloatAccessor */
 static float wmd_get_mass(const struct Wmd *const this) {
 	assert(this);
-	return 1.0f;
+	return this->mass;
 }
 /** @implements <Gate>FloatAccessor */
 static float gate_get_mass(const struct Gate *const this) {
 	assert(this);
-	return 1e36f; /* No moving. I don't think this is ever called. */
+	return 1e36f; /* No moving. This should not be called, anyway. */
 }
 
 
@@ -365,7 +367,7 @@ static void bin_migrate(void *const sprites_void,
 static void collision_migrate_sprite(struct Sprite *const this,
 	const struct Migrate *const migrate) {
 	assert(this && migrate);
-	if(this->collision) CollisionPoolMigratePointer(&this->collision, migrate);
+	if(this->collision) CollisionMigratePointer(&this->collision, migrate);
 }
 /** @param sprites_void: We don't need this because there's only one static.
  Should always equal {sprites}.
@@ -389,7 +391,7 @@ void Sprites_(void) {
 		SpriteListClear(&sprites->bins[i].sprites);
 		CoverStack_(&sprites->bins[i].covers);
 	}
-	CollisionPool_(&sprites->collisions);
+	CollisionStack_(&sprites->collisions);
 	Layer_(&sprites->layer);
 	GatePool_(&sprites->gates);
 	WmdPool_(&sprites->wmds);
@@ -426,7 +428,7 @@ int Sprites(void) {
 		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
 		if(!(sprites->gates = GatePool(&bin_migrate, sprites))) { e=GATE;break;}
 		if(!(sprites->layer=Layer(LAYER_SIDE_SIZE,layer_space))){e=LAYER;break;}
-		if(!(sprites->collisions = CollisionPool(&collision_migrate, sprites)))
+		if(!(sprites->collisions = CollisionStack(&collision_migrate, sprites)))
 			{ e = COLLISION; break; }
 	} while(0); switch(e) {
 		case NO: break;
@@ -437,7 +439,7 @@ int Sprites(void) {
 		case GATE: ea = "gates", eb = GatePoolGetError(sprites->gates); break;
 		case LAYER: ea = "layer", eb = "couldn't get layer"; break;
 		case COLLISION: ea = "collision",
-			eb = CollisionPoolGetError(sprites->collisions); break;
+			eb = CollisionStackGetError(sprites->collisions); break;
 	} if(e) {
 		fprintf(stderr, "Sprites %s buffer: %s.\n", ea, eb);
 		Sprites_();
@@ -648,7 +650,7 @@ static void timestep(struct Sprite *const this) {
 		this->x.x = this->x.x + this->v.x * t0 + v1->x * t1;
 		this->x.y = this->x.y + this->v.y * t0 + v1->y * t1;
 		this->v.x = v1->x, this->v.y = v1->y;
-		CollisionPoolRemove(sprites->collisions, this->collision);
+		/* Erase the reference; will be erased all at once in {timestep_bin}. */
 		this->collision = 0;
 	} else {
 		this->x.x += this->v.x * t;
@@ -672,6 +674,8 @@ static void timestep(struct Sprite *const this) {
 static void timestep_bin(const unsigned idx) {
 	assert(sprites);
 	SpriteListForEach(&sprites->bins[idx].sprites, &timestep);
+	/* Collisions are consumed, but not erased; erase them. */
+	CollisionStackClear(sprites->collisions);
 }
 
 /* This is where \see{collide_bin} is located; but lots of helper functions. */
@@ -692,14 +696,11 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 		LayerSetScreenRectangle(sprites->layer, &rect); }
 	/* Dynamics; puts temp values in {cover} for collisions. */
 	LayerForEachScreen(sprites->layer, &extrapolate_bin);
-	/* Collision has to be called after {extrapolate}; (fixme: really?) */
+	/* Collision has to be called after {extrapolate}; it consumes {cover}.
+	 (fixme: really? 3 passes?) */
 	LayerForEachScreen(sprites->layer, &collide_bin);
 	/* Time-step. */
 	LayerForEachScreen(sprites->layer, &timestep_bin);
-	/* Clear temp {cover}. (fixme: no) */
-	{ int i; for(i = 0; i < LAYER_SIZE; i++)
-		CoverStackClear(sprites->bins[i].covers); }
-	CollisionPoolClear(sprites->collisions);
 }
 
 /* fixme: This is bullshit. Have it all in Draw? */

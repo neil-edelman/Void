@@ -74,7 +74,6 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	DrawSetBackground("Dorado.jpeg");
 	/* fixme: set sunlight */
 
-	printf("********Zone: planets!\n");
 	FarsPlanetoid(sz->ois1);
 	FarsPlanetoid(sz->ois2);
 	FarsPlanetoid(sz->ois3);

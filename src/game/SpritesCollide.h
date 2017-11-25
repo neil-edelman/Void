@@ -50,9 +50,9 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 		if(t < col->t) col->t = t;
 	} else {
 		/* New collision. */
-		if(!(col = CollisionPoolNew(sprites->collisions)))
+		if(!(col = CollisionStackNew(sprites->collisions)))
 			{ fprintf(stderr, "add_bounce: %s.\n",
-			CollisionPoolGetError(sprites->collisions)); return; }
+			CollisionStackGetError(sprites->collisions)); return; }
 		col->no  = 1;
 		col->v.x = v.x;
 		col->v.y = v.y;
@@ -153,17 +153,17 @@ static void elastic_bounce_b(struct Sprite *const a, struct Sprite *const b,
 
 /** @implements SpriteCollision */
 static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
-	/*pedantic("wmd_deb: %s -- %s\n", SpriteToString(w), SpriteToString(d));*/
 	/* avoid inifinite destruction loop */
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
 	SpriteRecharge(d, -SpriteGetDamage(w));
 	SpriteDestroy(w);*/
-	char a[12], b[12];
+	/*char a[12], b[12];
 	sprite_to_string(w, &a);
 	sprite_to_string(d, &b);
-	printf("hit %s -- %s.\n", a, b);
-	UNUSED(t);
+	printf("hit %s -- %s.\n", a, b);*/
+	elastic_bounce_a(d, w, t);
+	sprite_delete(w);
 }
 /** @implements SpriteCollision */
 static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
@@ -172,16 +172,16 @@ static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
 
 /** @implements SpriteCollision */
 static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
-	char a[12], b[12];
+	/*char a[12], b[12];
 	sprite_to_string(w, &a);
 	sprite_to_string(s, &b);
-	printf("wmd_shp: %s -- %s\n", a, b);
+	printf("wmd_shp: %s -- %s\n", a, b);*/
 	/* avoid inifinite destruction loop */
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	SpriteRecharge(s, -SpriteGetDamage(w));*/
+	elastic_bounce_a(s, w, t);
 	sprite_delete(w);
-	UNUSED(t);
 }
 /** @implements SpriteCollision */
 static void ship_wmd(struct Sprite *s, struct Sprite *w, const float t) {

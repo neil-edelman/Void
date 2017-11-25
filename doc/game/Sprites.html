@@ -94,6 +94,7 @@ Define abstract <em>Sprite</em>.
 	char name[16];
 	const struct AutoWmdType *wmd;
 	unsigned ms_recharge_wmd;
+	float dist_to_horizon;
 }</pre>
 <p>
 Define <em>ShipPool</em> and <em>ShipPoolNode</em>, a subclass of <em>Sprite</em>.
@@ -170,7 +171,8 @@ processing.
 }</pre>
 <p>
 Collisions between sprites to apply later. This is a pool that sprites can
-use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>.
+use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>. <em>Pool</em> is used instead of
+<em>Stack</em> because we must have migrate.
 </p>
 <dl>
 </dl>
@@ -202,7 +204,7 @@ Used in <em>Sprites</em>.
 	struct Layer *layer;
 	/* Constantly updating frame time. */
 	float dt_ms;
-	struct CollisionPool *collisions;
+	struct CollisionStack *collisions;
 }</pre>
 <p>
 Sprites all together.
@@ -229,7 +231,6 @@ eg collision resolution.
 	SpriteToString to_string;
 	SpriteAction delete, update;
 	SpriteFloatAccessor get_mass;
-	SpriteMaskAccessor get_self_mask, get_others_mask;
 }</pre>
 <p>
 Define <em>SpriteVt</em>.

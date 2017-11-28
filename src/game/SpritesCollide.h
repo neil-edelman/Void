@@ -116,7 +116,7 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 }
 /** This is like {b} has an infinite mass.
  @implements SpriteCollision */
-static void elastic_bounce_a(struct Sprite *const a, struct Sprite *const b,
+static void bounce_a(struct Sprite *const a, struct Sprite *const b,
 	const float t) {
 	/* Interpolate position of collision; delta. */
 	const struct Vec2f u = { a->x.x + a->v.x * t, a->x.y + a->v.y * t },
@@ -126,12 +126,18 @@ static void elastic_bounce_a(struct Sprite *const a, struct Sprite *const b,
 	const float d_mag = sqrtf(d.x * d.x + d.y * d.y);
 	const struct Vec2f d_hat = { (d_mag < epsilon) ? 1.0f : d.x / d_mag,
 	                             (d_mag < epsilon) ? 0.0f : d.y / d_mag };
+	const float av_d = a->v.x * d_hat.x + a->v.y * d_hat.y;
+	const struct Vec2f a_v = {
+		2.0f * av_d * d_hat.x - a->v.x,
+		2.0f * av_d * d_hat.y - a->v.y
+	};
+
 	/* {a}'s velocity, normal, tangent, direction. */
-	const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
+	/*const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
 	const struct Vec2f a_nrm = { a_nrm_s * d_hat.x, a_nrm_s * d_hat.y },
-	                   a_tan = { a->v.x - a_nrm.x,  a->v.y - a_nrm.y };
+	                   a_tan = { a->v.x - a_nrm.x,  a->v.y - a_nrm.y };*/
 	/* {a} bounces off {b}. fixme: Prove this. fixme: It's wrong. */
-	const struct Vec2f a_v = { a_tan.x - a_nrm.x, a_tan.y - a_nrm.y };
+	/*const struct Vec2f a_v = { a_tan.x - a_nrm.x, a_tan.y - a_nrm.y };*/
 	assert(sprites);
 	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
 	 each other. */
@@ -145,9 +151,9 @@ static void elastic_bounce_a(struct Sprite *const a, struct Sprite *const b,
 	add_bounce(a, a_v, t);
 }
 /** @implements SpriteCollision */
-static void elastic_bounce_b(struct Sprite *const a, struct Sprite *const b,
+static void bounce_b(struct Sprite *const a, struct Sprite *const b,
 	const float t) {
-	elastic_bounce_a(b, a, t);
+	bounce_a(b, a, t);
 }
 
 /** @implements SpriteCollision */
@@ -162,7 +168,7 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	sprite_to_string(d, &b);
 	printf("hit %s -- %s.\n", a, b);*/
 	printf("BOOM!\n");
-	elastic_bounce(d, w, t); /* _a <- fixme: {elastic_bounce_a} is wonky. */
+	bounce_a(d, w, t); /* _a <- fixme: {elastic_bounce_a} is wonky. */
 	sprite_delete(w);
 }
 /** @implements SpriteCollision */
@@ -180,7 +186,7 @@ static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	SpriteRecharge(s, -SpriteGetDamage(w));*/
-	elastic_bounce_a(s, w, t);
+	bounce_a(s, w, t);
 	sprite_delete(w);
 }
 /** @implements SpriteCollision */
@@ -230,10 +236,10 @@ static void gate_ship(struct Sprite *g, struct Sprite *s, const float t) {
 /* What sort of collisions the subclasses of Sprites engage in. This is set by
  the sprite class, { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE }. */
 static const SpriteCollision collision_matrix[][4] = {
-	{ &elastic_bounce, &elastic_bounce,   &ship_wmd,   &ship_gate },
-	{ &elastic_bounce, &elastic_bounce,   &debris_wmd, &elastic_bounce_a },
-	{ &wmd_ship,       &wmd_debris,       0,           0 },
-	{ &gate_ship,      &elastic_bounce_b, 0,           0 }
+	{ &elastic_bounce, &elastic_bounce, &ship_wmd,   &ship_gate },
+	{ &elastic_bounce, &elastic_bounce, &debris_wmd, &bounce_a },
+	{ &wmd_ship,       &wmd_debris,     0,           0 },
+	{ &gate_ship,      &bounce_b,       0,           0 }
 };
 
 

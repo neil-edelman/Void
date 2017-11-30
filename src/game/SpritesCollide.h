@@ -72,45 +72,43 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
  @implements SpriteCollision */
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	const float t) {
-	/* Interpolate position of collision; delta. */
-	const struct Vec2f u = { a->x.x + a->v.x * t, a->x.y + a->v.y * t },
-	                   v = { b->x.x + b->v.x * t, b->x.y + b->v.y * t },
-		d = { v.x - u.x, v.y - u.y };
-	/* Normal at point of impact. */
-	const float d_mag = sqrtf(d.x * d.x + d.y * d.y);
-	const struct Vec2f d_hat = { (d_mag < epsilon) ? 1.0f : d.x / d_mag,
-	                             (d_mag < epsilon) ? 0.0f : d.y / d_mag };
-	/* {a}'s velocity, normal, tangent, direction. */
-	const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
-	const struct Vec2f a_nrm = { a_nrm_s * d_hat.x, a_nrm_s * d_hat.y },
-	                   a_tan = { a->v.x - a_nrm.x,  a->v.y - a_nrm.y };
-	/* {b}'s velocity, normal, tangent, direction. */
-	const float b_nrm_s = b->v.x * d_hat.x + b->v.y * d_hat.y;
-	const struct Vec2f b_nrm = { b_nrm_s * d_hat.x, b_nrm_s * d_hat.y },
-	                   b_tan = { b->v.x - b_nrm.x, b->v.y - b_nrm.y };
-	/* Assume all mass is strictly positive. */
-	const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b);
-	const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
-	/* Elastic collision. */
-	const struct Vec2f a_v = {
-		a_tan.x + (a_nrm.x * diff_m + 2 * b_m * b_nrm.x) * invsum_m,
-		a_tan.y + (a_nrm.y * diff_m + 2 * b_m * b_nrm.y) * invsum_m
-	}, b_v = {
-		b_tan.x - (b_nrm.x * diff_m - 2 * a_m * a_nrm.x) * invsum_m,
-		b_tan.y - (b_nrm.y * diff_m - 2 * a_m * a_nrm.y) * invsum_m
-	};
-	assert(sprites);
-	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
-	 each other. Happens all the time. */
-	if(d_mag < a->bounding + b->bounding) {
-		const float push = (a->bounding + b->bounding - d_mag) * 0.55f;
-		/*printf("elastic_bounce: \\pushing sprites %f distance apart\n",
-			push);*/
-		a->x.x -= d_hat.x * push;
-		a->x.y -= d_hat.y * push;
-		b->x.x += d_hat.x * push;
-		b->x.y += d_hat.y * push;
+	struct Vec2f d_hat, a_v, b_v;
+	/* Extrapolate and find the eigenvalue. */
+	{
+		struct Vec2f u, v, d;
+		float d_mag;
+		/* {u} {v} are the positions of {a} {b} extrapolated to impact. */
+		u.x = a->x.x + a->v.x * t, u.y = a->x.y + a->v.y * t;
+		v.x = b->x.x + b->v.x * t, v.y = b->x.y + b->v.y * t;
+		/* {d} difference between; use to set up a unitary frame, {d_hat}. */
+		d.x = v.x - u.x, d.y = v.y - u.y;
+		if((d_mag = sqrtf(d.x * d.x + d.y * d.y)) < epsilon) {
+			d_hat.x = 1.0f, d_hat.y = 0.0f;
+		} else {
+			d_hat.x = d.x / d_mag, d_hat.y = d.y / d_mag;
+		}
 	}
+	/* Elastic collision. */
+	{
+		/* All mass is strictly positive. */
+		const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b);
+		const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
+		/* Transform vectors into eigenvector transformation above. */
+		struct Vec2f a_v_nrm, b_v_nrm;
+		const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
+		const float b_nrm_s = b->v.x * d_hat.x + b->v.y * d_hat.y;
+		a_v_nrm.x = a_nrm_s * d_hat.x, a_v_nrm.y = a_nrm_s * d_hat.y;
+		b_v_nrm.x = b_nrm_s * d_hat.x, b_v_nrm.y = b_nrm_s * d_hat.y;
+		a_v.x = a->v.x - a_v_nrm.x
+			+ (a_v_nrm.x * diff_m + 2 * b_m * b_v_nrm.x) * invsum_m,
+		a_v.y = a->v.y - a_v_nrm.y
+			+ (a_v_nrm.y * diff_m + 2 * b_m * b_v_nrm.y) * invsum_m;
+		b_v.x = b->v.x - b_v_nrm.x
+			- (b_v_nrm.x * diff_m - 2 * a_m * a_v_nrm.x) * invsum_m,
+		b_v.y = b->v.y - b_v_nrm.y
+			- (b_v_nrm.y * diff_m - 2 * a_m * a_v_nrm.y) * invsum_m;
+	}
+	/* Record. */
 	add_bounce(a, a_v, t);
 	add_bounce(b, b_v, t);
 }
@@ -118,36 +116,33 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
  @implements SpriteCollision */
 static void bounce_a(struct Sprite *const a, struct Sprite *const b,
 	const float t) {
-	/* Interpolate position of collision; delta. */
-	const struct Vec2f u = { a->x.x + a->v.x * t, a->x.y + a->v.y * t },
-	                   v = { b->x.x + b->v.x * t, b->x.y + b->v.y * t },
-		d = { v.x - u.x, v.y - u.y };
-	/* Normal at point of impact. */
-	const float d_mag = sqrtf(d.x * d.x + d.y * d.y);
-	const struct Vec2f d_hat = { (d_mag < epsilon) ? 1.0f : d.x / d_mag,
-	                             (d_mag < epsilon) ? 0.0f : d.y / d_mag };
-	const float av_d = a->v.x * d_hat.x + a->v.y * d_hat.y;
-	const struct Vec2f a_v = {
-		2.0f * av_d * d_hat.x - a->v.x,
-		2.0f * av_d * d_hat.y - a->v.y
-	};
-
-	/* {a}'s velocity, normal, tangent, direction. */
-	/*const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
-	const struct Vec2f a_nrm = { a_nrm_s * d_hat.x, a_nrm_s * d_hat.y },
-	                   a_tan = { a->v.x - a_nrm.x,  a->v.y - a_nrm.y };*/
-	/* {a} bounces off {b}. fixme: Prove this. fixme: It's wrong. */
-	/*const struct Vec2f a_v = { a_tan.x - a_nrm.x, a_tan.y - a_nrm.y };*/
-	assert(sprites);
-	/* Inter-penetration; absolutely do not want objects to get stuck orbiting
-	 each other. */
-	if(d_mag < a->bounding + b->bounding) {
-		const float push = (a->bounding + b->bounding - d_mag) * 1.1f;
-		/*printf("elastic_bounce_a: \\pushing sprites %f distance apart\n",
-			push);*/
-		a->x.x += d_hat.x * push;
-		a->x.y += d_hat.y * push;
+	struct Vec2f d_hat, a_v;
+	/* Extrapolate and find the eigenvalue. */
+	{
+		struct Vec2f u, v, d;
+		float d_mag;
+		/* {u} {v} are the positions of {a} {b} extrapolated to impact. */
+		u.x = a->x.x + a->v.x * t, u.y = a->x.y + a->v.y * t;
+		v.x = b->x.x + b->v.x * t, v.y = b->x.y + b->v.y * t;
+		/* {d} difference between; use to set up a unitary frame, {d_hat}. */
+		d.x = v.x - u.x, d.y = v.y - u.y;
+		if((d_mag = sqrtf(d.x * d.x + d.y * d.y)) < epsilon) {
+			d_hat.x = 1.0f, d_hat.y = 0.0f;
+		} else {
+			d_hat.x = d.x / d_mag, d_hat.y = d.y / d_mag;
+		}
 	}
+	/* Bounce {a}. */
+	{
+		/* Transform vectors into eigenvector transformation above. */
+		const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
+		struct Vec2f a_v_nrm;
+		a_v_nrm.x = a_nrm_s * d_hat.x, a_v_nrm.y = a_nrm_s * d_hat.y;
+		/* fixme: Prove. */
+		a_v.x = 2.0f * b->v.x - a_v_nrm.x,
+		a_v.y = 2.0f * b->v.y - a_v_nrm.y;
+	}
+	/* Record. */
 	add_bounce(a, a_v, t);
 }
 /** @implements SpriteCollision */
@@ -168,7 +163,7 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	sprite_to_string(d, &b);
 	printf("hit %s -- %s.\n", a, b);*/
 	printf("BOOM!\n");
-	bounce_a(d, w, t); /* _a <- fixme: {elastic_bounce_a} is wonky. */
+	bounce_a(d, w, t);
 	sprite_delete(w);
 }
 /** @implements SpriteCollision */
@@ -249,31 +244,49 @@ static const SpriteCollision collision_matrix[][4] = {
  Called from \see{collide_boxes}. If we have a collision, calls the functions
  contained in the {collision_matrix}. */
 static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
-	struct Vec2f v, z, dist;
-	float t, v2, vz, z2, dist_2, det;
+	struct Vec2f v, z;
+	float t, v2, vz, z2, disc;
 	const float r = a->bounding + b->bounding;
-	assert(a && b);
-	v.x = a->v.x - b->v.x, v.y = a->v.y - b->v.y;
-	z.x = a->x.x - b->x.x, z.y = a->x.y - b->x.y;
+	v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y; /* Relative velocity. */
+	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y; /* Distance(zero). */
+	/* { vt + z = r -> v^2t^2 + 2vzt + z^2 - r^2 = 0 } is always { >= -r^2 } */
 	v2 = v.x * v.x + v.y * v.y;
 	vz = v.x * z.x + v.y * z.y;
-	/* Time of closest approach. */
-	if(v2 < epsilon) {
-		t = 0.0f;
-	} else {
-		t = -vz / v2;
-		if(     t < 0.0f)           t = 0.0f;
-		else if(t > sprites->dt_ms) t = sprites->dt_ms;
-	}
-	/* Distance(t_min). */
-	dist.x = z.x + v.x * t, dist.y = z.y + v.y * t;
-	dist_2 = dist.x * dist.x + dist.y * dist.y;
-	if(dist_2 >= r * r) return;
-	/* The first root or zero is when the collision happens. */
 	z2 = z.x * z.x + z.y * z.y;
-	det = (vz * vz - v2 * (z2 - r * r));
-	t = (det <= 0.0f) ? 0.0f : (-vz - sqrtf(det)) / v2;
-	if(t < 0.0f) t = 0.0f; /* bounded, dist < r^2; fixme: really want this? */
+	/* The discriminant determines whether a collision occurred. */
+	if((disc = vz * vz - v2 * (z2 - r * r)) < 0.0f) return;
+	/* The first root. */
+	t = (-vz - sqrtf(disc)) / v2;
+	/* Entirely in the future. */
+	if(t >= sprites->dt_ms) return;
+	/* Inter-penetration? */
+	if(t < 0.0f) {
+		/* The other root; entirely in the past? */
+		if((-vz + sqrtf(disc)) / v2 <= 0.0f) return;
+		/* Apply degeneracy pressure. */
+		{
+			const float z_mag = sqrtf(z2);
+			struct Vec2f z_hat;
+			const float push = (r - z_mag) * 0.501f;
+			if(z_mag < epsilon) {
+				z_hat.x = 1.0f, z_hat.y = 0.0f;
+			} else {
+				z_hat.x = z.x / z_mag, z_hat.y = z.y / z_mag;
+			}
+			printf("elastic_bounce: (%.1f, %.1f: %.1f)_0 <- |%.1f| -> "
+				   "(%.1f, %.1f: %.1f)_0 degeneracy pressure pushing sprites "
+				   "%f.\n",
+				   a->x.x, a->x.y, a->bounding, z_mag, b->x.x, b->x.y, b->bounding, push);
+			a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
+			b->x.x += z_hat.x * push, b->x.y += z_hat.y * push;
+			printf("elastic_bounce: now (%.1f, %.1f: %.1f), (%.1f, %.1f: %.1f)"
+				   ".\n", a->x.x, a->x.y, a->bounding, b->x.x, b->x.y, b->bounding);
+		}
+		/* If the math is correct, this will not happen again. */
+		collide_circles(a, b);
+		return;
+	}
+	/* Collision. */
 	assert(collision_matrix[a->vt->class][b->vt->class]);
 	collision_matrix[a->vt->class][b->vt->class](a, b, t);
 }

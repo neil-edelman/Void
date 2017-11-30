@@ -52,48 +52,51 @@ static void add_bounce(struct Circle *const this, const struct Vec2f v,
 	}
 }
 
+/** Finds the eigenvector of the difference between {a} and {b} at {t} into the
+ frame, normalised. */
+static struct Vec2f eigenvector_hat(struct Circle *const a,
+	struct Circle *const b, const float t) {
+	struct Vec2f e_hat, u, v, d;
+	float e_mag;
+	assert(a && b && t >= 0);
+	/* {u} {v} are the positions of {a} {b} extrapolated to impact. */
+	u.x = a->x.x + a->v.x * t, u.y = a->x.y + a->v.y * t;
+	v.x = b->x.x + b->v.x * t, v.y = b->x.y + b->v.y * t;
+	/* {d} difference between; use to set up a unitary frame, {d_hat}. */
+	d.x = v.x - u.x, d.y = v.y - u.y;
+	if((e_mag = sqrtf(d.x * d.x + d.y * d.y)) < epsilon) {
+		e_hat.x = 1.0f, e_hat.y = 0.0f;
+	} else {
+		e_hat.x = d.x / e_mag, e_hat.y = d.y / e_mag;
+	}
+	return e_hat;
+}
+
 /** Elastic collision between circles; called from \see{collision_matrix}. 
  Degeneracy pressure pushes sprites to avoid interpenetration.
  @param t: {ms} after frame that the collision occurs.
  @implements SpriteCollision */
 static void elastic_bounce(struct Circle *const a, struct Circle *const b,
 	const float t) {
-	struct Vec2f d_hat, a_v, b_v;
-	/* Extrapolate and find the eigenvalue. */
-	{
-		struct Vec2f u, v, d;
-		float d_mag;
-		/* {u} {v} are the positions of {a} {b} extrapolated to impact. */
-		u.x = a->x.x + a->v.x * t, u.y = a->x.y + a->v.y * t;
-		v.x = b->x.x + b->v.x * t, v.y = b->x.y + b->v.y * t;
-		/* {d} difference between; use to set up a unitary frame, {d_hat}. */
-		d.x = v.x - u.x, d.y = v.y - u.y;
-		if((d_mag = sqrtf(d.x * d.x + d.y * d.y)) < epsilon) {
-			d_hat.x = 1.0f, d_hat.y = 0.0f;
-		} else {
-			d_hat.x = d.x / d_mag, d_hat.y = d.y / d_mag;
-		}
-	}
+	const struct Vec2f e_hat = eigenvector_hat(a, b, t);
+	struct Vec2f a_v, b_v;
+	/* All mass is strictly positive. */
+	const float a_m = a->m, b_m = b->m;
+	const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
 	/* Elastic collision. */
-	{
-		/* All mass is strictly positive. */
-		const float a_m = a->m, b_m = b->m;
-		const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
-		/* Transform vectors into eigenvector transformation above. */
-		struct Vec2f a_v_nrm, b_v_nrm;
-		const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
-		const float b_nrm_s = b->v.x * d_hat.x + b->v.y * d_hat.y;
-		a_v_nrm.x = a_nrm_s * d_hat.x, a_v_nrm.y = a_nrm_s * d_hat.y;
-		b_v_nrm.x = b_nrm_s * d_hat.x, b_v_nrm.y = b_nrm_s * d_hat.y;
-		a_v.x = a->v.x - a_v_nrm.x
-			+ (a_v_nrm.x * diff_m + 2 * b_m * b_v_nrm.x) * invsum_m,
-		a_v.y = a->v.y - a_v_nrm.y
-			+ (a_v_nrm.y * diff_m + 2 * b_m * b_v_nrm.y) * invsum_m;
-		b_v.x = b->v.x - b_v_nrm.x
-			- (b_v_nrm.x * diff_m - 2 * a_m * a_v_nrm.x) * invsum_m,
-		b_v.y = b->v.y - b_v_nrm.y
-			- (b_v_nrm.y * diff_m - 2 * a_m * a_v_nrm.y) * invsum_m;
-	}
+	struct Vec2f a_v_nrm, b_v_nrm;
+	const float a_nrm_s = a->v.x * e_hat.x + a->v.y * e_hat.y;
+	const float b_nrm_s = b->v.x * e_hat.x + b->v.y * e_hat.y;
+	a_v_nrm.x = a_nrm_s * e_hat.x, a_v_nrm.y = a_nrm_s * e_hat.y;
+	b_v_nrm.x = b_nrm_s * e_hat.x, b_v_nrm.y = b_nrm_s * e_hat.y;
+	a_v.x = a->v.x - a_v_nrm.x
+		+ (a_v_nrm.x * diff_m + 2 * b_m * b_v_nrm.x) * invsum_m,
+	a_v.y = a->v.y - a_v_nrm.y
+		+ (a_v_nrm.y * diff_m + 2 * b_m * b_v_nrm.y) * invsum_m;
+	b_v.x = b->v.x - b_v_nrm.x
+		- (b_v_nrm.x * diff_m - 2 * a_m * a_v_nrm.x) * invsum_m,
+	b_v.y = b->v.y - b_v_nrm.y
+		- (b_v_nrm.y * diff_m - 2 * a_m * a_v_nrm.y) * invsum_m;
 	/* Record. */
 	add_bounce(a, a_v, t);
 	add_bounce(b, b_v, t);
@@ -101,28 +104,14 @@ static void elastic_bounce(struct Circle *const a, struct Circle *const b,
 
 static void bounce_a(struct Circle *const a, struct Circle *const b,
 	const float t) {
-	struct Vec2f d_hat, a_v;
-	/* Extrapolate and find the eigenvalue. */
-	{
-		struct Vec2f u, v, d;
-		float d_mag;
-		/* {u} {v} are the positions of {a} {b} extrapolated to impact. */
-		u.x = a->x.x + a->v.x * t, u.y = a->x.y + a->v.y * t;
-		v.x = b->x.x + b->v.x * t, v.y = b->x.y + b->v.y * t;
-		/* {d} difference between; use to set up a unitary frame, {d_hat}. */
-		d.x = v.x - u.x, d.y = v.y - u.y;
-		if((d_mag = sqrtf(d.x * d.x + d.y * d.y)) < epsilon) {
-			d_hat.x = 1.0f, d_hat.y = 0.0f;
-		} else {
-			d_hat.x = d.x / d_mag, d_hat.y = d.y / d_mag;
-		}
-	}
+	const struct Vec2f e_hat = eigenvector_hat(a, b, t);
+	struct Vec2f a_v;
 	/* Bounce {a}. */
 	{
 		/* Transform vectors into eigenvector transformation above. */
-		const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
+		const float a_nrm_s = a->v.x * e_hat.x + a->v.y * e_hat.y;
 		struct Vec2f a_v_nrm;
-		a_v_nrm.x = a_nrm_s * d_hat.x, a_v_nrm.y = a_nrm_s * d_hat.y;
+		a_v_nrm.x = a_nrm_s * e_hat.x, a_v_nrm.y = a_nrm_s * e_hat.y;
 		/* fixme: Prove. */
 		a_v.x = 2.0f * b->v.x - a_v_nrm.x,
 		a_v.y = 2.0f * b->v.y - a_v_nrm.y;
@@ -199,8 +188,8 @@ static int collision(struct Circle *const a,
 	/* Collision. */
 	*t0_ptr = t;
 	printf("Collision.\n");
-	/*elastic_bounce(a, b, t);*/
-	bounce_a(a, b, t);
+	elastic_bounce(a, b, t);
+	/*bounce_a(a, b, t);*/
 	return 1;
 }
 
@@ -273,6 +262,7 @@ static void test(FILE *data, FILE *gnu) {
 	fprintf(gnu, "set vrange [0:%f]\n", dt_ms);
 	fprintf(gnu, "set xrange [0:%f]\n", scale);
 	fprintf(gnu, "set yrange [0:%f]\n", scale);
+	fprintf(gnu, "set view 5,30\n");
 	/*fprintf(gnu, "p_x(t) = %f + %f*t\n", a.x.x, a.v.x);
 	fprintf(gnu, "p_y(t) = %f + %f*t\n", a.x.y, a.v.y);
 	fprintf(gnu, "q_x(t) = %f + %f*t\n", b.x.x, b.v.x);

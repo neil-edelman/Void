@@ -121,13 +121,11 @@ static void bounce_a(struct Circle *const a, struct Circle *const b,
 	{
 		/* Transform vectors into eigenvector transformation above. */
 		const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
-		const float b_tan_s = b->v.x * d_hat.y - b->v.y * d_hat.x;
 		struct Vec2f a_v_nrm;
 		a_v_nrm.x = a_nrm_s * d_hat.x, a_v_nrm.y = a_nrm_s * d_hat.y;
-		a_v.x = a->v.x - a_v_nrm.x
-			- a->v.x + 2.0f * b->v.x,
-		a_v.y = a->v.y - a_v_nrm.y
-			- a->v.y + 2.0f * b->v.y;
+		/* fixme: Prove. */
+		a_v.x = 2.0f * b->v.x - a_v_nrm.x,
+		a_v.y = 2.0f * b->v.y - a_v_nrm.y;
 	}
 	/* Record. */
 	add_bounce(a, a_v, t);

@@ -59,48 +59,42 @@ static void add_bounce(struct Circle *const this, const struct Vec2f v,
 static void elastic_bounce(struct Circle *const a, struct Circle *const b,
 	const float t) {
 	struct Vec2f d_hat, a_v, b_v;
-	{ /* Get transformation. */
+	/* Extrapolate and find the eigenvalue. */
+	{
 		struct Vec2f u, v, d;
 		float d_mag;
 		/* {u} {v} are the positions of {a} {b} extrapolated to impact. */
 		u.x = a->x.x + a->v.x * t, u.y = a->x.y + a->v.y * t;
 		v.x = b->x.x + b->v.x * t, v.y = b->x.y + b->v.y * t;
-		/* {d} difference between; use to set up a unitary frame {d_hat}. */
+		/* {d} difference between; use to set up a unitary frame, {d_hat}. */
 		d.x = v.x - u.x, d.y = v.y - u.y;
 		if((d_mag = sqrtf(d.x * d.x + d.y * d.y)) < epsilon) {
 			d_hat.x = 1.0f, d_hat.y = 0.0f;
 		} else {
 			d_hat.x = d.x / d_mag, d_hat.y = d.y / d_mag;
 		}
-		/* Inter-penetration; absolutely do not want objects to get stuck
-		 orbiting each other. Happens all the time. */
-		if(d_mag < a->r + b->r) {
-			const float push = (a->r + b->r - d_mag) * 0.55f;
-			/*printf("elastic_bounce: \\pushing sprites %f.\n", push);*/
-			a->x.x -= d_hat.x * push;
-			a->x.y -= d_hat.y * push;
-			b->x.x += d_hat.x * push;
-			b->x.y += d_hat.y * push;
-		}
 	}
+	/* Elastic collision. */
 	{
 		/* All mass is strictly positive. */
 		const float a_m = a->m, b_m = b->m;
 		const float diff_m = a_m - b_m, invsum_m = 1.0f / (a_m + b_m);
-		/* Transform vectors. */
-		struct Vec2f a_v_nrm, a_v_tan, b_v_nrm, b_v_tan;
+		/* Transform vectors into eigenvector transformation above. */
+		struct Vec2f a_v_nrm, b_v_nrm;
 		const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
 		const float b_nrm_s = b->v.x * d_hat.x + b->v.y * d_hat.y;
 		a_v_nrm.x = a_nrm_s * d_hat.x, a_v_nrm.y = a_nrm_s * d_hat.y;
-		a_v_tan.x = a->v.x - a_v_nrm.x,  a_v_tan.y = a->v.y - a_v_nrm.y;
 		b_v_nrm.x = b_nrm_s * d_hat.x, b_v_nrm.y = b_nrm_s * d_hat.y;
-		b_v_tan.x = b->v.x - b_v_nrm.x,  b_v_tan.y = b->v.y - b_v_nrm.y;
-		/* Elastic collision. */
-		a_v.x = a_v_tan.x + (a_v_nrm.x * diff_m + 2 * b_m * b_v_nrm.x)*invsum_m,
-		a_v.y = a_v_tan.y + (a_v_nrm.y * diff_m + 2 * b_m * b_v_nrm.y)*invsum_m;
-		b_v.x = b_v_tan.x - (b_v_nrm.x * diff_m - 2 * a_m * a_v_nrm.x)*invsum_m,
-		b_v.y = b_v_tan.y - (b_v_nrm.y * diff_m - 2 * a_m * a_v_nrm.y)*invsum_m;
+		a_v.x = a->v.x - a_v_nrm.x
+			+ (a_v_nrm.x * diff_m + 2 * b_m * b_v_nrm.x) * invsum_m,
+		a_v.y = a->v.y - a_v_nrm.y
+			+ (a_v_nrm.y * diff_m + 2 * b_m * b_v_nrm.y) * invsum_m;
+		b_v.x = b->v.x - b_v_nrm.x
+			- (b_v_nrm.x * diff_m - 2 * a_m * a_v_nrm.x) * invsum_m,
+		b_v.y = b->v.y - b_v_nrm.y
+			- (b_v_nrm.y * diff_m - 2 * a_m * a_v_nrm.y) * invsum_m;
 	}
+	/* Record. */
 	add_bounce(a, a_v, t);
 	add_bounce(b, b_v, t);
 }
@@ -114,13 +108,15 @@ static void elastic_bounce(struct Circle *const a, struct Circle *const b,
 static int collision(struct Circle *const a,
 	struct Circle *const b, float *d_ptr, float *t_ptr, float *t0_ptr) {
 	struct Vec2f v, z, dist;
-	float t, v2, vz, z2, dist_2, det;
+	float t, v2, vz, z2, dist_2, disc;
 	const float r = a->r + b->r;
-	v.x = a->v.x - b->v.x, v.y = a->v.y - b->v.y;
-	z.x = a->x.x - b->x.x, z.y = a->x.y - b->x.y;
+	v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y; /* Relative velocity. */
+	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y; /* Distance(zero). */
 	v2 = v.x * v.x + v.y * v.y;
 	vz = v.x * z.x + v.y * z.y;
-	/* Time of closest approach. */
+	z2 = z.x * z.x + z.y * z.y;
+	/* Time of closest approach; quadratic derivative,
+	 { vt + z = r -> v^2t^2 + 2vzt + z^2 - r^2 = 0 }. (Not used!) */
 	if(v2 < epsilon) {
 		t = 0.0f;
 	} else {
@@ -129,22 +125,53 @@ static int collision(struct Circle *const a,
 		else if(t > dt_ms) t = dt_ms;
 	}
 	*t_ptr = t;
-	/* distance(t_min) */
+	/* Distance(t_min), (not used!) */
 	dist.x = z.x + v.x * t, dist.y = z.y + v.y * t;
 	dist_2 = dist.x * dist.x + dist.y * dist.y;
 	*d_ptr = sqrtf(dist_2);
-	/* not colliding */
-	if(dist_2 >= r * r) return 0;
-	z2 = z.x * z.x + z.y * z.y;
-	det = (vz * vz - v2 * (z2 - r * r));
-	t = (det <= 0.0f) ? 0.0f : (-vz - sqrtf(det)) / v2;
-	if(t < 0.0f) t = 0.0f; /* bounded, dist < r^2 */
+	/* The discriminant determines whether a collision occurred. */
+	if((disc = vz * vz - v2 * (z2 - r * r)) < 0.0f)
+		return printf("Discriminant %.1f.\n", disc), 0;
+	/* The first root. */
+	t = (-vz - sqrtf(disc)) / v2;
+	printf("Discriminant %.1f; t %.1f.\n", disc, t);
+	/* Entirely in the future. */
+	if(t >= dt_ms) return printf("In the future.\n"), 0;
+	/* Inter-penetration? */
+	if(t < 0.0f) {
+		/* The other root; entirely in the past? */
+		if((-vz + sqrtf(disc)) / v2 <= 0.0f) return printf("In the past.\n"), 0;
+		/* Apply degeneracy pressure. */
+		printf("Applying degeneracy pressure.\n");
+		{
+			const float z_mag = sqrtf(z2);
+			struct Vec2f z_hat;
+			const float push = (r - z_mag) * 0.501f;
+			if(z_mag < epsilon) {
+				z_hat.x = 1.0f, z_hat.y = 0.0f;
+			} else {
+				z_hat.x = z.x / z_mag, z_hat.y = z.y / z_mag;
+			}
+			printf("elastic_bounce: (%.1f, %.1f: %.1f)_0 <- |%.1f| -> "
+				"(%.1f, %.1f: %.1f)_0 degeneracy pressure pushing sprites "
+				"%f.\n",
+				a->x.x, a->x.y, a->r, z_mag, b->x.x, b->x.y, b->r, push);
+			a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
+			b->x.x += z_hat.x * push, b->x.y += z_hat.y * push;
+			printf("elastic_bounce: now (%.1f, %.1f: %.1f), (%.1f, %.1f: %.1f)"
+				".\n", a->x.x, a->x.y, a->r, b->x.x, b->x.y, b->r);
+		}
+		/* If the math is correct, this will not happen again. */
+		return collision(a, b, d_ptr, t_ptr, t0_ptr);
+	}
+	/* Collision. */
 	*t0_ptr = t;
+	printf("Collision.\n");
 	elastic_bounce(a, b, t);
-	return -1;
+	return 1;
 }
 
-static void Collide_filler(struct Circle *const this) {
+static void Circle_filler(struct Circle *const this) {
 	struct Vec2f target;
 	target.x = scale * rand() / (RAND_MAX + 1.0f),
 	target.y = scale * rand() / (RAND_MAX + 1.0f);
@@ -163,8 +190,8 @@ static void test(FILE *data, FILE *gnu) {
 	float d, t, t0 = -1.0f, r;
 	int is_collision;
 
-	Collide_filler(&a);
-	Collide_filler(&b);
+	Circle_filler(&a);
+	Circle_filler(&b);
 
 	is_collision = collision(&a, &b, &d, &t, &t0);
 	r = a.r + b.r;
@@ -227,8 +254,10 @@ static void test(FILE *data, FILE *gnu) {
  @return		Either EXIT_SUCCESS or EXIT_FAILURE. */
 int main(void) {
 	FILE *data, *gnu;
+	const int seed = /*2498*//*2557*/(int)clock();
 
-	srand((int)clock());
+	srand(seed);
+	printf("Seed: %i.\n", seed);
 
 	if(!(data = fopen("Collision.data", "w"))) {
 		perror("Collision.data");

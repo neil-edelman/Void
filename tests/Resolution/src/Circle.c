@@ -99,6 +99,37 @@ static void elastic_bounce(struct Circle *const a, struct Circle *const b,
 	add_bounce(b, b_v, t);
 }
 
+static void bounce_a(struct Circle *const a, struct Circle *const b,
+	const float t) {
+	struct Vec2f d_hat, a_v;
+	/* Extrapolate and find the eigenvalue. */
+	{
+		struct Vec2f u, v, d;
+		float d_mag;
+		/* {u} {v} are the positions of {a} {b} extrapolated to impact. */
+		u.x = a->x.x + a->v.x * t, u.y = a->x.y + a->v.y * t;
+		v.x = b->x.x + b->v.x * t, v.y = b->x.y + b->v.y * t;
+		/* {d} difference between; use to set up a unitary frame, {d_hat}. */
+		d.x = v.x - u.x, d.y = v.y - u.y;
+		if((d_mag = sqrtf(d.x * d.x + d.y * d.y)) < epsilon) {
+			d_hat.x = 1.0f, d_hat.y = 0.0f;
+		} else {
+			d_hat.x = d.x / d_mag, d_hat.y = d.y / d_mag;
+		}
+	}
+	/* Bounce {a}. */
+	{
+		/* Transform vectors into eigenvector transformation above. */
+		struct Vec2f a_v_nrm;
+		const float a_nrm_s = a->v.x * d_hat.x + a->v.y * d_hat.y;
+		a_v_nrm.x = a_nrm_s * d_hat.x, a_v_nrm.y = a_nrm_s * d_hat.y;
+		a_v.x = a->v.x - 2.0f * a_v_nrm.x,
+		a_v.y = a->v.y - 2.0f * a_v_nrm.y;
+	}
+	/* Record. */
+	add_bounce(a, a_v, t);
+}
+
 /** Computes for two {Collide} the closest approach, distance and time, and
  whether they intersect.
  @param d_ptr: Return the distance of closest approach.
@@ -167,7 +198,8 @@ static int collision(struct Circle *const a,
 	/* Collision. */
 	*t0_ptr = t;
 	printf("Collision.\n");
-	elastic_bounce(a, b, t);
+	/*elastic_bounce(a, b, t);*/
+	bounce_a(a, b, t);
 	return 1;
 }
 
@@ -186,8 +218,8 @@ static void Circle_filler(struct Circle *const this) {
 
 static void test(FILE *data, FILE *gnu) {
 	struct Circle a, b;
-	struct Vec2f p, q, x, a_c = { 0, 0 }, b_c = { 0, 0 };
-	float d, t, t0 = -1.0f, r;
+	struct Vec2f p, q, x, a_c = { 0, 0 }, *a_v, b_c = { 0, 0 }, *b_v;
+	float d, t, t0_a = 0.0f, t0_b = 0.0f, t0 = -1.0f, r;
 	int is_collision;
 
 	Circle_filler(&a);
@@ -196,25 +228,35 @@ static void test(FILE *data, FILE *gnu) {
 	is_collision = collision(&a, &b, &d, &t, &t0);
 	r = a.r + b.r;
 
+	a_v = &a.v, b_v = &b.v;
 	for(t = 0.0f; t <= dt_ms && (!is_collision || t <= t0); t += 0.25f) {
-		p.x = a.x.x + a.v.x * t, p.y = a.x.y + a.v.y * t;
-		q.x = b.x.x + b.v.x * t, q.y = b.x.y + b.v.y * t;
+		p.x = a.x.x + a_v->x * t, p.y = a.x.y + a_v->y * t;
+		q.x = b.x.x + b_v->x * t, q.y = b.x.y + b_v->y * t;
 		x.x = q.x - p.x, x.y = q.y - p.y;
 		d   = sqrtf((float)x.x * x.x + x.y * x.y);
 		fprintf(data, "%f\t%f\t%f\t%f\t%f\t%f\n", t, d, p.x, p.y, q.x, q.y);
 	}
-	if(is_collision) {
-		assert(a.collision && b.collision);
+	if(a.collision) {
+		printf("A collides.\n");
 		a_c.x = a.x.x + a.v.x * a.collision->t,
 		a_c.y = a.x.y + a.v.y * a.collision->t;
+		a_v = &a.collision->v;
+		t0_a = a.collision->t;
+	} else {
+		a_c.x = a.x.x, a_c.y = a.x.y;
+	}
+	if(b.collision) {
+		printf("B collides.\n");
 		b_c.x = b.x.x + b.v.x * b.collision->t,
 		b_c.y = b.x.y + b.v.y * b.collision->t;
+		b_v = &b.collision->v;
+		t0_b = b.collision->t;
+	} else {
+		b_c.x = b.x.x, b_c.y = b.x.y;
 	}
 	for( ; t <= dt_ms; t += 0.25f) {
-		p.x = a_c.x + a.collision->v.x * (t - t0),
-		p.y = a_c.y + a.collision->v.y * (t - t0);
-		q.x = b_c.x + b.collision->v.x * (t - t0),
-		q.y = b_c.y + b.collision->v.y * (t - t0);
+		p.x = a_c.x + a_v->x * (t - t0_a), p.y = a_c.y + a_v->y * (t - t0_a);
+		q.x = b_c.x + b_v->x * (t - t0_b), q.y = b_c.y + b_v->y * (t - t0_b);
 		x.x = q.x - p.x, x.y = q.y - p.y;
 		d   = sqrtf((float)x.x * x.x + x.y * x.y);
 		fprintf(data, "%f\t%f\t%f\t%f\t%f\t%f\n", t, d, p.x, p.y, q.x, q.y);

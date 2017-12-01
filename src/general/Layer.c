@@ -101,6 +101,7 @@ static int set_rect_layer(struct Layer *const this,
 		if(bin4.y_max >= this->side_size) bin4.y_max = this->side_size - 1;
 		/* Save the screen rectangle. */
 		rectangle4i_assign(&this->screen, &bin4);
+		/*printf("Far (%d:%d, %d:%d)\n", bin4.x_min, bin4.x_max, bin4.y_min, bin4.y_max);*/
 	} else {
 		const struct Rectangle4i *const screen = &this->screen;
 		/* Clip it to the screen. */

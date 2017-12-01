@@ -78,6 +78,15 @@ static void rectangle4f_assign(struct Rectangle4f *const this,
 	this->y_min = that->y_min;
 	this->y_max = that->y_max;
 }
+/** Scales the rectangle. */
+static void rectangle4f_scale(struct Rectangle4f *const this,
+	const float scale) {
+	assert(this);
+	this->x_min *= scale;
+	this->x_max *= scale;
+	this->y_min *= scale;
+	this->y_max *= scale;
+}
 
 static void orthomath_unused_coda(void);
 static void orthomath_unused(void) {
@@ -88,6 +97,7 @@ static void orthomath_unused(void) {
 	rectangle4f_init(0);
 	rectangle4i_assign(0, 0);
 	rectangle4f_assign(0, 0);
+	rectangle4f_scale(0, 0.0f);
 	orthomath_unused_coda();
 }
 static void orthomath_unused_coda(void) {

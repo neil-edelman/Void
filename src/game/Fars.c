@@ -16,9 +16,10 @@
 #include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "Fars.h"
 
+#define LAYER_FORESHORTENING_F 0.2f
 #define LAYER_SIDE_SIZE (3)
 #define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)
-static const float layer_space = 1024.0f;
+static const float layer_space = 1024.0f / LAYER_FORESHORTENING_F;
 
 /**************** Declare types. **************/
 
@@ -175,6 +176,7 @@ struct Planetoid *FarsPlanetoid(const struct AutoObjectInSpace *const class) {
 		PlanetoidPoolGetError(fars->planetoids)); return 0; }
 	far_filler(&this->far.data, &planetoid_vt, class);
 	this->name = class->name;
+	printf("***%s at (%.1f, %.1f) is in bin %d.\n", this->name, this->far.data.x.x, this->far.data.x.y, this->far.data.bin);
 	return this;
 }
 
@@ -196,6 +198,7 @@ void FarsDraw(void) {
 	struct Rectangle4f rect;
 	if(!fars) return;
 	DrawGetScreen(&rect);
+	rectangle4f_scale(&rect, LAYER_FORESHORTENING_F);
 	/* fixme: add 1024px? */
 	LayerSetScreenRectangle(fars->layer, &rect);
 	LayerForEachScreen(fars->layer, &draw_bin);

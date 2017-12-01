@@ -181,7 +181,7 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	printf("hit %s -- %s.\n", a, b);*/
 	printf("BOOM!\n");
 	inelastic_stick(d, w, t);
-	/*sprite_delete(w); <- fixme */
+	/* sprite_delete(w); <- fixme: why is it crashing? */
 }
 /** @implements SpriteCollision */
 static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
@@ -199,7 +199,7 @@ static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	SpriteRecharge(s, -SpriteGetDamage(w));*/
 	inelastic_stick(s, w, t);
-	/*sprite_delete(w); <- fixme */
+	/* sprite_delete(w); <- fixme */
 }
 /** @implements SpriteCollision */
 static void ship_wmd(struct Sprite *s, struct Sprite *w, const float t) {
@@ -326,8 +326,12 @@ static const struct {
 
 
 
-static void collide_circles_count(struct Sprite *const a,
-	struct Sprite *const b, const unsigned no) {
+/** Checks whether two sprites intersect using inclined cylinders in
+ three-dimensions, where the third dimension is linearly-interpolated time.
+ Called from \see{collide_boxes}. If we have a collision, calls the functions
+ contained in the {collision_matrix}. */
+static void collide_circles(struct Sprite *const a, struct Sprite *const b,
+	const unsigned no) {
 	struct Vec2f v, z;
 	float t, v2, vz, z2, disc;
 	const float r = a->bounding + b->bounding;
@@ -359,20 +363,13 @@ static void collide_circles_count(struct Sprite *const a,
 				printf("Collision loop %s -- %s; breaking.\n", a_str, b_str);
 				return;
 			}
-			collide_circles_count(a, b, no + 1);
+			collide_circles(a, b, no + 1);
 			return;
 		}
 	}
-	/* Collision. */
+	/* Collision. Supposed to be checked earlier in the collision path. */
 	assert(collision_matrix[a->vt->class][b->vt->class].handler);
 	collision_matrix[a->vt->class][b->vt->class].handler(a, b, t);
-}
-/** Checks whether two sprites intersect using inclined cylinders in
- three-dimensions, where the third dimension is linearly-interpolated time.
- Called from \see{collide_boxes}. If we have a collision, calls the functions
- contained in the {collision_matrix}. */
-static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
-	collide_circles_count(a, b, 1);
 }
 
 /** This first applies the most course-grained collision detection in
@@ -383,7 +380,7 @@ static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
 	if(!(a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
 		 b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) return;
-	collide_circles(a, b);
+	collide_circles(a, b, 1);
 }
 
 /** This is the function that's calling everything else. Call after

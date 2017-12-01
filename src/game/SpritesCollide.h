@@ -74,6 +74,7 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	const float t) {
 	struct Vec2f d_hat, a_v, b_v;
+	assert(a && b && t >= 0.0f);
 	/* Extrapolate and find the eigenvalue. */
 	{
 		struct Vec2f u, v, d;
@@ -112,6 +113,21 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	/* Record. */
 	add_bounce(a, a_v, t);
 	add_bounce(b, b_v, t);
+}
+/** Perfectly inelastic.
+ @implements SpriteCollision */
+static void inelastic_stick(struct Sprite *const a,
+	struct Sprite *const b, const float t) {
+	/* All mass is strictly positive. */
+	const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b),
+		invsum_m = 1.0f / (a_m + b_m);
+	const struct Vec2f v = {
+		a_m * a->v.x + b_m * b->v.x * invsum_m,
+		a_m * a->v.y + b_m * b->v.y * invsum_m
+	};
+	assert(a && b && t >= 0.0f);
+	add_bounce(a, v, t);
+	add_bounce(b, v, t);
 }
 /** This is like {b} has an infinite mass.
  @implements SpriteCollision */
@@ -164,8 +180,8 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	sprite_to_string(d, &b);
 	printf("hit %s -- %s.\n", a, b);*/
 	printf("BOOM!\n");
-	bounce_a(d, w, t);
-	sprite_delete(w);
+	inelastic_stick(d, w, t);
+	/*sprite_delete(w); <- fixme */
 }
 /** @implements SpriteCollision */
 static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
@@ -182,8 +198,8 @@ static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	SpriteRecharge(s, -SpriteGetDamage(w));*/
-	bounce_a(s, w, t);
-	sprite_delete(w);
+	inelastic_stick(s, w, t);
+	/*sprite_delete(w); <- fixme */
 }
 /** @implements SpriteCollision */
 static void ship_wmd(struct Sprite *s, struct Sprite *w, const float t) {
@@ -328,18 +344,16 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 	/* The first root. */
 	t = (-vz - sqrtf(disc)) / v2;
 	/* Entirely in the future. */
-	if(t >= sprites->dt_ms) return;
-	if(t < 0.0f) {
+	if(t >= sprites->dt_ms) {
+		return;
+	} else if(t < 0.0f) {
 		SpriteDiAction d;
 		/* The other root; entirely in the past? */
 		if((-vz + sqrtf(disc)) / v2 <= 0.0f) return;
 		/* Inter-penetration. The degeneracy code MUST resolve the
 		 inter-penetration or it will stack-overflow with {collide_circles}. */
-		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy)) {
-			d(a, b);
-			collide_circles(a, b);
-			return;
-		}
+		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy))
+			{ d(a, b); collide_circles(a, b); return; }
 	}
 	/* Collision. */
 	assert(collision_matrix[a->vt->class][b->vt->class].handler);

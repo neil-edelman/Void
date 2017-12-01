@@ -275,7 +275,6 @@ static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
 	struct Vec2f z, z_hat;
 	float z_mag, push;
 	const float r = a->bounding + b->bounding;
-	char a_str[12], b_str[12];
 	assert(a && b);
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
 	z_mag = sqrtf(z.x * z.x + z.y * z.y);
@@ -286,11 +285,7 @@ static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
 	} else {
 		z_hat.x = z.x / z_mag, z_hat.y = z.y / z_mag;
 	}
-	sprite_to_string(a, &a_str);
-	sprite_to_string(b, &b_str);
-	printf("%s (%f, %f) %s (%f, %f)\n", a_str, a->x.x, a->x.y, b_str, b->x.x, b->x.y);
 	a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
-	printf("%s (%f, %f) %s (%f, %f)\n", a_str, a->x.x, a->x.y, b_str, b->x.x, b->x.y);
 }
 /* Apply degeneracy pressure to {a}.
  @implements SpriteDiAction */
@@ -336,9 +331,6 @@ static void collide_circles_count(struct Sprite *const a,
 	struct Vec2f v, z;
 	float t, v2, vz, z2, disc;
 	const float r = a->bounding + b->bounding;
-	if(no > 2) {
-		printf("no %d.\n", no);
-	}
 	v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y; /* Relative velocity. */
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y; /* Distance(zero). */
 	/* { vt + z = r -> v^2t^2 + 2vzt + z^2 - r^2 = 0 } is always { >= -r^2 } */
@@ -356,10 +348,20 @@ static void collide_circles_count(struct Sprite *const a,
 		SpriteDiAction d;
 		/* The other root; entirely in the past? */
 		if((-vz + sqrtf(disc)) / v2 <= 0.0f) return;
-		/* Inter-penetration. The degeneracy code MUST resolve the
-		 inter-penetration or it will stack-overflow with {collide_circles}. */
-		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy))
-			{ d(a, b); collide_circles_count(a, b, no + 1); return; }
+		/* Inter-penetration; the degeneracy code MUST resolve it. */
+		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy)) {
+			char a_str[12], b_str[12];
+			d(a, b);
+			sprite_to_string(a, &a_str), sprite_to_string(b, &b_str);
+			printf("Degeneracy pressure forcing %s (%f, %f) to be separate from"
+				" %s (%f, %f).\n", a_str, a->x.x, a->x.y, b_str, b->x.x,b->x.y);
+			if(no > 1) {
+				printf("Collision loop %s -- %s; breaking.\n", a_str, b_str);
+				return;
+			}
+			collide_circles_count(a, b, no + 1);
+			return;
+		}
 	}
 	/* Collision. */
 	assert(collision_matrix[a->vt->class][b->vt->class].handler);

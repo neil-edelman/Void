@@ -122,8 +122,8 @@ static void inelastic_stick(struct Sprite *const a,
 	const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b),
 		invsum_m = 1.0f / (a_m + b_m);
 	const struct Vec2f v = {
-		a_m * a->v.x + b_m * b->v.x * invsum_m,
-		a_m * a->v.y + b_m * b->v.y * invsum_m
+		(a_m * a->v.x + b_m * b->v.x) * invsum_m,
+		(a_m * a->v.y + b_m * b->v.y) * invsum_m
 	};
 	assert(a && b && t >= 0.0f);
 	add_bounce(a, v, t);
@@ -259,7 +259,7 @@ static void pressure_even(struct Sprite *const a, struct Sprite *const b) {
 	assert(a && b);
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
 	z_mag = sqrtf(z.x * z.x + z.y * z.y);
-	push = (r - z_mag) * 0.501f;
+	push = (r - z_mag) * 0.501f + epsilon;
 	if(z_mag < epsilon) {
 		z_hat.x = 1.0f, z_hat.y = 0.0f;
 	} else {
@@ -275,16 +275,22 @@ static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
 	struct Vec2f z, z_hat;
 	float z_mag, push;
 	const float r = a->bounding + b->bounding;
+	char a_str[12], b_str[12];
 	assert(a && b);
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
 	z_mag = sqrtf(z.x * z.x + z.y * z.y);
-	push = (r - z_mag) * 1.002f;
+	/* fixme: {epsilon} is necessary to avoid infinite recursion; why? */
+	push = (r - z_mag) * 1.002f + epsilon;
 	if(z_mag < epsilon) {
 		z_hat.x = 1.0f, z_hat.y = 0.0f;
 	} else {
 		z_hat.x = z.x / z_mag, z_hat.y = z.y / z_mag;
 	}
+	sprite_to_string(a, &a_str);
+	sprite_to_string(b, &b_str);
+	printf("%s (%f, %f) %s (%f, %f)\n", a_str, a->x.x, a->x.y, b_str, b->x.x, b->x.y);
 	a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
+	printf("%s (%f, %f) %s (%f, %f)\n", a_str, a->x.x, a->x.y, b_str, b->x.x, b->x.y);
 }
 /* Apply degeneracy pressure to {a}.
  @implements SpriteDiAction */
@@ -325,14 +331,14 @@ static const struct {
 
 
 
-/** Checks whether two sprites intersect using inclined cylinders in
- three-dimensions, where the third dimension is linearly-interpolated time.
- Called from \see{collide_boxes}. If we have a collision, calls the functions
- contained in the {collision_matrix}. */
-static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
+static void collide_circles_count(struct Sprite *const a,
+	struct Sprite *const b, const unsigned no) {
 	struct Vec2f v, z;
 	float t, v2, vz, z2, disc;
 	const float r = a->bounding + b->bounding;
+	if(no > 2) {
+		printf("no %d.\n", no);
+	}
 	v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y; /* Relative velocity. */
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y; /* Distance(zero). */
 	/* { vt + z = r -> v^2t^2 + 2vzt + z^2 - r^2 = 0 } is always { >= -r^2 } */
@@ -353,11 +359,18 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 		/* Inter-penetration. The degeneracy code MUST resolve the
 		 inter-penetration or it will stack-overflow with {collide_circles}. */
 		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy))
-			{ d(a, b); collide_circles(a, b); return; }
+			{ d(a, b); collide_circles_count(a, b, no + 1); return; }
 	}
 	/* Collision. */
 	assert(collision_matrix[a->vt->class][b->vt->class].handler);
 	collision_matrix[a->vt->class][b->vt->class].handler(a, b, t);
+}
+/** Checks whether two sprites intersect using inclined cylinders in
+ three-dimensions, where the third dimension is linearly-interpolated time.
+ Called from \see{collide_boxes}. If we have a collision, calls the functions
+ contained in the {collision_matrix}. */
+static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
+	collide_circles_count(a, b, 1);
 }
 
 /** This first applies the most course-grained collision detection in

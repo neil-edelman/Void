@@ -72,6 +72,26 @@ static struct Vec2f eigenvector_hat(struct Circle *const a,
 	return e_hat;
 }
 
+/** Apply degeneracy pressure. */
+static void degeneracy_pressure(struct Circle *const a,
+	struct Circle *const b) {
+	struct Vec2f z, z_hat;
+	float z_mag, push;
+	const float r = a->r + b->r;
+	assert(a && b);
+	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
+	z_mag = sqrtf(z.x * z.x + z.y * z.y);
+	push = (r - z_mag) * 0.501f;
+	if(z_mag < epsilon) {
+		z_hat.x = 1.0f, z_hat.y = 0.0f;
+	} else {
+		z_hat.x = z.x / z_mag, z_hat.y = z.y / z_mag;
+	}
+	printf("Degeneracy pressure pushing circles %.1f apart.\n", push);
+	a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
+	b->x.x += z_hat.x * push, b->x.y += z_hat.y * push;
+}
+
 /** Elastic collision between circles; called from \see{collision_matrix}. 
  Degeneracy pressure pushes sprites to avoid interpenetration.
  @param t: {ms} after frame that the collision occurs.
@@ -107,15 +127,12 @@ static void bounce_a(struct Circle *const a, struct Circle *const b,
 	const struct Vec2f e_hat = eigenvector_hat(a, b, t);
 	struct Vec2f a_v;
 	/* Bounce {a}. */
-	{
-		/* Transform vectors into eigenvector transformation above. */
-		const float a_nrm_s = a->v.x * e_hat.x + a->v.y * e_hat.y;
-		struct Vec2f a_v_nrm;
-		a_v_nrm.x = a_nrm_s * e_hat.x, a_v_nrm.y = a_nrm_s * e_hat.y;
-		/* fixme: Prove. */
-		a_v.x = 2.0f * b->v.x - a_v_nrm.x,
-		a_v.y = 2.0f * b->v.y - a_v_nrm.y;
-	}
+	const float a_nrm_s = a->v.x * e_hat.x + a->v.y * e_hat.y;
+	struct Vec2f a_v_nrm;
+	a_v_nrm.x = a_nrm_s * e_hat.x, a_v_nrm.y = a_nrm_s * e_hat.y;
+	/* fixme: Prove. */
+	a_v.x = 2.0f * b->v.x - a_v_nrm.x,
+	a_v.y = 2.0f * b->v.y - a_v_nrm.y;
 	/* Record. */
 	add_bounce(a, a_v, t);
 }
@@ -127,29 +144,16 @@ static void bounce_a(struct Circle *const a, struct Circle *const b,
  @param t0_ptr: If collision is true, sets this to the intersecting time.
  @return If they collided. */
 static int collision(struct Circle *const a,
-	struct Circle *const b, float *d_ptr, float *t_ptr, float *t0_ptr) {
-	struct Vec2f v, z, dist;
-	float t, v2, vz, z2, dist_2, disc;
+	struct Circle *const b, float *t0_ptr) {
+	struct Vec2f v, z;
+	float t, v2, vz, z2, disc;
 	const float r = a->r + b->r;
 	v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y; /* Relative velocity. */
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y; /* Distance(zero). */
+	/* Quadratic { (vt + z = r)^2 -> v^2t^2 + 2vzt + z^2 - r^2 = 0 }. */
 	v2 = v.x * v.x + v.y * v.y;
 	vz = v.x * z.x + v.y * z.y;
 	z2 = z.x * z.x + z.y * z.y;
-	/* Time of closest approach; quadratic derivative,
-	 { vt + z = r -> v^2t^2 + 2vzt + z^2 - r^2 = 0 }. (Not used!) */
-	if(v2 < epsilon) {
-		t = 0.0f;
-	} else {
-		t = -vz / v2;
-		if(     t < 0.0f)  t = 0.0f;
-		else if(t > dt_ms) t = dt_ms;
-	}
-	*t_ptr = t;
-	/* Distance(t_min), (not used!) */
-	dist.x = z.x + v.x * t, dist.y = z.y + v.y * t;
-	dist_2 = dist.x * dist.x + dist.y * dist.y;
-	*d_ptr = sqrtf(dist_2);
 	/* The discriminant determines whether a collision occurred. */
 	if((disc = vz * vz - v2 * (z2 - r * r)) < 0.0f)
 		return printf("Discriminant %.1f.\n", disc), 0;
@@ -157,37 +161,18 @@ static int collision(struct Circle *const a,
 	t = (-vz - sqrtf(disc)) / v2;
 	printf("Discriminant %.1f; t %.1f.\n", disc, t);
 	/* Entirely in the future. */
-	if(t >= dt_ms) return printf("In the future.\n"), 0;
-	/* Inter-penetration? */
+	if(t >= dt_ms) return printf("In future.\n"), 0;
+	/* In the past. */
 	if(t < 0.0f) {
-		/* The other root; entirely in the past? */
-		if((-vz + sqrtf(disc)) / v2 <= 0.0f) return printf("In the past.\n"), 0;
-		/* Apply degeneracy pressure. */
-		printf("Applying degeneracy pressure.\n");
-		{
-			const float z_mag = sqrtf(z2);
-			struct Vec2f z_hat;
-			const float push = (r - z_mag) * 0.501f;
-			if(z_mag < epsilon) {
-				z_hat.x = 1.0f, z_hat.y = 0.0f;
-			} else {
-				z_hat.x = z.x / z_mag, z_hat.y = z.y / z_mag;
-			}
-			printf("elastic_bounce: (%.1f, %.1f: %.1f)_0 <- |%.1f| -> "
-				"(%.1f, %.1f: %.1f)_0 degeneracy pressure pushing sprites "
-				"%f.\n",
-				a->x.x, a->x.y, a->r, z_mag, b->x.x, b->x.y, b->r, push);
-			a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
-			b->x.x += z_hat.x * push, b->x.y += z_hat.y * push;
-			printf("elastic_bounce: now (%.1f, %.1f: %.1f), (%.1f, %.1f: %.1f)"
-				".\n", a->x.x, a->x.y, a->r, b->x.x, b->x.y, b->r);
-		}
+		/* Entirely in the past. */
+		if((-vz + sqrtf(disc)) / v2 <= 0.0f) return printf("In past.\n"), 0;
+		/* Otherwise, we have a problem. */
+		degeneracy_pressure(a, b);
 		/* If the math is correct, this will not happen again. */
-		return collision(a, b, d_ptr, t_ptr, t0_ptr);
+		return collision(a, b, t0_ptr);
 	}
 	/* Collision. */
 	*t0_ptr = t;
-	printf("Collision.\n");
 	elastic_bounce(a, b, t);
 	/*bounce_a(a, b, t);*/
 	return 1;
@@ -209,13 +194,13 @@ static void Circle_filler(struct Circle *const this) {
 static void test(FILE *data, FILE *gnu) {
 	struct Circle a, b;
 	struct Vec2f p, q, x, a_c = { 0, 0 }, *a_v, b_c = { 0, 0 }, *b_v;
-	float d, t, t0_a = 0.0f, t0_b = 0.0f, t0 = -1.0f, r;
+	float t, d, t0_a = 0.0f, t0_b = 0.0f, t0 = -1.0f, r;
 	int is_collision;
 
 	Circle_filler(&a);
 	Circle_filler(&b);
 
-	is_collision = collision(&a, &b, &d, &t, &t0);
+	is_collision = collision(&a, &b, &t0);
 	r = a.r + b.r;
 
 	a_v = &a.v, b_v = &b.v;
@@ -276,7 +261,7 @@ static void test(FILE *data, FILE *gnu) {
 	fprintf(gnu, "set xrange [0 : %f]\n", dt_ms);
 	fprintf(gnu, "set yrange [-1 : *]\n");
 	/*fprintf(gnu, "set label \"t = %f\" at %f, graph 0.05\n", t, t + 0.01f);*/
-	fprintf(gnu, "set label \"d_{min} = %f\\nt_{min} = %f\\nt_0 = %f\" at graph 0.05, graph 0.10\n", d, t, t0);
+	/*fprintf(gnu, "set label \"d_{min} = %f\\nt_{min} = %f\\nt_0 = %f\" at graph 0.05, graph 0.10\n", d, t, t0);*/
 	fprintf(gnu, "set arrow 1 from graph 0, first %f to graph 1, first %f nohead lc rgb \"blue\" lw 3\n", r, r);
 	fprintf(gnu, "set arrow 2 from first %f, graph 0 to first %f, graph 1 nohead\n", t, t);
 	if(t0 > 0.0f) fprintf(gnu, "set arrow 3 from first %f, graph 0 to first %f, graph 1 nohead\n", t0, t0);
@@ -284,7 +269,7 @@ static void test(FILE *data, FILE *gnu) {
 }
 
 /** Entry point.
- @return		Either EXIT_SUCCESS or EXIT_FAILURE. */
+ @return Either EXIT_SUCCESS or EXIT_FAILURE. */
 int main(void) {
 	FILE *data, *gnu;
 	const int seed = /*2498*//*2557*/(int)clock();

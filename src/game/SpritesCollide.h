@@ -35,6 +35,7 @@
 /** Collision handlers. */
 typedef void (*SpriteCollision)(struct Sprite *const, struct Sprite *const,
 	const float);
+typedef void (*SpriteDiAction)(struct Sprite *const, struct Sprite *const);
 
 /** Add a collision to the sprite; called from collision handlers. */
 static void add_bounce(struct Sprite *const this, const struct Vec2f v,
@@ -63,7 +64,7 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 
 
 
-/* Collisions handlers; can not modify list of {Sprites}! Contained in
+/* Collision handlers; can not modify list of {Sprites}! Contained in
  \see{collision_matrix}. */
 
 /** Elastic collision between circles; called from \see{collision_matrix}. 
@@ -228,13 +229,82 @@ static void gate_ship(struct Sprite *g, struct Sprite *s, const float t) {
 	ship_gate(s, g, t);
 }
 
+
+
+/* Degeneracy handlers come into play on inter-penetration. */
+
+/* Apply degeneracy pressure evenly.
+ @implements SpriteDiAction
+ @fixme This function contains some duplicate code. */
+static void pressure_even(struct Sprite *const a, struct Sprite *const b) {
+	struct Vec2f z, z_hat;
+	float z_mag, push;
+	const float r = a->bounding + b->bounding;
+	assert(a && b);
+	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
+	z_mag = sqrtf(z.x * z.x + z.y * z.y);
+	push = (r - z_mag) * 0.501f;
+	if(z_mag < epsilon) {
+		z_hat.x = 1.0f, z_hat.y = 0.0f;
+	} else {
+		z_hat.x = z.x / z_mag, z_hat.y = z.y / z_mag;
+	}
+	a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
+	b->x.x += z_hat.x * push, b->x.y += z_hat.y * push;
+}
+/* Apply degeneracy pressure to {a}.
+ @implements SpriteDiAction
+ @fixme This function contains some duplicate code. */
+static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
+	struct Vec2f z, z_hat;
+	float z_mag, push;
+	const float r = a->bounding + b->bounding;
+	assert(a && b);
+	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
+	z_mag = sqrtf(z.x * z.x + z.y * z.y);
+	push = (r - z_mag) * 1.002f;
+	if(z_mag < epsilon) {
+		z_hat.x = 1.0f, z_hat.y = 0.0f;
+	} else {
+		z_hat.x = z.x / z_mag, z_hat.y = z.y / z_mag;
+	}
+	a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
+}
+/* Apply degeneracy pressure to {a}.
+ @implements SpriteDiAction */
+static void pressure_b(struct Sprite *const a, struct Sprite *const b) {
+	pressure_a(b, a);
+}
+
+
+
 /* What sort of collisions the subclasses of Sprites engage in. This is set by
  the sprite class, { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE }. */
-static const SpriteCollision collision_matrix[][4] = {
-	{ &elastic_bounce, &elastic_bounce, &ship_wmd,   &ship_gate },
-	{ &elastic_bounce, &elastic_bounce, &debris_wmd, &bounce_a },
-	{ &wmd_ship,       &wmd_debris,     0,           0 },
-	{ &gate_ship,      &bounce_b,       0,           0 }
+static const struct {
+	const SpriteCollision handler;
+	const SpriteDiAction degeneracy;
+} collision_matrix[][4] = {
+	{ /* [ship, *] */
+		{ &elastic_bounce, &pressure_even },
+		{ &elastic_bounce, &pressure_even },
+		{ &ship_wmd,       &pressure_b },
+		{ &ship_gate,      0 }
+	}, { /* [debris, *] */
+		{ &elastic_bounce, &pressure_even },
+		{ &elastic_bounce, &pressure_even },
+		{ &debris_wmd,     &pressure_b },
+		{ &bounce_a,       &pressure_a }
+	}, { /* [wmd, *] */
+		{ &wmd_ship,       &pressure_a },
+		{ &wmd_debris,     &pressure_a },
+		{ 0,               0 },
+		{ 0,               0 }
+	}, { /* [gate, *] */
+		{ &gate_ship,      0 },
+		{ &bounce_b,       &pressure_b },
+		{ 0,               0 },
+		{ 0,               0 }
+	}
 };
 
 
@@ -259,36 +329,21 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 	t = (-vz - sqrtf(disc)) / v2;
 	/* Entirely in the future. */
 	if(t >= sprites->dt_ms) return;
-	/* Inter-penetration? */
 	if(t < 0.0f) {
+		SpriteDiAction d;
 		/* The other root; entirely in the past? */
 		if((-vz + sqrtf(disc)) / v2 <= 0.0f) return;
-		/* Apply degeneracy pressure. */
-		{
-			const float z_mag = sqrtf(z2);
-			struct Vec2f z_hat;
-			const float push = (r - z_mag) * 0.501f;
-			if(z_mag < epsilon) {
-				z_hat.x = 1.0f, z_hat.y = 0.0f;
-			} else {
-				z_hat.x = z.x / z_mag, z_hat.y = z.y / z_mag;
-			}
-			printf("elastic_bounce: (%.1f, %.1f: %.1f)_0 <- |%.1f| -> "
-				   "(%.1f, %.1f: %.1f)_0 degeneracy pressure pushing sprites "
-				   "%f.\n",
-				   a->x.x, a->x.y, a->bounding, z_mag, b->x.x, b->x.y, b->bounding, push);
-			a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
-			b->x.x += z_hat.x * push, b->x.y += z_hat.y * push;
-			printf("elastic_bounce: now (%.1f, %.1f: %.1f), (%.1f, %.1f: %.1f)"
-				   ".\n", a->x.x, a->x.y, a->bounding, b->x.x, b->x.y, b->bounding);
+		/* Inter-penetration. The degeneracy code MUST resolve the
+		 inter-penetration or it will stack-overflow with {collide_circles}. */
+		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy)) {
+			d(a, b);
+			collide_circles(a, b);
+			return;
 		}
-		/* If the math is correct, this will not happen again. */
-		collide_circles(a, b);
-		return;
 	}
 	/* Collision. */
-	assert(collision_matrix[a->vt->class][b->vt->class]);
-	collision_matrix[a->vt->class][b->vt->class](a, b, t);
+	assert(collision_matrix[a->vt->class][b->vt->class].handler);
+	collision_matrix[a->vt->class][b->vt->class].handler(a, b, t);
 }
 
 /** This first applies the most course-grained collision detection in
@@ -324,12 +379,10 @@ static void collide_bin(unsigned bin) {
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
 			a = cover_a->sprite, b = cover_b->sprite;
 			assert(a && b);
-			/* Mostly for weapons that ignore collisions with themselves. */
-			/*if(!(sprite_get_self_mask(a) & sprite_get_others_mask(b))
-				&& !(sprite_get_others_mask(a) & sprite_get_self_mask(b)))
-				continue;*/
-			/* If the sprites have no collision handler thing, don't bother. */
-			if(!collision_matrix[a->vt->class][b->vt->class]) continue;
+			/* If the sprites have no collision handler thing, don't bother.
+			 Mostly for weapons that ignore collisions with themselves. */
+			if(!(collision_matrix[a->vt->class][b->vt->class].handler))
+				continue;
 			/* Pass it to the next LOD. */
 			collide_boxes(a, b);
 		} while(index_b);

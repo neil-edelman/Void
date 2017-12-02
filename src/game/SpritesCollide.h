@@ -390,13 +390,14 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b,
 			return;
 		}
 	}
-	/* The discriminant determines whether a collision occurred. */
-	if((disc = vz * vz - v2 * zr2) < 0.0f) return;
+	/* The relative velocity is zero then there can be no collision except as
+	 above, or the discriminant determines whether a collision occurred. */
+	if(v2 < epsilon || (disc = vz * vz - v2 * zr2) < 0.0f) return;
 	t = (-vz - sqrtf(disc)) / v2;
 	/* Entirely in the future or entirely in the past. */
 	if(t >= sprites->dt_ms || (t < 0.0f && (-vz + sqrtf(disc)) / v2 <= 0.0f))
 		return;
-	/* Collision. Supposed to be checked earlier in the collision path. */
+	/* Assert supposed to be checked earlier in the path. Collision. */
 	assert(collision_matrix[a->vt->class][b->vt->class].handler);
 	collision_matrix[a->vt->class][b->vt->class].handler(a, b, t);
 }

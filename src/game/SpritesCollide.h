@@ -365,7 +365,7 @@ static const struct {
 static void collide_circles(struct Sprite *const a, struct Sprite *const b,
 	const unsigned no) {
 	struct Vec2f v, z;
-	float t, v2, vz, z2, disc;
+	float t, v2, vz, z2, zr2, disc;
 	const float r = a->bounding + b->bounding;
 	v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y; /* Relative velocity. */
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y; /* Distance(zero). */
@@ -373,24 +373,15 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b,
 	v2 = v.x * v.x + v.y * v.y;
 	vz = v.x * z.x + v.y * z.y;
 	z2 = z.x * z.x + z.y * z.y;
-	/* The discriminant determines whether a collision occurred. */
-	if((disc = vz * vz - v2 * (z2 - r * r)) < 0.0f) return;
-	/* The first root. */
-	t = (-vz - sqrtf(disc)) / v2;
-	/* Entirely in the future. */
-	if(t >= sprites->dt_ms) {
-		return;
-	} else if(t < 0.0f) {
+	zr2 = z2 - r * r;
+	/* Inter-penetration; the degeneracy code MUST resolve it. */
+	if(zr2 < 0.0f) {
 		SpriteDiAction d;
-		/* The other root; entirely in the past? */
-		if((-vz + sqrtf(disc)) / v2 <= 0.0f) return;
-		/* Inter-penetration; the degeneracy code MUST resolve it. */
 		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy)) {
 			char a_str[12], b_str[12];
 			d(a, b);
 			sprite_to_string(a, &a_str), sprite_to_string(b, &b_str);
-			printf("Degeneracy pressure forcing %s (%f, %f) to be separate from"
-				" %s (%f, %f).\n", a_str, a->x.x, a->x.y, b_str, b->x.x,b->x.y);
+			printf("Degeneracy pressure between %s and %s.\n", a_str, b_str);
 			if(no > 1) {
 				printf("Collision loop %s -- %s; breaking.\n", a_str, b_str);
 				return;
@@ -399,6 +390,12 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b,
 			return;
 		}
 	}
+	/* The discriminant determines whether a collision occurred. */
+	if((disc = vz * vz - v2 * zr2) < 0.0f) return;
+	t = (-vz - sqrtf(disc)) / v2;
+	/* Entirely in the future or entirely in the past. */
+	if(t >= sprites->dt_ms || (t < 0.0f && (-vz + sqrtf(disc)) / v2 <= 0.0f))
+		return;
 	/* Collision. Supposed to be checked earlier in the collision path. */
 	assert(collision_matrix[a->vt->class][b->vt->class].handler);
 	collision_matrix[a->vt->class][b->vt->class].handler(a, b, t);

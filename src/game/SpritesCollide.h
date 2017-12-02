@@ -249,6 +249,8 @@ static void gate_ship(struct Sprite *g, struct Sprite *s, const float t) {
 
 /* Degeneracy handlers come into play on inter-penetration. */
 
+#if 1 /* <- pressure: Apply along normal. Leads to bouncing. */
+
 /* Apply degeneracy pressure evenly.
  @implements SpriteDiAction
  @fixme This function contains some duplicate code. */
@@ -292,6 +294,36 @@ static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
 static void pressure_b(struct Sprite *const a, struct Sprite *const b) {
 	pressure_a(b, a);
 }
+
+#else /* pressure --><-- random: Doesn't lead to bouncing, but is very
+ confusing to get stuck in. */
+
+/* Resolve randomly degeneracy pressure to {a} and {b}.
+ @implements SpriteDiAction */
+static void pressure_even(struct Sprite *const a, struct Sprite *const b) {
+	const struct Vec2f mid = { (a->x.x+b->x.x) * 0.5f, (a->x.y+b->x.y) * 0.5f };
+	const float r = (a->bounding + b->bounding) * 0.5f + 0.01f;
+	const float theta = random_pm_max(M_PI_F);
+	a->x.x = mid.x - cosf(theta) * r;
+	a->x.y = mid.y - sinf(theta) * r;
+	b->x.x = mid.x + cosf(theta) * r;
+	b->x.y = mid.y + sinf(theta) * r;
+}
+/* Resolve randomly degeneracy pressure to {a}.
+ @implements SpriteDiAction */
+static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
+	const float r = a->bounding + b->bounding + 0.01f;
+	const float theta = random_pm_max(M_PI_F);
+	a->x.x = b->x.x + cosf(theta) * r;
+	a->x.y = b->x.y + sinf(theta) * r;
+}
+/* Resolve randomly degeneracy pressure to {b}.
+ @implements SpriteDiAction */
+static void pressure_b(struct Sprite *const a, struct Sprite *const b) {
+	pressure_a(b, a);
+}
+
+#endif /* random --> */
 
 
 

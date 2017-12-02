@@ -176,7 +176,6 @@ struct Planetoid *FarsPlanetoid(const struct AutoObjectInSpace *const class) {
 		PlanetoidPoolGetError(fars->planetoids)); return 0; }
 	far_filler(&this->far.data, &planetoid_vt, class);
 	this->name = class->name;
-	printf("***%s at (%.1f, %.1f) is in bin %d.\n", this->name, this->far.data.x.x, this->far.data.x.y, this->far.data.bin);
 	return this;
 }
 

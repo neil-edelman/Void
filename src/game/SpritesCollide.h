@@ -261,7 +261,8 @@ static void pressure_even(struct Sprite *const a, struct Sprite *const b) {
 	assert(a && b);
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
 	z_mag = sqrtf(z.x * z.x + z.y * z.y);
-	push = (r - z_mag) * 0.501f + epsilon;
+	push = (r - z_mag) * 0.61f + epsilon;
+	printf("Pushing sprites %f apart.\n", push);
 	if(z_mag < epsilon) {
 		z_hat.x = 1.0f, z_hat.y = 0.0f;
 	} else {
@@ -281,7 +282,8 @@ static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
 	z_mag = sqrtf(z.x * z.x + z.y * z.y);
 	/* fixme: {epsilon} is necessary to avoid infinite recursion; why? */
-	push = (r - z_mag) * 1.002f + epsilon;
+	push = (r - z_mag) * 1.02f + epsilon;
+	printf("Pushing (a) sprite %f apart.\n", push);
 	if(z_mag < epsilon) {
 		z_hat.x = 1.0f, z_hat.y = 0.0f;
 	} else {
@@ -362,11 +364,11 @@ static const struct {
  three-dimensions, where the third dimension is linearly-interpolated time.
  Called from \see{collide_boxes}. If we have a collision, calls the functions
  contained in the {collision_matrix}. */
-static void collide_circles(struct Sprite *const a, struct Sprite *const b,
-	const unsigned no) {
+static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 	struct Vec2f v, z;
 	float t, v2, vz, z2, zr2, disc;
 	const float r = a->bounding + b->bounding;
+	assert(sprites);
 	v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y; /* Relative velocity. */
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y; /* Distance(zero). */
 	/* { vt + z = r -> v^2t^2 + 2vzt + z^2 - r^2 = 0 } is always { >= -r^2 } */
@@ -378,16 +380,22 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b,
 	if(zr2 < 0.0f) {
 		SpriteDiAction d;
 		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy)) {
+			struct Vec2f *spot;
 			char a_str[12], b_str[12];
-			d(a, b);
 			sprite_to_string(a, &a_str), sprite_to_string(b, &b_str);
 			printf("Degeneracy pressure between %s and %s.\n", a_str, b_str);
-			if(no > 1) {
-				printf("Collision loop %s -- %s; breaking.\n", a_str, b_str);
-				return;
-			}
-			collide_circles(a, b, no + 1);
-			return;
+			/* Debug show hair. */
+			spot = InfoStackNew(sprites->info);
+			spot->x = (a->x.x + b->x.x) * 0.5f;
+			spot->y = (a->x.y + b->x.y) * 0.5f;
+			/* Force it. */
+			d(a, b);
+			v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y;
+			z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
+			v2 = v.x * v.x + v.y * v.y;
+			vz = v.x * z.x + v.y * z.y;
+			z2 = z.x * z.x + z.y * z.y;
+			zr2 = z2 - r * r;
 		}
 	}
 	/* The relative velocity is zero then there can be no collision except as
@@ -410,7 +418,7 @@ static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
 	if(!(a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
 		 b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) return;
-	collide_circles(a, b, 1);
+	collide_circles(a, b);
 }
 
 /** This is the function that's calling everything else. Call after

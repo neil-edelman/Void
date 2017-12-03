@@ -131,6 +131,13 @@ struct Cover {
 
 
 
+/** Debug. */
+#define STACK_NAME Info
+#define STACK_TYPE struct Vec2f
+#include "../templates/Stack.h"
+
+
+
 /* * While {SpriteListForEach} is running, we may have to transfer a sprite to
  another bin, or delete a sprite, or whatever; this causes causality problems
  for iteration. We introduce a delay function that is called right after the
@@ -180,6 +187,7 @@ static struct Sprites {
 	/* Constantly updating frame time. */
 	float dt_ms;
 	struct CollisionStack *collisions;
+	struct InfoStack *info; /* Debug. */
 } *sprites;
 
 
@@ -391,6 +399,7 @@ void Sprites_(void) {
 		SpriteListClear(&sprites->bins[i].sprites);
 		CoverStack_(&sprites->bins[i].covers);
 	}
+	InfoStack_(&sprites->info);
 	CollisionStack_(&sprites->collisions);
 	Layer_(&sprites->layer);
 	GatePool_(&sprites->gates);
@@ -403,7 +412,7 @@ void Sprites_(void) {
 /** @return True if the sprite buffers have been set up. */
 int Sprites(void) {
 	unsigned i;
-	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, LAYER, COLLISION } e = NO;
+	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, LAYER, COLLISION, INFO } e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
 	if(!(sprites = malloc(sizeof *sprites)))
@@ -419,6 +428,7 @@ int Sprites(void) {
 	sprites->layer = 0;
 	sprites->dt_ms = 20;
 	sprites->collisions = 0;
+	sprites->info = 0;
 	do {
 		for(i = 0; i < LAYER_SIZE; i++) {
 			if(!(sprites->bins[i].covers = CoverStack())) { e = BINS; break; }
@@ -430,6 +440,7 @@ int Sprites(void) {
 		if(!(sprites->layer=Layer(LAYER_SIDE_SIZE,layer_space))){e=LAYER;break;}
 		if(!(sprites->collisions = CollisionStack(&collision_migrate, sprites)))
 			{ e = COLLISION; break; }
+		if(!(sprites->info = InfoStack())) { e = INFO; break; }
 	} while(0); switch(e) {
 		case NO: break;
 		case BINS: ea = "bins", eb = CoverStackGetError(0); break; /* hack */
@@ -440,6 +451,7 @@ int Sprites(void) {
 		case LAYER: ea = "layer", eb = "couldn't get layer"; break;
 		case COLLISION: ea = "collisions",
 			eb = CollisionStackGetError(sprites->collisions); break;
+		case INFO: ea = "info", eb = InfoStackGetError(sprites->info); break;
 	} if(e) {
 		fprintf(stderr, "Sprites %s buffer: %s.\n", ea, eb);
 		Sprites_();
@@ -687,6 +699,8 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	if(!sprites) return;
 	/* Update with the passed parameter. */
 	sprites->dt_ms = dt_ms;
+	/* Clear info on every frame. */
+	InfoStackClear(sprites->info);
 	/* Centre on the sprite that was passed, if it is available. */
 	if(target) DrawSetCamera((struct Vec2f *)&target->x);
 	/* Foreground drawable sprites are a function of screen position. */
@@ -706,7 +720,7 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 /* fixme: This is bullshit. Have it all in Draw? */
 
 /** Called from \see{draw_bin}.
- @implements <Sprite, ContainsLambertOutput>BiAction */
+ @implements <Sprite>Action */
 static void draw_sprite(struct Sprite *const this) {
 	assert(sprites);
 	DrawDisplayLambert(&this->x, this->image, this->normals);
@@ -724,8 +738,17 @@ void SpritesDraw(void) {
 	LayerForEachScreen(sprites->layer, &draw_bin);
 }
 
-
-
+/* @implements <Vec2f>Action */
+static void draw_info(struct Vec2f *const this) {
+	const struct AutoImage *hair = AutoImageSearch("Hair.png");
+	assert(sprites && hair);
+	DrawDisplayInfo(this, hair);
+}
+/** Use when the Info GPU shader is loaded. */
+void SpritesInfo(void) {
+	if(!sprites) return;
+	InfoStackForEach(sprites->info, &draw_info);
+}
 
 
 

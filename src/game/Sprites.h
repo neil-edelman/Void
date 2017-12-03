@@ -29,7 +29,7 @@ struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 struct Gate *SpritesGate(const struct AutoGate *const class);
 void SpritesUpdate(const int dt_ms, struct Sprite *const target);
 void SpritesDraw(void);
-
+void SpritesInfo(void);
 
 /* fixme: stubs */
 void SpritesPlot(void);

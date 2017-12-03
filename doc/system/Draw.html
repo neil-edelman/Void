@@ -161,6 +161,12 @@ geometry, uploaded into video memory. Fixme: not fully variablised!?
 	<td>const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor</td>
 </tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#DrawDisplayInfo">DrawDisplayInfo</a></td>
+	<td>const struct Vec2f *const x,
+	const struct AutoImage *const tex</td>
+</tr>
 </table>
 
 
@@ -257,6 +263,17 @@ Only used as a callback from <a href = "#display">display</a> while OpenGL is us
 <dl>
 	<dt>implements</dt>
 	<dd>DrawOutput</dd>
+</dl>
+</div>
+
+<div><a name = "DrawDisplayInfo"><!-- --></a>
+<h3>DrawDisplayInfo</h3>
+<pre>void <b>DrawDisplayInfo</b> (const struct Vec2f *const x,
+	const struct AutoImage *const tex)</pre>
+<p>
+Only used as a callback from <a href = "#display">display</a> while OpenGL is using Info.
+</p>
+<dl>
 </dl>
 </div>
 

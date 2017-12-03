@@ -498,9 +498,8 @@ void DrawDisplayFar(const struct Ortho3f *const x,
 	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
 }
 
-/** Only used as a callback from \see{display} while OpenGL is using Sprite.
- @implements SpriteOutput */
-static void display_info(const struct Vec2f *const x,
+/** Only used as a callback from \see{display} while OpenGL is using Info. */
+void DrawDisplayInfo(const struct Vec2f *const x,
 	const struct AutoImage *const tex) {
 	assert(x && tex);
 	if(old_texture != tex->texture) {
@@ -515,7 +514,7 @@ static void display_info(const struct Vec2f *const x,
 
 /** Callback for glutDisplayFunc; this is where all of the drawing happens. */
 static void display(void) {
-	struct Ship *player;
+	/*struct Ship *player;*/
 	int lights;
 	/* for SpriteIterate */
 	/*struct Ortho3f x;
@@ -575,9 +574,9 @@ static void display(void) {
 	SpritesDraw();
 
 	/* Display info on top. */
-	glUseProgram(auto_Info_shader.compiled);
-	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
-	/*SpritesDrawInfo(&display_info);*/
+	/*glUseProgram(auto_Info_shader.compiled);
+	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);*/
+	SpritesInfo();
 
 	/* Reset texture for next frame. */
 	old_texture = 0;

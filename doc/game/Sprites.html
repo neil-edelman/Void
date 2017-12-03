@@ -48,6 +48,9 @@ Public License 3, see copying.txt, or
 Sprites is a polymorphic static structure. Initialise it with <em>Sprites</em> and
 before exiting, when all references have been resolved, <em>Sprites_</em>.
 </p>
+<p>
+Debug.
+</p>
 <dl>
 	<dt>minimum standard</dt>
 	<dd>C89/90</dd>
@@ -205,6 +208,7 @@ Used in <em>Sprites</em>.
 	/* Constantly updating frame time. */
 	float dt_ms;
 	struct CollisionStack *collisions;
+	struct InfoStack *info; /* Debug. */
 }</pre>
 <p>
 Sprites all together.
@@ -344,6 +348,11 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 </tr>
 <tr>
 	<td>void</td>
+	<td><a href = "#SpritesInfo">SpritesInfo</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
 	<td><a href = "#SpritesDrawInfo">SpritesDrawInfo</a></td>
 	<td>InfoOutput draw</td>
 </tr>
@@ -457,6 +466,16 @@ Update each frame.
 <p>
 Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it sets
 <em>sprites.layer</em>. Use when the Lambert GPU shader is loaded.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesInfo"><!-- --></a>
+<h3>SpritesInfo</h3>
+<pre>void <b>SpritesInfo</b> (void)</pre>
+<p>
+Use when the Info GPU shader is loaded.
 </p>
 <dl>
 </dl>

@@ -15,3 +15,5 @@ void DrawDisplayLambert(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor);
 void DrawDisplayFar(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor);
+void DrawDisplayInfo(const struct Vec2f *const x,
+	const struct AutoImage *const tex);

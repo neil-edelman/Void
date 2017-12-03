@@ -574,8 +574,8 @@ static void display(void) {
 	SpritesDraw();
 
 	/* Display info on top. */
-	/*glUseProgram(auto_Info_shader.compiled);
-	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);*/
+	glUseProgram(auto_Info_shader.compiled);
+	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
 	SpritesInfo();
 
 	/* Reset texture for next frame. */

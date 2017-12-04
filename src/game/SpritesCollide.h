@@ -253,7 +253,9 @@ static void gate_ship(struct Sprite *g, struct Sprite *s, const float t) {
 
 /* Apply degeneracy pressure evenly.
  @implements SpriteDiAction
- @fixme This function contains some duplicate code. */
+ @fixme This function contains some duplicate code.
+ @fixme This should be called WAY less! Why is it letting inter-penetration on
+ some sprites? */
 static void pressure_even(struct Sprite *const a, struct Sprite *const b) {
 	struct Vec2f z, z_hat;
 	float z_mag, push;
@@ -261,8 +263,8 @@ static void pressure_even(struct Sprite *const a, struct Sprite *const b) {
 	assert(a && b);
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
 	z_mag = sqrtf(z.x * z.x + z.y * z.y);
-	push = (r - z_mag) * 0.61f + epsilon;
-	printf("Pushing sprites %f apart.\n", push);
+	push = (r - z_mag) * 0.5f + 0.25f; /* Big epsilon. */
+	printf("Sprites (%.1f, %.1f) -> %.1f apart with combined radius of %.1f pushing %.1f.\n", z.x, z.y, z_mag, r, push);
 	if(z_mag < epsilon) {
 		z_hat.x = 1.0f, z_hat.y = 0.0f;
 	} else {
@@ -282,7 +284,7 @@ static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
 	z_mag = sqrtf(z.x * z.x + z.y * z.y);
 	/* fixme: {epsilon} is necessary to avoid infinite recursion; why? */
-	push = (r - z_mag) * 1.02f + epsilon;
+	push = (r - z_mag) + 0.5f; /* Big epsilon. */
 	printf("Pushing (a) sprite %f apart.\n", push);
 	if(z_mag < epsilon) {
 		z_hat.x = 1.0f, z_hat.y = 0.0f;
@@ -399,8 +401,10 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 		}
 	}
 	/* The relative velocity is zero then there can be no collision except as
-	 above, or the discriminant determines whether a collision occurred. */
-	if(v2 < epsilon || (disc = vz * vz - v2 * zr2) < 0.0f) return;
+	 above -- this has a very small epsilon to prevent sprites from going
+	 slowly into @ other, but it's the denominator of the next equation.
+	 Otherwise, the discriminant determines whether a collision occurred. */
+	if(v2 <= 1e-32 || (disc = vz * vz - v2 * zr2) < 0.0f) return;
 	t = (-vz - sqrtf(disc)) / v2;
 	/* Entirely in the future or entirely in the past. */
 	if(t >= sprites->dt_ms || (t < 0.0f && (-vz + sqrtf(disc)) / v2 <= 0.0f))

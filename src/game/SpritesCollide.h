@@ -1,32 +1,32 @@
 /** 2017 Neil Edelman, distributed under the terms of the GNU General
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
-
+ 
  Collision detection and resolution. Part of {Sprites}, but too long; sort of
  hacky. The course grained functions are at the bottom, calling the
  fine-grained and response as it moves to the top.
-
+ 
  This is the calculation in \see{collide_circles},
  \${ 	     u = a.dx
-             v = b.dx
+ v = b.dx
  if(v-u ~= 0) t doesn't matter, parallel-ish
-          p(t) = a0 + ut
-          q(t) = b0 + vt
+ p(t) = a0 + ut
+ q(t) = b0 + vt
  distance(t)   = |q(t) - p(t)|
  distance^2(t) = (q(t) - p(t))^2
-               = ((b0+vt) - (a0+ut))^2
-               = ((b0-a0) + (v-u)t)^2
-               = (v-u)*(v-u)t^2 + 2(b0-a0)*(v-u)t + (b0-a0)*(b0-a0)
-             0 = 2(v-u)*(v-u)t_min + 2(b0-a0)*(v-u)
-         t_min = -(b0-a0)*(v-u)/(v-u)*(v-u)
+ = ((b0+vt) - (a0+ut))^2
+ = ((b0-a0) + (v-u)t)^2
+ = (v-u)*(v-u)t^2 + 2(b0-a0)*(v-u)t + (b0-a0)*(b0-a0)
+ 0 = 2(v-u)*(v-u)t_min + 2(b0-a0)*(v-u)
+ t_min = -(b0-a0)*(v-u)/(v-u)*(v-u)
  this is an optimisation, if t \notin [0,frame] then pick the closest; if
  distance^2(t_min) < r^2 then we have a collision, which happened at t0,
-           r^2 = (v-u)*(v-u)t0^2 + 2(b0-a0)*(v-u)t0 + (b0-a0)*(b0-a0)
-            t0 = [-2(b0-a0)*(v-u) - \sqrt((2(b0-a0)*(v-u))^2
-                   - 4((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / 2(v-u)*(v-u)
-            t0 = [-(b0-a0)*(v-u) - \sqrt(((b0-a0)*(v-u))^2
-                   - ((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / (v-u)*(v-u) }
-
+ r^2 = (v-u)*(v-u)t0^2 + 2(b0-a0)*(v-u)t0 + (b0-a0)*(b0-a0)
+ t0 = [-2(b0-a0)*(v-u) - \sqrt((2(b0-a0)*(v-u))^2
+ - 4((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / 2(v-u)*(v-u)
+ t0 = [-(b0-a0)*(v-u) - \sqrt(((b0-a0)*(v-u))^2
+ - ((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / (v-u)*(v-u) }
+ 
  @title		SpritesCollide
  @author	Neil
  @std		C89/90
@@ -34,13 +34,13 @@
 
 /** Collision handlers. */
 typedef void (*SpriteCollision)(struct Sprite *const, struct Sprite *const,
-	const float);
+								const float);
 /** Unsticking handlers. */
 typedef void (*SpriteDiAction)(struct Sprite *const, struct Sprite *const);
 
 /** Add a collision to the sprite; called from collision handlers. */
 static void add_bounce(struct Sprite *const this, const struct Vec2f v,
-	const float t) {
+					   const float t) {
 	struct Collision *col;
 	assert(sprites && this);
 	if((col = this->collision)) {
@@ -53,8 +53,8 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	} else {
 		/* New collision. */
 		if(!(col = CollisionStackNew(sprites->collisions)))
-			{ fprintf(stderr, "add_bounce: %s.\n",
-			CollisionStackGetError(sprites->collisions)); return; }
+		{ fprintf(stderr, "add_bounce: %s.\n",
+				  CollisionStackGetError(sprites->collisions)); return; }
 		col->no  = 1;
 		col->v.x = v.x;
 		col->v.y = v.y;
@@ -73,7 +73,7 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
  @param t: {ms} after frame that the collision occurs.
  @implements SpriteCollision */
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
-	const float t) {
+						   const float t) {
 	struct Vec2f d_hat, a_v, b_v;
 	assert(a && b && t >= 0.0f);
 	/* Extrapolate and find the eigenvalue. */
@@ -103,13 +103,13 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 		a_v_nrm.x = a_nrm_s * d_hat.x, a_v_nrm.y = a_nrm_s * d_hat.y;
 		b_v_nrm.x = b_nrm_s * d_hat.x, b_v_nrm.y = b_nrm_s * d_hat.y;
 		a_v.x = a->v.x - a_v_nrm.x
-			+ (a_v_nrm.x * diff_m + 2 * b_m * b_v_nrm.x) * invsum_m,
+		+ (a_v_nrm.x * diff_m + 2 * b_m * b_v_nrm.x) * invsum_m,
 		a_v.y = a->v.y - a_v_nrm.y
-			+ (a_v_nrm.y * diff_m + 2 * b_m * b_v_nrm.y) * invsum_m;
+		+ (a_v_nrm.y * diff_m + 2 * b_m * b_v_nrm.y) * invsum_m;
 		b_v.x = b->v.x - b_v_nrm.x
-			- (b_v_nrm.x * diff_m - 2 * a_m * a_v_nrm.x) * invsum_m,
+		- (b_v_nrm.x * diff_m - 2 * a_m * a_v_nrm.x) * invsum_m,
 		b_v.y = b->v.y - b_v_nrm.y
-			- (b_v_nrm.y * diff_m - 2 * a_m * a_v_nrm.y) * invsum_m;
+		- (b_v_nrm.y * diff_m - 2 * a_m * a_v_nrm.y) * invsum_m;
 	}
 	/* Record. */
 	add_bounce(a, a_v, t);
@@ -118,10 +118,10 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 /** Perfectly inelastic.
  @implements SpriteCollision */
 static void inelastic_stick(struct Sprite *const a,
-	struct Sprite *const b, const float t) {
+							struct Sprite *const b, const float t) {
 	/* All mass is strictly positive. */
 	const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b),
-		invsum_m = 1.0f / (a_m + b_m);
+	invsum_m = 1.0f / (a_m + b_m);
 	const struct Vec2f v = {
 		(a_m * a->v.x + b_m * b->v.x) * invsum_m,
 		(a_m * a->v.y + b_m * b->v.y) * invsum_m
@@ -133,7 +133,7 @@ static void inelastic_stick(struct Sprite *const a,
 /** This is like {b} has an infinite mass.
  @implements SpriteCollision */
 static void bounce_a(struct Sprite *const a, struct Sprite *const b,
-	const float t) {
+					 const float t) {
 	struct Vec2f d_hat, a_v;
 	/* Extrapolate and find the eigenvalue. */
 	{
@@ -165,7 +165,7 @@ static void bounce_a(struct Sprite *const a, struct Sprite *const b,
 }
 /** @implements SpriteCollision */
 static void bounce_b(struct Sprite *const a, struct Sprite *const b,
-	const float t) {
+					 const float t) {
 	bounce_a(b, a, t);
 }
 
@@ -173,13 +173,13 @@ static void bounce_b(struct Sprite *const a, struct Sprite *const b,
 static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	/* avoid inifinite destruction loop */
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
-	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
-	SpriteRecharge(d, -SpriteGetDamage(w));
-	SpriteDestroy(w);*/
+	 push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
+	 SpriteRecharge(d, -SpriteGetDamage(w));
+	 SpriteDestroy(w);*/
 	/*char a[12], b[12];
-	sprite_to_string(w, &a);
-	sprite_to_string(d, &b);
-	printf("hit %s -- %s.\n", a, b);*/
+	 sprite_to_string(w, &a);
+	 sprite_to_string(d, &b);
+	 printf("hit %s -- %s.\n", a, b);*/
 	printf("BOOM!\n");
 	inelastic_stick(d, w, t);
 	/* sprite_delete(w); <- fixme: why is it crashing? */
@@ -192,13 +192,13 @@ static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
 /** @implements SpriteCollision */
 static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
 	/*char a[12], b[12];
-	sprite_to_string(w, &a);
-	sprite_to_string(s, &b);
-	printf("wmd_shp: %s -- %s\n", a, b);*/
+	 sprite_to_string(w, &a);
+	 sprite_to_string(s, &b);
+	 printf("wmd_shp: %s -- %s\n", a, b);*/
 	/* avoid inifinite destruction loop */
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
-	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
-	SpriteRecharge(s, -SpriteGetDamage(w));*/
+	 push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
+	 SpriteRecharge(s, -SpriteGetDamage(w));*/
 	inelastic_stick(s, w, t);
 	/* sprite_delete(w); <- fixme */
 }
@@ -301,7 +301,7 @@ static void pressure_b(struct Sprite *const a, struct Sprite *const b) {
 }
 
 #else /* pressure --><-- random: Doesn't lead to bouncing, but is very
- confusing to get stuck in. */
+confusing to get stuck in. */
 
 /* Resolve randomly degeneracy pressure to {a} and {b}.
  @implements SpriteDiAction */
@@ -435,7 +435,7 @@ static void collide_bin(unsigned bin) {
 	struct Sprite *a, *b;
 	size_t index_b;
 	assert(sprites && bin < LAYER_SIZE);
-
+	
 	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
 	/* This is {O({covers}^2)/2} within the bin. {a} is poped . . . */
 	while((cover_a = CoverStackPop(cover))) {

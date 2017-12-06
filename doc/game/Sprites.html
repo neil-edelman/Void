@@ -154,6 +154,7 @@ Define <em>GatePool</em> and <em>GatePoolNode</em>, a subclass of <em>Sprite</em
 <pre><b>struct Cover</b> {
 	struct Sprite *sprite;
 	int is_corner;
+	int is_deleted;
 }</pre>
 <p>
 Define a temporary reference to sprites for collision-detection; these will
@@ -235,6 +236,7 @@ eg collision resolution.
 	SpriteToString to_string;
 	SpriteAction delete, update;
 	SpriteFloatAccessor get_mass;
+	SpritePredicate is_valid;
 }</pre>
 <p>
 Define <em>SpriteVt</em>.

@@ -35,6 +35,7 @@
 /** Collision handlers. */
 typedef void (*SpriteCollision)(struct Sprite *const, struct Sprite *const,
 	const float);
+/** Unsticking handlers. */
 typedef void (*SpriteDiAction)(struct Sprite *const, struct Sprite *const);
 
 /** Add a collision to the sprite; called from collision handlers. */
@@ -426,7 +427,8 @@ static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 }
 
 /** This is the function that's calling everything else. Call after
- {extrapolate}; needs and consumes {covers}. */
+ {extrapolate}; needs and consumes {covers}. This is {n^2} inside of the
+ {bin}. */
 static void collide_bin(unsigned bin) {
 	struct CoverStack *const cover = sprites->bins[bin].covers;
 	struct Cover *cover_a, *cover_b;

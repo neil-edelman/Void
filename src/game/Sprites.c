@@ -302,7 +302,7 @@ static float debris_get_mass(const struct Debris *const this) {
 	assert(this && this->mass >= minimum_mass);
 	return this->mass;
 }
-/** @implements <Debris>FloatAccessor */
+/** @implements <Wmd>FloatAccessor */
 static float wmd_get_mass(const struct Wmd *const this) {
 	assert(this);
 	return this->mass;

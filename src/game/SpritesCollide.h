@@ -64,8 +64,9 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 
 
 
-/* Collision handlers; can not modify list of {Sprites}! Contained in
- \see{collision_matrix}. */
+/* Collision handlers; --can not modify list of {Sprites}!-- Relaxed a bit!
+ However, must add sprites before deleting them because {sprite_is_valid} might
+ get confused if you delete then add. Contained in \see{collision_matrix}. */
 
 /** Elastic collision between circles; called from \see{collision_matrix}. 
  Degeneracy pressure pushes sprites to avoid interpenetration.
@@ -181,7 +182,7 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	printf("hit %s -- %s.\n", a, b);*/
 	printf("BOOM!\n");
 	inelastic_stick(d, w, t);
-	/* sprite_delete(w); <- fixme: why is it crashing? */
+	sprite_delete(w); /*<- fixme: why is it crashing? it's collide_bin? */
 }
 /** @implements SpriteCollision */
 static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
@@ -199,7 +200,7 @@ static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	SpriteRecharge(s, -SpriteGetDamage(w));*/
 	inelastic_stick(s, w, t);
-	/* sprite_delete(w); <- fixme */
+	sprite_delete(w); /*<- fixme */
 }
 /** @implements SpriteCollision */
 static void ship_wmd(struct Sprite *s, struct Sprite *w, const float t) {
@@ -234,6 +235,7 @@ static void ship_gate(struct Sprite *s, struct Sprite *g, const float t) {
 			/* disappear */
 			/* fixme: test! */
 		}
+		/* dist = 0? return? */
 #endif
 	}/* else*/
 	/* fixme: unreliable */
@@ -426,7 +428,8 @@ static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 }
 
 /** This is the function that's calling everything else. Call after
- {extrapolate}; needs and consumes {covers}. */
+ {extrapolate}; needs and consumes {covers}. This is {n^2} inside of the
+ {bin}. */
 static void collide_bin(unsigned bin) {
 	struct CoverStack *const cover = sprites->bins[bin].covers;
 	struct Cover *cover_a, *cover_b;
@@ -443,8 +446,9 @@ static void collide_bin(unsigned bin) {
 			index_b--;
 			cover_b = CoverStackGetElement(cover, index_b);
 			assert(cover_a && cover_b);
-			/* Another {bin} takes care of it? */
-			if(!cover_a->is_corner && !cover_b->is_corner) continue;
+			/* Another {bin} takes care of it or deleted on this frame. */
+			if((!cover_a->is_corner && !cover_b->is_corner)
+				|| cover_b->is_deleted) continue;
 			a = cover_a->sprite, b = cover_b->sprite;
 			assert(a && b);
 			/* If the sprites have no collision handler thing, don't bother.
@@ -453,6 +457,9 @@ static void collide_bin(unsigned bin) {
 				continue;
 			/* Pass it to the next LOD. */
 			collide_boxes(a, b);
+			/* Have them check for deleted sprites. */
+			if(!sprite_is_valid(b)) cover_b->is_deleted = 1;
+			if(!sprite_is_valid(a)) break;
 		} while(index_b);
 	}
 }

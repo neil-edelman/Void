@@ -32,11 +32,15 @@
  @std		C89/90
  @version	2017-10 Broke off from Sprites. */
 
+/** This is a private bitvector; changing it will affect the operation. */
+enum Deleted { DELETED_NEITHER, DELETED_A, DELETED_B, DELETED_BOTH };
 /** Collision handlers. */
-typedef void (*SpriteCollision)(struct Sprite *const, struct Sprite *const,
-	const float);
+typedef enum Deleted (*SpriteCollision)(struct Sprite *const,
+	struct Sprite *const, const float);
 /** Unsticking handlers. */
 typedef void (*SpriteDiAction)(struct Sprite *const, struct Sprite *const);
+
+/* Sub-helper fuction called by helper function. */
 
 /** Add a collision to the sprite; called from collision handlers. */
 static void add_bounce(struct Sprite *const this, const struct Vec2f v,
@@ -63,16 +67,10 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	}
 }
 
+/* Helper functions called the things in {collision_matrix}. */
 
-
-/* Collision handlers; --can not modify list of {Sprites}!-- Relaxed a bit!
- However, must add sprites before deleting them because {sprite_is_valid} might
- get confused if you delete then add. Contained in \see{collision_matrix}. */
-
-/** Elastic collision between circles; called from \see{collision_matrix}. 
- Degeneracy pressure pushes sprites to avoid interpenetration.
- @param t: {ms} after frame that the collision occurs.
- @implements SpriteCollision */
+/** Elastic collision between circles.
+ @param t: {ms} after frame that the collision occurs. */
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	const float t) {
 	struct Vec2f d_hat, a_v, b_v;
@@ -116,8 +114,7 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	add_bounce(a, a_v, t);
 	add_bounce(b, b_v, t);
 }
-/** Perfectly inelastic.
- @implements SpriteCollision */
+/** Perfectly inelastic. */
 static void inelastic_stick(struct Sprite *const a,
 	struct Sprite *const b, const float t) {
 	/* All mass is strictly positive. */
@@ -131,8 +128,7 @@ static void inelastic_stick(struct Sprite *const a,
 	add_bounce(a, v, t);
 	add_bounce(b, v, t);
 }
-/** This is like {b} has an infinite mass.
- @implements SpriteCollision */
+/** This is like {b} has an infinite mass. */
 static void bounce_a(struct Sprite *const a, struct Sprite *const b,
 	const float t) {
 	struct Vec2f d_hat, a_v;
@@ -164,14 +160,26 @@ static void bounce_a(struct Sprite *const a, struct Sprite *const b,
 	/* Record. */
 	add_bounce(a, a_v, t);
 }
-/** @implements SpriteCollision */
-static void bounce_b(struct Sprite *const a, struct Sprite *const b,
-	const float t) {
-	bounce_a(b, a, t);
-}
+
+
+
+/* The things in {collision_matrix}. */
 
 /** @implements SpriteCollision */
-static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
+static enum Deleted d_bounce_a(struct Sprite *const a, struct Sprite *const b,
+	const float t) {
+	bounce_a(a, b, t);
+	return DELETED_NEITHER;
+}
+/** @implements SpriteCollision */
+static enum Deleted d_bounce_b(struct Sprite *const a, struct Sprite *const b,
+	const float t) {
+	bounce_a(b, a, t);
+	return DELETED_NEITHER;
+}
+/** @implements SpriteCollision */
+static enum Deleted wmd_debris(struct Sprite *w, struct Sprite *d,
+	const float t) {
 	/* avoid inifinite destruction loop */
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
 	push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
@@ -183,7 +191,8 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	printf("hit %s -- %s.\n", a, b);*/
 	printf("BOOM!\n");
 	inelastic_stick(d, w, t);
-	sprite_delete(w); /*<- fixme: why is it crashing? it's collide_bin? */
+	sprite_delete(w);
+	return DELETED_A;
 }
 /** @implements SpriteCollision */
 static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
@@ -336,32 +345,30 @@ static void pressure_b(struct Sprite *const a, struct Sprite *const b) {
 
 /* What sort of collisions the subclasses of Sprites engage in. This is set by
  the sprite class, { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE }. */
-static const struct CollisionMatrix {
+static const struct {
 	const SpriteCollision handler;
 	const SpriteDiAction degeneracy;
-	/* This is a private bitvector; changing it will affect the operation. */
-	enum Deleted { DELETED_NEITHER, DELETED_A, DELETED_B, DELETED_BOTH }deleted;
 } collision_matrix[][4] = {
 	{ /* [ship, *] */
-		{ &elastic_bounce, &pressure_even, DELETED_NEITHER },
-		{ &elastic_bounce, &pressure_even, DELETED_NEITHER },
-		{ &ship_wmd,       &pressure_b,    DELETED_B },
-		{ &ship_gate,      0,              DELETED_NEITHER }
+		{ &elastic_bounce, &pressure_even },
+		{ &elastic_bounce, &pressure_even },
+		{ &ship_wmd,       &pressure_b },
+		{ &ship_gate,      0 }
 	}, { /* [debris, *] */
-		{ &elastic_bounce, &pressure_even, DELETED_NEITHER },
-		{ &elastic_bounce, &pressure_even, DELETED_NEITHER },
-		{ &debris_wmd,     &pressure_b,    DELETED_B },
-		{ &bounce_a,       &pressure_a,    DELETED_NEITHER }
+		{ &elastic_bounce, &pressure_even },
+		{ &elastic_bounce, &pressure_even },
+		{ &debris_wmd,     &pressure_b },
+		{ &bounce_a,       &pressure_a }
 	}, { /* [wmd, *] */
-		{ &wmd_ship,       &pressure_a,    DELETED_A },
-		{ &wmd_debris,     &pressure_a,    DELETED_A },
-		{ 0,               0,              DELETED_NEITHER },
-		{ 0,               0,              DELETED_NEITHER }
+		{ &wmd_ship,       &pressure_a },
+		{ &wmd_debris,     &pressure_a },
+		{ 0,               0 },
+		{ 0,               0 }
 	}, { /* [gate, *] */
-		{ &gate_ship,      0,              DELETED_NEITHER },
-		{ &bounce_b,       &pressure_b,    DELETED_NEITHER },
-		{ 0,               0,              DELETED_NEITHER },
-		{ 0,               0,              DELETED_NEITHER }
+		{ &gate_ship,      0 },
+		{ &bounce_b,       &pressure_b },
+		{ 0,               0 },
+		{ 0,               0 }
 	}
 };
 
@@ -436,7 +443,6 @@ static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 static void collide_bin(unsigned bin) {
 	struct CoverStack *const cover = sprites->bins[bin].covers;
 	struct Cover *cover_a, *cover_b;
-	const struct CollisionMatrix *matrix;
 	struct Sprite *a, *b;
 	size_t index_b;
 	assert(sprites && bin < LAYER_SIZE);
@@ -451,21 +457,19 @@ static void collide_bin(unsigned bin) {
 			cover_b = CoverStackGetElement(cover, index_b);
 			assert(cover_a && cover_b);
 			/* Another {bin} takes care of it or deleted on this frame. */
-			if(cover_b->is_deleted
-				|| (!cover_a->is_corner && !cover_b->is_corner)) continue;
+			if((!cover_a->is_corner && !cover_b->is_corner)
+				|| cover_b->is_deleted) continue;
 			a = cover_a->sprite, b = cover_b->sprite;
 			assert(a && b);
-			matrix = &collision_matrix[a->vt->class][b->vt->class];
 			/* If the sprites have no collision handler thing, don't bother.
 			 Mostly for weapons that ignore collisions with themselves. */
-			if(!matrix->handler) continue;
+			if(!(collision_matrix[a->vt->class][b->vt->class].handler))
+				continue;
 			/* Pass it to the next LOD. */
 			collide_boxes(a, b);
-			/* Deal with deletions. */
-			if(!matrix->deleted) continue;
 			/* Have them check for deleted sprites. */
-			if(matrix->deleted & DELETED_B) cover_b->is_deleted = 1;
-			if(matrix->deleted & DELETED_A) break;
+			if(!sprite_is_valid(b)) cover_b->is_deleted = 1;
+			if(!sprite_is_valid(a)) break;
 		} while(index_b);
 	}
 }

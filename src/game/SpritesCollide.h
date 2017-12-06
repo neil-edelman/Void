@@ -166,6 +166,12 @@ static void bounce_a(struct Sprite *const a, struct Sprite *const b,
 /* The things in {collision_matrix}. */
 
 /** @implements SpriteCollision */
+static enum Deleted d_eb(struct Sprite *const a, struct Sprite *const b,
+	const float t) {
+	elastic_bounce(a, b, t);
+	return DELETED_NEITHER;
+}
+/** @implements SpriteCollision */
 static enum Deleted d_bounce_a(struct Sprite *const a, struct Sprite *const b,
 	const float t) {
 	bounce_a(a, b, t);
@@ -195,12 +201,14 @@ static enum Deleted wmd_debris(struct Sprite *w, struct Sprite *d,
 	return DELETED_A;
 }
 /** @implements SpriteCollision */
-static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
+static enum Deleted debris_wmd(struct Sprite *d, struct Sprite *w,
+	const float t) {
 	wmd_debris(w, d, t);
+	return DELETED_B;
 }
-
 /** @implements SpriteCollision */
-static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
+static enum Deleted wmd_ship(struct Sprite *w, struct Sprite *s,
+	const float t) {
 	/*char a[12], b[12];
 	sprite_to_string(w, &a);
 	sprite_to_string(s, &b);
@@ -210,15 +218,19 @@ static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
 	push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	SpriteRecharge(s, -SpriteGetDamage(w));*/
 	inelastic_stick(s, w, t);
-	sprite_delete(w); /*<- fixme */
+	sprite_delete(w);
+	return DELETED_A;
 }
 /** @implements SpriteCollision */
-static void ship_wmd(struct Sprite *s, struct Sprite *w, const float t) {
+static enum Deleted ship_wmd(struct Sprite *s, struct Sprite *w,
+	const float t) {
 	wmd_ship(w, s, t);
+	return DELETED_B;
 }
 
 /** @implements SpriteCollision */
-static void ship_gate(struct Sprite *s, struct Sprite *g, const float t) {
+static enum Deleted ship_gate(struct Sprite *s, struct Sprite *g,
+	const float t) {
 	/*void (*fn)(struct Sprite *const, struct Sprite *);*/
 	/*Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));*/
 	/*if((fn = EtherealGetCallback(eth))) fn(eth, s);*/
@@ -251,10 +263,12 @@ static void ship_gate(struct Sprite *s, struct Sprite *g, const float t) {
 	/* fixme: unreliable */
 	ship->dist_to_horizon = proj;
 	UNUSED(t);
+	return DELETED_NEITHER;
 }
 /** @implements SpriteCollision */
-static void gate_ship(struct Sprite *g, struct Sprite *s, const float t) {
-	ship_gate(s, g, t);
+static enum Deleted gate_ship(struct Sprite *g, struct Sprite *s,
+	const float t) {
+	return ship_gate(s, g, t);
 }
 
 
@@ -350,25 +364,25 @@ static const struct {
 	const SpriteDiAction degeneracy;
 } collision_matrix[][4] = {
 	{ /* [ship, *] */
-		{ &elastic_bounce, &pressure_even },
-		{ &elastic_bounce, &pressure_even },
-		{ &ship_wmd,       &pressure_b },
-		{ &ship_gate,      0 }
+		{ &d_eb,       &pressure_even },
+		{ &d_eb,       &pressure_even },
+		{ &ship_wmd,   &pressure_b },
+		{ &ship_gate,  0 }
 	}, { /* [debris, *] */
-		{ &elastic_bounce, &pressure_even },
-		{ &elastic_bounce, &pressure_even },
-		{ &debris_wmd,     &pressure_b },
-		{ &bounce_a,       &pressure_a }
+		{ &d_eb,       &pressure_even },
+		{ &d_eb,       &pressure_even },
+		{ &debris_wmd, &pressure_b },
+		{ &d_bounce_a, &pressure_a }
 	}, { /* [wmd, *] */
-		{ &wmd_ship,       &pressure_a },
-		{ &wmd_debris,     &pressure_a },
-		{ 0,               0 },
-		{ 0,               0 }
+		{ &wmd_ship,   &pressure_a },
+		{ &wmd_debris, &pressure_a },
+		{ 0,           0 },
+		{ 0,           0 }
 	}, { /* [gate, *] */
-		{ &gate_ship,      0 },
-		{ &bounce_b,       &pressure_b },
-		{ 0,               0 },
-		{ 0,               0 }
+		{ &gate_ship,  0 },
+		{ &d_bounce_b, &pressure_b },
+		{ 0,           0 },
+		{ 0,           0 }
 	}
 };
 
@@ -378,7 +392,7 @@ static const struct {
  three-dimensions, where the third dimension is linearly-interpolated time.
  Called from \see{collide_boxes}. If we have a collision, calls the functions
  contained in the {collision_matrix}. */
-static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
+static enum Deleted collide_circles(struct Sprite *const a, struct Sprite *const b) {
 	struct Vec2f v, z;
 	float t, v2, vz, z2, zr2, disc;
 	const float r = a->bounding + b->bounding;
@@ -416,25 +430,25 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 	 above -- this has a very small epsilon to prevent sprites from going
 	 slowly into @ other, but it's the denominator of the next equation.
 	 Otherwise, the discriminant determines whether a collision occurred. */
-	if(v2 <= 1e-32 || (disc = vz * vz - v2 * zr2) < 0.0f) return;
+	if(v2 <= 1e-32 || (disc = vz * vz - v2 * zr2) < 0.0f) return 0;
 	t = (-vz - sqrtf(disc)) / v2;
 	/* Entirely in the future or entirely in the past. */
 	if(t >= sprites->dt_ms || (t < 0.0f && (-vz + sqrtf(disc)) / v2 <= 0.0f))
-		return;
+		return 0;
 	/* Assert supposed to be checked earlier in the path. Collision. */
 	assert(collision_matrix[a->vt->class][b->vt->class].handler);
-	collision_matrix[a->vt->class][b->vt->class].handler(a, b, t);
+	return collision_matrix[a->vt->class][b->vt->class].handler(a, b, t);
 }
 
 /** This first applies the most course-grained collision detection in
  two-dimensional space, Hahn–Banach separation theorem using {box}. If passed,
  calls \see{collide_circles}. Called from \see{collide_bin}. */
-static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
+static enum Deleted collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 	assert(a && b);
 	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
 	if(!(a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
-		 b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) return;
-	collide_circles(a, b);
+		 b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) return 0;
+	return collide_circles(a, b);
 }
 
 /** This is the function that's calling everything else. Call after
@@ -445,6 +459,7 @@ static void collide_bin(unsigned bin) {
 	struct Cover *cover_a, *cover_b;
 	struct Sprite *a, *b;
 	size_t index_b;
+	enum Deleted d;
 	assert(sprites && bin < LAYER_SIZE);
 
 	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
@@ -466,10 +481,10 @@ static void collide_bin(unsigned bin) {
 			if(!(collision_matrix[a->vt->class][b->vt->class].handler))
 				continue;
 			/* Pass it to the next LOD. */
-			collide_boxes(a, b);
+			if(!(d = collide_boxes(a, b))) continue;
 			/* Have them check for deleted sprites. */
-			if(!sprite_is_valid(b)) cover_b->is_deleted = 1;
-			if(!sprite_is_valid(a)) break;
+			if(d & DELETED_B) cover_b->is_deleted = 1;
+			if(d & DELETED_A) break;
 		} while(index_b);
 	}
 }

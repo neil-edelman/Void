@@ -1,44 +1,47 @@
 /** 2017 Neil Edelman, distributed under the terms of the GNU General
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
- 
- Collision detection and resolution. Part of {Sprites}, but too long; sort of
- hacky. The course grained functions are at the bottom, calling the
- fine-grained and response as it moves to the top.
- 
+
+ Collision detection and resolution. Part of {Sprites}, but too long. The only
+ function external to the file is \see{collide_bin}.
+
  This is the calculation in \see{collide_circles},
  \${ 	     u = a.dx
- v = b.dx
+             v = b.dx
  if(v-u ~= 0) t doesn't matter, parallel-ish
- p(t) = a0 + ut
- q(t) = b0 + vt
+          p(t) = a0 + ut
+          q(t) = b0 + vt
  distance(t)   = |q(t) - p(t)|
  distance^2(t) = (q(t) - p(t))^2
- = ((b0+vt) - (a0+ut))^2
- = ((b0-a0) + (v-u)t)^2
- = (v-u)*(v-u)t^2 + 2(b0-a0)*(v-u)t + (b0-a0)*(b0-a0)
- 0 = 2(v-u)*(v-u)t_min + 2(b0-a0)*(v-u)
- t_min = -(b0-a0)*(v-u)/(v-u)*(v-u)
+               = ((b0+vt) - (a0+ut))^2
+               = ((b0-a0) + (v-u)t)^2
+               = (v-u)*(v-u)t^2 + 2(b0-a0)*(v-u)t + (b0-a0)*(b0-a0)
+             0 = 2(v-u)*(v-u)t_min + 2(b0-a0)*(v-u)
+         t_min = -(b0-a0)*(v-u)/(v-u)*(v-u)
  this is an optimisation, if t \notin [0,frame] then pick the closest; if
  distance^2(t_min) < r^2 then we have a collision, which happened at t0,
- r^2 = (v-u)*(v-u)t0^2 + 2(b0-a0)*(v-u)t0 + (b0-a0)*(b0-a0)
- t0 = [-2(b0-a0)*(v-u) - \sqrt((2(b0-a0)*(v-u))^2
- - 4((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / 2(v-u)*(v-u)
- t0 = [-(b0-a0)*(v-u) - \sqrt(((b0-a0)*(v-u))^2
- - ((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / (v-u)*(v-u) }
- 
+           r^2 = (v-u)*(v-u)t0^2 + 2(b0-a0)*(v-u)t0 + (b0-a0)*(b0-a0)
+            t0 = [-2(b0-a0)*(v-u) - \sqrt((2(b0-a0)*(v-u))^2
+                  - 4((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / 2(v-u)*(v-u)
+            t0 = [-(b0-a0)*(v-u) - \sqrt(((b0-a0)*(v-u))^2
+                  - ((v-u)*(v-u))((b0-a0)*(b0-a0) - r^2))] / (v-u)*(v-u) }
+
  @title		SpritesCollide
  @author	Neil
  @std		C89/90
  @version	2017-10 Broke off from Sprites. */
 
 /** Collision handlers. */
-typedef void (*SpriteCollision)(struct Sprite *const, struct Sprite *const,
+typedef void (*CoverCollision)(struct Cover *const, struct Cover *const,
 	const float);
 /** Unsticking handlers. */
 typedef void (*SpriteDiAction)(struct Sprite *const, struct Sprite *const);
 
-/** Add a collision to the sprite; called from collision handlers. */
+
+
+/* Used by collision handlers. */
+
+/** Add a collision to the sprite; called from helpers to collision handlers. */
 static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	const float t) {
 	struct Collision *col;
@@ -62,18 +65,10 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 		this->collision = col;
 	}
 }
-
-
-
-/* Collision handlers; can not modify list of {Sprites}! Contained in
- \see{collision_matrix}. */
-
-/** Elastic collision between circles; called from \see{collision_matrix}. 
- Degeneracy pressure pushes sprites to avoid interpenetration.
- @param t: {ms} after frame that the collision occurs.
- @implements SpriteCollision */
-static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
-	const float t) {
+/** Elastic collision between circles.
+ @param t: {ms} after frame that the collision occurs. */
+static void sprite_elastic_bounce(struct Sprite *const a,
+	struct Sprite *const b, const float t) {
 	struct Vec2f d_hat, a_v, b_v;
 	assert(a && b && t >= 0.0f);
 	/* Extrapolate and find the eigenvalue. */
@@ -115,9 +110,8 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 	add_bounce(a, a_v, t);
 	add_bounce(b, b_v, t);
 }
-/** Perfectly inelastic.
- @implements SpriteCollision */
-static void inelastic_stick(struct Sprite *const a,
+/** Perfectly inelastic. */
+static void sprite_inelastic_stick(struct Sprite *const a,
 	struct Sprite *const b, const float t) {
 	/* All mass is strictly positive. */
 	const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b),
@@ -130,9 +124,8 @@ static void inelastic_stick(struct Sprite *const a,
 	add_bounce(a, v, t);
 	add_bounce(b, v, t);
 }
-/** This is like {b} has an infinite mass.
- @implements SpriteCollision */
-static void bounce_a(struct Sprite *const a, struct Sprite *const b,
+/** This is like {b} has an infinite mass. */
+static void sprite_bounce_a(struct Sprite *const a, struct Sprite *const b,
 	const float t) {
 	struct Vec2f d_hat, a_v;
 	/* Extrapolate and find the eigenvalue. */
@@ -163,14 +156,28 @@ static void bounce_a(struct Sprite *const a, struct Sprite *const b,
 	/* Record. */
 	add_bounce(a, a_v, t);
 }
-/** @implements SpriteCollision */
-static void bounce_b(struct Sprite *const a, struct Sprite *const b,
-	const float t) {
-	bounce_a(b, a, t);
-}
 
-/** @implements SpriteCollision */
-static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
+
+
+/* Collision handlers contained in {collision_matrix}. */
+
+/** @implements CoverCollision */
+static void elastic_bounce(struct Cover *a, struct Cover *b, const float t) {
+	assert(a && a->sprite && b && b->sprite);
+	sprite_elastic_bounce(a->sprite, b->sprite, t);
+}
+/** @implements CoverCollision */
+static void bounce_a(struct Cover *a, struct Cover *b, const float t) {
+	assert(a && a->sprite && b && b->sprite);
+	sprite_bounce_a(a->sprite, b->sprite, t);
+}
+/** @implements CoverCollision */
+static void bounce_b(struct Cover *a, struct Cover *b, const float t) {
+	assert(a && a->sprite && b && b->sprite);
+	sprite_bounce_a(b->sprite, a->sprite, t);
+}
+/** @implements CoverCollision */
+static void wmd_debris(struct Cover *w, struct Cover *d, const float t) {
 	/* avoid inifinite destruction loop */
 	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
 	 push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
@@ -181,40 +188,40 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	 sprite_to_string(d, &b);
 	 printf("hit %s -- %s.\n", a, b);*/
 	printf("BOOM!\n");
-	inelastic_stick(d, w, t);
-	/* sprite_delete(w); <- fixme: it is crashing because there is still a
-	 pointer in covers, but some other reason, too. */
+	sprite_inelastic_stick(d->sprite, w->sprite, t);
+	sprite_delete(w->sprite); w->sprite = 0;
 }
-/** @implements SpriteCollision */
-static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
+/** @implements CoverCollision */
+static void debris_wmd(struct Cover *d, struct Cover *w, const float t) {
 	wmd_debris(w, d, t);
 }
-
-/** @implements SpriteCollision */
-static void wmd_ship(struct Sprite *w, struct Sprite *s, const float t) {
+/** @implements CoverCollision */
+static void wmd_ship(struct Cover *w, struct Cover *s, const float t) {
 	/*char a[12], b[12];
 	 sprite_to_string(w, &a);
 	 sprite_to_string(s, &b);
 	 printf("wmd_shp: %s -- %s\n", a, b);*/
 	/* avoid inifinite destruction loop */
-	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(s)) return;
+	/*if(CoverIsDestroyed(w) || CoverIsDestroyed(s)) return;
 	 push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	 SpriteRecharge(s, -SpriteGetDamage(w));*/
-	inelastic_stick(s, w, t);
-	/* sprite_delete(w); <- fixme */
+	printf("BAM!\n");
+	sprite_inelastic_stick(s->sprite, w->sprite, t);
+	sprite_delete(w->sprite); w->sprite = 0;
 }
-/** @implements SpriteCollision */
-static void ship_wmd(struct Sprite *s, struct Sprite *w, const float t) {
+/** @implements CoverCollision */
+static void ship_wmd(struct Cover *s, struct Cover *w, const float t) {
 	wmd_ship(w, s, t);
 }
 
-/** @implements SpriteCollision */
-static void ship_gate(struct Sprite *s, struct Sprite *g, const float t) {
+/** @implements CoverCollision */
+static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 	/*void (*fn)(struct Sprite *const, struct Sprite *);*/
 	/*Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));*/
 	/*if((fn = EtherealGetCallback(eth))) fn(eth, s);*/
 	/* while in iterate! danger! */
 	/*if(e->sp.ethereal.callback) e->sp.ethereal.callback(e, s);*/
+	struct Sprite *const s = cs->sprite, *const g = cg->sprite;
 	struct Ship *const ship = (struct Ship *)s;
 	float x, y, /*vx, vy,*/ gate_norm_x, gate_norm_y, proj/*, h*/;
 	assert(s && g && s->vt->class == SC_SHIP);
@@ -242,22 +249,21 @@ static void ship_gate(struct Sprite *s, struct Sprite *g, const float t) {
 	ship->dist_to_horizon = proj;
 	UNUSED(t);
 }
-/** @implements SpriteCollision */
-static void gate_ship(struct Sprite *g, struct Sprite *s, const float t) {
+/** @implements CoverCollision */
+static void gate_ship(struct Cover *g, struct Cover *s, const float t) {
 	ship_gate(s, g, t);
 }
 
 
 
-/* Degeneracy handlers come into play on inter-penetration. */
-
-#if 1 /* <- pressure: Apply along normal. Leads to bouncing. */
+/* Degeneracy handlers come into play on inter-penetration; they can't modify
+ the topology of the sprite list. In a perfect world, every sprite would sense
+ every other, but since we are limited to checking two at a time, sometimes
+ it's messy and we just have to fake it. Also contained in
+ {collision_matrix}. */
 
 /* Apply degeneracy pressure evenly.
- @implements SpriteDiAction
- @fixme This function contains some duplicate code.
- @fixme This should be called WAY less! Why is it letting inter-penetration on
- some sprites? */
+ @implements SpriteDiAction */
 static void pressure_even(struct Sprite *const a, struct Sprite *const b) {
 	struct Vec2f z, z_hat;
 	float z_mag, push;
@@ -295,48 +301,18 @@ static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
 	}
 	a->x.x -= z_hat.x * push, a->x.y -= z_hat.y * push;
 }
-/* Apply degeneracy pressure to {a}.
+/* Apply degeneracy pressure to {b}.
  @implements SpriteDiAction */
 static void pressure_b(struct Sprite *const a, struct Sprite *const b) {
 	pressure_a(b, a);
 }
-
-#else /* pressure --><-- random: Doesn't lead to bouncing, but is very
-confusing to get stuck in. */
-
-/* Resolve randomly degeneracy pressure to {a} and {b}.
- @implements SpriteDiAction */
-static void pressure_even(struct Sprite *const a, struct Sprite *const b) {
-	const struct Vec2f mid = { (a->x.x+b->x.x) * 0.5f, (a->x.y+b->x.y) * 0.5f };
-	const float r = (a->bounding + b->bounding) * 0.5f + 0.01f;
-	const float theta = random_pm_max(M_PI_F);
-	a->x.x = mid.x - cosf(theta) * r;
-	a->x.y = mid.y - sinf(theta) * r;
-	b->x.x = mid.x + cosf(theta) * r;
-	b->x.y = mid.y + sinf(theta) * r;
-}
-/* Resolve randomly degeneracy pressure to {a}.
- @implements SpriteDiAction */
-static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
-	const float r = a->bounding + b->bounding + 0.01f;
-	const float theta = random_pm_max(M_PI_F);
-	a->x.x = b->x.x + cosf(theta) * r;
-	a->x.y = b->x.y + sinf(theta) * r;
-}
-/* Resolve randomly degeneracy pressure to {b}.
- @implements SpriteDiAction */
-static void pressure_b(struct Sprite *const a, struct Sprite *const b) {
-	pressure_a(b, a);
-}
-
-#endif /* random --> */
 
 
 
 /* What sort of collisions the subclasses of Sprites engage in. This is set by
  the sprite class, { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE }. */
 static const struct Matrix {
-	const SpriteCollision handler;
+	const CoverCollision handler;
 	const SpriteDiAction degeneracy;
 } collision_matrix[][4] = {
 	{ /* [ship, *] */
@@ -363,6 +339,8 @@ static const struct Matrix {
 };
 
 
+
+/* Collision detection. */
 
 /** Checks whether two sprites intersect using inclined cylinders in
  three-dimensions, where the third dimension is linearly-interpolated time.
@@ -416,25 +394,25 @@ static int collide_circles(struct Sprite *const a, struct Sprite *const b,
 	*t_ptr = t;
 	return 1;
 }
-
-/** This first applies the most course-grained collision detection in
- two-dimensional space, Hahn–Banach separation theorem using {box}. The box
- must be set beforehand. */
+/** This applies the most course-grained collision detection in two-dimensional
+ space, Hahn–Banach separation theorem using {box}. The box must be set
+ beforehand (viz, in \see{extrapolate}.) */
 static int collide_boxes(const struct Sprite *const a,
 	const struct Sprite *const b) {
 	assert(a && b);
 	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
-	if((a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
-	    b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) {
-		return 1;
-	} else {
-		return 0;
-	}
+	return (a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max
+		&&  b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)
+		? 1 : 0;
 }
 
-/** This is the function that's calling everything else. Call after
- {extrapolate}; needs and consumes {covers}. This is {n^2} inside of the
- {bin}. */
+
+
+/* This is the function that's calling everything else and is the only function
+ that matters to the rest of {Sprites.c}. */
+
+/** Call after {extrapolate}; needs and consumes {covers}. This is {n^2} inside
+ of the {bin}. */
 static void collide_bin(unsigned bin) {
 	struct CoverStack *const cover = sprites->bins[bin].covers;
 	struct Cover *cover_a, *cover_b;
@@ -445,7 +423,7 @@ static void collide_bin(unsigned bin) {
 	assert(sprites && bin < LAYER_SIZE);
 	
 	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
-	/* This is {O({covers}^2)/2} within the bin. {a} is poped . . . */
+	/* This is {O({covers}^2)/2} within the bin. {a} is popped . . . */
 	while((cover_a = CoverStackPop(cover))) {
 		/* . . . then {b} goes down the list. */
 		if(!(index_b = CoverStackGetSize(cover))) break;
@@ -455,18 +433,17 @@ static void collide_bin(unsigned bin) {
 			assert(cover_a && cover_b);
 			/* Another {bin} takes care of it? */
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
-			/* Was it deleted? */
-			if(!(a = cover_a->sprite)) { printf("Sprite (a) deleted during collision.\n"); break; }
-			if(!(b = cover_b->sprite)) { printf("Sprite (b) deleted during collision.\n");continue;}
+			/* Respond appropriately if it was deleted on the fly. */
+			if(!(a = cover_a->sprite)) break;
+			if(!(b = cover_b->sprite)) continue;
 			/* Extract the info on the type of collision. */
 			matrix = &collision_matrix[a->vt->class][b->vt->class];
-			/* If the sprites have no collision handler thing, don't bother.
-			 Mostly for weapons that ignore collisions with themselves. */
+			/* If the sprites have no collision handler, don't bother. */
 			if(!(matrix->handler)) continue;
-			/* collide_boxes >= collide_circles */
+			/* {collide_boxes} >= {collide_circles} */
 			if(!collide_boxes(a, b) || !collide_circles(a, b, &t)) continue;
 			/* Collision. */
-			matrix->handler(a, b, t);
+			matrix->handler(cover_a, cover_b, t);
 		} while(index_b);
 	}
 }

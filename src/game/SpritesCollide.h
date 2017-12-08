@@ -34,13 +34,13 @@
 
 /** Collision handlers. */
 typedef void (*SpriteCollision)(struct Sprite *const, struct Sprite *const,
-								const float);
+	const float);
 /** Unsticking handlers. */
 typedef void (*SpriteDiAction)(struct Sprite *const, struct Sprite *const);
 
 /** Add a collision to the sprite; called from collision handlers. */
 static void add_bounce(struct Sprite *const this, const struct Vec2f v,
-					   const float t) {
+	const float t) {
 	struct Collision *col;
 	assert(sprites && this);
 	if((col = this->collision)) {
@@ -53,8 +53,8 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
 	} else {
 		/* New collision. */
 		if(!(col = CollisionStackNew(sprites->collisions)))
-		{ fprintf(stderr, "add_bounce: %s.\n",
-				  CollisionStackGetError(sprites->collisions)); return; }
+			{ fprintf(stderr, "add_bounce: %s.\n",
+			CollisionStackGetError(sprites->collisions)); return; }
 		col->no  = 1;
 		col->v.x = v.x;
 		col->v.y = v.y;
@@ -73,7 +73,7 @@ static void add_bounce(struct Sprite *const this, const struct Vec2f v,
  @param t: {ms} after frame that the collision occurs.
  @implements SpriteCollision */
 static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
-						   const float t) {
+	const float t) {
 	struct Vec2f d_hat, a_v, b_v;
 	assert(a && b && t >= 0.0f);
 	/* Extrapolate and find the eigenvalue. */
@@ -118,7 +118,7 @@ static void elastic_bounce(struct Sprite *const a, struct Sprite *const b,
 /** Perfectly inelastic.
  @implements SpriteCollision */
 static void inelastic_stick(struct Sprite *const a,
-							struct Sprite *const b, const float t) {
+	struct Sprite *const b, const float t) {
 	/* All mass is strictly positive. */
 	const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b),
 	invsum_m = 1.0f / (a_m + b_m);
@@ -133,7 +133,7 @@ static void inelastic_stick(struct Sprite *const a,
 /** This is like {b} has an infinite mass.
  @implements SpriteCollision */
 static void bounce_a(struct Sprite *const a, struct Sprite *const b,
-					 const float t) {
+	const float t) {
 	struct Vec2f d_hat, a_v;
 	/* Extrapolate and find the eigenvalue. */
 	{
@@ -165,7 +165,7 @@ static void bounce_a(struct Sprite *const a, struct Sprite *const b,
 }
 /** @implements SpriteCollision */
 static void bounce_b(struct Sprite *const a, struct Sprite *const b,
-					 const float t) {
+	const float t) {
 	bounce_a(b, a, t);
 }
 
@@ -182,7 +182,8 @@ static void wmd_debris(struct Sprite *w, struct Sprite *d, const float t) {
 	 printf("hit %s -- %s.\n", a, b);*/
 	printf("BOOM!\n");
 	inelastic_stick(d, w, t);
-	/* sprite_delete(w); <- fixme: why is it crashing? */
+	/* sprite_delete(w); <- fixme: it is crashing because there is still a
+	 pointer in covers, but some other reason, too. */
 }
 /** @implements SpriteCollision */
 static void debris_wmd(struct Sprite *d, struct Sprite *w, const float t) {
@@ -448,7 +449,8 @@ static void collide_bin(unsigned bin) {
 			/* Another {bin} takes care of it? */
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
 			a = cover_a->sprite, b = cover_b->sprite;
-			assert(a && b);
+			if(!a) { printf("Sprite (a) deleted during collision.\n"); break; }
+			if(!b) { printf("Sprite (b) deleted during collision.\n");continue;}
 			/* If the sprites have no collision handler thing, don't bother.
 			 Mostly for weapons that ignore collisions with themselves. */
 			if(!(collision_matrix[a->vt->class][b->vt->class].handler))

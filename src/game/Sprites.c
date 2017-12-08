@@ -207,7 +207,6 @@ struct SpriteVt {
 	SpriteToString to_string;
 	SpriteAction delete, update;
 	SpriteFloatAccessor get_mass;
-	SpritePredicate is_valid;
 };
 
 
@@ -314,59 +313,37 @@ static float gate_get_mass(const struct Gate *const this) {
 	assert(this);
 	return 1e36f; /* No moving. This should not be called, anyway. */
 }
-/* @implements <Sprite>Predicate */
-static int sprite_is_valid(const struct Sprite *const this) {
-	assert(this);
-	return this->vt->is_valid(this);
-}
-/** @implements <Ship>Predicate */
-static float ship_is_valid(const struct Ship *const this)
-	{ return ShipPoolIsValid(this); }
-/** @implements <Debris>Predicate */
-static float debris_is_valid(const struct Debris *const this)
-	{ return DebrisPoolIsValid(this); }
-/** @implements <Wmd>Predicate */
-static float wmd_is_valid(const struct Wmd *const this)
-	{ return WmdPoolIsValid(this); }
-/** @implements <Gate>Predicate */
-static float gate_is_valid(const struct Gate *const this)
-	{ return GatePoolIsValid(this); }
 
 static const struct SpriteVt ship_human_vt = {
 	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_human,
-	(SpriteFloatAccessor)&ship_get_mass,
-	(SpritePredicate)&ship_is_valid
+	(SpriteFloatAccessor)&ship_get_mass
 }, ship_ai_vt = {
 	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpriteAction)&ship_update_dumb_ai,
-	(SpriteFloatAccessor)&ship_get_mass,
-	(SpritePredicate)&ship_is_valid
+	(SpriteFloatAccessor)&ship_get_mass
 }, debris_vt = {
 	SC_DEBRIS,
 	(SpriteToString)&debris_to_string,
 	(SpriteAction)&debris_delete,
 	(SpriteAction)&debris_update,
-	(SpriteFloatAccessor)&debris_get_mass,
-	(SpritePredicate)&debris_is_valid
+	(SpriteFloatAccessor)&debris_get_mass
 }, wmd_vt = {
 	SC_WMD,
 	(SpriteToString)&wmd_to_string,
 	(SpriteAction)&wmd_delete,
 	(SpriteAction)&wmd_update,
-	(SpriteFloatAccessor)&wmd_get_mass,
-	(SpritePredicate)&wmd_is_valid
+	(SpriteFloatAccessor)&wmd_get_mass
 }, gate_vt = {
 	SC_GATE,
 	(SpriteToString)&gate_to_string,
 	(SpriteAction)&gate_delete,
 	(SpriteAction)&gate_update,
-	(SpriteFloatAccessor)&gate_get_mass,
-	(SpritePredicate)&gate_is_valid
+	(SpriteFloatAccessor)&gate_get_mass
 };
 
 

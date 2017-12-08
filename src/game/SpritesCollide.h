@@ -335,7 +335,7 @@ static void pressure_b(struct Sprite *const a, struct Sprite *const b) {
 
 /* What sort of collisions the subclasses of Sprites engage in. This is set by
  the sprite class, { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE }. */
-static const struct {
+static const struct Matrix {
 	const SpriteCollision handler;
 	const SpriteDiAction degeneracy;
 } collision_matrix[][4] = {
@@ -366,13 +366,14 @@ static const struct {
 
 /** Checks whether two sprites intersect using inclined cylinders in
  three-dimensions, where the third dimension is linearly-interpolated time.
- Called from \see{collide_boxes}. If we have a collision, calls the functions
- contained in the {collision_matrix}. */
-static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
+ @param t_ptr: If it returns true, this will be set to the time after frame
+ time (ms) that it collides. */
+static int collide_circles(struct Sprite *const a, struct Sprite *const b,
+	float *const t_ptr) {
 	struct Vec2f v, z;
 	float t, v2, vz, z2, zr2, disc;
 	const float r = a->bounding + b->bounding;
-	assert(sprites);
+	assert(sprites && a && b && t_ptr);
 	v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y; /* Relative velocity. */
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y; /* Distance(zero). */
 	/* { vt + z = r -> v^2t^2 + 2vzt + z^2 - r^2 = 0 } is always { >= -r^2 } */
@@ -406,25 +407,29 @@ static void collide_circles(struct Sprite *const a, struct Sprite *const b) {
 	 above -- this has a very small epsilon to prevent sprites from going
 	 slowly into @ other, but it's the denominator of the next equation.
 	 Otherwise, the discriminant determines whether a collision occurred. */
-	if(v2 <= 1e-32 || (disc = vz * vz - v2 * zr2) < 0.0f) return;
+	if(v2 <= 1e-32 || (disc = vz * vz - v2 * zr2) < 0.0f) return 0;
 	t = (-vz - sqrtf(disc)) / v2;
 	/* Entirely in the future or entirely in the past. */
 	if(t >= sprites->dt_ms || (t < 0.0f && (-vz + sqrtf(disc)) / v2 <= 0.0f))
-		return;
-	/* Assert supposed to be checked earlier in the path. Collision. */
-	assert(collision_matrix[a->vt->class][b->vt->class].handler);
-	collision_matrix[a->vt->class][b->vt->class].handler(a, b, t);
+		return 0;
+	/* Collision. */
+	*t_ptr = t;
+	return 1;
 }
 
 /** This first applies the most course-grained collision detection in
- two-dimensional space, Hahn–Banach separation theorem using {box}. If passed,
- calls \see{collide_circles}. Called from \see{collide_bin}. */
-static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
+ two-dimensional space, Hahn–Banach separation theorem using {box}. The box
+ must be set beforehand. */
+static int collide_boxes(const struct Sprite *const a,
+	const struct Sprite *const b) {
 	assert(a && b);
 	/* https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other */
-	if(!(a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
-		 b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) return;
-	collide_circles(a, b);
+	if((a->box.x_min <= b->box.x_max && b->box.x_min <= a->box.x_max &&
+	    b->box.y_min <= a->box.y_max && a->box.y_min <= b->box.y_max)) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 /** This is the function that's calling everything else. Call after
@@ -433,7 +438,9 @@ static void collide_boxes(struct Sprite *const a, struct Sprite *const b) {
 static void collide_bin(unsigned bin) {
 	struct CoverStack *const cover = sprites->bins[bin].covers;
 	struct Cover *cover_a, *cover_b;
+	const struct Matrix *matrix;
 	struct Sprite *a, *b;
+	float t;
 	size_t index_b;
 	assert(sprites && bin < LAYER_SIZE);
 	
@@ -448,15 +455,18 @@ static void collide_bin(unsigned bin) {
 			assert(cover_a && cover_b);
 			/* Another {bin} takes care of it? */
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
-			a = cover_a->sprite, b = cover_b->sprite;
-			if(!a) { printf("Sprite (a) deleted during collision.\n"); break; }
-			if(!b) { printf("Sprite (b) deleted during collision.\n");continue;}
+			/* Was it deleted? */
+			if(!(a = cover_a->sprite)) { printf("Sprite (a) deleted during collision.\n"); break; }
+			if(!(b = cover_b->sprite)) { printf("Sprite (b) deleted during collision.\n");continue;}
+			/* Extract the info on the type of collision. */
+			matrix = &collision_matrix[a->vt->class][b->vt->class];
 			/* If the sprites have no collision handler thing, don't bother.
 			 Mostly for weapons that ignore collisions with themselves. */
-			if(!(collision_matrix[a->vt->class][b->vt->class].handler))
-				continue;
-			/* Pass it to the next LOD. */
-			collide_boxes(a, b);
+			if(!(matrix->handler)) continue;
+			/* collide_boxes >= collide_circles */
+			if(!collide_boxes(a, b) || !collide_circles(a, b, &t)) continue;
+			/* Collision. */
+			matrix->handler(a, b, t);
 		} while(index_b);
 	}
 }

@@ -98,13 +98,13 @@ static void sprite_elastic_bounce(struct Sprite *const a,
 		a_v_nrm.x = a_nrm_s * d_hat.x, a_v_nrm.y = a_nrm_s * d_hat.y;
 		b_v_nrm.x = b_nrm_s * d_hat.x, b_v_nrm.y = b_nrm_s * d_hat.y;
 		a_v.x = a->v.x - a_v_nrm.x
-		+ (a_v_nrm.x * diff_m + 2 * b_m * b_v_nrm.x) * invsum_m,
+			+ (a_v_nrm.x * diff_m + 2 * b_m * b_v_nrm.x) * invsum_m,
 		a_v.y = a->v.y - a_v_nrm.y
-		+ (a_v_nrm.y * diff_m + 2 * b_m * b_v_nrm.y) * invsum_m;
+			+ (a_v_nrm.y * diff_m + 2 * b_m * b_v_nrm.y) * invsum_m;
 		b_v.x = b->v.x - b_v_nrm.x
-		- (b_v_nrm.x * diff_m - 2 * a_m * a_v_nrm.x) * invsum_m,
+			- (b_v_nrm.x * diff_m - 2 * a_m * a_v_nrm.x) * invsum_m,
 		b_v.y = b->v.y - b_v_nrm.y
-		- (b_v_nrm.y * diff_m - 2 * a_m * a_v_nrm.y) * invsum_m;
+			- (b_v_nrm.y * diff_m - 2 * a_m * a_v_nrm.y) * invsum_m;
 	}
 	/* Record. */
 	add_bounce(a, a_v, t);
@@ -115,7 +115,7 @@ static void sprite_inelastic_stick(struct Sprite *const a,
 	struct Sprite *const b, const float t) {
 	/* All mass is strictly positive. */
 	const float a_m = sprite_get_mass(a), b_m = sprite_get_mass(b),
-	invsum_m = 1.0f / (a_m + b_m);
+		invsum_m = 1.0f / (a_m + b_m);
 	const struct Vec2f v = {
 		(a_m * a->v.x + b_m * b->v.x) * invsum_m,
 		(a_m * a->v.y + b_m * b->v.y) * invsum_m
@@ -187,9 +187,9 @@ static void wmd_debris(struct Cover *w, struct Cover *d, const float t) {
 	 sprite_to_string(w, &a);
 	 sprite_to_string(d, &b);
 	 printf("hit %s -- %s.\n", a, b);*/
-	printf("BOOM!\n");
+	/*printf("BOOM!\n");*/
 	sprite_inelastic_stick(d->sprite, w->sprite, t);
-	sprite_delete(w->sprite); w->sprite = 0;
+	/*sprite_delete(w->sprite), w->sprite = 0;*/
 }
 /** @implements CoverCollision */
 static void debris_wmd(struct Cover *d, struct Cover *w, const float t) {
@@ -205,9 +205,9 @@ static void wmd_ship(struct Cover *w, struct Cover *s, const float t) {
 	/*if(CoverIsDestroyed(w) || CoverIsDestroyed(s)) return;
 	 push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	 SpriteRecharge(s, -SpriteGetDamage(w));*/
-	printf("BAM!\n");
+	/*printf("BAM!\n");*/
 	sprite_inelastic_stick(s->sprite, w->sprite, t);
-	sprite_delete(w->sprite); w->sprite = 0;
+	/*sprite_delete(w->sprite), w->sprite = 0; <- fixme */
 }
 /** @implements CoverCollision */
 static void ship_wmd(struct Cover *s, struct Cover *w, const float t) {
@@ -272,7 +272,7 @@ static void pressure_even(struct Sprite *const a, struct Sprite *const b) {
 	z.x = b->x.x - a->x.x, z.y = b->x.y - a->x.y;
 	z_mag = sqrtf(z.x * z.x + z.y * z.y);
 	push = (r - z_mag) * 0.5f + 0.25f; /* Big epsilon. */
-	printf("Sprites (%.1f, %.1f) -> %.1f apart with combined radius of %.1f pushing %.1f.\n", z.x, z.y, z_mag, r, push);
+	/*printf("Sprites (%.1f, %.1f) -> %.1f apart with combined radius of %.1f pushing %.1f.\n", z.x, z.y, z_mag, r, push);*/
 	if(z_mag < epsilon) {
 		z_hat.x = 1.0f, z_hat.y = 0.0f;
 	} else {
@@ -293,7 +293,7 @@ static void pressure_a(struct Sprite *const a, struct Sprite *const b) {
 	z_mag = sqrtf(z.x * z.x + z.y * z.y);
 	/* fixme: {epsilon} is necessary to avoid infinite recursion; why? */
 	push = (r - z_mag) + 0.5f; /* Big epsilon. */
-	printf("Pushing (a) sprite %f apart.\n", push);
+	/*printf("Pushing (a) sprite %f apart.\n", push);*/
 	if(z_mag < epsilon) {
 		z_hat.x = 1.0f, z_hat.y = 0.0f;
 	} else {
@@ -364,9 +364,9 @@ static int collide_circles(struct Sprite *const a, struct Sprite *const b,
 		SpriteDiAction d;
 		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy)) {
 			struct Vec2f *spot;
-			char a_str[12], b_str[12];
+			/*char a_str[12], b_str[12];
 			sprite_to_string(a, &a_str), sprite_to_string(b, &b_str);
-			printf("Degeneracy pressure between %s and %s.\n", a_str, b_str);
+			printf("Degeneracy pressure between %s and %s.\n", a_str, b_str);*/
 			/* Debug show hair. */
 			spot = InfoStackNew(sprites->info);
 			spot->x = (a->x.x + b->x.x) * 0.5f;

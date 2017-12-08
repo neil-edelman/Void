@@ -197,8 +197,8 @@ void FarsDraw(void) {
 	struct Rectangle4f rect;
 	if(!fars) return;
 	DrawGetScreen(&rect);
+	rectangle4f_expand(&rect, layer_space * 0.5f); /* fixme: maybe? */
 	rectangle4f_scale(&rect, LAYER_FORESHORTENING_F);
-	/* fixme: add 1024px? */
 	LayerSetScreenRectangle(fars->layer, &rect);
 	LayerForEachScreen(fars->layer, &draw_bin);
 }

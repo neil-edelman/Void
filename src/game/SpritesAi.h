@@ -14,7 +14,6 @@
 static void shoot(struct Ship *const ship) {
 	assert(ship && ship->wmd);
 	if(!TimerIsTime(ship->ms_recharge_wmd)) return;
-	printf("Phew!\n");
 	SpritesWmd(ship->wmd, ship);
 	ship->ms_recharge_wmd = TimerGetGameTime() + ship->wmd->ms_recharge;
 }

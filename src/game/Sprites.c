@@ -241,8 +241,12 @@ static void gate_to_string(const struct Gate *this, char (*const a)[12]) {
 
 /** @implements SpritesAction */
 static void sprite_delete(struct Sprite *const this) {
+	char a[12];
 	assert(sprites && this);
-	SpriteListRemove(&sprites->bins[this->bin].sprites, this); /* Safe-ish. */
+	sprite_to_string(this, &a);
+	printf("Removing %s.\n", a);
+	SpriteListRemove(&sprites->bins[this->bin].sprites, this),
+		this->bin = (unsigned)-1;
 	this->vt->delete(this);
 }
 /** @implements <Ship>Action */
@@ -707,7 +711,7 @@ void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
 	/* Foreground drawable sprites are a function of screen position. */
 	{ 	struct Rectangle4f rect;
 		DrawGetScreen(&rect);
-		/* fixme: Add 128px for sprites off-screen but drawn. */
+		rectangle4f_expand(&rect, layer_space * 0.5f);
 		LayerSetScreenRectangle(sprites->layer, &rect); }
 	/* Dynamics; puts temp values in {cover} for collisions. */
 	LayerForEachScreen(sprites->layer, &extrapolate_bin);

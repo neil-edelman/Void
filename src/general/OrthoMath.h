@@ -87,6 +87,15 @@ static void rectangle4f_scale(struct Rectangle4f *const this,
 	this->y_min *= scale;
 	this->y_max *= scale;
 }
+/** Expands the rectangle; doesn't do checks for inversion. */
+static void rectangle4f_expand(struct Rectangle4f *const this,
+	const float add) {
+	assert(this);
+	this->x_min -= add;
+	this->x_max += add;
+	this->y_min -= add;
+	this->y_max += add;
+}
 
 static void orthomath_unused_coda(void);
 static void orthomath_unused(void) {
@@ -98,6 +107,7 @@ static void orthomath_unused(void) {
 	rectangle4i_assign(0, 0);
 	rectangle4f_assign(0, 0);
 	rectangle4f_scale(0, 0.0f);
+	rectangle4f_expand(0, 0.0f);
 	orthomath_unused_coda();
 }
 static void orthomath_unused_coda(void) {

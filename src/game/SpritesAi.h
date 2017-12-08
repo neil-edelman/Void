@@ -17,8 +17,8 @@ static void shoot(struct Ship *const ship) {
 	SpritesWmd(ship->wmd, ship);
 	ship->ms_recharge_wmd = TimerGetGameTime() + ship->wmd->ms_recharge;
 }
-/** @implements <Ship>Action */
-static void ship_update_human(struct Ship *const this) {
+/** @implements <Ship>Predicate */
+static int ship_update_human(struct Ship *const this) {
 	const int ms_turning = -PollGetRight();
 	const int ms_acceleration = PollGetUp();
 	const int ms_shoot = PollGetShoot(); /* fixme */
@@ -50,12 +50,14 @@ static void ship_update_human(struct Ship *const this) {
 		- turn_damping_1st_order * (sprites->dt_ms - 25.0f);
 	}
 	if(ms_shoot) shoot(this);
+	return 1;
 }
 
-/** @implements <Ship>Action */
-static void ship_update_dumb_ai(struct Ship *const this) {
+/** @implements <Ship>Predicate */
+static int ship_update_dumb_ai(struct Ship *const this) {
 	assert(this);
 	this->sprite.data.v.theta = 0.0002f;
+	return 1;
 }
 #if 0
 static void ship_update_ai(struct Ship *const this) {

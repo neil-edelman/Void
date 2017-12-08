@@ -234,7 +234,8 @@ eg collision resolution.
 <pre><b>struct SpriteVt</b> {
 	enum SpriteClass class;
 	SpriteToString to_string;
-	SpriteAction delete, update;
+	SpriteAction delete;
+	SpritePredicate update;
 	SpriteFloatAccessor get_mass;
 }</pre>
 <p>

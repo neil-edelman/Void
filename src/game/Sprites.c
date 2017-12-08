@@ -205,7 +205,8 @@ enum SpriteClass { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE };
 struct SpriteVt {
 	enum SpriteClass class;
 	SpriteToString to_string;
-	SpriteAction delete, update;
+	SpriteAction delete;
+	SpritePredicate update;
 	SpriteFloatAccessor get_mass;
 };
 
@@ -230,7 +231,7 @@ static void debris_to_string(const struct Debris *this, char (*const a)[12]) {
 static void wmd_to_string(const struct Wmd *this, char (*const a)[12]) {
 	UNUSED(this);
 	assert(sprites);
-	sprintf(*a, "Wmd",
+	sprintf(*a, "Wmd%u",
 		(unsigned)WmdPoolGetIndex(sprites->wmds, this) % 100000000);
 }
 /** @implements <Gate>ToString */
@@ -244,7 +245,7 @@ static void sprite_delete(struct Sprite *const this) {
 	char a[12];
 	assert(sprites && this);
 	sprite_to_string(this, &a);
-	printf("Removing %s.\n", a);
+	printf("Removing %s from Bin%u.\n", a, this->bin);
 	SpriteListRemove(&sprites->bins[this->bin].sprites, this),
 		this->bin = (unsigned)-1;
 	this->vt->delete(this);
@@ -268,26 +269,35 @@ static void gate_delete(struct Gate *const this) {
 }
 
 
-/** @implements <Sprite>Action */
-static void sprite_update(struct Sprite *const this) {
+/** @implements <Sprite>Predicate */
+static int sprite_update(struct Sprite *const this) {
 	assert(this);
-	this->vt->update(this);
+	return this->vt->update(this);
 }
 /* Includes {ship_update*} Human/AI. */
 #include "SpritesAi.h"
 /** Does nothing; just debris.
- @implements <Debris>Action */
-static void debris_update(struct Debris *const this) {
+ @implements <Debris>Predicate */
+static int debris_update(struct Debris *const this) {
 	UNUSED(this);
+	return 1;
 }
-/** @implements <Wmd>Action
+/** @implements <Wmd>Predicate
  @fixme Replace delete with more dramatic death. */
-static void wmd_update(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) sprite_delete(&this->sprite.data);
+static int wmd_update(struct Wmd *const this) {
+	if(TimerIsTime(this->expires)) {
+		char a[12];
+		sprite_to_string((struct Sprite *)this, &a);
+		printf("Expires %s.\n", a);
+		sprite_delete(&this->sprite.data);
+		return 0;
+	}
+	return 1;
 }
-/** @implements <Gate>Action */
-static void gate_update(struct Gate *const this) {
+/** @implements <Gate>Predicate */
+static int gate_update(struct Gate *const this) {
 	UNUSED(this);
+	return 1;
 }
 
 
@@ -322,31 +332,31 @@ static const struct SpriteVt ship_human_vt = {
 	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
-	(SpriteAction)&ship_update_human,
+	(SpritePredicate)&ship_update_human,
 	(SpriteFloatAccessor)&ship_get_mass
 }, ship_ai_vt = {
 	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
-	(SpriteAction)&ship_update_dumb_ai,
+	(SpritePredicate)&ship_update_dumb_ai,
 	(SpriteFloatAccessor)&ship_get_mass
 }, debris_vt = {
 	SC_DEBRIS,
 	(SpriteToString)&debris_to_string,
 	(SpriteAction)&debris_delete,
-	(SpriteAction)&debris_update,
+	(SpritePredicate)&debris_update,
 	(SpriteFloatAccessor)&debris_get_mass
 }, wmd_vt = {
 	SC_WMD,
 	(SpriteToString)&wmd_to_string,
 	(SpriteAction)&wmd_delete,
-	(SpriteAction)&wmd_update,
+	(SpritePredicate)&wmd_update,
 	(SpriteFloatAccessor)&wmd_get_mass
 }, gate_vt = {
 	SC_GATE,
 	(SpriteToString)&gate_to_string,
 	(SpriteAction)&gate_delete,
-	(SpriteAction)&gate_update,
+	(SpritePredicate)&gate_update,
 	(SpriteFloatAccessor)&gate_get_mass
 };
 
@@ -619,8 +629,13 @@ static void put_cover(const unsigned bin, unsigned no, struct Sprite *this) {
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
  @implements <Sprite>Action */
 static void extrapolate(struct Sprite *const this) {
+	char a[12];
 	assert(sprites && this);
-	sprite_update(this);
+	sprite_to_string(this, &a);
+	if(!sprite_update(this)) {
+		printf("extrapolate: sprite_update has deleted %s.\n", a);
+		return;
+	}
 	/* Kinematics. */
 	this->dx.x = this->v.x * sprites->dt_ms;
 	this->dx.y = this->v.y * sprites->dt_ms;

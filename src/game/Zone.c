@@ -54,8 +54,7 @@ static int remove_all_events_except(struct Event *const victim) {
 
 /* public */
 
-/** Clears, then sets up a new zone.
- @return		Success. */
+/** Clears, then sets up a new zone. */
 void Zone(const struct AutoSpaceZone *const sz) {
 	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
 	const struct AutoShipClass *blob_class = AutoShipClassSearch("Blob");
@@ -91,9 +90,11 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 }
 
-#if 0
-/** Zone change with the {gate}. */
-void ZoneChange(const struct Gate *const gate) {
+/** Zone change with the {gate}.
+ @implements SpriteConsumer<Gate> */
+void ZoneChange(struct Gate *const gate) {
+	printf("Zone::change: stub.\n");
+	UNUSED(gate);
 #if 0
 	const struct AutoSpaceZone *const new_zone = GateGetTo(gate), *old_zone = current_zone;
 	struct Sprite *new_gate;
@@ -165,5 +166,3 @@ void ZoneChange(const struct Gate *const gate) {
 	SpriteSetVelocity(player, player_vx, player_vy);
 #endif
 }
-
-#endif

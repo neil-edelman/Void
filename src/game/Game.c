@@ -65,7 +65,6 @@ static void gametime(void);
 int Game(void) {
 	struct Ortho3f position = { 0.0f, 0.0f, 0.0f };
 	const unsigned keys[] = { k_left, k_right, k_down, k_up, 32 };
-	const char *e = 0;
 
 	if(is_started) return 1;
 
@@ -78,13 +77,6 @@ int Game(void) {
 		debug("Game: couldn't find required game elements.\n");
 		return 0;
 	};
-
-	do {
-		if(!Events()) { e = "event"; break; }
-	} while(0); if(e) {
-		debug("Game: couldn't start %s.\n", e); Game_();
-		return 0;
-	}
 
 	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
 	KeyRegister(27,   &quit);
@@ -107,7 +99,7 @@ int Game(void) {
 	Zone(game.start);
 	game.player = SpritesShip(game.nautilus, &position, AI_HUMAN);
 
-	EventsRunnable(game.events, 2000, &fps);
+	EventsRunnable(2000, &fps);
 
 	debug("Game: on.\n");
 	is_started = 1;
@@ -122,7 +114,6 @@ void Game_(void) {
 
 	debug("~Game: over.\n");
 	is_started = 0;
-	Events_(&game.events);
 }
 
 /** updates the gameplay */
@@ -132,8 +123,8 @@ void GameUpdate(const int dt_ms) {
 	PollUpdate();
 	/* Collision detect, move sprites, center on the player; a lot of work. */
 	SpritesUpdate(dt_ms, (struct Sprite *)game.player);
-	/* check events */
-	EventsUpdate(game.events);
+	/* Dispatch events; after update so that immidiate can be immediate. */
+	EventsUpdate();
 }
 
 struct Ship *GameGetPlayer(void) {

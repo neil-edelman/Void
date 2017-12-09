@@ -4,4 +4,4 @@ struct AutoSpaceZone;
 struct Gate;
 
 void Zone(const struct AutoSpaceZone *const sz);
-void ZoneChange(const struct Gate *const s);
+void ZoneChange(struct Gate *const gate);

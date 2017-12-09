@@ -35,7 +35,6 @@ struct Runnable {
 	struct EventListNode event;
 	Runnable run;
 };
-
 #define POOL_NAME Runnable
 #define POOL_TYPE struct Runnable
 #include "../templates/Pool.h"
@@ -46,7 +45,6 @@ struct IntConsumer {
 	IntConsumer accept;
 	int param;
 };
-
 #define POOL_NAME IntConsumer
 #define POOL_TYPE struct IntConsumer
 #include "../templates/Pool.h"
@@ -57,7 +55,6 @@ struct SpriteConsumer {
 	SpriteConsumer accept;
 	struct Sprite *const param;
 };
-
 #define POOL_NAME SpriteConsumer
 #define POOL_TYPE struct SpriteConsumer
 #include "../templates/Pool.h"
@@ -79,32 +76,29 @@ static struct Events {
 
 /******************* Define virtual functions. ********************/
 
-typedef void (*EventsAction)(struct Events *const, struct Event *const);
+typedef void (*EventsAction)(struct Event *const);
 
 struct EventVt { EventsAction call; };
 
 /** This is only called from {run_event_list} as the event list must be purged
  because the backing in the {Pool}s has been removed; important!
- @implements <Event, [Events]>BiAction */
-static void event_call(struct Event *const this, struct Events *const events) {
+ @implements <Event>Action */
+static void event_call(struct Event *const this) {
 	assert(events && this);
-	this->vt->call(events, this);
+	this->vt->call(this);
 }
-
-static void runnable_call(struct Events *const events,
-	struct Runnable *const this) {
+/** @implements <Runnable>Action */
+static void runnable_call(struct Runnable *const this) {
 	this->run();
 	RunnablePoolRemove(events->runnables, this);
 }
-
-static void int_consumer_call(struct Events *const events,
-	struct IntConsumer *const this) {
+/** @implements <IntConsumer>Action */
+static void int_consumer_call(struct IntConsumer *const this) {
 	this->accept(this->param);
 	IntConsumerPoolRemove(events->int_consumers, this);
 }
-
-static void sprite_consumer_call(struct Events *const events,
-	struct SpriteConsumer *const this) {
+/** @implements <SpriteConsumer>Action */
+static void sprite_consumer_call(struct SpriteConsumer *const this) {
 	this->accept(this->param);
 	SpriteConsumerPoolRemove(events->sprite_consumers, this);
 }
@@ -119,23 +113,23 @@ static const struct EventVt
 /******************** Type functions. ******************/
 
 /** Used in {Events_}, {Events}, and {EventsClear}. */
-static void clear_events(void) {
+static void clear_event_lists(void) {
 	unsigned i;
 	assert(events);
-	this->update = TimerGetGameTime();
-	EventListClear(&this->immediate);
-	for(i = 0; i < sizeof this->approx1s / sizeof *this->approx1s; i++)
-		EventListClear(this->approx1s + i);
-	for(i = 0; i < sizeof this->approx8s / sizeof *this->approx8s; i++)
-		EventListClear(this->approx8s + i);
-	for(i = 0; i < sizeof this->approx64s / sizeof *this->approx64s; i++)
-		EventListClear(this->approx64s + i);
+	events->update = TimerGetGameTime();
+	EventListClear(&events->immediate);
+	for(i = 0; i < sizeof events->approx1s / sizeof *events->approx1s; i++)
+		EventListClear(events->approx1s + i);
+	for(i = 0; i < sizeof events->approx8s / sizeof *events->approx8s; i++)
+		EventListClear(events->approx8s + i);
+	for(i = 0; i < sizeof events->approx64s / sizeof *events->approx64s; i++)
+		EventListClear(events->approx64s + i);
 }
 
 /** Destructor. */
 void Events_(void) {
 	if(!events) return;
-	clear_events();
+	clear_event_lists();
 	SpriteConsumerPool_(&events->sprite_consumers);
 	IntConsumerPool_(&events->int_consumers);
 	RunnablePool_(&events->runnables);
@@ -148,21 +142,20 @@ int Events(void) {
 	if(events) return 1;
 	if(!(events = malloc(sizeof *events)))
 		{ perror("Events"); Events_(); return 0; }
-	clear_events();
+	clear_event_lists();
 	events->runnables = 0;
 	events->int_consumers = 0;
 	events->sprite_consumers = 0;
 	do {
 		if(!(events->runnables = RunnablePool(&EventListMigrate, events)))
 			{ e = RunnablePoolGetError(events->runnables); break; }
-		if(!(events->int_consumers = IntConsumerPool(&EventListMigrate, events)))
+		if(!(events->int_consumers = IntConsumerPool(&EventListMigrate,events)))
 			{ e = IntConsumerPoolGetError(events->int_consumers); break; }
-		if(!(events->sprite_consumers=SpriteConsumerPool(&EventListMigrate,events)))
-			{ e = SpriteConsumerPoolGetError(events->sprite_consumers); break;}
+		if(!(events->sprite_consumers=SpriteConsumerPool(&EventListMigrate,
+			events)))
+			{ e = SpriteConsumerPoolGetError(events->sprite_consumers); break; }
 	} while(0); if(e) {
-		fprintf(stderr, "Events: %s.\n", e);
-		Events_();
-		return 0;
+		fprintf(stderr, "Events: %s.\n", e); Events_(); return 0;
 	}
 	return 1;
 }
@@ -198,7 +191,7 @@ static struct EventList *fit_future(struct Events *const this,
 	return list + select;
 }
 
-/** Abstract sprite constructor. */
+/** Abstract {Event} constructor. */
 static void event_filler(struct Event *const this,
 	const unsigned ms_future, const struct EventVt *const vt) {
 	assert(events && this && vt);
@@ -210,9 +203,9 @@ static void event_filler(struct Event *const this,
 int EventsRunnable(const unsigned ms_future, const Runnable run) {
 	struct Runnable *this;
 	if(!events || !run) return 0;
-	if(!(this = RunnablePoolNew(events->runnables))) { fprintf(stderr,
-		"EventsRunnable: %s.\n", RunnablePoolGetError(events->runnables));
-		return 0; }
+	if(!(this = RunnablePoolNew(events->runnables)))
+		{ fprintf(stderr, "EventsRunnable: %s.\n",
+		RunnablePoolGetError(events->runnables)); return 0; }
 	this->run = run;
 	event_filler(&this->event.data, ms_future, &runnable_vt);
 	return 1;
@@ -232,7 +225,7 @@ int EventsSpriteConsumer(const unsigned ms_future,
 /** Clears all events. */
 void EventsClear(void) {
 	if(!events) return;
-	clear_events();
+	clear_event_lists();
 	RunnablePoolClear(events->runnables);
 	IntConsumerPoolClear(events->int_consumers);
 	SpriteConsumerPoolClear(events->sprite_consumers);
@@ -240,8 +233,7 @@ void EventsClear(void) {
 
 static void run_event_list(struct EventList *const list) {
 	assert(events && list);
-	/* fixme */
-	EventListBiForEach(list, /*(EventBiAction)*/&event_call, events);
+	EventListForEach(list, &event_call);
 	/* {event_call} strips away their backing, so this call is important! */
 	EventListClear(list);
 }
@@ -287,67 +279,3 @@ void EventsUpdate(void) {
 		run_event_list(chosen);
 	} while(!t1s.done);
 }
-
-
-
-
-
-
-
-
-
-
-
-#if 0
-/* These are the types of delays. */
-
-/** Called from \see{Event_transfer}.
- @implements <Sprite>Action */
-static void lazy_update_fg_bin(struct Sprite *const this) {
-	unsigned to_bin;
-	/**/char a[12];
-	assert(this);
-	/**/Sprite_to_string(this, &a);
-	Vec2f_to_fg_bin(&this->x_5, &to_bin); /* fixme: again. */
-	printf("%s: Bin%u -> Bin%u.\n", a, this->bin, to_bin);
-	SpriteListRemove(bins + this->bin, this);
-	SpriteListPush(bins + to_bin, (struct SpriteListNode *)this);
-	this->bin = to_bin;
-}
-static void Event_transfer(struct Sprite *const sprite) {
-	struct Event *d;
-	if(!(d = EventPoolNew(delays))) { fprintf(stderr, "Event error: %s.\n",
-		EventPoolGetError(delays)); return; }
-	d->action = &lazy_update_fg_bin;
-	d->sprite = sprite;
-}
-
-/** Called from \see{Event_delete}.
- @implements <Sprite>Action */
-static void lazy_delete(struct Sprite *const this) {
-	assert(this);
-	this->vt->delete(this);
-}
-static void event_delete(struct Sprite *const sprite) {
-	struct Event *d;
-	if(!(d = EventPoolNew(removes))) { fprintf(stderr, "Event error: %s.\n",
-		EventPoolGetError(removes)); return; }
-	d->action = &lazy_delete;
-	d->sprite = sprite;
-}
-
-/** This applies the delay. */
-static void event_evaluate(struct Event *const this) {
-	assert(this && this->action);
-	this->action(this->sprite);
-}
-
-/** Called by \see{Event_migrate}.
- @implements <Transfer, Migrate>BiAction */
-static void event_migrate_sprite(struct Event *const this,
-	void *const migrate_void) {
-	const struct Migrate *const migrate = migrate_void;
-	assert(this && migrate);
-	SpriteMigrate(migrate, &this->sprite);
-}
-#endif

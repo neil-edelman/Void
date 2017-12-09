@@ -84,7 +84,7 @@ Dependence on <em>Sprite</em>.
 <tr>
 	<td>void</td>
 	<td><a href = "#ZoneChange">ZoneChange</a></td>
-	<td>const struct Gate *const gate</td>
+	<td>struct Gate *const gate</td>
 </tr>
 </table>
 
@@ -98,18 +98,18 @@ Dependence on <em>Sprite</em>.
 Clears, then sets up a new zone.
 </p>
 <dl>
-	<dt>return</dt>
-	<dd>Success.</dd>
 </dl>
 </div>
 
 <div><a name = "ZoneChange"><!-- --></a>
 <h3>ZoneChange</h3>
-<pre>void <b>ZoneChange</b> (const struct Gate *const gate)</pre>
+<pre>void <b>ZoneChange</b> (struct Gate *const gate)</pre>
 <p>
 Zone change with the <em>gate</em>.
 </p>
 <dl>
+	<dt>implements</dt>
+	<dd>SpriteConsumer&lt;Gate&gt;</dd>
 </dl>
 </div>
 

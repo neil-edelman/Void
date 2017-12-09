@@ -112,9 +112,18 @@ This is one polymorphic <em>Event</em>.
 </dl>
 </div>
 
-<div><a name = "struct Events"><!-- --></a>
-<h3>struct Events</h3>
-<pre><b>struct Events</b></pre>
+<div><a name = "static struct Events"><!-- --></a>
+<h3>static struct Events</h3>
+<pre><b>static struct Events</b> {
+	unsigned update; /* time */
+	struct EventList immediate;
+	struct EventList approx1s[8];
+	struct EventList approx8s[8];
+	struct EventList approx64s[8];
+	struct RunnablePool *runnables;
+	struct IntConsumerPool *int_consumers;
+	struct SpriteConsumerPool *sprite_consumers;
+}</pre>
 <p>
 Events are fit to various bins depending on the length of the delay. Longer
 delays will be more granular and less-resolution.
@@ -131,28 +140,33 @@ delays will be more granular and less-resolution.
 <tr>
 	<td>void</td>
 	<td><a href = "#Events_">Events_</a></td>
-	<td>struct Events **const pthis</td>
+	<td>void</td>
 </tr>
 <tr>
-	<td>struct Events *</td>
+	<td>int</td>
 	<td><a href = "#Events">Events</a></td>
 	<td>void</td>
 </tr>
 <tr>
 	<td>int</td>
 	<td><a href = "#EventsRunnable">EventsRunnable</a></td>
-	<td>struct Events *const events, const unsigned ms_future,
-	const Runnable run</td>
+	<td>const unsigned ms_future, const Runnable run</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#EventsSpriteConsumer">EventsSpriteConsumer</a></td>
+	<td>const unsigned ms_future,
+	const SpriteConsumer consumer, const struct Sprite *const param</td>
 </tr>
 <tr>
 	<td>void</td>
 	<td><a href = "#EventsClear">EventsClear</a></td>
-	<td>struct Events *const this</td>
+	<td>void</td>
 </tr>
 <tr>
 	<td>void</td>
 	<td><a href = "#EventsUpdate">EventsUpdate</a></td>
-	<td>struct Events *const this</td>
+	<td>void</td>
 </tr>
 </table>
 
@@ -161,7 +175,7 @@ delays will be more granular and less-resolution.
 
 <div><a name = "Events_"><!-- --></a>
 <h3>Events_</h3>
-<pre>void <b>Events_</b> (struct Events **const pthis)</pre>
+<pre>void <b>Events_</b> (void)</pre>
 <p>
 Destructor.
 </p>
@@ -171,18 +185,16 @@ Destructor.
 
 <div><a name = "Events"><!-- --></a>
 <h3>Events</h3>
-<pre>struct Events * <b>Events</b> (void)</pre>
-<p>
-Events pool constructor.
-</p>
+<pre>int <b>Events</b> (void)</pre>
 <dl>
+	<dt>return</dt>
+	<dd>True if the Events pool has been set up.</dd>
 </dl>
 </div>
 
 <div><a name = "EventsRunnable"><!-- --></a>
 <h3>EventsRunnable</h3>
-<pre>int <b>EventsRunnable</b> (struct Events *const events, const unsigned ms_future,
-	const Runnable run)</pre>
+<pre>int <b>EventsRunnable</b> (const unsigned ms_future, const Runnable run)</pre>
 <p>
 Creates a new <em>Runnable</em>.
 </p>
@@ -190,9 +202,20 @@ Creates a new <em>Runnable</em>.
 </dl>
 </div>
 
+<div><a name = "EventsSpriteConsumer"><!-- --></a>
+<h3>EventsSpriteConsumer</h3>
+<pre>int <b>EventsSpriteConsumer</b> (const unsigned ms_future,
+	const SpriteConsumer consumer, const struct Sprite *const param)</pre>
+<p>
+Creates a new <em>SpriteConsumer</em>.
+</p>
+<dl>
+</dl>
+</div>
+
 <div><a name = "EventsClear"><!-- --></a>
 <h3>EventsClear</h3>
-<pre>void <b>EventsClear</b> (struct Events *const this)</pre>
+<pre>void <b>EventsClear</b> (void)</pre>
 <p>
 Clears all events.
 </p>
@@ -202,7 +225,7 @@ Clears all events.
 
 <div><a name = "EventsUpdate"><!-- --></a>
 <h3>EventsUpdate</h3>
-<pre>void <b>EventsUpdate</b> (struct Events *const this)</pre>
+<pre>void <b>EventsUpdate</b> (void)</pre>
 <p>
 Fire off <em>Events</em> that have happened.
 </p>

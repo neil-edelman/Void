@@ -21,6 +21,7 @@
 #include "../system/Poll.h" /* input */
 #include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "../system/Timer.h" /* for expiring */
+#include "Zone.h" /* ZoneChange */
 #include "Game.h" /* GameGetPlayer */
 #include "Light.h" /* for glowing */
 #include "Sprites.h"
@@ -140,23 +141,6 @@ struct Cover {
 
 
 
-/* * While {SpriteListForEach} is running, we may have to transfer a sprite to
- another bin, or delete a sprite, or whatever; this causes causality problems
- for iteration. We introduce a delay function that is called right after the
- loop for dealing with that. Defines {DelayPool}, {DelayPoolNode}. */
-/*struct Delay {
-	SpriteAction action;
-	struct Sprite *sprite;
-};
-static void delay_to_string(const struct Delay *this, char (*const a)[12]) {
-	assert(this);
-	sprite_to_string(this->sprite, a);
-}
-#define POOL_NAME Delay
-#define POOL_TYPE struct Delay
-#define POOL_TO_STRING &delay_to_string
-#include "../templates/Pool.h"*/
-
 /** Collisions between sprites to apply later. This is a pool that sprites can
  use. Defines {CollisionPool}, {CollisionPoolNode}. {Pool} is used instead of
  {Stack} because we must have migrate. */
@@ -169,6 +153,8 @@ struct Collision {
 #define STACK_TYPE struct Collision
 #define STACK_MIGRATE
 #include "../templates/Stack.h"
+
+
 
 /** Used in {Sprites}. */
 struct Bin {

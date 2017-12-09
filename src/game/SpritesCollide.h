@@ -234,7 +234,7 @@ static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 		if(ship == GameGetPlayer()) {
 			/* trasport to zone immediately. fixme!!!: events is not handled by
 			 migrate sprites. */
-			EventsSpriteConsumer(&ZoneChange, g); /*  */
+			EventsSpriteConsumer(0.0f, (SpriteConsumer)&ZoneChange, g);
 		} else {
 			sprite_delete(s), cs->sprite = 0; /* Disappear! */
 		}

@@ -53,7 +53,7 @@ struct IntConsumer {
 struct SpriteConsumer {
 	struct EventListNode event;
 	SpriteConsumer accept;
-	struct Sprite *const param;
+	struct Sprite *param;
 };
 #define POOL_NAME SpriteConsumer
 #define POOL_TYPE struct SpriteConsumer
@@ -198,7 +198,6 @@ static void event_filler(struct Event *const this,
 	this->vt = vt;
 	EventListPush(fit_future(events, ms_future), this);
 }
-
 /** Creates a new {Runnable}. */
 int EventsRunnable(const unsigned ms_future, const Runnable run) {
 	struct Runnable *this;
@@ -212,13 +211,17 @@ int EventsRunnable(const unsigned ms_future, const Runnable run) {
 }
 /** Creates a new {SpriteConsumer}. */
 int EventsSpriteConsumer(const unsigned ms_future,
-	const SpriteConsumer consumer, const struct Sprite *const param) {
-	printf("Events: stub\n");
-	return 0;
+	const SpriteConsumer accept, struct Sprite *const param) {
+	struct SpriteConsumer *this;
+	if(!events || !accept) return 0;
+	if(!(this = SpriteConsumerPoolNew(events->sprite_consumers)))
+		{ fprintf(stderr, "EventsSpriteConsumer: %s.\n",
+		SpriteConsumerPoolGetError(events->sprite_consumers)); return 0; }
+	this->accept = accept;
+	this->param  = param;
+	event_filler(&this->event.data, ms_future, &runnable_vt);
+	return 1;
 }
-
-
-
 
 
 

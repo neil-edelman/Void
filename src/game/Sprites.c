@@ -364,6 +364,7 @@ static void bin_migrate(void *const sprites_void,
 		CoverStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
 			migrate);
 	}
+	/* fixme: also in Events. */
 }
 /** Called from \see{collision_migrate}.
  @implements <Sprite>ListMigrateElement */

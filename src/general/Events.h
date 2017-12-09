@@ -10,4 +10,4 @@ void EventsClear(void);
 void EventsUpdate(void);
 int EventsRunnable(const unsigned ms_future, const Runnable run);
 int EventsSpriteConsumer(const unsigned ms_future,
-	const SpriteConsumer consumer, const struct Sprite *const param);
+	const SpriteConsumer accept, struct Sprite *const param);

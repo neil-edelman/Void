@@ -103,7 +103,7 @@ This is one polymorphic <em>Event</em>.
 <pre><b>struct SpriteConsumer</b> {
 	struct EventListNode event;
 	SpriteConsumer accept;
-	struct Sprite *const param;
+	struct Sprite *param;
 }</pre>
 <p>
 <em>SpriteConsumer</em> is an <em>Event</em>.
@@ -156,7 +156,7 @@ delays will be more granular and less-resolution.
 	<td>int</td>
 	<td><a href = "#EventsSpriteConsumer">EventsSpriteConsumer</a></td>
 	<td>const unsigned ms_future,
-	const SpriteConsumer consumer, const struct Sprite *const param</td>
+	const SpriteConsumer accept, struct Sprite *const param</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -205,7 +205,7 @@ Creates a new <em>Runnable</em>.
 <div><a name = "EventsSpriteConsumer"><!-- --></a>
 <h3>EventsSpriteConsumer</h3>
 <pre>int <b>EventsSpriteConsumer</b> (const unsigned ms_future,
-	const SpriteConsumer consumer, const struct Sprite *const param)</pre>
+	const SpriteConsumer accept, struct Sprite *const param)</pre>
 <p>
 Creates a new <em>SpriteConsumer</em>.
 </p>

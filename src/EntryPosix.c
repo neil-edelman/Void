@@ -19,6 +19,7 @@
 #include "system/Draw.h"
 #include "system/Timer.h"
 #include "system/Key.h"
+#include "general/Events.h"
 #include "game/Sprites.h"
 #include "game/Fars.h"
 #include "game/Game.h"
@@ -49,6 +50,7 @@ int main(int argc, char **argv) {
 	/* start up subsystems; window has to be first; timer ms */
 	if(!Window(programme, argc, argv)
 		|| !Key()
+		|| !Events()
 		|| !Sprites()
 		|| !Fars()
 		|| !Draw()
@@ -64,11 +66,12 @@ int main(int argc, char **argv) {
  @allow */
 static void main_(void) {
 	TimerPause();
-	/* There is no Window_(). */
 	Game_();
 	Draw_();
 	Fars_();
 	Sprites_();
+	Events_();
+	/* There is no Key_() or Window_(). */
 }
 
 /** Help screen. */

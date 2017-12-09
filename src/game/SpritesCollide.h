@@ -207,7 +207,7 @@ static void wmd_ship(struct Cover *w, struct Cover *s, const float t) {
 	 SpriteRecharge(s, -SpriteGetDamage(w));*/
 	/*printf("BAM!\n");*/
 	sprite_inelastic_stick(s->sprite, w->sprite, t);
-	sprite_delete(w->sprite), w->sprite = 0; /*<- fixme */
+	sprite_delete(w->sprite), w->sprite = 0;
 }
 /** @implements CoverCollision */
 static void ship_wmd(struct Cover *s, struct Cover *w, const float t) {
@@ -216,37 +216,30 @@ static void ship_wmd(struct Cover *s, struct Cover *w, const float t) {
 
 /** @implements CoverCollision */
 static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
-	/*void (*fn)(struct Sprite *const, struct Sprite *);*/
-	/*Info("Shp%u colliding with Eth%u . . . \n", ShipGetId(ship), EtherealGetId(eth));*/
-	/*if((fn = EtherealGetCallback(eth))) fn(eth, s);*/
-	/* while in iterate! danger! */
-	/*if(e->sp.ethereal.callback) e->sp.ethereal.callback(e, s);*/
 	struct Sprite *const s = cs->sprite, *const g = cg->sprite;
 	struct Ship *const ship = (struct Ship *)s;
-	float x, y, /*vx, vy,*/ gate_norm_x, gate_norm_y, proj/*, h*/;
+	struct Vec2f diff, gate_norm;
+	float proj;
 	assert(s && g && s->vt->class == SC_SHIP);
-	x = s->x.x - g->x.x;
-	y = s->x.y - g->x.y;
-	gate_norm_x = cosf(g->x.theta);
-	gate_norm_y = sinf(g->x.theta);
-	proj = x * gate_norm_x + y * gate_norm_y;
+	diff.x = s->x.x - g->x.x;
+	diff.y = s->x.y - g->x.y;
+	gate_norm.x = cosf(g->x.theta);
+	gate_norm.y = sinf(g->x.theta);
+	proj = diff.x * gate_norm.x + diff.y * gate_norm.y;
 	if(ship->dist_to_horizon > 0 && proj < 0) {
 		char a[12], b[12];
 		sprite_to_string(s, &a);
 		sprite_to_string(g, &b);
-		printf("ship_into_gate: %s crossed into the event horizon of %s.\n",a,b);
-#if 0
+		printf("ship_gate: %s crossed into the event horizon of %s.\n", a, b);
 		if(ship == GameGetPlayer()) {
-			/* trasport to zone immediately */
-			Event(0, 0, 0, FN_CONSUMER, &ZoneChange, g);
+			/* trasport to zone immediately. fixme!!!: events is not handled by
+			 migrate sprites. */
+			EventsSpriteConsumer(&ZoneChange, g); /*  */
 		} else {
-			/* disappear */
-			/* fixme: test! */
+			sprite_delete(s), cs->sprite = 0; /* Disappear! */
 		}
-#endif
-	}/* else*/
-	/* fixme: unreliable */
-	ship->dist_to_horizon = proj;
+	}
+	ship->dist_to_horizon = proj; /* fixme: unreliable? */
 	UNUSED(t);
 }
 /** @implements CoverCollision */

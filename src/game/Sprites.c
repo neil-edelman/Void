@@ -16,11 +16,12 @@
 #include <stdio.h> /* fprintf */
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
 #include "../general/Orcish.h" /* for human-readable ship names */
-/*#include "../general/Events.h"*/ /* for delays */
+#include "../general/Events.h" /* Event for delays */
 #include "../general/Layer.h" /* for descritising */
 #include "../system/Poll.h" /* input */
 #include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "../system/Timer.h" /* for expiring */
+#include "Game.h" /* GameGetPlayer */
 #include "Light.h" /* for glowing */
 #include "Sprites.h"
 
@@ -1101,34 +1102,5 @@ struct Gate *GateFind(struct AutoSpaceZone *const to) {
 }
 
 
-/** can be a callback for an Ethereal, whenever it collides with a Ship.
- IT CAN'T MODIFY THE LIST */
-static void gate_travel(struct Gate *const gate, struct Ship *this) {
-	struct Vec2f diff, gate_norm;
-	float proj;
-	if(!gate || !this) return;
-	diff.x = this->sprite.r.x - gate->sprite.data.r.x;
-	diff.y = this->sprite.r.y - gate->sprite.r.y;
-	/* unneccesary?
-	 vx = ship_vx - gate_vx;
-	 vy = ship_vy - gate_vy;*/
-	gate_norm_x = cosf(gate->theta);
-	gate_norm_y = sinf(gate->theta);
-	proj = x * gate_norm_x + y * gate_norm_y; /* proj is the new h */
-	if(this->sp.this.horizon > 0 && proj < 0) {
-		debug("gate_travel: %s crossed into the event horizon of %s.\n",
-			SpriteToString(this), SpriteToString(gate));
-		if(this == GameGetPlayer()) {
-			/* trasport to zone immediately */
-			Event(0, 0, 0, FN_CONSUMER, &ZoneChange, gate);
-		} else {
-			/* disappear */
-			/* fixme: test! */
-			SpriteDestroy(this);
-		}
-	}/* else*/
-	/* fixme: unreliable */
-	this->sp.this.horizon = proj;
-}
 
 #endif

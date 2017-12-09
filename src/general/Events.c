@@ -64,8 +64,7 @@ struct SpriteConsumer {
 
 /** Events are fit to various bins depending on the length of the delay. Longer
  delays will be more granular and less-resolution. */
-struct Events;
-struct Events {
+static struct Events {
 	unsigned update; /* time */
 	struct EventList immediate;
 	struct EventList approx1s[8];
@@ -74,7 +73,7 @@ struct Events {
 	struct RunnablePool *runnables;
 	struct IntConsumerPool *int_consumers;
 	struct SpriteConsumerPool *sprite_consumers;
-};
+} *events;
 
 
 
@@ -120,9 +119,10 @@ static const struct EventVt
 /******************** Type functions. ******************/
 
 /** Used in {Events_}, {Events}, and {EventsClear}. */
-static void clear_events(struct Events *const this) {
+static void clear_events(void) {
 	unsigned i;
-	assert(this);
+	assert(events);
+	this->update = TimerGetGameTime();
 	EventListClear(&this->immediate);
 	for(i = 0; i < sizeof this->approx1s / sizeof *this->approx1s; i++)
 		EventListClear(this->approx1s + i);
@@ -133,39 +133,38 @@ static void clear_events(struct Events *const this) {
 }
 
 /** Destructor. */
-void Events_(struct Events **const pthis) {
-	struct Events *this;
-	if(!pthis || !(this = *pthis)) return;
-	clear_events(this);
-	SpriteConsumerPool_(&this->sprite_consumers);
-	IntConsumerPool_(&this->int_consumers);
-	RunnablePool_(&this->runnables);
-	free(this);
-	*pthis = this = 0;
+void Events_(void) {
+	if(!events) return;
+	clear_events();
+	SpriteConsumerPool_(&events->sprite_consumers);
+	IntConsumerPool_(&events->int_consumers);
+	RunnablePool_(&events->runnables);
+	free(events), events = 0;
 }
 
-/** Events pool constructor. */
-struct Events *Events(void) {
-	struct Events *this;
+/** @return True if the Events pool has been set up. */
+int Events(void) {
 	const char *e = 0;
-	if(!(this = malloc(sizeof *this)))
-		{ perror("Events"); Events_(&this); return 0; }
-	clear_events(this);
-	this->runnables = 0;
-	this->int_consumers = 0;
-	this->sprite_consumers = 0;
+	if(events) return 1;
+	if(!(events = malloc(sizeof *events)))
+		{ perror("Events"); Events_(); return 0; }
+	clear_events();
+	events->runnables = 0;
+	events->int_consumers = 0;
+	events->sprite_consumers = 0;
 	do {
-		if(!(this->runnables = RunnablePool(&EventListMigrate, this)))
-			{ e = RunnablePoolGetError(this->runnables); break; }
-		if(!(this->int_consumers = IntConsumerPool(&EventListMigrate, this)))
-			{ e = IntConsumerPoolGetError(this->int_consumers); break; }
-		if(!(this->sprite_consumers=SpriteConsumerPool(&EventListMigrate,this)))
-			{ e = SpriteConsumerPoolGetError(this->sprite_consumers); break;}
+		if(!(events->runnables = RunnablePool(&EventListMigrate, events)))
+			{ e = RunnablePoolGetError(events->runnables); break; }
+		if(!(events->int_consumers = IntConsumerPool(&EventListMigrate, events)))
+			{ e = IntConsumerPoolGetError(events->int_consumers); break; }
+		if(!(events->sprite_consumers=SpriteConsumerPool(&EventListMigrate,events)))
+			{ e = SpriteConsumerPoolGetError(events->sprite_consumers); break;}
 	} while(0); if(e) {
 		fprintf(stderr, "Events: %s.\n", e);
-		Events_(&this);
+		Events_();
+		return 0;
 	}
-	return this;
+	return 1;
 }
 
 
@@ -200,7 +199,7 @@ static struct EventList *fit_future(struct Events *const this,
 }
 
 /** Abstract sprite constructor. */
-static void event_filler(struct Events *const events, struct Event *const this,
+static void event_filler(struct Event *const this,
 	const unsigned ms_future, const struct EventVt *const vt) {
 	assert(events && this && vt);
 	this->vt = vt;
@@ -208,16 +207,21 @@ static void event_filler(struct Events *const events, struct Event *const this,
 }
 
 /** Creates a new {Runnable}. */
-int EventsRunnable(struct Events *const events, const unsigned ms_future,
-	const Runnable run) {
+int EventsRunnable(const unsigned ms_future, const Runnable run) {
 	struct Runnable *this;
 	if(!events || !run) return 0;
 	if(!(this = RunnablePoolNew(events->runnables))) { fprintf(stderr,
 		"EventsRunnable: %s.\n", RunnablePoolGetError(events->runnables));
 		return 0; }
 	this->run = run;
-	event_filler(events, &this->event.data, ms_future, &runnable_vt);
+	event_filler(&this->event.data, ms_future, &runnable_vt);
 	return 1;
+}
+/** Creates a new {SpriteConsumer}. */
+int EventsSpriteConsumer(const unsigned ms_future,
+	const SpriteConsumer consumer, const struct Sprite *const param) {
+	printf("Events: stub\n");
+	return 0;
 }
 
 
@@ -226,38 +230,38 @@ int EventsRunnable(struct Events *const events, const unsigned ms_future,
 
 
 /** Clears all events. */
-void EventsClear(struct Events *const this) {
-	if(!this) return;
-	clear_events(this);
-	RunnablePoolClear(this->runnables);
-	IntConsumerPoolClear(this->int_consumers);
-	SpriteConsumerPoolClear(this->sprite_consumers);
+void EventsClear(void) {
+	if(!events) return;
+	clear_events();
+	RunnablePoolClear(events->runnables);
+	IntConsumerPoolClear(events->int_consumers);
+	SpriteConsumerPoolClear(events->sprite_consumers);
 }
 
-static void run_event_list(struct Events *const events,
-	struct EventList *const list) {
+static void run_event_list(struct EventList *const list) {
 	assert(events && list);
-	EventListBiForEach(list, (EventBiAction)&event_call, events);
+	/* fixme */
+	EventListBiForEach(list, /*(EventBiAction)*/&event_call, events);
 	/* {event_call} strips away their backing, so this call is important! */
 	EventListClear(list);
 }
 
 /** Fire off {Events} that have happened. */
-void EventsUpdate(struct Events *const this) {
+void EventsUpdate(void) {
 	struct EventList *chosen;
 	struct { unsigned cur, end; int done; } t1s, t8s, t64s;
 	const unsigned now = TimerGetGameTime();
 	enum { T64S, T8S, T1S } granularity = T64S;
-	if(!this) return;
+	if(!events) return;
 	/* Always run events that are immediate asap. */
-	run_event_list(this, &this->immediate);
+	run_event_list(&events->immediate);
 	/* Applies the timer with a granularity of whatever; all are [0, 7].
 	 fixme: Meh, could be better. */
-	t64s.cur = (this->update >> 16) & 7;
+	t64s.cur = (events->update >> 16) & 7;
 	t64s.end = (now >> 16) & 7;
-	t8s.cur  = (this->update >> 13) & 7;
+	t8s.cur  = (events->update >> 13) & 7;
 	t8s.end  = (now >> 13) & 7;
-	t1s.cur  = (this->update >> 10) & 7;
+	t1s.cur  = (events->update >> 10) & 7;
 	t1s.end  = (now >> 10) & 7;
 	do {
 		switch(granularity) {
@@ -266,21 +270,21 @@ void EventsUpdate(struct Events *const this) {
 			case T1S:  t1s.done  = t8s.done && (t1s.cur == t1s.end);
 		}
 		if(t1s.cur < 8) {
-			chosen = this->approx1s + t1s.cur++;
+			chosen = events->approx1s + t1s.cur++;
 			granularity = T1S;
 		} else {
 			t1s.cur = 0;
 			if(t8s.cur != 8) {
-				chosen = this->approx8s + t8s.cur++;
+				chosen = events->approx8s + t8s.cur++;
 				granularity = T8S;
 			} else {
 				t8s.cur = 0;
-				chosen = this->approx64s + t64s.cur++;
+				chosen = events->approx64s + t64s.cur++;
 				t64s.cur &= 7;
 				granularity = T64S;
 			}
 		}
-		run_event_list(this, chosen);
+		run_event_list(chosen);
 	} while(!t1s.done);
 }
 

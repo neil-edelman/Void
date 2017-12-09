@@ -4,9 +4,10 @@ struct Sprite;
 typedef void (*SpriteConsumer)(struct Sprite *const);
 struct Events;
 
-void Events_(struct Events **const pthis);
-struct Events *Events(void);
-void EventsClear(struct Events *const this);
-void EventsUpdate(struct Events *const this);
-int EventsRunnable(struct Events *const events, const unsigned ms_future,
-	const Runnable run);
+void Events_(void);
+int Events(void);
+void EventsClear(void);
+void EventsUpdate(void);
+int EventsRunnable(const unsigned ms_future, const Runnable run);
+int EventsSpriteConsumer(const unsigned ms_future,
+	const SpriteConsumer consumer, const struct Sprite *const param);

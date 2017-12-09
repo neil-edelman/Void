@@ -35,7 +35,6 @@ static int is_started;
 
 /* public struct */
 static struct Game {
-	struct Events *events;
 	struct Ship *player; /* camera moves with this */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
@@ -70,7 +69,6 @@ int Game(void) {
 
 	if(is_started) return 1;
 
-	game.events = 0;
 	game.player = 0;
 	/* game elements */
 	if(!(game.asteroid = AutoDebrisSearch("Asteroid"))
@@ -82,7 +80,7 @@ int Game(void) {
 	};
 
 	do {
-		if(!(game.events = Events())) { e = "event"; break; }
+		if(!Events()) { e = "event"; break; }
 	} while(0); if(e) {
 		debug("Game: couldn't start %s.\n", e); Game_();
 		return 0;

@@ -750,7 +750,52 @@ void SpritesInfo(void) {
 
 
 
+/** Specific sprites. */
 
+/** Allows access to {this}' position as a read-only value. */
+const struct Ortho3f *SpriteGetPosition(const struct Sprite *const this) {
+	if(!this) return 0;
+	return &this->x;
+}
+/** Allows access to {this}' velocity as a read-only value. */
+const struct Ortho3f *SpriteGetVelocity(const struct Sprite *const this) {
+	if(!this) return 0;
+	return &this->v;
+}
+/** Modifies {this}' position. */
+void SpriteSetPosition(struct Sprite *const this,const struct Ortho3f *const x){
+	if(!this || !x) return;
+	ortho3f_assign(&this->x, x);
+}
+/** Modifies {this}' velocity. */
+void SpriteSetVelocity(struct Sprite *const this,const struct Ortho3f *const v){
+	if(!this || !v) return;
+	ortho3f_assign(&this->v, v);
+}
+
+/** Gets an {AutoSpaceZone} that it goes to, if it exists. */
+const struct AutoSpaceZone *GateGetTo(const struct Gate *const this) {
+	if(!this) return 0;
+	return this->to;
+}
+
+/** Gets a {Sprite} that goes to the {AutoSpaceZone}, if it exists.
+ @order O({|max Gates|}) */
+struct Gate *FindGate(const struct AutoSpaceZone *const to) {
+	struct GatePool *const gates = sprites->gates;
+	struct Gate *g;
+	size_t i;
+	if(!to || !sprites) return 0;
+	if((g = GatePoolElement(gates))) {
+		i = GatePoolGetIndex(gates, g);
+		for( ; ; ) {
+			if(g->to == to) return g;
+			do if(!i) return 0; while(GatePoolIsElement(gates, --i));
+			g = GatePoolGetElement(gates, i);
+		}
+	}
+	return 0;
+}
 
 
 
@@ -1069,11 +1114,6 @@ void ShipRechage(struct Ship *const sprites, const int recharge) {
 	}
 }
 
-/** Gets a SpaceZone that it goes to, if it exists. */
-const struct AutoSpaceZone *GateGetTo(const struct Gate *const sprites) {
-	if(!sprites) return 0;
-	return sprites->to;
-}
 
 /** See \see{GateFind}.
  @implements <Gate>Predicate */

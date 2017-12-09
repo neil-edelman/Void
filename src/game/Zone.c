@@ -93,76 +93,52 @@ void Zone(const struct AutoSpaceZone *const sz) {
 /** Zone change with the {gate}.
  @implements SpriteConsumer<Gate> */
 void ZoneChange(struct Gate *const gate) {
+#if 0
 	printf("Zone::change: stub.\n");
 	UNUSED(gate);
-#if 0
-	const struct AutoSpaceZone *const new_zone = GateGetTo(gate), *old_zone = current_zone;
-	struct Sprite *new_gate;
-	struct Sprite *player;
-	const struct Ortho3f oldg;
-	float oldg_x,   oldg_y,   oldg_theta,   oldg_vx,   oldg_vy;
-	float newg_x,   newg_y,   newg_theta,   newg_vx,   newg_vy;
-	float dg_x,     dg_y,     dg_theta,     dg_vx,     dg_vy;
-	float dg_cos, dg_sin;
-	float player_x, player_y, player_theta, player_vx, player_vy;
-	float dp_x,     dp_y,     /*dp_theta,*/ dp_vx,     dp_vy;
+#else
+	const struct AutoSpaceZone *const new_zone = GateGetTo(gate),
+		*old_zone = current_zone;
+	struct Gate *new_gate;
+	struct Ship *player;
+	const struct Ortho3f *oldx, *oldv, *newx, *newv, *playerx, *playerv;
+	struct Ortho3f dx, dv, playerdx, playerdv, finalx, finalv;
+	float dx_cos, dx_sin;
 
-	/* get old gate parametres */
-	SpriteGetOrtho(&gate->sprite, &oldg);
-	oldg_theta = SpriteGetTheta(gate);
-	SpriteGetVelocity(gate, &oldg_vx, &oldg_vy);
-
-	/* new zone */
-	if(!new_zone) {
-		warn("ZoneChange: %s does not have information about zone.\n", SpriteToString(gate));
-		return;
-	}
+	/* Get old gate parametres. */
+	oldx = SpriteGetPosition((struct Sprite *)gate);
+	oldv = SpriteGetVelocity((struct Sprite *)gate);
+	assert(oldx && oldv);
+	/* New zone. */
+	if(!new_zone) { fprintf(stderr,
+		"ZoneChange: does not have information about zone.\n"); return; }
 	Zone(new_zone);
-
-	/* get new gate parametres; after the Zone changes! */
-	if(!(new_gate = SpriteOutgoingGate(old_zone))) {
-		warn("ZoneChange: there doesn't seem to be a gate back.\n");
-		return;
-	}
-	SpriteGetPosition(new_gate, &newg_x, &newg_y);
-	newg_theta = SpriteGetTheta(new_gate);
-	SpriteGetVelocity(new_gate, &newg_vx, &newg_vy);
-
-	/* difference between the gates */
-	dg_x     = newg_x     - oldg_x;
-	dg_y     = newg_y     - oldg_y;
-	dg_theta = newg_theta - oldg_theta;
-	dg_vx    = newg_vx    - oldg_vx;
-	dg_vy    = newg_vy    - oldg_vy;
-
-	dg_cos = cosf(dg_theta);
-	dg_sin = sinf(dg_theta);
-
-	/* get player parametres; after the Zone changes! */
-	if(!(player = GameGetPlayer())) {
-		warn("ZoneChange: there doesn't seem to be a player.\n");
-		return;
-	}
-	SpriteGetPosition(player, &player_x, &player_y);
-	player_theta = SpriteGetTheta(player);
-	SpriteGetVelocity(player, &player_vx, &player_vy);
-
-	/* difference between the player and the old gate */
-	dp_x     = player_x     - oldg_x;
-	dp_y     = player_y     - oldg_y;
-	/*dp_theta = player_theta - oldg_theta;*/
-	dp_vx    = player_vx    - oldg_vx;
-	dp_vy    = player_vy    - oldg_vy;
-
-	/* calculate new player parametres */
-	player_x     =  newg_x - dp_x*dg_cos - dp_y*dg_sin;
-	player_y     =  newg_y + dp_x*dg_sin - dp_y*dg_cos;
-	player_theta += dg_theta;
-	player_vx    = -dp_vx*dg_cos - dp_vy*dg_sin;
-	player_vy    =  dp_vx*dg_sin - dp_vy*dg_cos;
-
-	SpriteSetPosition(player, player_x, player_y);
-	SpriteSetTheta(player, player_theta);
-	SpriteSetVelocity(player, player_vx, player_vy);
+	/* Get new gate parametres; after the Zone changes. */
+	if(!(new_gate = FindGate(old_zone)))
+		{ fprintf(stderr, "ZoneChange: missing gate back.\n"); return; }
+	newx = SpriteGetPosition((struct Sprite *)new_gate);
+	newv = SpriteGetVelocity((struct Sprite *)new_gate);
+	assert(newx && newv);
+	/* Difference between the gates. */
+	ortho3f_sub(&dx, newx, oldx);
+	ortho3f_sub(&dv, newv, oldv);
+	dx_cos = cosf(dx.theta), dx_sin = sinf(dx.theta);
+	/* Get player parametres; after the Zone changes! */
+	if(!(player = GameGetPlayer())) { fprintf(stderr,
+		"ZoneChange: there doesn't seem to be a player.\n"); return; }
+	playerx = SpriteGetPosition((struct Sprite *)player);
+	playerv = SpriteGetVelocity((struct Sprite *)player);
+	/* Difference between the player and the old gate. */
+	ortho3f_sub(&playerdx, playerx, oldx);
+	ortho3f_sub(&playerdv, playerv, oldv);
+	/* Calculate new player parametres. */
+	finalx.x     = newx->x - playerdx.x * dx_cos - playerdx.y * dx_sin;
+	finalx.y     = newx->y + playerdx.x * dx_sin - playerdx.y * dx_cos;
+	finalx.theta = playerx->theta + dx.theta;
+	finalv.x     =-playerdv.x * dx_cos - playerdv.y * dx_sin;
+	finalv.y     = playerdv.x * dx_sin - playerdv.y * dx_cos;
+	finalv.theta = playerv->theta;
+	SpriteSetPosition((struct Sprite *)player, &finalx);
+	SpriteSetVelocity((struct Sprite *)player, &finalv);
 #endif
 }

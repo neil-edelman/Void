@@ -30,6 +30,9 @@ struct Gate *SpritesGate(const struct AutoGate *const class);
 void SpritesUpdate(const int dt_ms, struct Sprite *const target);
 void SpritesDraw(void);
 void SpritesInfo(void);
-
-/* fixme: stubs */
-void SpritesPlot(void);
+const struct Ortho3f *SpriteGetPosition(const struct Sprite *const this);
+const struct Ortho3f *SpriteGetVelocity(const struct Sprite *const this);
+void SpriteSetPosition(struct Sprite *const this,const struct Ortho3f *const x);
+void SpriteSetVelocity(struct Sprite *const this,const struct Ortho3f *const v);
+const struct AutoSpaceZone *GateGetTo(const struct Gate *const this);
+struct Gate *FindGate(const struct AutoSpaceZone *const to);

@@ -42,11 +42,17 @@ static void ortho3f_init(struct Ortho3f *const this) {
 /** Assigns {that} to {this}. */
 static void ortho3f_assign(struct Ortho3f *const this,
 	const struct Ortho3f *const that) {
-	assert(this);
-	assert(that);
+	assert(this && that);
 	this->x     = that->x;
 	this->y     = that->y;
 	this->theta = that->theta;
+}
+/** {this} = {a} - {b}. */
+static void ortho3f_sub(struct Ortho3f *const this, const struct Ortho3f *const a, const struct Ortho3f *const b) {
+	assert(this && a && b);
+	this->x     = a->x - b->x;
+	this->y     = a->y - b->y;
+	this->theta = a->theta - b->theta;
 }
 /** Assigns zero. */
 static void rectangle4i_init(struct Rectangle4i *const this) {
@@ -102,6 +108,7 @@ static void orthomath_unused(void) {
 	random_pm_max(0);
 	ortho3f_init(0);
 	ortho3f_assign(0, 0);
+	ortho3f_sub(0, 0, 0);
 	rectangle4i_init(0);
 	rectangle4f_init(0);
 	rectangle4i_assign(0, 0);

@@ -188,10 +188,7 @@ static void wmd_debris(struct Cover *w, struct Cover *d, const float t) {
 	 sprite_to_string(d, &b);
 	 printf("hit %s -- %s.\n", a, b);*/
 	/*printf("BOOM!\n");*/
-	char a[12];
 	sprite_inelastic_stick(d->sprite, w->sprite, t);
-	sprite_to_string(w->sprite, &a);
-	printf("Hit debris %s.\n", a);
 	sprite_delete(w->sprite), w->sprite = 0;
 }
 /** @implements CoverCollision */
@@ -209,10 +206,7 @@ static void wmd_ship(struct Cover *w, struct Cover *s, const float t) {
 	 push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
 	 SpriteRecharge(s, -SpriteGetDamage(w));*/
 	/*printf("BAM!\n");*/
-	char a[12];
 	sprite_inelastic_stick(s->sprite, w->sprite, t);
-	sprite_to_string(w->sprite, &a);
-	printf("Hit ship %s.\n", a);
 	sprite_delete(w->sprite), w->sprite = 0; /*<- fixme */
 }
 /** @implements CoverCollision */
@@ -450,8 +444,6 @@ static void collide_bin(unsigned bin) {
 			if(!collide_boxes(a, b) || !collide_circles(a, b, &t)) continue;
 			/* Collision. */
 			matrix->handler(cover_a, cover_b, t);
-			if(!cover_a->sprite) printf("a.sprite was deleted.\n");
-			if(!cover_b->sprite) printf("b.sprite was deleted.\n");
 		} while(index_b);
 	}
 }

@@ -245,9 +245,8 @@ static void sprite_delete(struct Sprite *const this) {
 	char a[12];
 	assert(sprites && this);
 	sprite_to_string(this, &a);
-	printf("Removing %s from Bin%u.\n", a, this->bin);
-	SpriteListRemove(&sprites->bins[this->bin].sprites, this),
-		this->bin = (unsigned)-1;
+	SpriteListRemove(&sprites->bins[this->bin].sprites, this);
+	this->bin = (unsigned)-1; /* Makes debugging easier. */
 	this->vt->delete(this);
 }
 /** @implements <Ship>Action */
@@ -269,7 +268,8 @@ static void gate_delete(struct Gate *const this) {
 }
 
 
-/** @implements <Sprite>Predicate */
+/** If it returns false, it deleted the sprite.
+ @implements <Sprite>Predicate */
 static int sprite_update(struct Sprite *const this) {
 	assert(this);
 	return this->vt->update(this);
@@ -285,13 +285,7 @@ static int debris_update(struct Debris *const this) {
 /** @implements <Wmd>Predicate
  @fixme Replace delete with more dramatic death. */
 static int wmd_update(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) {
-		char a[12];
-		sprite_to_string((struct Sprite *)this, &a);
-		printf("Expires %s.\n", a);
-		sprite_delete(&this->sprite.data);
-		return 0;
-	}
+	if(TimerIsTime(this->expires)) return sprite_delete(&this->sprite.data), 0;
 	return 1;
 }
 /** @implements <Gate>Predicate */
@@ -629,13 +623,9 @@ static void put_cover(const unsigned bin, unsigned no, struct Sprite *this) {
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
  @implements <Sprite>Action */
 static void extrapolate(struct Sprite *const this) {
-	char a[12];
 	assert(sprites && this);
-	sprite_to_string(this, &a);
-	if(!sprite_update(this)) {
-		printf("extrapolate: sprite_update has deleted %s.\n", a);
-		return;
-	}
+	/* If it returns false, just leave it; it's probably invalid now. */
+	if(!sprite_update(this)) return;
 	/* Kinematics. */
 	this->dx.x = this->v.x * sprites->dt_ms;
 	this->dx.y = this->v.y * sprites->dt_ms;

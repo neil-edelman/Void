@@ -66,7 +66,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 		sz->ois1->name, sz->ois2->name);
 
 	/* clear all objects */
-	SpriteRemoveIf(&all_except_player);
+	/*SpriteRemoveIf(&all_except_player);*/
 	/*EventRemoveIf(&remove_all_events_except);*/
 	FarsClear();
 
@@ -121,7 +121,7 @@ void ZoneChange(struct Gate *const gate) {
 	ortho3f_sub(&dv, newv, oldv);
 	dx_cos = cosf(dx.theta), dx_sin = sinf(dx.theta);
 	/* Get player parametres; after the Zone changes! */
-	if(!(player = SpritesGetPlayer())) { fprintf(stderr,
+	if(!(player = SpritesGetPlayerShip())) { fprintf(stderr,
 		"ZoneChange: there doesn't seem to be a player.\n"); return; }
 	playerx = SpriteGetPosition((struct Sprite *)player);
 	playerv = SpriteGetVelocity((struct Sprite *)player);

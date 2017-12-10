@@ -36,4 +36,4 @@ void SpriteSetPosition(struct Sprite *const this,const struct Ortho3f *const x);
 void SpriteSetVelocity(struct Sprite *const this,const struct Ortho3f *const v);
 const struct AutoSpaceZone *GateGetTo(const struct Gate *const this);
 struct Gate *FindGate(const struct AutoSpaceZone *const to);
-struct Ship *SpritesGetPlayer(void);
+struct Ship *SpritesGetPlayerShip(void);

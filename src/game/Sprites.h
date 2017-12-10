@@ -30,6 +30,7 @@ struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 struct Gate *SpritesGate(const struct AutoGate *const class);
 void SpritesUpdate(const int dt_ms);
 void SpritesDraw(void);
+void Info(const struct Vec2f *const x, const struct AutoImage *const image);
 void SpritesInfo(void);
 void SpritesRemoveIf(const SpritesPredicate predicate);
 const struct Ortho3f *SpriteGetPosition(const struct Sprite *const this);

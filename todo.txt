@@ -22,6 +22,7 @@ specimen, sample, instance, occurrence, manifestation, embodiment, epitome, repr
 
 Bug List
 --------
+-lighting is wonky; put actual lights on the Info
 -more complex scene lighting
 
 Features
@@ -66,8 +67,8 @@ struct Foo {
 }
 static struct Foo foo = { "foo", 2, { &bar[0], &bar[1] } };
 
-Kampala, Uganda (just south, Lake Victoria)
-Singapore, Malaysia (just south)
+landing (have landing spot (x,y))
+space elevator landing spots: Kampala, Uganda (just south, Lake Victoria), Singapore, Malaysia (just south)
 
 Random.c; P[\mu_x,\mu_y,\sigma] = f(x|\mu,\sigma) = \frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(x-\mu)^2}{2\sigma^2}} Gaussian distribution in space to find ships. Also, custom dist based on objects of interest
 
@@ -78,8 +79,6 @@ things that you can buy that allow different things to be picked up, eg gold min
 look up how to get outlines (I think you just add a little bit to the size and then render it in one colour)
 
 text engine (display lists? wrapping?) -- communication
-
-landing (have landing spot (x,y))
 
 select icon, target display (ships, planets, stations, links)
 

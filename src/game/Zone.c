@@ -54,6 +54,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 	/* clear all objects */
 	SpritesRemoveIf(&all_except_player);
+	/* @fixme LightsClear();*/
 	EventsClear();
 	FarsClear();
 

@@ -46,6 +46,9 @@ static const float turn_damping_1st_order = 0.00442217f;
 
 
 
+/* Sprites used in debugging; initialised in {Sprites}. */
+static const struct AutoImage *icon_expand;
+
 /******************* Declare types. ***************/
 
 /* Define {SpriteList} and {SpriteListNode}. */
@@ -135,8 +138,12 @@ struct Cover {
 
 
 /** Debug. */
+struct Info {
+	struct Vec2f x;
+	const struct AutoImage *image;
+};
 #define STACK_NAME Info
-#define STACK_TYPE struct Vec2f
+#define STACK_TYPE struct Info
 #include "../templates/Stack.h"
 
 
@@ -419,6 +426,10 @@ int Sprites(void) {
 	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, LAYER, COLLISION, INFO } e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
+	/* Static, if it were possible. */
+	if(!icon_expand) icon_expand = AutoImageSearch("Expand16.png");
+	assert(icon_expand);
+	/* Keep going. */
 	if(!(sprites = malloc(sizeof *sprites)))
 		{ perror("Sprites"); Sprites_(); return 0; }
 	for(i = 0; i < LAYER_SIZE; i++) {
@@ -778,11 +789,22 @@ void SpritesDraw(void) {
 	LayerForEachScreen(sprites->layer, &draw_bin);
 }
 
+/* Debug info. */
+void Info(const struct Vec2f *const x, const struct AutoImage *const image) {
+	struct Info *info;
+	if(!x || !image) return;
+	/*char a_str[12], b_str[12];
+	 sprite_to_string(a, &a_str), sprite_to_string(b, &b_str);
+	 printf("Degeneracy pressure between %s and %s.\n", a_str, b_str);*/
+	/* Debug show hair. */
+	if(!(info = InfoStackNew(sprites->info))) return;
+	info->x.x = x->x;
+	info->x.y = x->y;
+	info->image = image;
+}
 /* @implements <Vec2f>Action */
-static void draw_info(struct Vec2f *const this) {
-	const struct AutoImage *hair = AutoImageSearch("Hair.png");
-	assert(sprites && hair);
-	DrawDisplayInfo(this, hair);
+static void draw_info(struct Info *const this) {
+	DrawDisplayInfo(&this->x, this->image);
 }
 /** Use when the Info GPU shader is loaded. */
 void SpritesInfo(void) {

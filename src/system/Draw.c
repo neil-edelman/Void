@@ -48,6 +48,9 @@ extern const int max_auto_images;
 /* if is started, we don't and can't start it again */
 static int is_started;
 
+/* Sprites used in debugging; initialised in {Draw}. */
+static const struct AutoImage *icon_light;
+
 /** Texture addresses on the graphics card, when you want different textures
  simultaneously. Limit of {MAX_COMBINED_TEXTURE_IMAGE_UNITS}, which may be
  small, (like 2?) */
@@ -111,6 +114,9 @@ static struct Vec2f camera, camera_extent;
 int Draw(void) {
 	const float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
 	int i;
+
+	if(!icon_light) icon_light = AutoImageSearch("Idea16.png");
+	assert(icon_light);
 
 	if(is_started) return -1;
 
@@ -515,7 +521,7 @@ void DrawDisplayInfo(const struct Vec2f *const x,
 /** Callback for glutDisplayFunc; this is where all of the drawing happens. */
 static void display(void) {
 	/*struct Ship *player;*/
-	int lights;
+	unsigned lights;
 	/* for SpriteIterate */
 	/*struct Ortho3f x;
 	unsigned old_tex = 0, tex, size;*/
@@ -566,10 +572,14 @@ static void display(void) {
 	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
 	glUniform1i(auto_Lambert_shader.points, lights = LightGetArraySize());
 	if(lights) {
+		struct Vec2f *parray = LightGetPositionArray();
+		unsigned i;
 		glUniform2fv(auto_Lambert_shader.point_position, lights,
-			(GLfloat *)LightGetPositionArray());
+			(GLfloat *)parray);
 		glUniform3fv(auto_Lambert_shader.point_colour, lights,
 			(GLfloat *)LightGetColourArray());
+		/* Debug. */
+		for(i = 0; i < lights; i++) Info(parray + i, icon_light);
 	}
 	SpritesDraw();
 

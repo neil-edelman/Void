@@ -49,9 +49,6 @@ Sprites is a polymorphic static structure. Initialise it with <em>Sprites</em> a
 before exiting, when all references have been resolved, <em>Sprites_</em>.
 </p>
 <p>
-Debug.
-</p>
-<p>
 Specific sprites.
 </p>
 <dl>
@@ -164,6 +161,19 @@ Define a temporary reference to sprites for collision-detection; these will
 go in each bin that is covered by the sprite and be consumed by the functions
 responsible. The sprite cannot be modified during this operation to simplify
 processing.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Info"><!-- --></a>
+<h3>struct Info</h3>
+<pre><b>struct Info</b> {
+	struct Vec2f x;
+	const struct AutoImage *image;
+}</pre>
+<p>
+Debug.
 </p>
 <dl>
 </dl>

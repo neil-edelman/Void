@@ -356,14 +356,10 @@ static int collide_circles(struct Sprite *const a, struct Sprite *const b,
 	if(zr2 < 0.0f) {
 		SpriteDiAction d;
 		if((d = collision_matrix[a->vt->class][b->vt->class].degeneracy)) {
-			struct Vec2f *spot;
-			/*char a_str[12], b_str[12];
-			sprite_to_string(a, &a_str), sprite_to_string(b, &b_str);
-			printf("Degeneracy pressure between %s and %s.\n", a_str, b_str);*/
-			/* Debug show hair. */
-			spot = InfoStackNew(sprites->info);
-			spot->x = (a->x.x + b->x.x) * 0.5f;
-			spot->y = (a->x.y + b->x.y) * 0.5f;
+			/* Debug: show degeracy pressure. */
+			struct Vec2f x = { (a->x.x + b->x.x) * 0.5f,
+				(a->x.y + b->x.y) * 0.5f };
+			Info(&x, icon_expand);
 			/* Force it. */
 			d(a, b);
 			v.x = b->v.x - a->v.x, v.y = b->v.y - a->v.y;

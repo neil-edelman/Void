@@ -118,19 +118,19 @@ void Light_(unsigned *id_ptr) {
 	*id_ptr = 0;
 }
 
-/** @return		The number of lights active. */
+/** @return The number of lights active. */
 unsigned LightGetArraySize(void) { return lights_size; }
 
-/** @return		The positions of the lights. */
+/** @return The positions of the lights. */
 struct Vec2f *LightGetPositionArray(void) { return position; }
 
-/** @return		The colours of the lights. */
+/** @return The colours of the lights. */
 struct Colour3f *LightGetColourArray(void) { return colour; }
 
 /**
- @param index	Index.
+ @param index: Index.
  @param x
- @param y		*/
+ @param y */
 void LightSetPosition(const int id, const float x, const float y) {
 	const unsigned light = id_to_light(id);
 
@@ -192,75 +192,3 @@ char *to_string(const unsigned light) {
 	}
 	return buffer[b++];
 }
-
-/*#include "../general/Random.h"
-#include "../../bin/Auto.h"
-
-static int lgt_bubbles[64];
-static struct Sprite *spr_bubbles[64];
-static int tail_bubble = 0, head_bubble = 0;
-
-void BubblePush(void) {
-	float x = RandomUniformFloat(300.0f);
-	float y = RandomUniformFloat(300.0f);
-	if(((head_bubble + 1) & 63) == tail_bubble) {
-		warn("%u-%u Bubble capacity reached.\n", tail_bubble, head_bubble);
-		return;
-	}
-	debug("%u-%u Creating Bubble %u\n", tail_bubble, head_bubble, head_bubble);
-	Light(&lgt_bubbles[head_bubble], 32.0f, 1.0f, 1.0f, 1.0f, 0);
-	LightSetPosition(lgt_bubbles[head_bubble], x, y);
-	spr_bubbles[head_bubble] = Sprite(SP_ETHEREAL, AutoImageSearch("AsteroidSmall.png"), (int)x, (int)y, 0.0f);
-	SpriteSetNotify(&spr_bubbles[head_bubble]);
-	head_bubble = (head_bubble + 1) & 63;
-	SpriteList();
-	LightList();
-}
-
-void BubblePop(void) {
-	if(head_bubble == tail_bubble) {
-		warn("%u-%u No Bubbles to delete.\n", tail_bubble, head_bubble);
-		return;
-	}
-	debug("%u-%u Deleting Bubble %u\n", tail_bubble, head_bubble, tail_bubble);
-	Light_(&lgt_bubbles[tail_bubble]);
-	Sprite_(&spr_bubbles[tail_bubble]);
-	tail_bubble = (tail_bubble + 1) & 63;
-	SpriteList();
-	LightList();
-}*/
-
-/*static int lgt_bubbles[64];
-static struct Sprite *spr_bubbles[64];
-static int bubble = 0;
-
-void BubblePush(void) {
-	float x = RandomUniformFloat(300.0f);
-	float y = RandomUniformFloat(300.0f);
-	if(bubble >= 64) {
-		warn("Bubble capacity reached %u.\n", bubble);
-		return;
-	}
-	debug("Creating Bubble %u.\n", bubble);
-	Light(&lgt_bubbles[bubble], 32.0f, 1.0f, 1.0f, 1.0f, 0);
-	LightSetPosition(lgt_bubbles[bubble], x, y);
-	spr_bubbles[bubble] = Sprite(SP_ETHEREAL, AutoImageSearch("AsteroidSmall.png"), (int)x, (int)y, 0.0f);
-	SpriteSetNotify(&spr_bubbles[bubble]);
-	bubble++;
-	SpriteList();
-	LightList();
-}
-
-void BubblePop(void) {
-	if(bubble >= 0) {
-		warn("No Bubbles to delete %u.\n", bubble);
-		return;
-	}
-	debug("Deleting Bubble %u\n", bubble);
-	Light_(&lgt_bubbles[bubble]);
-	Sprite_(&spr_bubbles[bubble]);
-	bubble--;
-	SpriteList();
-	LightList();
-}
-*/

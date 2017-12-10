@@ -126,7 +126,7 @@ static void clear_event_lists(void) {
 }
 
 /** Used in {EventsRemoveIf}. */
-static void clear_event_lists_predicate(const EventsPredicate predicate) {
+/*static void clear_event_lists_predicate(const EventsPredicate predicate) {
 	unsigned i;
 	assert(events);
 	EventListTakeIf(0, &events->immediate, predicate);
@@ -136,7 +136,7 @@ static void clear_event_lists_predicate(const EventsPredicate predicate) {
 		EventListTakeIf(0, events->approx8s + i, predicate);
 	for(i = 0; i < sizeof events->approx64s / sizeof *events->approx64s; i++)
 		EventListTakeIf(0, events->approx64s + i, predicate);
-}
+} <- fixme: leaves Pool!! */
 
 /** Destructor. */
 void Events_(void) {
@@ -247,9 +247,10 @@ void EventsClear(void) {
 	SpriteConsumerPoolClear(events->sprite_consumers);
 }
 
-void EventsRemoveIf(const EventsPredicate predicate) {
+/*void EventsRemoveIf(const EventsPredicate predicate) {
 	if(!events) return;
-}
+	clear_event_lists_predicate(predicate);
+}*/
 
 static void run_event_list(struct EventList *const list) {
 	assert(events && list);

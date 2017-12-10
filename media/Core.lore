@@ -146,16 +146,24 @@ SpaceZone
 Earth
 humans
 Exploring
+-
+-
+-
 Mercury
 Venus
 Earth
+-
 SpaceZone
 Jupiter
 aliens
 Homebound
+-
+-
+-
 Mars
 Pluto
 PartyRock
+-
 #WmdType string name, Sprite, int ms_range, speed, ms_recharge, damage, impact_mass, int r,g,b
 WmdType
 lazer

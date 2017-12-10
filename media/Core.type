@@ -51,9 +51,13 @@ SpaceZone
 string name
 Alignment government
 Gate gate1
+Gate gate2
+Gate gate3
+Gate gate4
 ObjectInSpace ois1
 ObjectInSpace ois2
 ObjectInSpace ois3
+ObjectInSpace ois4
 ~
 WmdType
 string name

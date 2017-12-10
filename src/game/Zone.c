@@ -33,13 +33,13 @@ const struct AutoSpaceZone *current_zone;
 static int all_except_player(const struct Sprite *const this) {
 	return this != (struct Sprite *)SpritesGetPlayerShip();
 }
-/** @implements <Event>Predicate
- @fixme: We don't erase the player's recharge event nor any (one?) event that
+/* * @implements <Event>Predicate
+ @fixme We don't erase the player's recharge event nor any (one?) event that
  uses ZoneChange because it's probably happening right now. */
-static int all_events_except_gate(const struct Event *const this) {
+/*static int all_events_except_gate(const struct Event *const this) {
 	UNUSED(this);
 	return 1;
-}
+} <- We need to have more in {Events.c}, perhaps? */
 /** Clears, then sets up a new zone. */
 void Zone(const struct AutoSpaceZone *const sz) {
 	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
@@ -54,7 +54,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 
 	/* clear all objects */
 	SpritesRemoveIf(&all_except_player);
-	EventsRemoveIf(&all_events_except_gate);
+	EventsClear();
 	FarsClear();
 
 	/* set drawing elements */

@@ -250,61 +250,6 @@ Define <em>SpriteVt</em>.
 </dl>
 </div>
 
-<div><a name = "struct ColourData"><!-- --></a>
-<h3>struct ColourData</h3>
-<pre><b>struct ColourData</b> {
-	FILE *fp;
-	const char *colour;
-	unsigned object;
-}</pre>
-<p>
-For communication with <em>gnu_draw_bins</em>.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "struct Ship"><!-- --></a>
-<h3>struct Ship</h3>
-<pre><b>struct Ship</b> {
-	struct SpriteListNode sprite;
-	const struct AutoShipClass *class;
-	unsigned     ms_recharge_wmd; /* ms */
-	unsigned     ms_recharge_hit; /* ms */
-	struct Event *event_recharge;
-	int          hit, max_hit; /* GJ */
-	float        max_speed2;
-	float        acceleration;
-	float        turn; /* deg/s -> rad/ms */
-	float        turn_acceleration;
-	float        horizon;
-	enum SpriteBehaviour behaviour;
-	char         name[16];
-}</pre>
-<p>
-Define <em>Ship</em> as a subclass of <em>Sprite</em>.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "struct Wmd"><!-- --></a>
-<h3>struct Wmd</h3>
-<pre><b>struct Wmd</b> {
-	struct SpriteListNode sprite;
-	const struct AutoWmdType *class;
-	const struct Sprite *from;
-	float mass;
-	unsigned expires;
-	unsigned light;
-}</pre>
-<p>
-Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
-</p>
-<dl>
-</dl>
-</div>
-
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>
 
@@ -319,6 +264,11 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 	<td>int</td>
 	<td><a href = "#Sprites">Sprites</a></td>
 	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpritesRemoveIf">SpritesRemoveIf</a></td>
+	<td>const SpritesPredicate predicate</td>
 </tr>
 <tr>
 	<td>struct Ship *</td>
@@ -390,33 +340,8 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 </tr>
 <tr>
 	<td>struct Ship *</td>
-	<td><a href = "#SpritesGetPlayer">SpritesGetPlayer</a></td>
+	<td><a href = "#SpritesGetPlayerShip">SpritesGetPlayerShip</a></td>
 	<td>void</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#SpritesDrawInfo">SpritesDrawInfo</a></td>
-	<td>InfoOutput draw</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#SpritesDrawFar">SpritesDrawFar</a></td>
-	<td>LambertOutput draw</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#SpritesPlot">SpritesPlot</a></td>
-	<td>void</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#SpritesOut">SpritesOut</a></td>
-	<td>void</td>
-</tr>
-<tr>
-	<td>struct Gate *</td>
-	<td><a href = "#GateFind">GateFind</a></td>
-	<td>struct AutoSpaceZone *const to</td>
 </tr>
 </table>
 
@@ -439,6 +364,16 @@ Destructor.
 <dl>
 	<dt>return</dt>
 	<dd>True if the sprite buffers have been set up.</dd>
+</dl>
+</div>
+
+<div><a name = "SpritesRemoveIf"><!-- --></a>
+<h3>SpritesRemoveIf</h3>
+<pre>void <b>SpritesRemoveIf</b> (const SpritesPredicate predicate)</pre>
+<p>
+Clear all space.
+</p>
+<dl>
 </dl>
 </div>
 
@@ -580,64 +515,11 @@ Gets a <em>Sprite</em> that goes to the <em>AutoSpaceZone</em>, if it exists.
 </dl>
 </div>
 
-<div><a name = "SpritesGetPlayer"><!-- --></a>
-<h3>SpritesGetPlayer</h3>
-<pre>struct Ship * <b>SpritesGetPlayer</b> (void)</pre>
+<div><a name = "SpritesGetPlayerShip"><!-- --></a>
+<h3>SpritesGetPlayerShip</h3>
+<pre>struct Ship * <b>SpritesGetPlayerShip</b> (void)</pre>
 <p>
 Gets the player's ship or null.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "SpritesDrawInfo"><!-- --></a>
-<h3>SpritesDrawInfo</h3>
-<pre>void <b>SpritesDrawInfo</b> (InfoOutput draw)</pre>
-<p>
-Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it updates everything.
-Use when the Info GPU shader is loaded.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "SpritesDrawFar"><!-- --></a>
-<h3>SpritesDrawFar</h3>
-<pre>void <b>SpritesDrawFar</b> (LambertOutput draw)</pre>
-<p>
-Use when the Far GPU shader is loaded.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "SpritesPlot"><!-- --></a>
-<h3>SpritesPlot</h3>
-<pre>void <b>SpritesPlot</b> (void)</pre>
-<p>
-Debugging plot.
-</p>
-<dl>
-	<dt>implements</dt>
-	<dd>Action</dd>
-</dl>
-</div>
-
-<div><a name = "SpritesOut"><!-- --></a>
-<h3>SpritesOut</h3>
-<pre>void <b>SpritesOut</b> (void)</pre>
-<p>
-Output sprites.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "GateFind"><!-- --></a>
-<h3>GateFind</h3>
-<pre>struct Gate * <b>GateFind</b> (struct AutoSpaceZone *const to)</pre>
-<p>
-Linear search for <em>gates</em> that go to a specific place.
 </p>
 <dl>
 </dl>

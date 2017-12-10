@@ -7,6 +7,8 @@
 #include <stdio.h>  /* fprintf */
 #include <string.h> /* strncpy, strrchr */
 #include <ctype.h>  /* toupper */
+#include <limits.h> /* MAX_INT */
+#include <assert.h> /* assert */
 #include <unistd.h> /* chdir (POSIX, not ANSI) */
 #include <dirent.h> /* opendir readdir closedir */
 
@@ -53,8 +55,8 @@ static const int image_names_size = sizeof(image_names) / sizeof(char *);*/
 static struct ImageName {
 	char name[1024];
 } *image_names;
-static const int max_image_names_name = sizeof((struct ImageName *)0)->name / sizeof(char);
-static int no_image_names, image_names_capacity;
+static const size_t max_image_names_name = sizeof((struct ImageName *)0)->name / sizeof(char);
+static size_t no_image_names, image_names_capacity;
 static int is_sorted = -1;
 
 /* constants */
@@ -70,19 +72,22 @@ static const char *ext_png_h   = ".png";
 static const char *ext_jpeg_h  = ".jpeg";
 static const char *ext_bmp_h   = ".bmp";
 
+typedef int (*Compare)(const void *, const void *);
+
 /** If you add an image, the position probably won't be valid, so to this after
  you've added all the images.
- @return	The {@code str} entry of the image table or -1 if it couldn't be
-			found. */
+ @return The {str} entry of the image table or -1 if it couldn't be
+ found. */
 int LoaderImagePosition(const char *const str) {
 	struct ImageName *in;
+	long ret;
 	if(!is_sorted) sort();
 	if(!(in = bsearch(&str, image_names, no_image_names,
-					  sizeof(struct ImageName),
-					  (int (*)(const void *, const void *))&string_image_comp)))
-		return -1;
+		sizeof(struct ImageName), (Compare)&string_image_comp))) return -1;
 	/* printf("*********%s: %s\n", str, in->name); */
-	return in - image_names;
+	ret = in - image_names;
+	assert(ret <= INT_MAX);
+	return (int)ret;
 }
 
 /** Entry point. */
@@ -291,7 +296,7 @@ static void sort(void) {
 }
 
 static int include_images(void) {
-	int i;
+	size_t i;
 
 	if(!is_sorted) sort();
 	printf("/* external dependencies -- use File2h to automate */\n");
@@ -303,10 +308,9 @@ static int include_images(void) {
 }
 
 static int print_images(const char *const directory) {
-	size_t size = 0;
+	size_t size = 0, i;
 	static char pn[1024];
 	const int   max_pn = sizeof(pn) / sizeof(char);
-	int i;
 	char type[8], *str, *fn;
 	unsigned char *data;
 	unsigned width = 0, height = 0, depth = 0;
@@ -341,7 +345,7 @@ static int print_images(const char *const directory) {
 
 			/* get file size */
 			if(!(fp = fopen(pn, "r"))
-			   || fseek(fp, 0, SEEK_END)
+			   || fseek(fp, 0l, SEEK_END)
 			   || (int)(size = ftell(fp)) == -1
 			   || fclose(fp)) { perror(fn); fclose(fp); return 0; }
 			/* re-open it in lodepng to get the other info */
@@ -360,15 +364,15 @@ static int print_images(const char *const directory) {
 			do { /* try */
 				/* nanojpeg doesn't do io */
 				if(!(fp = fopen(pn, "r"))) { err = E_PERROR; break; }
-				fseek(fp, 0, SEEK_END);
+				fseek(fp, 0l, SEEK_END);
 				size = ftell(fp);
-				fseek(fp, 0, SEEK_SET);
+				fseek(fp, 0l, SEEK_SET);
 				rewind(fp);
 				if(!(buffer = malloc(size))) { err = E_PERROR; break; }
 				if(fread(buffer, sizeof(char), size, fp) != size)
 					{ err = E_READ; break; }
 				/* decode */
-				if(njDecode(buffer, size) || !njIsColor())
+				if(njDecode(buffer, (int)size) || !njIsColor())
 					{ err = E_DECODE; break; }
 				width  = njGetWidth();
 				height = njGetHeight();

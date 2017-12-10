@@ -24,8 +24,8 @@
 struct Event;
 struct EventVt;
 struct EventList;
-struct Event { const struct EventVt *vt; };
 
+struct Event { const struct EventVt *vt; };
 #define LIST_NAME Event
 #define LIST_TYPE struct Event
 #include "../templates/List.h"
@@ -219,7 +219,7 @@ int EventsSpriteConsumer(const unsigned ms_future,
 		SpriteConsumerPoolGetError(events->sprite_consumers)); return 0; }
 	this->accept = accept;
 	this->param  = param;
-	event_filler(&this->event.data, ms_future, &runnable_vt);
+	event_filler(&this->event.data, ms_future, &sprite_consumer_vt);
 	return 1;
 }
 

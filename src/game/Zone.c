@@ -10,7 +10,6 @@
 #include "../Print.h"
 #include "../general/Events.h"
 #include "../system/Draw.h"
-#include "Game.h"
 #include "Sprites.h"
 #include "Fars.h"
 #include "Zone.h"
@@ -62,12 +61,14 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	const struct AutoDebris *asteroid = AutoDebrisSearch("Asteroid");
 	int i;
 
-	debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name, sz->ois1->name, sz->ois2->name);
+	debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars "
+		"%s, %s.\n", sz->name, sz->government->name, sz->gate1->name,
+		sz->ois1->name, sz->ois2->name);
 
 	/* clear all objects */
-	/*SpriteRemoveIf(&remove_all_except_player);*/
+	SpriteRemoveIf(&all_except_player);
 	/*EventRemoveIf(&remove_all_events_except);*/
-	/*PlanetoidClear();*/
+	FarsClear();
 
 	/* set drawing elements */
 	DrawSetBackground("Dorado.jpeg");
@@ -93,10 +94,6 @@ void Zone(const struct AutoSpaceZone *const sz) {
 /** Zone change with the {gate}.
  @implements SpriteConsumer<Gate> */
 void ZoneChange(struct Gate *const gate) {
-#if 0
-	printf("Zone::change: stub.\n");
-	UNUSED(gate);
-#else
 	const struct AutoSpaceZone *const new_zone = GateGetTo(gate),
 		*old_zone = current_zone;
 	struct Gate *new_gate;
@@ -124,7 +121,7 @@ void ZoneChange(struct Gate *const gate) {
 	ortho3f_sub(&dv, newv, oldv);
 	dx_cos = cosf(dx.theta), dx_sin = sinf(dx.theta);
 	/* Get player parametres; after the Zone changes! */
-	if(!(player = GameGetPlayer())) { fprintf(stderr,
+	if(!(player = SpritesGetPlayer())) { fprintf(stderr,
 		"ZoneChange: there doesn't seem to be a player.\n"); return; }
 	playerx = SpriteGetPosition((struct Sprite *)player);
 	playerv = SpriteGetVelocity((struct Sprite *)player);
@@ -140,5 +137,4 @@ void ZoneChange(struct Gate *const gate) {
 	finalv.theta = playerv->theta;
 	SpriteSetPosition((struct Sprite *)player, &finalx);
 	SpriteSetVelocity((struct Sprite *)player, &finalv);
-#endif
 }

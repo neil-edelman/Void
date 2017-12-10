@@ -176,6 +176,8 @@ static struct Sprites {
 	float dt_ms;
 	struct CollisionStack *collisions;
 	struct InfoStack *info; /* Debug. */
+	int is_player;
+	size_t ship_player_index;
 } *sprites;
 
 
@@ -238,6 +240,12 @@ static void sprite_delete(struct Sprite *const this) {
 }
 /** @implements <Ship>Action */
 static void ship_delete(struct Ship *const this) {
+	/* The player is deleted; update. */
+	if(sprites->is_player && ShipPoolGetIndex(sprites->ships, this)
+		== sprites->ship_player_index) {
+		sprites->is_player = 0;
+		printf("You died! :0\n");
+	}
 	ShipPoolRemove(sprites->ships, this);
 }
 /** @implements <Debris>Action */
@@ -425,6 +433,8 @@ int Sprites(void) {
 	sprites->dt_ms = 20;
 	sprites->collisions = 0;
 	sprites->info = 0;
+	sprites->is_player = 0;
+	sprites->ship_player_index = 0;
 	do {
 		for(i = 0; i < LAYER_SIZE; i++) {
 			if(!(sprites->bins[i].covers = CoverStack())) { e = BINS; break; }
@@ -516,6 +526,12 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	this->wmd = class->weapon;
 	this->ms_recharge_wmd = 0;
 	this->dist_to_horizon = 0.0f;
+	if(ai == AI_HUMAN) {
+		if(sprites->is_player)
+			fprintf(stderr, "SpritesShip: overriding previous player.\n");
+		sprites->is_player = 1;
+		sprites->ship_player_index = ShipPoolGetIndex(sprites->ships, this);
+	}
 	return this;
 }
 
@@ -583,6 +599,7 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 		GatePoolGetError(sprites->gates)); return 0; }
 	sprite_filler(&this->sprite.data, &gate_vt, gate_sprite, &x);
 	this->to = class->to;
+	printf("SpritesGate: to %s.\n", this->to->name);
 	return this;
 }
 
@@ -688,19 +705,32 @@ static void timestep_bin(const unsigned idx) {
 	CollisionStackClear(sprites->collisions);
 }
 
+/** Gets the player's ship. */
+static struct Ship *get_player(void) {
+	assert(sprites);
+	if(!sprites->is_player) return 0;
+	return ShipPoolGetElement(sprites->ships, sprites->ship_player_index);
+}
+
 /* This is where \see{collide_bin} is located; but lots of helper functions. */
 #include "SpritesCollide.h"
 
 /** Update each frame.
  @param target: What the camera focuses on; could be null. */
-void SpritesUpdate(const int dt_ms, struct Sprite *const target) {
+void SpritesUpdate(const int dt_ms) {
 	if(!sprites) return;
 	/* Update with the passed parameter. */
 	sprites->dt_ms = dt_ms;
 	/* Clear info on every frame. */
 	InfoStackClear(sprites->info);
-	/* Centre on the sprite that was passed, if it is available. */
-	if(target) DrawSetCamera((struct Vec2f *)&target->x);
+	/* Centre on the the player. */
+	if(sprites->is_player) {
+		struct Ship *const player = ShipPoolGetElement(sprites->ships,
+			sprites->ship_player_index);
+		if(player) {
+			DrawSetCamera((struct Vec2f *)&player->sprite.data.x);
+		}
+	}
 	/* Foreground drawable sprites are a function of screen position. */
 	{ 	struct Rectangle4f rect;
 		DrawGetScreen(&rect);
@@ -796,6 +826,13 @@ struct Gate *FindGate(const struct AutoSpaceZone *const to) {
 	}
 	return 0;
 }
+
+/** Gets the player's ship or null. */
+struct Ship *SpritesGetPlayer(void) {
+	if(!sprites) return 0;
+	return get_player();
+}
+
 
 
 

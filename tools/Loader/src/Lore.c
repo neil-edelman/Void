@@ -1,5 +1,16 @@
 /** Copyright 2015 Neil Edelman, distributed under the terms of the
- GNU General Public License, see copying.txt */
+ GNU General Public License, see copying.txt
+
+ data/item/info/list/index/axiom/term/clue/cue/lore/tale/myth[os]/word/fact/
+ saga/tale/yarn/writ/file/word/story; ".data" would be more appropriate, but
+ that implies that it's a binary file. ".file" is cute.
+
+ ".lore" files contain typed data. "lore" contains all the data from every
+ resource. You have to load the types for it to be meaningful.
+
+ @author	Neil
+ @version	3.2, 2015-08
+ @since		3.2, 2015-08 */
 
 #include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
@@ -15,17 +26,6 @@
 #include "Record.h"
 #include "Type.h"
 #include "Lore.h"
-
-/* data/item/info/list/index/axiom/term/clue/cue/lore/tale/myth[os]/word/fact/
- saga/tale/yarn/writ/file/word/story; ".data" would be more appropriate, but
- that implies that it's a binary file. ".file" is cute.
- <p>
- ".lore" files contain typed data. "lore" contains all the data from every
- resource. You have to load the types for it to be meaningful.
-
- @author	Neil
- @version	3.2, 2015-08
- @since		3.2, 2015-08 */
 
 static const int debug = 0;
 
@@ -222,7 +222,7 @@ int LoreSearch(const char *const multi, char **const type_ptr, int *const index_
 		for(first = lores; strcmp(szrecord, RecordGetName(first->record)); first++);
 		/*fprintf(stderr, " first %s at #%p: sub %d\n", szrecord, first, lore - first);*/
 		*type_ptr  = camel_to_snake_case(szrecord);
-		*index_ptr = lore - first;
+		*index_ptr = (int)(lore - first);
 	}
 
 	return -1;

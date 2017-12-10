@@ -22,11 +22,7 @@ specimen, sample, instance, occurrence, manifestation, embodiment, epitome, repr
 
 Bug List
 --------
--fix far clipping
--test high collision scene
--do stuff before elastic_bounce
 -more complex scene lighting
--redeploy gates
 
 Features
 --------
@@ -56,13 +52,19 @@ bar1
 Bar
 bar2
 .c
-static Foo {
+struct Foo {
 	char *name;
 	unsigned bars_size;
 	struct Bar *bars_first;
 };
-static Bar foo_bars[2] = { &bar[0], &bar[1]; };
-static Foo foo[] = { { "foo", 2, &foo_bars[0] } }
+static struct Bar foo_bars[2] = { &bar[0], &bar[1]; };
+static struct Foo foo[] = { { "foo", 2, &foo_bars[0] } }
+.c
+struct Foo {
+	char *name;
+	size_t bars_no; struct Bar *bars[];
+}
+static struct Foo foo = { "foo", 2, { &bar[0], &bar[1] } };
 
 Kampala, Uganda (just south, Lake Victoria)
 Singapore, Malaysia (just south)

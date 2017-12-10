@@ -24,6 +24,10 @@
 
 #define AUTO_START (1)
 
+#ifndef UNUSED
+#define UNUSED(x) ((void)(x))
+#endif
+
 /* Not to be confused with .type records.
 
  @author	Neil
@@ -34,11 +38,13 @@
 static int (*get_loader(const struct Type *const type))(char **, struct Reader *const);
 static int string_type_comp(const char **key_ptr, const struct Type *elem);
 /* reading fn's */
+static int load_array(char **data_ptr, struct Reader *const r);
 static int load_word(char **data_ptr, struct Reader *const r);
 static int load_string(char **data_ptr, struct Reader *const r);
 static int load_paragraph(char **data_ptr, struct Reader *const r);	
 /* writing fn's */
 static int print_zero(const char *const *const data_ptr);
+static int print_array(const char *const *const data_ptr);
 static int print_ai(const char *const *const data_ptr);
 static int print_float(const char *const *const data_ptr);
 static int print_image(const char *const *const data_ptr);
@@ -63,6 +69,8 @@ static const struct Type {
 } types[] = {
 	{ "-",             "const void *",         0,
 		0,               &print_zero,   0 },
+	{ "array",         0,                      0,
+		&load_array,     &print_array,  0 },
 	{ "autoincrement", "const int ",           "cmp_int",
 		0,               &print_ai,     0 },
 	{ "float",         "const float ",         "cmp_float",
@@ -151,12 +159,19 @@ static int string_type_comp(const char **key_ptr, const struct Type *elem) {
 
 /* reading fn's */
 
+static int load_array(char **data_ptr, struct Reader *const r) {
+	char *line = ReaderReadLine(r);
+	line = trim(line);
+	/* fixme: I have no idea what to do. */
+	return 0;
+}
+
 static int load_word(char **data_ptr, struct Reader *const r) {
 	char *line = ReaderReadLine(r), *word, *next_word;
 	line = trim(line);
 	if(!(word = strseparate(&line, delimiters))
-	   || ((next_word = strseparate(&line, delimiters))
-		   && (*next_word != '#'))) return 0;
+		|| ((next_word = strseparate(&line, delimiters))
+		&& (*next_word != '#'))) return 0;
 	if(!(*data_ptr = strdup(word))) {
 		perror("strdup");
 		Error(E_MEMORY);
@@ -181,6 +196,7 @@ static int load_string(char **data_ptr, struct Reader *const r) {
 }
 
 static int load_paragraph(char **data_ptr, struct Reader *const r) {
+	UNUSED(data_ptr), UNUSED(r);
 	fprintf(stderr, "loading a paragraph is not done yet\n");
 	return 0;
 }
@@ -188,11 +204,18 @@ static int load_paragraph(char **data_ptr, struct Reader *const r) {
 /* writing fn's */
 
 static int print_zero(const char *const *const data_ptr) {
+	UNUSED(data_ptr);
 	printf("0");
 	return -1;
 }
 
+static int print_array(const char *const *const data_ptr) {
+	printf("Array: data? %.30s.\n", *data_ptr);
+	return -1;
+}
+
 static int print_ai(const char *const *const data_ptr) {
+	UNUSED(data_ptr);
 	printf("%u", autoincrement++);
 	return -1;
 }
@@ -229,14 +252,14 @@ static int print_string(const char *const *const data_ptr) {
 /* Fk is stored as "Type key" (see @see{RecordLoadInstance}.) So hacked. */
 static int print_fk(const char *const *const data_ptr) {
 	const char *value = (*data_ptr + strlen(*data_ptr) + 1);
-	int index;
+	int idx;
 	char *type;
 
-	if(!LoreSearch(*data_ptr, &type, &index)) return 0;
+	if(!LoreSearch(*data_ptr, &type, &idx)) return 0;
 	if(!type) {
 		printf("0");
 	} else {
-		printf("&auto_%s[%u]/*%s*/", type, index, value);
+		printf("&auto_%s[%u]/*%s*/", type, idx, value);
 	}
 
 	return -1;

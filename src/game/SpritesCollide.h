@@ -220,7 +220,7 @@ static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 	struct Ship *const ship = (struct Ship *)s;
 	struct Vec2f diff, gate_norm;
 	float proj;
-	assert(s && g && s->vt->class == SC_SHIP);
+	assert(sprites && s && g && s->vt->class == SC_SHIP);
 	diff.x = s->x.x - g->x.x;
 	diff.y = s->x.y - g->x.y;
 	gate_norm.x = cosf(g->x.theta);
@@ -231,7 +231,7 @@ static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 		sprite_to_string(s, &a);
 		sprite_to_string(g, &b);
 		printf("ship_gate: %s crossed into the event horizon of %s.\n", a, b);
-		if(ship == GameGetPlayer()) {
+		if(ship == get_player()) {
 			/* trasport to zone immediately. fixme!!!: events is not handled by
 			 migrate sprites. */
 			EventsSpriteConsumer(0.0f, (SpriteConsumer)&ZoneChange, g);

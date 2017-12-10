@@ -35,7 +35,6 @@ static int is_started;
 
 /* public struct */
 static struct Game {
-	struct Ship *player; /* camera moves with this */
 	/* defined in Lore.h (hopefully!) */
 	const struct AutoDebris *asteroid;
 	const struct AutoShipClass *nautilus, *scorpion;
@@ -61,6 +60,15 @@ static void gametime(void);
 
 /* public */
 
+/** destructor: fixme: what if there's a second game */
+void Game_(void) {
+	
+	if(!is_started) return;
+	
+	debug("~Game: over.\n");
+	is_started = 0;
+}
+
 /** Constructor. */
 int Game(void) {
 	struct Ortho3f position = { 0.0f, 0.0f, 0.0f };
@@ -68,7 +76,6 @@ int Game(void) {
 
 	if(is_started) return 1;
 
-	game.player = 0;
 	/* game elements */
 	if(!(game.asteroid = AutoDebrisSearch("Asteroid"))
 		|| !(game.nautilus = AutoShipClassSearch("Fox"))
@@ -97,23 +104,14 @@ int Game(void) {
 	DrawSetShield("Bar.png");
 
 	Zone(game.start);
-	game.player = SpritesShip(game.nautilus, &position, AI_HUMAN);
+	SpritesShip(game.nautilus, &position, AI_HUMAN);
 
-	EventsRunnable(2000, &fps);
+	EventsRunnable(7000, &fps);
 
 	debug("Game: on.\n");
 	is_started = 1;
 
 	return -1;
-}
-
-/** destructor: fixme: what if there's a second game */
-void Game_(void) {
-
-	if(!is_started) return;
-
-	debug("~Game: over.\n");
-	is_started = 0;
 }
 
 /** updates the gameplay */
@@ -122,13 +120,9 @@ void GameUpdate(const int dt_ms) {
 	/* Update keys. */
 	PollUpdate();
 	/* Collision detect, move sprites, center on the player; a lot of work. */
-	SpritesUpdate(dt_ms, (struct Sprite *)game.player);
+	SpritesUpdate(dt_ms);
 	/* Dispatch events; after update so that immidiate can be immediate. */
 	EventsUpdate();
-}
-
-struct Ship *GameGetPlayer(void) {
-	return game.player;
 }
 
 /* private */

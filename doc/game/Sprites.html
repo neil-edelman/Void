@@ -51,6 +51,9 @@ before exiting, when all references have been resolved, <em>Sprites_</em>.
 <p>
 Debug.
 </p>
+<p>
+Specific sprites.
+</p>
 <dl>
 	<dt>minimum standard</dt>
 	<dd>C89/90</dd>
@@ -210,6 +213,8 @@ Used in <em>Sprites</em>.
 	float dt_ms;
 	struct CollisionStack *collisions;
 	struct InfoStack *info; /* Debug. */
+	int is_player;
+	size_t ship_player_index;
 }</pre>
 <p>
 Sprites all together.
@@ -341,7 +346,7 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 <tr>
 	<td>void</td>
 	<td><a href = "#SpritesUpdate">SpritesUpdate</a></td>
-	<td>const int dt_ms, struct Sprite *const target</td>
+	<td>const int dt_ms</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -351,6 +356,41 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 <tr>
 	<td>void</td>
 	<td><a href = "#SpritesInfo">SpritesInfo</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>const struct Ortho3f *</td>
+	<td><a href = "#SpriteGetPosition">SpriteGetPosition</a></td>
+	<td>const struct Sprite *const this</td>
+</tr>
+<tr>
+	<td>const struct Ortho3f *</td>
+	<td><a href = "#SpriteGetVelocity">SpriteGetVelocity</a></td>
+	<td>const struct Sprite *const this</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteSetPosition">SpriteSetPosition</a></td>
+	<td>struct Sprite *const this,const struct Ortho3f *const x</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#SpriteSetVelocity">SpriteSetVelocity</a></td>
+	<td>struct Sprite *const this,const struct Ortho3f *const v</td>
+</tr>
+<tr>
+	<td>const struct AutoSpaceZone *</td>
+	<td><a href = "#GateGetTo">GateGetTo</a></td>
+	<td>const struct Gate *const this</td>
+</tr>
+<tr>
+	<td>struct Gate *</td>
+	<td><a href = "#FindGate">FindGate</a></td>
+	<td>const struct AutoSpaceZone *const to</td>
+</tr>
+<tr>
+	<td>struct Ship *</td>
+	<td><a href = "#SpritesGetPlayer">SpritesGetPlayer</a></td>
 	<td>void</td>
 </tr>
 <tr>
@@ -372,11 +412,6 @@ Define <em>Wmd</em> as a subclass of <em>Sprite</em>.
 	<td>void</td>
 	<td><a href = "#SpritesOut">SpritesOut</a></td>
 	<td>void</td>
-</tr>
-<tr>
-	<td>const struct AutoSpaceZone *</td>
-	<td><a href = "#GateGetTo">GateGetTo</a></td>
-	<td>const struct Gate *const sprites</td>
 </tr>
 <tr>
 	<td>struct Gate *</td>
@@ -452,7 +487,7 @@ Creates a new <em>Gate</em>.
 
 <div><a name = "SpritesUpdate"><!-- --></a>
 <h3>SpritesUpdate</h3>
-<pre>void <b>SpritesUpdate</b> (const int dt_ms, struct Sprite *const target)</pre>
+<pre>void <b>SpritesUpdate</b> (const int dt_ms)</pre>
 <p>
 Update each frame.
 </p>
@@ -478,6 +513,78 @@ Must call <a href = "#SpriteUpdate">SpriteUpdate</a> before this, because it set
 <pre>void <b>SpritesInfo</b> (void)</pre>
 <p>
 Use when the Info GPU shader is loaded.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteGetPosition"><!-- --></a>
+<h3>SpriteGetPosition</h3>
+<pre>const struct Ortho3f * <b>SpriteGetPosition</b> (const struct Sprite *const this)</pre>
+<p>
+Allows access to <em>this</em>' position as a read-only value.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteGetVelocity"><!-- --></a>
+<h3>SpriteGetVelocity</h3>
+<pre>const struct Ortho3f * <b>SpriteGetVelocity</b> (const struct Sprite *const this)</pre>
+<p>
+Allows access to <em>this</em>' velocity as a read-only value.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteSetPosition"><!-- --></a>
+<h3>SpriteSetPosition</h3>
+<pre>void <b>SpriteSetPosition</b> (struct Sprite *const this,const struct Ortho3f *const x)</pre>
+<p>
+Modifies <em>this</em>' position.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpriteSetVelocity"><!-- --></a>
+<h3>SpriteSetVelocity</h3>
+<pre>void <b>SpriteSetVelocity</b> (struct Sprite *const this,const struct Ortho3f *const v)</pre>
+<p>
+Modifies <em>this</em>' velocity.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "GateGetTo"><!-- --></a>
+<h3>GateGetTo</h3>
+<pre>const struct AutoSpaceZone * <b>GateGetTo</b> (const struct Gate *const this)</pre>
+<p>
+Gets an <em>AutoSpaceZone</em> that it goes to, if it exists.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "FindGate"><!-- --></a>
+<h3>FindGate</h3>
+<pre>struct Gate * <b>FindGate</b> (const struct AutoSpaceZone *const to)</pre>
+<p>
+Gets a <em>Sprite</em> that goes to the <em>AutoSpaceZone</em>, if it exists.
+</p>
+<dl>
+	<dt>order</dt>
+	<dd>O(<em>|max Gates|</em>)</dd>
+</dl>
+</div>
+
+<div><a name = "SpritesGetPlayer"><!-- --></a>
+<h3>SpritesGetPlayer</h3>
+<pre>struct Ship * <b>SpritesGetPlayer</b> (void)</pre>
+<p>
+Gets the player's ship or null.
 </p>
 <dl>
 </dl>
@@ -521,16 +628,6 @@ Debugging plot.
 <pre>void <b>SpritesOut</b> (void)</pre>
 <p>
 Output sprites.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "GateGetTo"><!-- --></a>
-<h3>GateGetTo</h3>
-<pre>const struct AutoSpaceZone * <b>GateGetTo</b> (const struct Gate *const sprites)</pre>
-<p>
-Gets a SpaceZone that it goes to, if it exists.
 </p>
 <dl>
 </dl>

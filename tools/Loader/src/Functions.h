@@ -10,10 +10,10 @@
 
 static int suffix(char *const str, const char *suf);
 
-/** @return		True is the suffix of the string {@code str} is {@code suf}. */
+/** @return True is the suffix of the string {str} is {suf}. */
 static int suffix(char *const str, const char *suf) {
 	char *sub = str;
-	const int len = strlen(suf);
+	const size_t len = strlen(suf);
 	while((sub = strstr(sub, suf))) if(*(sub += len) == '\0') return -1;
 	return 0;
 }
@@ -27,7 +27,7 @@ static int suffix(char *const str, const char *suf) {
 
 static char *trim(char *const str);
 
-/** @return		The trimmed string. The original is trimmed from the end. */
+/** @return The trimmed string. The original is trimmed from the end. */
 static char *trim(char *const str) {
 	char *start, *end;
 	

@@ -116,7 +116,6 @@ static const struct EventVt
 static void clear_event_lists(void) {
 	unsigned i;
 	assert(events);
-	events->update = TimerGetGameTime();
 	EventListClear(&events->immediate);
 	for(i = 0; i < sizeof events->approx1s / sizeof *events->approx1s; i++)
 		EventListClear(events->approx1s + i);
@@ -124,6 +123,19 @@ static void clear_event_lists(void) {
 		EventListClear(events->approx8s + i);
 	for(i = 0; i < sizeof events->approx64s / sizeof *events->approx64s; i++)
 		EventListClear(events->approx64s + i);
+}
+
+/** Used in {EventsRemoveIf}. */
+static void clear_event_lists_predicate(const EventsPredicate predicate) {
+	unsigned i;
+	assert(events);
+	EventListTakeIf(0, &events->immediate, predicate);
+	for(i = 0; i < sizeof events->approx1s / sizeof *events->approx1s; i++)
+		EventListTakeIf(0, events->approx1s + i, predicate);
+	for(i = 0; i < sizeof events->approx8s / sizeof *events->approx8s; i++)
+		EventListTakeIf(0, events->approx8s + i, predicate);
+	for(i = 0; i < sizeof events->approx64s / sizeof *events->approx64s; i++)
+		EventListTakeIf(0, events->approx64s + i, predicate);
 }
 
 /** Destructor. */
@@ -142,6 +154,7 @@ int Events(void) {
 	if(events) return 1;
 	if(!(events = malloc(sizeof *events)))
 		{ perror("Events"); Events_(); return 0; }
+	events->update = TimerGetGameTime();
 	clear_event_lists();
 	events->runnables = 0;
 	events->int_consumers = 0;
@@ -232,6 +245,10 @@ void EventsClear(void) {
 	RunnablePoolClear(events->runnables);
 	IntConsumerPoolClear(events->int_consumers);
 	SpriteConsumerPoolClear(events->sprite_consumers);
+}
+
+void EventsRemoveIf(const EventsPredicate predicate) {
+	if(!events) return;
 }
 
 static void run_event_list(struct EventList *const list) {

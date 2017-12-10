@@ -27,32 +27,19 @@ extern const struct AutoObjectInSpace auto_object_in_space[];
 /* from Game */
 extern const float de_sitter;
 
-/* public struct */
-/*struct Zone {
-	char *name;
-	struct Gate *gate[1];
-	struct ObjectInSpace ois[2];
-} zone;*/
-
 const struct AutoSpaceZone *current_zone;
 
-#if 0
-/** @fixme Player should be on it's own. */
-static int remove_all_except_player(struct Sprite *const this) {
-	const struct Ship *const player = GameGetPlayer();
-	return !player || (struct Sprite *)player != this;
+/** @implements <Sprite>Predicate */
+static int all_except_player(const struct Sprite *const this) {
+	return this != (struct Sprite *)SpritesGetPlayerShip();
 }
-
-static int remove_all_events_except(struct Event *const victim) {
-	/* we don't erase the player's recharge event nor any (one?) event that uses
-	 ZoneChange because it's probably happening right now */
-	return 0;/*fixme ShipGetEventRecharge(GameGetPlayer()) != victim
-	&& EventGetConsumerAccept(victim) != (void (*)(void *))&ZoneChange;*/
+/** @implements <Event>Predicate
+ @fixme: We don't erase the player's recharge event nor any (one?) event that
+ uses ZoneChange because it's probably happening right now. */
+static int all_events_except_gate(const struct Event *const this) {
+	UNUSED(this);
+	return 1;
 }
-#endif
-
-/* public */
-
 /** Clears, then sets up a new zone. */
 void Zone(const struct AutoSpaceZone *const sz) {
 	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
@@ -66,8 +53,8 @@ void Zone(const struct AutoSpaceZone *const sz) {
 		sz->ois1->name, sz->ois2->name);
 
 	/* clear all objects */
-	/*SpriteRemoveIf(&all_except_player);*/
-	/*EventRemoveIf(&remove_all_events_except);*/
+	SpritesRemoveIf(&all_except_player);
+	EventsRemoveIf(&all_events_except_gate);
 	FarsClear();
 
 	/* set drawing elements */
@@ -92,7 +79,8 @@ void Zone(const struct AutoSpaceZone *const sz) {
 }
 
 /** Zone change with the {gate}.
- @implements SpriteConsumer<Gate> */
+ @implements SpriteConsumer<Gate>
+ @fixme Broken. */
 void ZoneChange(struct Gate *const gate) {
 	const struct AutoSpaceZone *const new_zone = GateGetTo(gate),
 		*old_zone = current_zone;

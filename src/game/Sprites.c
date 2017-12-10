@@ -466,6 +466,18 @@ int Sprites(void) {
 	return 1;
 }
 
+/** Clear all space. */
+void SpritesRemoveIf(const SpritesPredicate predicate) {
+	struct Bin *bin;
+	size_t i;
+	if(!sprites) return;
+	for(i = 0; i < LAYER_SIZE; i++) {
+		bin = sprites->bins + i;
+		SpriteListTakeIf(0, &bin->sprites, predicate);
+		CoverStackClear(bin->covers); /* Should be empty anyway. */
+	}
+}
+
 
 
 /*************** Sub-type constructors. ******************/

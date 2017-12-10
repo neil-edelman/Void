@@ -9,6 +9,7 @@ struct AutoDebris;
 struct AutoWmdType;
 struct AutoGate;
 struct AutoObjectInSpace;
+typedef int (*SpritesPredicate)(const struct Sprite *const);
 
 enum AiType { AI_DUMB, AI_HUMAN };
 
@@ -30,6 +31,7 @@ struct Gate *SpritesGate(const struct AutoGate *const class);
 void SpritesUpdate(const int dt_ms);
 void SpritesDraw(void);
 void SpritesInfo(void);
+void SpritesRemoveIf(const SpritesPredicate predicate);
 const struct Ortho3f *SpriteGetPosition(const struct Sprite *const this);
 const struct Ortho3f *SpriteGetVelocity(const struct Sprite *const this);
 void SpriteSetPosition(struct Sprite *const this,const struct Ortho3f *const x);

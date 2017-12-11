@@ -23,20 +23,23 @@
 #include "../system/Timer.h" /* for expiring */
 #include "Zone.h" /* ZoneChange */
 #include "Game.h" /* GameGetPlayer */
-#include "Light.h" /* for glowing */
+/*#include "Light.h"*/ /* for glowing */
 #include "Sprites.h"
 
 #define LAYER_SIDE_SIZE (64)
 #define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)
 static const float layer_space = 256.0f;
+/* must be the same as in Lighting.fs */
+#define MAX_LIGHTS (64)
 
 /* This is used for small floating-point values. The value doesn't have any
  significance. */
 static const float epsilon = 0.0005f;
-/* Mass is a measure of a rigid body's resistance to a change of state of it's
- motion; it is a divisor, thus cannot be (near) zero. */
+/* Mass is a measure of a rigid body's resistance to a change of motion; it is
+ a divisor, thus cannot be (near) zero. */
 static const float minimum_mass = 0.01f; /* mg (t) */
-/* Controls how far past the bounding radius the ship's shots appear. 1.415? */
+/* Controls how far past the bounding radius the ship's shots appear. 1.415?
+ Kind of hacky. */
 static const float wmd_distance_mod = 1.3f;
 /* Controls the acceleration of a turn; low values are sluggish; (0, 1]. */
 static const float turn_acceleration = 0.005f;
@@ -65,6 +68,7 @@ struct Sprite {
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
 	struct Collision *collision; /* temporary, \in {sprites.collisions} */
+	struct Sprite *light; /* linking pointer to a limited number of lights */
 };
 static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_NAME Sprite
@@ -163,15 +167,12 @@ struct Collision {
 
 
 
-/** Used in {Sprites}. */
-struct Bin {
-	struct SpriteList sprites;
-	struct CoverStack *covers;
-};
-
 /** Sprites all together. */
 static struct Sprites {
-	struct Bin bins[LAYER_SIZE];
+	struct Bin {
+		struct SpriteList sprites;
+		struct CoverStack *covers;
+	} bins[LAYER_SIZE];
 	/* Backing for the {SpriteList} in the {Bin}s. */
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
@@ -183,11 +184,22 @@ static struct Sprites {
 	float dt_ms;
 	struct CollisionStack *collisions;
 	struct InfoStack *info; /* Debug. */
-	int is_player;
-	size_t ship_player_index;
+	struct {
+		int is_ship;
+		size_t ship_index;
+	} player;
+	struct Lights {
+		size_t size;
+		struct Sprite *sprite[MAX_LIGHTS];
+		struct Vec2f x[MAX_LIGHTS];
+		struct Colour3f colour[MAX_LIGHTS];
+	} lights;
 } *sprites;
 
 
+
+/* Include Light functions. */
+#include "SpritesLight.h"
 
 /*********** Define virtual functions. ***********/
 
@@ -238,9 +250,8 @@ static void gate_to_string(const struct Gate *this, char (*const a)[12]) {
 
 /** @implements SpritesAction */
 static void sprite_delete(struct Sprite *const this) {
-	char a[12];
 	assert(sprites && this);
-	sprite_to_string(this, &a);
+	light_(this->light);
 	SpriteListRemove(&sprites->bins[this->bin].sprites, this);
 	this->bin = (unsigned)-1; /* Makes debugging easier. */
 	this->vt->delete(this);
@@ -248,9 +259,9 @@ static void sprite_delete(struct Sprite *const this) {
 /** @implements <Ship>Action */
 static void ship_delete(struct Ship *const this) {
 	/* The player is deleted; update. */
-	if(sprites->is_player && ShipPoolGetIndex(sprites->ships, this)
-		== sprites->ship_player_index) {
-		sprites->is_player = 0;
+	if(sprites->player.is_ship
+		&& ShipPoolGetIndex(sprites->ships, this) ==sprites->player.ship_index){
+		sprites->player.is_ship = 0;
 		printf("You died! :0\n");
 	}
 	ShipPoolRemove(sprites->ships, this);
@@ -261,7 +272,7 @@ static void debris_delete(struct Debris *const this) {
 }
 /** @implements <Wmd>Action */
 static void wmd_delete(struct Wmd *const this) {
-	Light_(&this->light);
+	light_(this->sprite.data.light);
 	WmdPoolRemove(sprites->wmds, this);
 }
 /** @implements <Gate>Action */
@@ -379,6 +390,10 @@ static void bin_migrate(void *const sprites_void,
 		CoverStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
 			migrate);
 	}
+	/* There is a dependancy in Lights. */
+	for(i = 0; i < sprites_pass->lights.size; i++) {
+		SpriteListMigrate(&sprites_pass->lights.sprite + i, migrate);
+	}
 	/* fixme: also in Events. */
 }
 /** Called from \see{collision_migrate}.
@@ -405,6 +420,7 @@ static void collision_migrate(void *const sprites_void,
 /** Destructor. */
 void Sprites_(void) {
 	unsigned i;
+	/* We don't have to do the lights; all static. */
 	if(!sprites) return;
 	for(i = 0; i < LAYER_SIZE; i++) {
 		SpriteListClear(&sprites->bins[i].sprites);
@@ -444,8 +460,9 @@ int Sprites(void) {
 	sprites->dt_ms = 20;
 	sprites->collisions = 0;
 	sprites->info = 0;
-	sprites->is_player = 0;
-	sprites->ship_player_index = 0;
+	sprites->player.is_ship = 0;
+	sprites->player.ship_index = 0;
+	sprites->lights.size = 0;
 	do {
 		for(i = 0; i < LAYER_SIZE; i++) {
 			if(!(sprites->bins[i].covers = CoverStack())) { e = BINS; break; }
@@ -514,10 +531,11 @@ static void sprite_filler(struct Sprite *const this,
 		LayerSetRandom(sprites->layer, &this->x);
 	}
 	ortho3f_init(&this->v);
-	this->bin  = LayerGetOrtho(sprites->layer, &this->x);
-	this->dx.x = this->dx.y = 0.0f;
+	this->bin       = LayerGetOrtho(sprites->layer, &this->x);
+	this->dx.x      = this->dx.y = 0.0f;
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
 	this->collision = 0;
+	this->light     = 0;
 	/* Put this in space. */
 	SpriteListPush(&sprites->bins[this->bin].sprites, this);
 }
@@ -550,10 +568,10 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	this->ms_recharge_wmd = 0;
 	this->dist_to_horizon = 0.0f;
 	if(ai == AI_HUMAN) {
-		if(sprites->is_player)
+		if(sprites->player.is_ship)
 			fprintf(stderr, "SpritesShip: overriding previous player.\n");
-		sprites->is_player = 1;
-		sprites->ship_player_index = ShipPoolGetIndex(sprites->ships, this);
+		sprites->player.is_ship = 1;
+		sprites->player.ship_index = ShipPoolGetIndex(sprites->ships, this);
 	}
 	return this;
 }
@@ -597,13 +615,7 @@ struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 	this->from = &from->sprite.data;
 	this->mass = class->impact_mass;
 	this->expires = TimerGetGameTime() + class->ms_range;
-	{
-		const float length = sqrtf(class->r * class->r + class->g * class->g
-			+ class->b * class->b);
-		const float one_length = length > epsilon ? 1.0f / length : 1.0f;
-		Light(&this->light, length, class->r * one_length,
-			class->g * one_length, class->b * one_length);
-	}
+	light(&this->sprite.data, class->r, class->g, class->b);
 	return this;
 }
 
@@ -731,8 +743,8 @@ static void timestep_bin(const unsigned idx) {
 /** Gets the player's ship. */
 static struct Ship *get_player(void) {
 	assert(sprites);
-	if(!sprites->is_player) return 0;
-	return ShipPoolGetElement(sprites->ships, sprites->ship_player_index);
+	if(!sprites->player.is_ship) return 0;
+	return ShipPoolGetElement(sprites->ships, sprites->player.ship_index);
 }
 
 /* This is where \see{collide_bin} is located; but lots of helper functions. */
@@ -747,9 +759,9 @@ void SpritesUpdate(const int dt_ms) {
 	/* Clear info on every frame. */
 	InfoStackClear(sprites->info);
 	/* Centre on the the player. */
-	if(sprites->is_player) {
+	if(sprites->player.is_ship) {
 		struct Ship *const player = ShipPoolGetElement(sprites->ships,
-			sprites->ship_player_index);
+			sprites->player.ship_index);
 		if(player) {
 			DrawSetCamera((struct Vec2f *)&player->sprite.data.x);
 		}

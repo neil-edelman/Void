@@ -79,7 +79,7 @@ Specific sprites.
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
 	struct Collision *collision; /* temporary, \in {sprites.collisions} */
-	struct Light *light; /* pointer to a limited number of lights */
+	struct Sprite *light; /* linking pointer to a limited number of lights */
 }</pre>
 <p>
 Define abstract <em>Sprite</em>.
@@ -196,23 +196,13 @@ use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>. <em>Pool</em> i
 </dl>
 </div>
 
-<div><a name = "struct Bin"><!-- --></a>
-<h3>struct Bin</h3>
-<pre><b>struct Bin</b> {
-	struct SpriteList sprites;
-	struct CoverStack *covers;
-}</pre>
-<p>
-Used in <em>Sprites</em>.
-</p>
-<dl>
-</dl>
-</div>
-
 <div><a name = "static struct Sprites"><!-- --></a>
 <h3>static struct Sprites</h3>
 <pre><b>static struct Sprites</b> {
-	struct Bin bins[LAYER_SIZE];
+	struct Bin {
+		struct SpriteList sprites;
+		struct CoverStack *covers;
+	} bins[LAYER_SIZE];
 	/* Backing for the {SpriteList} in the {Bin}s. */
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
@@ -224,8 +214,16 @@ Used in <em>Sprites</em>.
 	float dt_ms;
 	struct CollisionStack *collisions;
 	struct InfoStack *info; /* Debug. */
-	int is_player;
-	size_t ship_player_index;
+	struct {
+		int is_ship;
+		size_t ship_index;
+	} player;
+	struct Lights {
+		size_t size;
+		struct Sprite *sprite[MAX_LIGHTS];
+		struct Vec2f x[MAX_LIGHTS];
+		struct Colour3f colour[MAX_LIGHTS];
+	} lights;
 }</pre>
 <p>
 Sprites all together.

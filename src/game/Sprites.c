@@ -288,6 +288,7 @@ static int sprite_update(struct Sprite *const this) {
 	assert(this);
 	return this->vt->update(this);
 }
+static struct Ship *get_player(void);
 /* Includes {ship_update*} Human/AI. */
 #include "SpritesAi.h"
 /** Does nothing; just debris.
@@ -346,7 +347,7 @@ static const struct SpriteVt ship_human_vt = {
 	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
-	(SpritePredicate)&ship_update_dumb_ai,
+	(SpritePredicate)&ship_update_ai,
 	(SpriteFloatAccessor)&ship_get_mass
 }, debris_vt = {
 	SC_DEBRIS,
@@ -396,6 +397,7 @@ static void bin_migrate(void *const sprites_void,
 		SpriteListMigrate(&sprites_pass->lights.light_table[i].sprite, migrate);
 	}
 	/* fixme: also in Events. */
+	/* fixme: also in Wmd. */
 }
 /** Called from \see{collision_migrate}.
  @implements <Sprite>ListMigrateElement */
@@ -691,13 +693,6 @@ static void extrapolate_bin(const unsigned idx) {
 	SpriteListForEach(&sprites->bins[idx].sprites, &extrapolate);
 }
 
-/* Branch cut to the principal branch (-Pi,Pi] for numerical stability. We
- should really use normalised {ints}, so this would not be a problem, but
- {OpenGl} doesn't like that. Called from \see{timestep}. */
-static void branch_cut_pi_pi(float *theta_ptr) {
-	assert(theta_ptr);
-	*theta_ptr -= M_2PI_F * floorf((*theta_ptr + M_PI_F) / M_2PI_F);
-}
 /** Relies on \see{extrapolate}; all pre-computation is finalised in this step
  and values are advanced. Collisions are used up and need to be cleared after.
  Called from \see{timestep_bin}.

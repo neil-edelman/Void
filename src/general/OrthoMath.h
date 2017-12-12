@@ -30,6 +30,14 @@ struct Colour3f { float r, g, b; };
 struct Rectangle4i { int x_min, x_max, y_min, y_max; };
 struct Rectangle4f { float x_min, x_max, y_min, y_max; };
 
+/* Branch cut to the principal branch (-Pi,Pi] for numerical stability. We
+ should really use normalised {ints}, so this would not be a problem, but
+ {OpenGl} doesn't like that. */
+static void branch_cut_pi_pi(float *theta_ptr) {
+	assert(theta_ptr);
+	*theta_ptr -= M_2PI_F * floorf((*theta_ptr + M_PI_F) / M_2PI_F);
+}
+
 /** Generic uniform {(+/-max)} with {rand}. */
 static float random_pm_max(const float max) {
 	return 2.0f * max * rand() / RAND_MAX - max; /* fixme: Pedantic! */
@@ -105,6 +113,7 @@ static void rectangle4f_expand(struct Rectangle4f *const this,
 
 static void orthomath_unused_coda(void);
 static void orthomath_unused(void) {
+	branch_cut_pi_pi(0);
 	random_pm_max(0);
 	ortho3f_init(0);
 	ortho3f_assign(0, 0);

@@ -79,7 +79,7 @@ Specific sprites.
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
 	struct Collision *collision; /* temporary, \in {sprites.collisions} */
-	struct Sprite *light; /* linking pointer to a limited number of lights */
+	struct Light *light; /* pointer to a limited number of lights */
 }</pre>
 <p>
 Define abstract <em>Sprite</em>.
@@ -220,9 +220,11 @@ use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>. <em>Pool</em> i
 	} player;
 	struct Lights {
 		size_t size;
-		struct Sprite *sprite[MAX_LIGHTS];
-		struct Vec2f x[MAX_LIGHTS];
-		struct Colour3f colour[MAX_LIGHTS];
+		struct Light {
+			struct Sprite *sprite;
+		} light_table[MAX_LIGHTS];
+		struct Vec2f x_table[MAX_LIGHTS];
+		struct Colour3f colour_table[MAX_LIGHTS];
 	} lights;
 }</pre>
 <p>

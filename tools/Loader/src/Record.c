@@ -43,6 +43,7 @@ struct Field {
 	char        name[1024];      /* eg, likes */
 	char        type_name[1024]; /* eg, Alignment */
 	struct Type *type;           /* eg, 0 */
+	int         is_array;
 };
 static const int max_field_name = sizeof((struct Field *)0)->name / sizeof(char);
 static const int max_field_type = sizeof((struct Field *)0)->type_name / sizeof(char);
@@ -120,7 +121,13 @@ void RecordOutput(void) {
 		printf("struct Auto%s {\n", record->name);
 		printf("\t%s%s; /* key */\n", field_to_name(&record->key), record->key.name);
 		for(j = 0; j < record->no_fields; j++) {
-			printf("\t%s%s;\n", field_to_name(&record->fields[j]), record->fields[j].name);
+			struct Field *field = record->fields + j;
+			if(field->is_array) {
+				printf("\tconst size_t %s_size;\n", field->name);
+				printf("\t%s%s[];\n", field_to_name(field), field->name);
+			} else {
+				printf("\t%s%s;\n", field_to_name(field), field->name);
+			}
 		}
 		printf("};\n\n"/*, camel_to_snake_case(record->name)*/);
 	}
@@ -303,7 +310,7 @@ static struct Record *new_record(void) {
 	return record;
 }
 
-/** Loads each individal Record resource.
+/** Loads each individual Record resource.
  @return	Success or sets {@see Error} on failure. */
 static int load_record(struct Reader *r) {
 	struct Record *record = 0;
@@ -353,10 +360,18 @@ static int load_record(struct Reader *r) {
 			             &record->key : &record->fields[record->no_fields++];
 
 			/* filling in the field */
+			field->is_array = 0;
+			{
+				/* Hack */
+				size_t len = strlen(word[0]);
+				if(len > 2
+					&& word[0][len - 2] == '[' && word[0][len - 1] == ']') {
+					word[0][len - 2] = '\0';
+					field->is_array = 1;
+				}
+			}
 			strcopy(field->type_name, word[0], max_field_type);
-
 			field->type = TypeFromString(word[0]);
-
 			strcopy(field->name, word[1], max_field_name);
 		}
 		/*fprintf(stderr, "load_record: %s %s\n", record->name, word[1]);*/

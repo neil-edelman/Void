@@ -16,7 +16,6 @@
 #include "../Print.h"
 #include "Sprites.h"
 #include "Zone.h"
-#include "Light.h"
 #include "../general/Events.h"
 #include "../system/Key.h"
 #include "../system/Poll.h"

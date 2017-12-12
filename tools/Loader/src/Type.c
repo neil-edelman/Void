@@ -38,13 +38,11 @@
 static int (*get_loader(const struct Type *const type))(char **, struct Reader *const);
 static int string_type_comp(const char **key_ptr, const struct Type *elem);
 /* reading fn's */
-static int load_array(char **data_ptr, struct Reader *const r);
 static int load_word(char **data_ptr, struct Reader *const r);
 static int load_string(char **data_ptr, struct Reader *const r);
 static int load_paragraph(char **data_ptr, struct Reader *const r);	
 /* writing fn's */
 static int print_zero(const char *const *const data_ptr);
-static int print_array(const char *const *const data_ptr);
 static int print_ai(const char *const *const data_ptr);
 static int print_float(const char *const *const data_ptr);
 static int print_image(const char *const *const data_ptr);
@@ -69,8 +67,6 @@ static const struct Type {
 } types[] = {
 	{ "-",             "const void *",         0,
 		0,               &print_zero,   0 },
-	{ "array",         0,                      0,
-		&load_array,     &print_array,  0 },
 	{ "autoincrement", "const int ",           "cmp_int",
 		0,               &print_ai,     0 },
 	{ "float",         "const float ",         "cmp_float",
@@ -159,13 +155,6 @@ static int string_type_comp(const char **key_ptr, const struct Type *elem) {
 
 /* reading fn's */
 
-static int load_array(char **data_ptr, struct Reader *const r) {
-	char *line = ReaderReadLine(r);
-	line = trim(line);
-	/* fixme: I have no idea what to do. */
-	return 0;
-}
-
 static int load_word(char **data_ptr, struct Reader *const r) {
 	char *line = ReaderReadLine(r), *word, *next_word;
 	line = trim(line);
@@ -206,11 +195,6 @@ static int load_paragraph(char **data_ptr, struct Reader *const r) {
 static int print_zero(const char *const *const data_ptr) {
 	UNUSED(data_ptr);
 	printf("0");
-	return -1;
-}
-
-static int print_array(const char *const *const data_ptr) {
-	printf("Array: data? %.30s.\n", *data_ptr);
 	return -1;
 }
 

@@ -40,3 +40,9 @@ void SpriteSetVelocity(struct Sprite *const this,const struct Ortho3f *const v);
 const struct AutoSpaceZone *GateGetTo(const struct Gate *const this);
 struct Gate *FindGate(const struct AutoSpaceZone *const to);
 struct Ship *SpritesGetPlayerShip(void);
+
+/* In {SpritesLight.h}. */
+void SpritesLightClear(void);
+size_t SpritesLightGetSize(void);
+struct Vec2f *SpritesLightPositions(void);
+struct Colour3f *SpritesLightGetColours(void);

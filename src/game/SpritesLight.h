@@ -56,15 +56,18 @@ static int Light(struct Sprite *const sprite,
 	return 1;
 }
 /** Delete all lights. */
-static void Light_clear(void) {
-	struct Lights *const lights = &sprites->lights;
-	size_t i;
-	assert(sprites);
-	for(i = 0; i < lights->size; i++) {
-		assert(lights->light_table[i].sprite);
-		lights->light_table[i].sprite->light = 0;
+void SpritesLightClear(void) {
+	struct Light *light;
+	size_t i, *psize;
+	if(!sprites) return;
+	psize = &sprites->lights.size;
+	light = sprites->lights.light_table;
+	/* Erase all spites' lights. */
+	for(i = 0; i < *psize; i++) {
+		assert(light[i].sprite);
+		light[i].sprite->light = 0;
 	}
-	lights->size = 0;
+	*psize = 0;
 }
 size_t SpritesLightGetSize(void) {
 	if(!sprites) return 0;
@@ -86,7 +89,7 @@ struct Vec2f *SpritesLightPositions(void) {
 	}
 	return xs;
 }
-struct Colour3f *SpritesLightGetColours() {
+struct Colour3f *SpritesLightGetColours(void) {
 	if(!sprites) return 0;
 	return sprites->lights.colour_table;
 }

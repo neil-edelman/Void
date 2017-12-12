@@ -15,7 +15,6 @@
 #include "../Print.h"
 #include "../game/Sprites.h"
 #include "../game/Fars.h"
-#include "../game/Light.h"
 #include "../game/Game.h"       /* shield display */
 #include "../../external/lodepng.h"  /* texture() */
 #include "../../external/nanojpeg.h" /* texture() */
@@ -570,14 +569,14 @@ static void display(void) {
 	/* Set up lights, draw sprites in foreground. */
 	glUseProgram(auto_Lambert_shader.compiled);
 	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
-	glUniform1i(auto_Lambert_shader.points, lights = LightGetArraySize());
+	glUniform1i(auto_Lambert_shader.points, lights = (unsigned)SpritesLightGetSize());
 	if(lights) {
-		struct Vec2f *parray = LightGetPositionArray();
+		struct Vec2f *parray = SpritesLightPositions();
 		unsigned i;
 		glUniform2fv(auto_Lambert_shader.point_position, lights,
 			(GLfloat *)parray);
 		glUniform3fv(auto_Lambert_shader.point_colour, lights,
-			(GLfloat *)LightGetColourArray());
+			(GLfloat *)SpritesLightGetColours());
 		/* Debug. */
 		for(i = 0; i < lights; i++) Info(parray + i, icon_light);
 	}

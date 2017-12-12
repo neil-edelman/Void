@@ -57,6 +57,7 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* @fixme LightsClear();*/
 	EventsClear();
 	FarsClear();
+	SpritesLightClear();
 
 	/* set drawing elements */
 	DrawSetBackground("Dorado.jpeg");

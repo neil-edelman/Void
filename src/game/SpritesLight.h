@@ -16,9 +16,9 @@
 static void Light_(struct Light *const light) {
 	struct Lights *const lights = &sprites->lights;
 	size_t no, r;
-	assert(sprites && light);
+	if(!light) return;
+	assert(sprites);
 	no = light - lights->light_table;
-	printf("light: %lu\n", no);
 	if(no >= lights->size) {printf("~light: %lu not in range of lights, %lu.\n",
 		(unsigned long)no, (unsigned long)lights->size); return; }
 	/* Take the last light and replace this one. */

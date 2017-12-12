@@ -192,7 +192,7 @@ static struct Sprites {
 		size_t size;
 		struct Light {
 			struct Sprite *sprite;
-		} light[MAX_LIGHTS];
+		} light_table[MAX_LIGHTS];
 		struct Vec2f x_table[MAX_LIGHTS];
 		struct Colour3f colour_table[MAX_LIGHTS];
 	} lights;
@@ -393,7 +393,7 @@ static void bin_migrate(void *const sprites_void,
 	}
 	/* There is a dependancy in Lights. */
 	for(i = 0; i < sprites_pass->lights.size; i++) {
-		SpriteListMigrate(&sprites_pass->lights.light[i].sprite, migrate);
+		SpriteListMigrate(&sprites_pass->lights.light_table[i].sprite, migrate);
 	}
 	/* fixme: also in Events. */
 }

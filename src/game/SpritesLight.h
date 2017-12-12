@@ -17,19 +17,19 @@ static void Light_(struct Light *const light) {
 	struct Lights *const lights = &sprites->lights;
 	size_t no, r;
 	assert(sprites && light);
-	no = light - lights->light;
+	no = light - lights->light_table;
 	printf("light: %lu\n", no);
 	if(no >= lights->size) {printf("~light: %lu not in range of lights, %lu.\n",
 		(unsigned long)no, (unsigned long)lights->size); return; }
 	/* Take the last light and replace this one. */
 	if(no < (r = lights->size - 1)) {
-		memcpy(light, lights->light + r, sizeof *light);
+		memcpy(light, lights->light_table + r, sizeof *light);
 		memcpy(lights->x_table + no, lights->x_table + r,
 			sizeof *lights->x_table);
 		memcpy(lights->colour_table + no, lights->colour_table + r,
 			sizeof *lights->colour_table);
-		assert(light->sprite && light->sprite->light == lights->light + r);
-		light->sprite->light = lights->light + no;
+		assert(light->sprite && light->sprite->light == lights->light_table +r);
+		light->sprite->light = lights->light_table + no;
 	}
 	sprites->lights.size--;
 }
@@ -47,7 +47,7 @@ static int Light(struct Sprite *const sprite,
 	if(lights->size >= MAX_LIGHTS)
 		return fprintf(stderr, "light: capacity.\n"), 0;
 	l = lights->size++;
-	this = lights->light + l;
+	this = lights->light_table + l;
 	this->sprite = sprite, sprite->light = this;
 	x = lights->x_table + l;
 	colour = lights->colour_table + l;
@@ -61,8 +61,8 @@ static void Light_clear(void) {
 	size_t i;
 	assert(sprites);
 	for(i = 0; i < lights->size; i++) {
-		assert(lights->light[i].sprite);
-		lights->light[i].sprite->light = 0;
+		assert(lights->light_table[i].sprite);
+		lights->light_table[i].sprite->light = 0;
 	}
 	lights->size = 0;
 }
@@ -76,7 +76,7 @@ struct Vec2f *SpritesLightPositions(void) {
 	size_t i, size;
 	if(!sprites) return 0;
 	size = sprites->lights.size;
-	lights = sprites->lights.light;
+	lights = sprites->lights.light_table;
 	xs = sprites->lights.x_table;
 	for(i = 0; i < size; i++) {
 		x = xs + i;

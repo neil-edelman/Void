@@ -68,7 +68,7 @@ struct Sprite {
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
 	struct Collision *collision; /* temporary, \in {sprites.collisions} */
-	struct Sprite *light; /* linking pointer to a limited number of lights */
+	struct Light *light; /* pointer to a limited number of lights */
 };
 static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_NAME Sprite
@@ -190,9 +190,11 @@ static struct Sprites {
 	} player;
 	struct Lights {
 		size_t size;
-		struct Sprite *sprite[MAX_LIGHTS];
-		struct Vec2f x[MAX_LIGHTS];
-		struct Colour3f colour[MAX_LIGHTS];
+		struct Light {
+			struct Sprite *sprite;
+		} light[MAX_LIGHTS];
+		struct Vec2f x_table[MAX_LIGHTS];
+		struct Colour3f colour_table[MAX_LIGHTS];
 	} lights;
 } *sprites;
 
@@ -251,7 +253,7 @@ static void gate_to_string(const struct Gate *this, char (*const a)[12]) {
 /** @implements SpritesAction */
 static void sprite_delete(struct Sprite *const this) {
 	assert(sprites && this);
-	light_(this->light);
+	Light_(this->light);
 	SpriteListRemove(&sprites->bins[this->bin].sprites, this);
 	this->bin = (unsigned)-1; /* Makes debugging easier. */
 	this->vt->delete(this);
@@ -272,7 +274,6 @@ static void debris_delete(struct Debris *const this) {
 }
 /** @implements <Wmd>Action */
 static void wmd_delete(struct Wmd *const this) {
-	light_(this->sprite.data.light);
 	WmdPoolRemove(sprites->wmds, this);
 }
 /** @implements <Gate>Action */
@@ -392,7 +393,7 @@ static void bin_migrate(void *const sprites_void,
 	}
 	/* There is a dependancy in Lights. */
 	for(i = 0; i < sprites_pass->lights.size; i++) {
-		SpriteListMigrate(&sprites_pass->lights.sprite + i, migrate);
+		SpriteListMigrate(&sprites_pass->lights.light[i].sprite, migrate);
 	}
 	/* fixme: also in Events. */
 }
@@ -615,7 +616,7 @@ struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 	this->from = &from->sprite.data;
 	this->mass = class->impact_mass;
 	this->expires = TimerGetGameTime() + class->ms_range;
-	light(&this->sprite.data, class->r, class->g, class->b);
+	Light(&this->sprite.data, class->r, class->g, class->b);
 	return this;
 }
 

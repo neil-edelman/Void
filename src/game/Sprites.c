@@ -736,7 +736,7 @@ static void put_cover(const unsigned bin, unsigned no, struct Sprite *this) {
  @implements <Sprite>Action */
 static void extrapolate(struct Sprite *const this) {
 	assert(sprites && this);
-	/* If it returns false, just leave it; it's probably invalid now. */
+	/* If it returns false, it's deleted. */
 	if(!sprite_update(this)) return;
 	/* Kinematics. */
 	this->dx.x = this->v.x * sprites->dt_ms;
@@ -812,7 +812,7 @@ static struct Ship *get_player(void) {
 	return ShipPoolGetElement(sprites->ships, sprites->player.ship_index);
 }
 
-/* This is where \see{collide_bin} is located; but lots of helper functions. */
+/* This is where \see{collide_bin} is located, but lots of helper functions. */
 #include "SpritesCollide.h"
 
 /** Update each frame.

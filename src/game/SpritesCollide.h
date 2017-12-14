@@ -382,28 +382,30 @@ static int collide_boxes(const struct Sprite *const a,
 /** Call after {extrapolate}; needs and consumes {covers}. This is {n^2} inside
  of the {bin}. */
 static void collide_bin(unsigned bin) {
-	struct CoverStack *const cover = sprites->bins[bin].covers;
+	struct CoverStack *const covers = sprites->bins[bin].covers;
 	struct Cover *cover_a, *cover_b;
 	const struct Matrix *matrix;
-	struct Sprite *a, *b;
+	struct Sprite *a, *b, *const*ref;
 	float t;
 	size_t index_b;
 	assert(sprites && bin < LAYER_SIZE);
 	
 	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
 	/* This is {O({covers}^2)/2} within the bin. {a} is popped . . . */
-	while((cover_a = CoverStackPop(cover))) {
+	while((cover_a = CoverStackPop(covers))) {
 		/* . . . then {b} goes down the list. */
-		if(!(index_b = CoverStackGetSize(cover))) break;
+		if(!(index_b = CoverStackGetSize(covers))) break;
 		do {
 			index_b--;
-			cover_b = CoverStackGetElement(cover, index_b);
+			cover_b = CoverStackGetElement(covers, index_b);
 			assert(cover_a && cover_b);
 			/* Another {bin} takes care of it? */
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
 			/* Respond appropriately if it was deleted on the fly. */
-			if(!(a = cover_a->sprite_ref)) break;
-			if(!(b = cover_b->sprite_ref)) continue;
+			if(!(ref = cover_a->sprite_ref)) break;
+			assert(ref), a = *ref, assert(a);
+			if(!(ref = cover_b->sprite_ref)) continue;
+			assert(ref), b = *ref, assert(b);
 			/* Extract the info on the type of collision. */
 			matrix = &collision_matrix[a->vt->class][b->vt->class];
 			/* If the sprites have no collision handler, don't bother. */

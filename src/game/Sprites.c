@@ -81,6 +81,7 @@ static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 /* Define pointers-to-Sprite as a temporory structure; used in covers. */
 #define STACK_NAME SpriteRef
 #define STACK_TYPE struct Sprite *
+#define STACK_MIGRATE
 #include "../templates/Stack.h"
 
 /** Define a temporary reference to sprites for collision-detection; these will
@@ -182,10 +183,9 @@ static struct Sprites {
 	struct WmdPool *wmds;
 	struct GatePool *gates;
 	/* Backing for temporary {CoverStack.sprite_ref}. */
-	struct SpriteRefStack *sprite_refs;
+	struct SpriteRefStack *onscreen;
 	/* Contains calculations for the {bins}. */
 	struct Layer *layer;
-	/*  */
 	/* Constantly updating frame time. */
 	float dt_ms;
 	struct CollisionStack *collisions;
@@ -451,9 +451,18 @@ static const struct SpriteVt ship_human_vt = {
 	const struct Migrate *const migrate) {
 	SpriteListMigratePointer(&this->sprite, migrate);
 }*/
+
+static void onscreen_migrate(void *const sprite_refs_void,
+	const struct Migrate *const migrate) {
+	struct SpriteRef *const sprite_refs = sprite_refs_void;
+	assert(sprites);
+	
+	printf("arught\n");
+}
 /** Called from {bin_migrate}.
- @implements <SpriteRef>Migrate */
-static void sprite_ref_migrate(struct Sprite **const sprite_ref,
+ @implements <SpriteRef>Migrate
+ @fixme Is this really neccessary? what about calling it directly? */
+static void sprite_ref_migrate_contents(struct Sprite **const sprite_ref,
 	const struct Migrate *const migrate) {
 	if(!sprite_ref) return;
 	SpriteMigratePointer(sprite_ref, migrate);
@@ -461,7 +470,7 @@ static void sprite_ref_migrate(struct Sprite **const sprite_ref,
 /** @param sprites_void: We don't need this because there's only one static.
  Should always equal {sprites}.
  @implements Migrate */
-static void bin_migrate(void *const sprites_void,
+static void sprites_migrate(void *const sprites_void,
 	const struct Migrate *const migrate) {
 	struct Sprites *const sprites_pass = sprites_void;
 	unsigned i;
@@ -472,7 +481,7 @@ static void bin_migrate(void *const sprites_void,
 			migrate);*/
 	}
 	/* Move the temporary pointers. */
-	SpriteRefStackMigrateEach(0, &sprite_ref_migrate, migrate);
+	SpriteRefStackMigrateEach(0, &sprite_ref_migrate_contents, migrate);
 	/* There is a dependancy in Lights. */
 	for(i = 0; i < sprites_pass->lights.size; i++) {
 		SpriteListMigrate(&sprites_pass->lights.light_table[i].sprite, migrate);
@@ -513,6 +522,7 @@ void Sprites_(void) {
 	InfoStack_(&sprites->info);
 	CollisionStack_(&sprites->collisions);
 	Layer_(&sprites->layer);
+	SpriteRefStack_(&sprites->onscreen);
 	GatePool_(&sprites->gates);
 	WmdPool_(&sprites->wmds);
 	DebrisPool_(&sprites->debris);
@@ -523,7 +533,8 @@ void Sprites_(void) {
 /** @return True if the sprite buffers have been set up. */
 int Sprites(void) {
 	unsigned i;
-	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, LAYER, COLLISION, INFO } e = NO;
+	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, REF, LAYER, COLLISION, INFO }
+		e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
 	/* Static, if it were possible. */
@@ -551,11 +562,18 @@ int Sprites(void) {
 		for(i = 0; i < LAYER_SIZE; i++) {
 			if(!(sprites->bins[i].covers = CoverStack())) { e = BINS; break; }
 		} if(e) break;
-		if(!(sprites->ships = ShipPool(&bin_migrate, sprites))) { e=SHIP;break;}
-		if(!(sprites->debris=DebrisPool(&bin_migrate,sprites))){e=DEBRIS;break;}
-		if(!(sprites->wmds = WmdPool(&bin_migrate, sprites))) { e = WMD; break;}
-		if(!(sprites->gates = GatePool(&bin_migrate, sprites))) { e=GATE;break;}
-		if(!(sprites->layer=Layer(LAYER_SIDE_SIZE,layer_space))){e=LAYER;break;}
+		if(!(sprites->ships = ShipPool(&sprites_migrate, sprites)))
+			{ e = SHIP; break; }
+		if(!(sprites->debris=DebrisPool(&sprites_migrate,sprites)))
+			{ e = DEBRIS; break; }
+		if(!(sprites->wmds = WmdPool(&sprites_migrate, sprites)))
+			{ e = WMD; break; }
+		if(!(sprites->gates = GatePool(&sprites_migrate, sprites)))
+			{ e = GATE; break; }
+		if(!(sprites->onscreen = SpriteRefStack(&onscreen_migrate,
+			&sprites->onscreen))) { e = REF; break; }
+		if(!(sprites->layer = Layer(LAYER_SIDE_SIZE, layer_space)))
+			{ e = LAYER; break; }
 		if(!(sprites->collisions = CollisionStack(&collision_migrate, sprites)))
 			{ e = COLLISION; break; }
 		if(!(sprites->info = InfoStack())) { e = INFO; break; }
@@ -566,6 +584,7 @@ int Sprites(void) {
 		case DEBRIS: ea = "debris",eb=DebrisPoolGetError(sprites->debris);break;
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
 		case GATE: ea = "gates", eb = GatePoolGetError(sprites->gates); break;
+		case REF: ea = "onscreen", eb = SpriteRefStackGetError(sprites->onscreen); break;
 		case LAYER: ea = "layer", eb = "couldn't get layer"; break;
 		case COLLISION: ea = "collisions",
 			eb = CollisionStackGetError(sprites->collisions); break;
@@ -748,6 +767,7 @@ static void put_cover(const unsigned bin, const unsigned no,
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
  @implements <Sprite>Action */
 static void extrapolate(struct Sprite *const this) {
+	struct Sprite **ref;
 	assert(sprites && this);
 	/* If it returns false, it's deleted. */
 	if(!sprite_update(this)) return;
@@ -766,8 +786,9 @@ static void extrapolate(struct Sprite *const this) {
 	/* Put it into appropriate {covers}. This is like a hashmap in space, but
 	 it is spread out, so it may cover multiple bins. */
 	LayerSetSpriteRectangle(sprites->layer, &this->box);
-	SpriteRefStackNew(sprites->sprite_refs);
-	LayerSpriteForEachSprite(sprites->layer, this, &put_cover);
+	if(!(ref = SpriteRefStackNew(sprites->onscreen))) return;
+	*ref = this;
+	LayerSpriteForEachSprite(sprites->layer, ref, &put_cover);
 }
 /** Called in \see{SpritesUpdate}.
  @implements <Bin>Action */
@@ -855,6 +876,8 @@ void SpritesUpdate(const int dt_ms) {
 	/* Collision has to be called after {extrapolate}; it consumes {cover}.
 	 (fixme: really? 3 passes?) */
 	LayerForEachScreen(sprites->layer, &collide_bin);
+	/* Clear out the temporary {SpriteRef}s now that cover is consumed. */
+	SpriteRefStackClear(sprites->onscreen);
 	/* Time-step. */
 	LayerForEachScreen(sprites->layer, &timestep_bin);
 }

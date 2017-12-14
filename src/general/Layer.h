@@ -17,4 +17,4 @@ int LayerSetSpriteRectangle(struct Layer *const this,
 void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o);
 void LayerForEachScreen(struct Layer *const this, const LayerAction action);
 void LayerSpriteForEachSprite(struct Layer *const this,
-	struct Sprite *const sprite, const LayerNoSpriteAction action);
+	struct Sprite *const*const sprite_ref, const LayerNoSpriteAction action);

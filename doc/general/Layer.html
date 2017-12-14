@@ -105,7 +105,7 @@ size.
 	<td>void</td>
 	<td><a href = "#LayerSpriteForEachSprite">LayerSpriteForEachSprite</a></td>
 	<td>struct Layer *const this,
-	struct Sprite *const sprite, const LayerNoSpriteAction action</td>
+	struct Sprite *const*const sprite_ref, const LayerNoSpriteAction action</td>
 </tr>
 </table>
 
@@ -185,7 +185,7 @@ For each bin on screen; used for drawing.
 <div><a name = "LayerSpriteForEachSprite"><!-- --></a>
 <h3>LayerSpriteForEachSprite</h3>
 <pre>void <b>LayerSpriteForEachSprite</b> (struct Layer *const this,
-	struct Sprite *const sprite, const LayerNoSpriteAction action)</pre>
+	struct Sprite *const*const sprite_ref, const LayerNoSpriteAction action)</pre>
 <p>
 For each bin crossing the sprite; used for collision-detection.
 </p>

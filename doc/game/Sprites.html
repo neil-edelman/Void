@@ -49,6 +49,9 @@ Sprites is a polymorphic static structure. Initialise it with <em>Sprites</em> a
 before exiting, when all references have been resolved, <em>Sprites_</em>.
 </p>
 <p>
+Called from <em>bin_migrate</em>.
+</p>
+<p>
 Specific sprites.
 </p>
 <dl>
@@ -83,6 +86,21 @@ Specific sprites.
 }</pre>
 <p>
 Define abstract <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Cover"><!-- --></a>
+<h3>struct Cover</h3>
+<pre><b>struct Cover</b> {
+	struct Sprite *const*sprite_ref;
+	int is_corner;
+}</pre>
+<p>
+Define a temporary reference to sprites for collision-detection; these will
+go in each bin that is covered by the sprite and be consumed by the functions
+responsible.
 </p>
 <dl>
 </dl>
@@ -150,23 +168,6 @@ Define <em>GatePool</em> and <em>GatePoolNode</em>, a subclass of <em>Sprite</em
 </dl>
 </div>
 
-<div><a name = "struct Cover"><!-- --></a>
-<h3>struct Cover</h3>
-<pre><b>struct Cover</b> {
-	struct Sprite *sprite;
-	int is_corner;
-	int is_deleted;
-}</pre>
-<p>
-Define a temporary reference to sprites for collision-detection; these will
-go in each bin that is covered by the sprite and be consumed by the functions
-responsible. The sprite cannot be modified during this operation to simplify
-processing.
-</p>
-<dl>
-</dl>
-</div>
-
 <div><a name = "struct Info"><!-- --></a>
 <h3>struct Info</h3>
 <pre><b>struct Info</b> {
@@ -208,8 +209,11 @@ use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>. <em>Pool</em> i
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
+	/* Backing for temporary {CoverStack.sprite_ref}. */
+	struct SpriteRefStack *sprite_refs;
 	/* Contains calculations for the {bins}. */
 	struct Layer *layer;
+	/*  */
 	/* Constantly updating frame time. */
 	float dt_ms;
 	struct CollisionStack *collisions;
@@ -253,6 +257,8 @@ eg collision resolution.
 	SpriteAction delete;
 	SpritePredicate update;
 	SpriteFloatAccessor get_mass;
+	SpriteFloatAccessor get_damage;
+	SpriteFloatPredicate put_damage;
 }</pre>
 <p>
 Define <em>SpriteVt</em>.

@@ -46,6 +46,8 @@ static const float turn_acceleration = 0.005f;
 /* {0.995^t} Taylor series at {t = 25ms}. */
 static const float turn_damping_per_25ms = 0.88222f;
 static const float turn_damping_1st_order = 0.00442217f;
+/* Damage/mass */
+static const float mass_damage = 5.0f;
 
 
 
@@ -206,6 +208,7 @@ static struct Sprites {
 /*********** Define virtual functions. ***********/
 
 typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
+typedef int (*SpriteFloatPredicate)(struct Sprite *const, const float);
 
 /** Sometimes, the sprite class is important; ie, {typeof(sprite)};
  eg collision resolution. */
@@ -218,6 +221,8 @@ struct SpriteVt {
 	SpriteAction delete;
 	SpritePredicate update;
 	SpriteFloatAccessor get_mass;
+	SpriteFloatAccessor get_damage;
+	SpriteFloatPredicate put_damage;
 };
 
 
@@ -337,36 +342,99 @@ static float gate_get_mass(const struct Gate *const this) {
 	return 1e36f; /* No moving. This should not be called, anyway. */
 }
 
+/** @implements <Sprite>FloatAccessor */
+static float sprite_get_damage(const struct Sprite *const this) {
+	assert(this);
+	return this->vt->get_damage(this);
+}
+/** @implements <Ship>FloatAccessor */
+static float ship_get_damage(const struct Ship *const this) {
+	assert(this);
+	return this->mass * mass_damage;
+}
+/** @implements <Debris>FloatAccessor */
+static float debris_get_damage(const struct Debris *const this) {
+	assert(this);
+	return this->mass * mass_damage;
+}
+/** @implements <Wmd>FloatAccessor */
+static float wmd_get_damage(const struct Wmd *const this) {
+	assert(this && this->class);
+	return this->class->damage;
+}
+/** @implements <Gate>FloatAccessor */
+static float gate_get_damage(const struct Gate *const this) {
+	assert(this);
+	return 1e36f; /* You are fucked. */
+}
+
+/** @implements <Sprite,Float>Action */
+static void sprite_put_damage(struct Sprite *const this, const float damage) {
+	assert(this);
+	this->vt->put_damage(this, damage);
+}
+/** @implements <Ship,Float>Predicate */
+static void ship_put_damage(struct Ship *const this, const float damage) {
+	printf("Hit!\n");
+	this->shield -= damage;
+	if(this->shield <= 0.0f) sprite_delete(&this->sprite.data);
+}
+/** @implements <Debris,Float>Predicate */
+static void debris_put_damage(struct Debris *const this, const float damage) {
+	/* fixme */
+	if(damage > 4.0f) sprite_delete(&this->sprite.data);
+}
+/** Just dies.
+ @implements <Wmd,Float>Predicate */
+static void wmd_put_damage(struct Wmd *const this, const float damage) {
+	if(damage > 0.0f) sprite_delete(&this->sprite.data);
+}
+/** Just absorbs the damage.
+ @implements <Gate,Float>Predicate */
+static void gate_put_damage(const struct Gate *const this, const float damage) {
+	UNUSED(this), UNUSED(damage);
+}
+
 static const struct SpriteVt ship_human_vt = {
 	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpritePredicate)&ship_update_human,
-	(SpriteFloatAccessor)&ship_get_mass
+	(SpriteFloatAccessor)&ship_get_mass,
+	(SpriteFloatAccessor)&ship_get_damage,
+	(SpriteFloatPredicate)&ship_put_damage
 }, ship_ai_vt = {
 	SC_SHIP,
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpritePredicate)&ship_update_ai,
-	(SpriteFloatAccessor)&ship_get_mass
+	(SpriteFloatAccessor)&ship_get_mass,
+	(SpriteFloatAccessor)&ship_get_damage,
+	(SpriteFloatPredicate)&ship_put_damage
 }, debris_vt = {
 	SC_DEBRIS,
 	(SpriteToString)&debris_to_string,
 	(SpriteAction)&debris_delete,
 	(SpritePredicate)&debris_update,
-	(SpriteFloatAccessor)&debris_get_mass
+	(SpriteFloatAccessor)&debris_get_mass,
+	(SpriteFloatAccessor)&debris_get_damage,
+	(SpriteFloatPredicate)&debris_put_damage	
 }, wmd_vt = {
 	SC_WMD,
 	(SpriteToString)&wmd_to_string,
 	(SpriteAction)&wmd_delete,
 	(SpritePredicate)&wmd_update,
-	(SpriteFloatAccessor)&wmd_get_mass
+	(SpriteFloatAccessor)&wmd_get_mass,
+	(SpriteFloatAccessor)&wmd_get_damage,
+	(SpriteFloatPredicate)&wmd_put_damage	
 }, gate_vt = {
 	SC_GATE,
 	(SpriteToString)&gate_to_string,
 	(SpriteAction)&gate_delete,
 	(SpritePredicate)&gate_update,
-	(SpriteFloatAccessor)&gate_get_mass
+	(SpriteFloatAccessor)&gate_get_mass,
+	(SpriteFloatAccessor)&gate_get_damage,
+	(SpriteFloatPredicate)&gate_put_damage	
 };
 
 
@@ -612,6 +680,7 @@ struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 		{ fprintf(stderr, "SpritesWmd: %s.\n",
 		WmdPoolGetError(sprites->wmds)); return 0; }
 	sprite_filler(&this->sprite.data, &wmd_vt, class->sprite, &x);
+	this->class = class;
 	/* Speed is in [px/s], want it [px/ms]. */
 	this->sprite.data.v.x = from->sprite.data.v.x + dir.x * class->speed*0.001f;
 	this->sprite.data.v.y = from->sprite.data.v.y + dir.y * class->speed*0.001f;

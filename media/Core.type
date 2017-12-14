@@ -65,7 +65,7 @@ Sprite sprite
 int ms_range
 int speed
 int ms_recharge
-int damage
+float damage
 float impact_mass
 int r
 int g

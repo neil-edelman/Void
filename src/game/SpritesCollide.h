@@ -177,41 +177,14 @@ static void bounce_b(struct Cover *a, struct Cover *b, const float t) {
 	sprite_bounce_a(b->sprite, a->sprite, t);
 }
 /** @implements CoverCollision */
-static void wmd_debris(struct Cover *w, struct Cover *d, const float t) {
-	/* avoid inifinite destruction loop */
-	/*if(SpriteIsDestroyed(w) || SpriteIsDestroyed(d)) return;
-	 push(d, atan2f(d->y - w->y, d->x - w->x), w->mass);
-	 SpriteRecharge(d, -SpriteGetDamage(w));
-	 SpriteDestroy(w);*/
-	/*char a[12], b[12];
-	 sprite_to_string(w, &a);
-	 sprite_to_string(d, &b);
-	 printf("hit %s -- %s.\n", a, b);*/
-	/*printf("BOOM!\n");*/
-	sprite_inelastic_stick(d->sprite, w->sprite, t);
+static void wmd_generic(struct Cover *w, struct Cover *g, const float t) {
+	sprite_inelastic_stick(g->sprite, w->sprite, t);
+	sprite_put_damage(g->sprite, sprite_get_damage(w->sprite));
 	sprite_delete(w->sprite), w->sprite = 0;
 }
 /** @implements CoverCollision */
-static void debris_wmd(struct Cover *d, struct Cover *w, const float t) {
-	wmd_debris(w, d, t);
-}
-/** @implements CoverCollision */
-static void wmd_ship(struct Cover *w, struct Cover *s, const float t) {
-	/*char a[12], b[12];
-	 sprite_to_string(w, &a);
-	 sprite_to_string(s, &b);
-	 printf("wmd_shp: %s -- %s\n", a, b);*/
-	/* avoid inifinite destruction loop */
-	/*if(CoverIsDestroyed(w) || CoverIsDestroyed(s)) return;
-	 push(s, atan2f(s->y - w->y, s->x - w->x), w->mass);
-	 SpriteRecharge(s, -SpriteGetDamage(w));*/
-	/*printf("BAM!\n");*/
-	sprite_inelastic_stick(s->sprite, w->sprite, t);
-	sprite_delete(w->sprite), w->sprite = 0;
-}
-/** @implements CoverCollision */
-static void ship_wmd(struct Cover *s, struct Cover *w, const float t) {
-	wmd_ship(w, s, t);
+static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
+	wmd_generic(w, g, t);
 }
 
 /** @implements CoverCollision */
@@ -311,16 +284,16 @@ static const struct Matrix {
 	{ /* [ship, *] */
 		{ &elastic_bounce, &pressure_even },
 		{ &elastic_bounce, &pressure_even },
-		{ &ship_wmd,       &pressure_b },
+		{ &generic_wmd,    &pressure_b },
 		{ &ship_gate,      0 }
 	}, { /* [debris, *] */
 		{ &elastic_bounce, &pressure_even },
 		{ &elastic_bounce, &pressure_even },
-		{ &debris_wmd,     &pressure_b },
+		{ &generic_wmd,    &pressure_b },
 		{ &bounce_a,       &pressure_a }
 	}, { /* [wmd, *] */
-		{ &wmd_ship,       &pressure_a },
-		{ &wmd_debris,     &pressure_a },
+		{ &wmd_generic,    &pressure_a },
+		{ &wmd_generic,    &pressure_a },
 		{ 0,               0 },
 		{ 0,               0 }
 	}, { /* [gate, *] */

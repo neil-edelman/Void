@@ -163,24 +163,29 @@ static void sprite_bounce_a(struct Sprite *const a, struct Sprite *const b,
 
 /** @implements CoverCollision */
 static void elastic_bounce(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->sprite && b && b->sprite);
-	sprite_elastic_bounce(a->sprite, b->sprite, t);
+	assert(a && a->sprite_ref && *a->sprite_ref
+		&& b && b->sprite_ref && *b->sprite_ref);
+	sprite_elastic_bounce(*a->sprite_ref, *b->sprite_ref, t);
 }
 /** @implements CoverCollision */
 static void bounce_a(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->sprite && b && b->sprite);
-	sprite_bounce_a(a->sprite, b->sprite, t);
+	assert(a && a->sprite_ref && *a->sprite_ref
+		&& b && b->sprite_ref && *b->sprite_ref);
+	sprite_bounce_a(*a->sprite_ref, *b->sprite_ref, t);
 }
 /** @implements CoverCollision */
 static void bounce_b(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->sprite && b && b->sprite);
-	sprite_bounce_a(b->sprite, a->sprite, t);
+	assert(a && a->sprite_ref && *a->sprite_ref
+		&& b && b->sprite_ref && *b->sprite_ref);
+	sprite_bounce_a(*b->sprite_ref, *a->sprite_ref, t);
 }
 /** @implements CoverCollision */
-static void wmd_generic(struct Cover *w, struct Cover *g, const float t) {
-	sprite_inelastic_stick(g->sprite, w->sprite, t);
-	sprite_put_damage(g->sprite, sprite_get_damage(w->sprite));
-	sprite_delete(w->sprite), w->sprite = 0;
+static void wmd_generic(struct Cover *a, struct Cover *b, const float t) {
+	assert(a && a->sprite_ref && *a->sprite_ref
+		&& b && b->sprite_ref && *b->sprite_ref);
+	sprite_inelastic_stick(*b->sprite_ref, *a->sprite_ref, t);
+	sprite_put_damage(*b->sprite_ref, sprite_get_damage(*a->sprite_ref));
+	sprite_delete(*a->sprite_ref), a->sprite_ref = 0;
 }
 /** @implements CoverCollision */
 static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
@@ -189,11 +194,12 @@ static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
 
 /** @implements CoverCollision */
 static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
-	struct Sprite *const s = cs->sprite, *const g = cg->sprite;
+	struct Sprite *const s = *cs->sprite_ref, *const g = *cg->sprite_ref;
 	struct Ship *const ship = (struct Ship *)s;
 	struct Vec2f diff, gate_norm;
 	float proj;
-	assert(sprites && s && g && s->vt->class == SC_SHIP);
+	assert(sprites && cs->sprite_ref && cg->sprite_ref && s && g
+		&& s->vt->class == SC_SHIP);
 	diff.x = s->x.x - g->x.x;
 	diff.y = s->x.y - g->x.y;
 	gate_norm.x = cosf(g->x.theta);
@@ -209,7 +215,7 @@ static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 			 migrate sprites. */
 			EventsSpriteConsumer(0.0f, (SpriteConsumer)&ZoneChange, g);
 		} else {
-			sprite_delete(s), cs->sprite = 0; /* Disappear! */
+			sprite_delete(s), cs->sprite_ref = 0; /* Disappear! */
 		}
 	}
 	ship->dist_to_horizon = proj; /* fixme: unreliable? */
@@ -396,8 +402,8 @@ static void collide_bin(unsigned bin) {
 			/* Another {bin} takes care of it? */
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
 			/* Respond appropriately if it was deleted on the fly. */
-			if(!(a = cover_a->sprite)) break;
-			if(!(b = cover_b->sprite)) continue;
+			if(!(a = cover_a->sprite_ref)) break;
+			if(!(b = cover_b->sprite_ref)) continue;
 			/* Extract the info on the type of collision. */
 			matrix = &collision_matrix[a->vt->class][b->vt->class];
 			/* If the sprites have no collision handler, don't bother. */

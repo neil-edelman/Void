@@ -78,6 +78,22 @@ static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_TO_STRING &sprite_to_string
 #include "../templates/List.h"
 
+/* Define pointers-to-Sprite as a temporory structure; used in covers. */
+#define STACK_NAME SpriteRef
+#define STACK_TYPE struct Sprite *
+#include "../templates/Stack.h"
+
+/** Define a temporary reference to sprites for collision-detection; these will
+ go in each bin that is covered by the sprite and be consumed by the functions
+ responsible. */
+struct Cover {
+	struct Sprite *const*sprite_ref;
+	int is_corner;
+};
+#define STACK_NAME Cover
+#define STACK_TYPE struct Cover
+#include "../templates/Stack.h"
+
 /* Declare {ShipVt}. */
 struct ShipVt;
 /** Define {ShipPool} and {ShipPoolNode}, a subclass of {Sprite}. */
@@ -128,21 +144,6 @@ struct Gate {
 
 
 
-/** Define a temporary reference to sprites for collision-detection; these will
- go in each bin that is covered by the sprite and be consumed by the functions
- responsible. The sprite cannot be modified during this operation to simplify
- processing. */
-struct Cover {
-	struct Sprite *sprite;
-	int is_corner;
-	int is_deleted;
-};
-#define STACK_NAME Cover
-#define STACK_TYPE struct Cover
-#include "../templates/Stack.h"
-
-
-
 /** Debug. */
 struct Info {
 	struct Vec2f x;
@@ -180,8 +181,11 @@ static struct Sprites {
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
+	/* Backing for temporary {CoverStack.sprite_ref}. */
+	struct SpriteRefStack *sprite_refs;
 	/* Contains calculations for the {bins}. */
 	struct Layer *layer;
+	/*  */
 	/* Constantly updating frame time. */
 	float dt_ms;
 	struct CollisionStack *collisions;
@@ -443,9 +447,16 @@ static const struct SpriteVt ship_human_vt = {
 
 /** Called from {bin_migrate}.
  @implements <Cover>Migrate */
-static void cover_migrate(struct Cover *const this,
+/*static void cover_migrate(struct Cover *const this,
 	const struct Migrate *const migrate) {
 	SpriteListMigratePointer(&this->sprite, migrate);
+}*/
+/** Called from {bin_migrate}.
+ @implements <SpriteRef>Migrate */
+static void sprite_ref_migrate(struct Sprite **const sprite_ref,
+	const struct Migrate *const migrate) {
+	if(!sprite_ref) return;
+	SpriteMigratePointer(sprite_ref, migrate);
 }
 /** @param sprites_void: We don't need this because there's only one static.
  Should always equal {sprites}.
@@ -457,9 +468,11 @@ static void bin_migrate(void *const sprites_void,
 	assert(sprites_pass && sprites_pass == sprites && migrate);
 	for(i = 0; i < LAYER_SIZE; i++) {
 		SpriteListMigrate(&sprites_pass->bins[i].sprites, migrate);
-		CoverStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
-			migrate);
+		/*CoverStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
+			migrate);*/
 	}
+	/* Move the temporary pointers. */
+	SpriteRefStackMigrateEach(0, &sprite_ref_migrate, migrate);
 	/* There is a dependancy in Lights. */
 	for(i = 0; i < sprites_pass->lights.size; i++) {
 		SpriteListMigrate(&sprites_pass->lights.light_table[i].sprite, migrate);
@@ -718,16 +731,16 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 
 /** Called in \see{extrapolate}.
  @implements LayerNoSpriteAction */
-static void put_cover(const unsigned bin, unsigned no, struct Sprite *this) {
+static void put_cover(const unsigned bin, const unsigned no,
+	struct Sprite *const*const this) {
 	struct Cover *cover;
 	/*char a[12];*/
-	assert(this && bin < LAYER_SIZE);
+	assert(this && *this && bin < LAYER_SIZE);
 	if(!(cover = CoverStackNew(sprites->bins[bin].covers)))
 		{ fprintf(stderr, "put_cover: %s.\n",
 		CoverStackGetError(sprites->bins[bin].covers)); return;}
-	cover->sprite = this;
+	cover->sprite_ref = this;
 	cover->is_corner = !no;
-	cover->is_deleted = 0;
 	/*sprite_to_string(this, &a);
 	printf("put_cover: %s -> %u.\n", a, bin);*/
 }
@@ -753,6 +766,7 @@ static void extrapolate(struct Sprite *const this) {
 	/* Put it into appropriate {covers}. This is like a hashmap in space, but
 	 it is spread out, so it may cover multiple bins. */
 	LayerSetSpriteRectangle(sprites->layer, &this->box);
+	SpriteRefStackNew(sprites->sprite_refs);
 	LayerSpriteForEachSprite(sprites->layer, this, &put_cover);
 }
 /** Called in \see{SpritesUpdate}.

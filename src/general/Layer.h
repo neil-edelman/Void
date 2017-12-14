@@ -4,7 +4,8 @@ struct Rectangle4f;
 struct Sprite;
 struct Layer;
 typedef void (*LayerAction)(const unsigned);
-typedef void (*LayerNoSpriteAction)(const unsigned, unsigned, struct Sprite *);
+typedef void (*LayerNoSpriteAction)(const unsigned, const unsigned,
+	struct Sprite *const*const);
 
 void Layer_(struct Layer **const pthis);
 struct Layer *Layer(const size_t size_side, const float each_bin);

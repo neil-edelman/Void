@@ -78,23 +78,6 @@ static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #define LIST_TO_STRING &sprite_to_string
 #include "../templates/List.h"
 
-/* Define pointers-to-Sprite as a temporory structure; used in covers. */
-#define STACK_NAME SpriteRef
-#define STACK_TYPE struct Sprite *
-#define STACK_MIGRATE
-#include "../templates/Stack.h"
-
-/** Define a temporary reference to sprites for collision-detection; these will
- go in each bin that is covered by the sprite and be consumed by the functions
- responsible. */
-struct Cover {
-	struct Sprite *const*sprite_ref;
-	int is_corner;
-};
-#define STACK_NAME Cover
-#define STACK_TYPE struct Cover
-#include "../templates/Stack.h"
-
 /* Declare {ShipVt}. */
 struct ShipVt;
 /** Define {ShipPool} and {ShipPoolNode}, a subclass of {Sprite}. */
@@ -145,6 +128,37 @@ struct Gate {
 
 
 
+/** It's really a pointer-to-{Sprite}, but it's super-awkward to have
+ PointerToSpriteStack, and then double-pointers. This is one temporary
+ structure that fills up with all the sprites onscreen on each frame. Many
+ {Cover}s from different bins can reference this. The added level of
+ indirection is so that we can safely delete stuff while we're iterating; viz,
+ {Sprite *} has one more piece of information then {Sprite}: whether it's
+ null. This is used to indicate deleted sprites that should not, (and cannot
+ with this structure,) be accessed. */
+struct Onscreen {
+	struct Sprite *sprite;
+};
+#define STACK_NAME Onscreen
+#define STACK_TYPE struct Onscreen
+#define STACK_MIGRATE
+#include "../templates/Stack.h"
+
+/** Define a temporary reference to sprites for collision-detection; these will
+ go in each bin that is covered by the sprite and be consumed by the functions
+ responsible. Potentially, there are many {Covers}, one in each bin, that point
+ to the same {Onscreen}. */
+struct Cover {
+	struct Onscreen *onscreen;
+	int is_corner;
+};
+#define STACK_NAME Cover
+#define STACK_TYPE struct Cover
+#define STACK_MIGRATE
+#include "../templates/Stack.h"
+
+
+
 /** Debug. */
 struct Info {
 	struct Vec2f x;
@@ -157,8 +171,7 @@ struct Info {
 
 
 /** Collisions between sprites to apply later. This is a pool that sprites can
- use. Defines {CollisionPool}, {CollisionPoolNode}. {Pool} is used instead of
- {Stack} because we must have migrate. */
+ use. Defines {CollisionPool}, {CollisionPoolNode}. */
 struct Collision {
 	unsigned no;
 	struct Vec2f v;
@@ -177,23 +190,25 @@ static struct Sprites {
 		struct SpriteList sprites;
 		struct CoverStack *covers;
 	} bins[LAYER_SIZE];
-	/* Backing for the {SpriteList} in the {Bin}s. */
+	/* Backing for the {SpriteList} in the bins. */
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
-	/* Backing for temporary {CoverStack.sprite_ref}. */
-	struct SpriteRefStack *onscreen;
+	/* Backing for temporary {Cover.onscreen}. */
+	struct OnscreenStack *onscreens;
+	/* Backing for temporary {Sprite.collision}. */
+	struct CollisionStack *collisions;
 	/* Contains calculations for the {bins}. */
 	struct Layer *layer;
 	/* Constantly updating frame time. */
 	float dt_ms;
-	struct CollisionStack *collisions;
 	struct InfoStack *info; /* Debug. */
 	struct {
 		int is_ship;
 		size_t ship_index;
 	} player;
+	/* Lights are a static structure with a hard-limit defined by the shader. */
 	struct Lights {
 		size_t size;
 		struct Light {
@@ -445,49 +460,43 @@ static const struct SpriteVt ship_human_vt = {
 
 /****************** Type functions. **************/
 
-/** Called from {bin_migrate}.
- @implements <Cover>Migrate */
-/*static void cover_migrate(struct Cover *const this,
+/** Called in \see{sprites_migrate}.
+ @implements <Onscreen>StackMigrateElement */
+static void sprite_migrate_onscreen(struct Onscreen *const element,
 	const struct Migrate *const migrate) {
-	SpriteListMigratePointer(&this->sprite, migrate);
-}*/
-
-static void onscreen_migrate(void *const sprite_refs_void,
-	const struct Migrate *const migrate) {
-	struct SpriteRef *const sprite_refs = sprite_refs_void;
-	assert(sprites);
-	
-	printf("arught\n");
+	SpriteMigratePointer(&element->sprite, migrate);
 }
-/** Called from {bin_migrate}.
- @implements <SpriteRef>Migrate
- @fixme Is this really neccessary? what about calling it directly? */
-static void sprite_ref_migrate_contents(struct Sprite **const sprite_ref,
-	const struct Migrate *const migrate) {
-	if(!sprite_ref) return;
-	SpriteMigratePointer(sprite_ref, migrate);
-}
-/** @param sprites_void: We don't need this because there's only one static.
- Should always equal {sprites}.
+/** This should be called on subclasses of sprites.
+ @param sprites_void: We don't need this because there's only one static;
+ should always equal {sprites}.
  @implements Migrate */
 static void sprites_migrate(void *const sprites_void,
 	const struct Migrate *const migrate) {
 	struct Sprites *const sprites_pass = sprites_void;
 	unsigned i;
 	assert(sprites_pass && sprites_pass == sprites && migrate);
-	for(i = 0; i < LAYER_SIZE; i++) {
-		SpriteListMigrate(&sprites_pass->bins[i].sprites, migrate);
-		/*CoverStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
-			migrate);*/
-	}
-	/* Move the temporary pointers. */
-	SpriteRefStackMigrateEach(0, &sprite_ref_migrate_contents, migrate);
+	/* Move the pointers from all the bins. */
+	for(i = 0; i < LAYER_SIZE; i++)
+		SpriteListMigrate(&sprites->bins[i].sprites, migrate);
+	/* Move the temporary pointers from {onscreens}. */
+	OnscreenStackMigrateEach(sprites->onscreens, &sprite_migrate_onscreen,
+		migrate);
 	/* There is a dependancy in Lights. */
 	for(i = 0; i < sprites_pass->lights.size; i++) {
-		SpriteListMigrate(&sprites_pass->lights.light_table[i].sprite, migrate);
+		SpriteListMigrate(&sprites->lights.light_table[i].sprite, migrate);
 	}
 	/* fixme: also in Events. */
 	/* fixme: also in Wmd. */
+}
+/** 
+ @implements <Cover>Migrate */
+/*static void cover_migrate(struct Cover *const this,
+ const struct Migrate *const migrate) {
+ SpriteListMigratePointer(&this->sprite, migrate);
+ }*/
+/** @implements Migrate */
+static void cover_migrate(void *const _void,
+							const struct Migrate *const migrate) {
 }
 /** Called from \see{collision_migrate}.
  @implements <Sprite>ListMigrateElement */
@@ -510,6 +519,8 @@ static void collision_migrate(void *const sprites_void,
 	}
 }
 
+
+
 /** Destructor. */
 void Sprites_(void) {
 	unsigned i;
@@ -522,7 +533,7 @@ void Sprites_(void) {
 	InfoStack_(&sprites->info);
 	CollisionStack_(&sprites->collisions);
 	Layer_(&sprites->layer);
-	SpriteRefStack_(&sprites->onscreen);
+	OnscreenStack_(&sprites->onscreen);
 	GatePool_(&sprites->gates);
 	WmdPool_(&sprites->wmds);
 	DebrisPool_(&sprites->debris);
@@ -570,7 +581,7 @@ int Sprites(void) {
 			{ e = WMD; break; }
 		if(!(sprites->gates = GatePool(&sprites_migrate, sprites)))
 			{ e = GATE; break; }
-		if(!(sprites->onscreen = SpriteRefStack(&onscreen_migrate,
+		if(!(sprites->onscreen = OnscreenStack(&onscreen_migrate,
 			&sprites->onscreen))) { e = REF; break; }
 		if(!(sprites->layer = Layer(LAYER_SIDE_SIZE, layer_space)))
 			{ e = LAYER; break; }

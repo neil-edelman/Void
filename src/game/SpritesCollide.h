@@ -185,6 +185,7 @@ static void wmd_generic(struct Cover *a, struct Cover *b, const float t) {
 		&& b && b->sprite_ref && *b->sprite_ref);
 	sprite_inelastic_stick(*b->sprite_ref, *a->sprite_ref, t);
 	sprite_put_damage(*b->sprite_ref, sprite_get_damage(*a->sprite_ref));
+	/* @fixme Must check if b is deleted and delete it from the cover. */
 	sprite_delete(*a->sprite_ref), a->sprite_ref = 0;
 }
 /** @implements CoverCollision */

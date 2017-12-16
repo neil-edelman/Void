@@ -79,6 +79,7 @@ static void sprite_to_string(const struct Sprite *this, char (*const a)[12]);
 #include "../templates/List.h"
 
 /* Declare {ShipVt}. */
+struct Sprites;
 struct ShipVt;
 /** Define {ShipPool} and {ShipPoolNode}, a subclass of {Sprite}. */
 struct Ship {
@@ -93,6 +94,7 @@ struct Ship {
 };
 #define POOL_NAME Ship
 #define POOL_TYPE struct Ship
+#define POOL_MIGRATE struct Sprites
 #include "../templates/Pool.h"
 
 /** Define {DebrisPool} and {DebrisPoolNode}, a subclass of {Sprite}. */
@@ -102,19 +104,21 @@ struct Debris {
 };
 #define POOL_NAME Debris
 #define POOL_TYPE struct Debris
+#define POOL_MIGRATE struct Sprites
 #include "../templates/Pool.h"
 
 /** Define {WmdPool} and {WmdPoolNode}, a subclass of {Sprite}. */
 struct Wmd {
 	struct SpriteListNode sprite;
 	const struct AutoWmdType *class;
-	const struct Sprite *from;
+	/*const struct Sprite *from;*/
 	float mass;
 	unsigned expires;
 	unsigned light;
 };
 #define POOL_NAME Wmd
 #define POOL_TYPE struct Wmd
+#define POOL_MIGRATE struct Sprites
 #include "../templates/Pool.h"
 
 /** Define {GatePool} and {GatePoolNode}, a subclass of {Sprite}. */
@@ -124,6 +128,7 @@ struct Gate {
 };
 #define POOL_NAME Gate
 #define POOL_TYPE struct Gate
+#define POOL_MIGRATE struct Sprites
 #include "../templates/Pool.h"
 
 
@@ -141,7 +146,7 @@ struct Onscreen {
 };
 #define STACK_NAME Onscreen
 #define STACK_TYPE struct Onscreen
-#define STACK_MIGRATE
+#define STACK_MIGRATE struct Sprites
 #include "../templates/Stack.h"
 
 /** Define a temporary reference to sprites for collision-detection; these will
@@ -154,7 +159,6 @@ struct Cover {
 };
 #define STACK_NAME Cover
 #define STACK_TYPE struct Cover
-#define STACK_MIGRATE
 #include "../templates/Stack.h"
 
 
@@ -179,7 +183,7 @@ struct Collision {
 };
 #define STACK_NAME Collision
 #define STACK_TYPE struct Collision
-#define STACK_MIGRATE
+#define STACK_MIGRATE struct Sprites
 #include "../templates/Stack.h"
 
 
@@ -460,48 +464,97 @@ static const struct SpriteVt ship_human_vt = {
 
 /****************** Type functions. **************/
 
-/** Called in \see{sprites_migrate}.
- @implements <Onscreen>StackMigrateElement */
-static void sprite_migrate_onscreen(struct Onscreen *const element,
+#if 1
+
+/* These are the helpers for migrate each; these pick one pointer field out of
+ the struct and migrate it. */
+
+/** @implements <Onscreen>StackMigrateElement */
+static void onscreen_migrate_sprite(struct Onscreen *const this,
 	const struct Migrate *const migrate) {
-	SpriteMigratePointer(&element->sprite, migrate);
+	assert(this && migrate);
+	SpriteMigratePointer(&this->sprite, migrate);
 }
-/** This should be called on subclasses of sprites.
- @param sprites_void: We don't need this because there's only one static;
- should always equal {sprites}.
- @implements Migrate */
-static void sprites_migrate(void *const sprites_void,
+
+/** @implements <Sprite>ListMigrateElement */
+static void sprite_migrate_collision(struct Sprite *const this,
 	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	CollisionMigratePointer(&this->collision, migrate);
+}
+
+/** @implements <Cover>StackMigrateElement */
+static void cover_migrate_onscreen(struct Cover *const this,
+	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	OnscreenMigratePointer(&this->onscreen, migrate);
+}
+
+/* There are three migrate-nodes that have dependancies in other sub-types
+ of {Sprites}. All of these do not need the {sprites_void} because it is
+ available statically. */
+
+/** @implements <Sprite>Migrate */
+static void migrate_sprite(struct Sprites *const s,
+	const struct Migrate *const migrate) {
+	unsigned i;
+	assert(s == sprites && migrate);
+	printf("migrate_sprite\n");
+	/* {sub types}->{sprites}. */
+	for(i = 0; i < LAYER_SIZE; i++)
+		SpriteListMigrate(&s->bins[i].sprites, migrate);
+	/* {onscreens}->{sprites}. */
+	OnscreenStackMigrateEach(s->onscreens, &onscreen_migrate_sprite, migrate);
+	/* {lights}->{sprites}. */
+	for(i = 0; i < s->lights.size; i++)
+		SpriteMigratePointer(&s->lights.light_table[i].sprite, migrate);
+}
+
+/** @implements <Collision>Migrate */
+static void migrate_collision(struct Sprites *const s,
+	const struct Migrate *const migrate) {
+	assert(s == sprites && migrate);
+	assert(0);
+}
+
+/** @implements <Onscreen>Migrate */
+static void migrate_onscreen(struct Sprites *const s,
+	const struct Migrate *const migrate) {
+	assert(s == sprites && migrate);
+	assert(0);
+}
+
+#elif 0
+/** Called from {bin_migrate}.
+ @implements <Cover>Migrate */
+static void cover_migrate(struct Cover *const this,
+						  const struct Migrate *const migrate) {
+	SpriteListMigratePointer(&this->sprite, migrate);
+}
+/** @param sprites_void: We don't need this because there's only one static.
+ Should always equal {sprites}.
+ @implements Migrate */
+static void bin_migrate(void *const sprites_void,
+						const struct Migrate *const migrate) {
 	struct Sprites *const sprites_pass = sprites_void;
 	unsigned i;
 	assert(sprites_pass && sprites_pass == sprites && migrate);
-	/* Move the pointers from all the bins. */
-	for(i = 0; i < LAYER_SIZE; i++)
-		SpriteListMigrate(&sprites->bins[i].sprites, migrate);
-	/* Move the temporary pointers from {onscreens}. */
-	OnscreenStackMigrateEach(sprites->onscreens, &sprite_migrate_onscreen,
-		migrate);
+	for(i = 0; i < LAYER_SIZE; i++) {
+		SpriteListMigrate(&sprites_pass->bins[i].sprites, migrate);
+		CoverStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
+							  migrate);
+	}
 	/* There is a dependancy in Lights. */
 	for(i = 0; i < sprites_pass->lights.size; i++) {
-		SpriteListMigrate(&sprites->lights.light_table[i].sprite, migrate);
+		SpriteListMigrate(&sprites_pass->lights.light_table[i].sprite, migrate);
 	}
 	/* fixme: also in Events. */
 	/* fixme: also in Wmd. */
 }
-/** 
- @implements <Cover>Migrate */
-/*static void cover_migrate(struct Cover *const this,
- const struct Migrate *const migrate) {
- SpriteListMigratePointer(&this->sprite, migrate);
- }*/
-/** @implements Migrate */
-static void cover_migrate(void *const _void,
-							const struct Migrate *const migrate) {
-}
 /** Called from \see{collision_migrate}.
  @implements <Sprite>ListMigrateElement */
 static void collision_migrate_sprite(struct Sprite *const this,
-	const struct Migrate *const migrate) {
+									 const struct Migrate *const migrate) {
 	assert(this && migrate);
 	if(this->collision) CollisionMigratePointer(&this->collision, migrate);
 }
@@ -509,15 +562,81 @@ static void collision_migrate_sprite(struct Sprite *const this,
  Should always equal {sprites}.
  @implements Migrate */
 static void collision_migrate(void *const sprites_void,
-	const struct Migrate *const migrate) {
+							  const struct Migrate *const migrate) {
 	struct Sprites *const sprites_pass = sprites_void;
 	unsigned i;
 	assert(sprites_pass && sprites_pass == sprites && migrate);
 	for(i = 0; i < LAYER_SIZE; i++) {
 		SpriteListMigrateEach(&sprites_pass->bins[i].sprites,
-			&collision_migrate_sprite, migrate);
+							  &collision_migrate_sprite, migrate);
 	}
 }
+#else
+
+/** @implements Migrate */
+static void migrate_onscreen(void *const sprites_void,
+	const struct Migrate *const migrate) {
+	struct Sprites *const sprites_pass = sprites_void;
+	unsigned i;
+	assert(sprites_pass && sprites_pass == sprites && migrate);
+	/* {covers}->{onscreens} */
+	for(i = 0; i < LAYER_SIZE; i++)
+		OnscreenStackMigrate(&sprites->bins[i].covers, migrate);
+}
+
+/** Called in \see{migrate_sprite}.
+ @implements <Onscreen>StackMigrateElement */
+static void onscreen_migrate_sprite(struct Onscreen *const element,
+	const struct Migrate *const migrate) {
+	SpriteMigratePointer(&element->sprite, migrate);
+}
+/** This should be called on sub-classes of sprites.
+ @param sprites_void: We don't need this because there's only one static;
+ should always equal {sprites}.
+ @implements Migrate */
+static void migrate_sprite(void *const sprites_void,
+	const struct Migrate *const migrate) {
+	struct Sprites *const sprites_pass = sprites_void;
+	unsigned i;
+	assert(sprites_pass && sprites_pass == sprites && migrate);
+	/* {sub-classes}->{sprites}. */
+	for(i = 0; i < LAYER_SIZE; i++)
+		SpriteListMigrate(&sprites->bins[i].sprites, migrate);
+	/* {onscreens}->{sprites}. */
+	OnscreenStackMigrateEach(sprites->onscreens, &onscreen_migrate_sprite,
+		migrate);
+	/* {lights}->{sprites}. */
+	for(i = 0; i < sprites->lights.size; i++)
+		SpriteListMigrate(&sprites->lights.light_table[i].sprite, migrate);
+	/* fixme: also in Events. */
+	/* fixme: also in Wmd. */
+	/* fixme: also player? */
+}
+
+/** Called from \see{migrate_collision}.
+ @implements <Sprite>ListMigrateElement */
+static void sprite_migrate_collision(struct Sprite *const this,
+	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	CollisionMigratePointer(&this->collision, migrate);
+	printf("%u %f\n", this->collision->no, this->collision->t);
+}
+/** @param sprites_void: We don't need this because there's only one static.
+ Should always equal {sprites}.
+ @implements Migrate */
+static void migrate_collision(void *const sprites_void,
+	const struct Migrate *const migrate) {
+	struct Sprites *const sprites_pass = sprites_void;
+	unsigned i;
+	assert(sprites_pass && sprites_pass == sprites && migrate);
+	printf("Calling migrate collision.\n");
+	/* {sprites}->{collision} */
+	for(i = 0; i < LAYER_SIZE; i++) {
+		SpriteListMigrateEach(&sprites->bins[i].sprites,
+			&sprite_migrate_collision, migrate);
+	}
+}
+#endif
 
 
 
@@ -531,9 +650,9 @@ void Sprites_(void) {
 		CoverStack_(&sprites->bins[i].covers);
 	}
 	InfoStack_(&sprites->info);
-	CollisionStack_(&sprites->collisions);
 	Layer_(&sprites->layer);
-	OnscreenStack_(&sprites->onscreen);
+	CollisionStack_(&sprites->collisions);
+	OnscreenStack_(&sprites->onscreens);
 	GatePool_(&sprites->gates);
 	WmdPool_(&sprites->wmds);
 	DebrisPool_(&sprites->debris);
@@ -544,7 +663,7 @@ void Sprites_(void) {
 /** @return True if the sprite buffers have been set up. */
 int Sprites(void) {
 	unsigned i;
-	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, REF, LAYER, COLLISION, INFO }
+	enum { NO, BINS, SHIP, DEBRIS, WMD, GATE, REF, COLLISION, LAYER, INFO }
 		e = NO;
 	const char *ea = 0, *eb = 0;
 	if(sprites) return 1;
@@ -562,9 +681,10 @@ int Sprites(void) {
 	sprites->debris = 0;
 	sprites->wmds = 0;
 	sprites->gates = 0;
+	sprites->onscreens = 0;
+	sprites->collisions = 0;
 	sprites->layer = 0;
 	sprites->dt_ms = 20;
-	sprites->collisions = 0;
 	sprites->info = 0;
 	sprites->player.is_ship = 0;
 	sprites->player.ship_index = 0;
@@ -573,21 +693,22 @@ int Sprites(void) {
 		for(i = 0; i < LAYER_SIZE; i++) {
 			if(!(sprites->bins[i].covers = CoverStack())) { e = BINS; break; }
 		} if(e) break;
-		if(!(sprites->ships = ShipPool(&sprites_migrate, sprites)))
+		if(!(sprites->ships = ShipPool(&migrate_sprite, sprites)))
 			{ e = SHIP; break; }
-		if(!(sprites->debris=DebrisPool(&sprites_migrate,sprites)))
+		if(!(sprites->debris = DebrisPool(&migrate_sprite, sprites)))
 			{ e = DEBRIS; break; }
-		if(!(sprites->wmds = WmdPool(&sprites_migrate, sprites)))
+		if(!(sprites->wmds = WmdPool(&migrate_sprite, sprites)))
 			{ e = WMD; break; }
-		if(!(sprites->gates = GatePool(&sprites_migrate, sprites)))
+		if(!(sprites->gates = GatePool(&migrate_sprite, sprites)))
 			{ e = GATE; break; }
-		if(!(sprites->onscreen = OnscreenStack(&onscreen_migrate,
-			&sprites->onscreen))) { e = REF; break; }
+		if(!(sprites->onscreens = OnscreenStack(&migrate_onscreen, sprites)))
+			{ e = REF; break; }
+		if(!(sprites->collisions = CollisionStack(&migrate_collision, sprites)))
+			{ e = COLLISION; break; }
 		if(!(sprites->layer = Layer(LAYER_SIDE_SIZE, layer_space)))
 			{ e = LAYER; break; }
-		if(!(sprites->collisions = CollisionStack(&collision_migrate, sprites)))
-			{ e = COLLISION; break; }
-		if(!(sprites->info = InfoStack())) { e = INFO; break; }
+		if(!(sprites->info = InfoStack()))
+			{ e = INFO; break; }
 	} while(0); switch(e) {
 		case NO: break;
 		case BINS: ea = "bins", eb = CoverStackGetError(0); break; /* hack */
@@ -595,10 +716,11 @@ int Sprites(void) {
 		case DEBRIS: ea = "debris",eb=DebrisPoolGetError(sprites->debris);break;
 		case WMD: ea = "wmds", eb = WmdPoolGetError(sprites->wmds); break;
 		case GATE: ea = "gates", eb = GatePoolGetError(sprites->gates); break;
-		case REF: ea = "onscreen", eb = SpriteRefStackGetError(sprites->onscreen); break;
-		case LAYER: ea = "layer", eb = "couldn't get layer"; break;
+		case REF: ea = "onscreen",
+			eb = OnscreenStackGetError(sprites->onscreens); break;
 		case COLLISION: ea = "collisions",
 			eb = CollisionStackGetError(sprites->collisions); break;
+		case LAYER: ea = "layer", eb = "couldn't get layer"; break;
 		case INFO: ea = "info", eb = InfoStackGetError(sprites->info); break;
 	} if(e) {
 		fprintf(stderr, "Sprites %s buffer: %s.\n", ea, eb);
@@ -727,7 +849,7 @@ struct Wmd *SpritesWmd(const struct AutoWmdType *const class,
 	/* Speed is in [px/s], want it [px/ms]. */
 	this->sprite.data.v.x = from->sprite.data.v.x + dir.x * class->speed*0.001f;
 	this->sprite.data.v.y = from->sprite.data.v.y + dir.y * class->speed*0.001f;
-	this->from = &from->sprite.data;
+	/*this->from = &from->sprite.data;*/
 	this->mass = class->impact_mass;
 	this->expires = TimerGetGameTime() + class->ms_range;
 	Light(&this->sprite.data, class->r, class->g, class->b);
@@ -762,23 +884,21 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 /** Called in \see{extrapolate}.
  @implements LayerNoSpriteAction */
 static void put_cover(const unsigned bin, const unsigned no,
-	struct Sprite *const*const this) {
+	struct Onscreen *const on) {
 	struct Cover *cover;
 	/*char a[12];*/
-	assert(this && *this && bin < LAYER_SIZE);
+	assert(on && on->sprite && bin < LAYER_SIZE);
 	if(!(cover = CoverStackNew(sprites->bins[bin].covers)))
 		{ fprintf(stderr, "put_cover: %s.\n",
 		CoverStackGetError(sprites->bins[bin].covers)); return;}
-	cover->sprite_ref = this;
+	cover->onscreen = on;
 	cover->is_corner = !no;
-	/*sprite_to_string(this, &a);
-	printf("put_cover: %s -> %u.\n", a, bin);*/
 }
 /** Moves the sprite. Calculates temporary values, {dx}, and {box}; sticks it
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
  @implements <Sprite>Action */
 static void extrapolate(struct Sprite *const this) {
-	struct Sprite **ref;
+	struct Onscreen *on;
 	assert(sprites && this);
 	/* If it returns false, it's deleted. */
 	if(!sprite_update(this)) return;
@@ -797,9 +917,9 @@ static void extrapolate(struct Sprite *const this) {
 	/* Put it into appropriate {covers}. This is like a hashmap in space, but
 	 it is spread out, so it may cover multiple bins. */
 	LayerSetSpriteRectangle(sprites->layer, &this->box);
-	if(!(ref = SpriteRefStackNew(sprites->onscreen))) return;
-	*ref = this;
-	LayerSpriteForEachSprite(sprites->layer, ref, &put_cover);
+	if(!(on = OnscreenStackNew(sprites->onscreens))) return;
+	on->sprite = this;
+	LayerSpriteForEachSprite(sprites->layer, on, &put_cover);
 }
 /** Called in \see{SpritesUpdate}.
  @implements <Bin>Action */
@@ -888,7 +1008,7 @@ void SpritesUpdate(const int dt_ms) {
 	 (fixme: really? 3 passes?) */
 	LayerForEachScreen(sprites->layer, &collide_bin);
 	/* Clear out the temporary {SpriteRef}s now that cover is consumed. */
-	SpriteRefStackClear(sprites->onscreen);
+	OnscreenStackClear(sprites->onscreens);
 	/* Time-step. */
 	LayerForEachScreen(sprites->layer, &timestep_bin);
 }

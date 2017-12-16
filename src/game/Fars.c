@@ -46,6 +46,7 @@ struct Planetoid {
 };
 #define POOL_NAME Planetoid
 #define POOL_TYPE struct Planetoid
+#define POOL_MIGRATE struct Fars
 #include "../templates/Pool.h"
 
 /** Fars all together. */

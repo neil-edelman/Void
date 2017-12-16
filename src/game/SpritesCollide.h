@@ -163,30 +163,31 @@ static void sprite_bounce_a(struct Sprite *const a, struct Sprite *const b,
 
 /** @implements CoverCollision */
 static void elastic_bounce(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->sprite_ref && *a->sprite_ref
-		&& b && b->sprite_ref && *b->sprite_ref);
-	sprite_elastic_bounce(*a->sprite_ref, *b->sprite_ref, t);
+	assert(a && a->onscreen && a->onscreen->sprite
+		&& b && b->onscreen && b->onscreen->sprite);
+	sprite_elastic_bounce(a->onscreen->sprite, b->onscreen->sprite, t);
 }
 /** @implements CoverCollision */
 static void bounce_a(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->sprite_ref && *a->sprite_ref
-		&& b && b->sprite_ref && *b->sprite_ref);
-	sprite_bounce_a(*a->sprite_ref, *b->sprite_ref, t);
+	assert(a && a->onscreen && a->onscreen->sprite
+		&& b && b->onscreen && b->onscreen->sprite);
+	sprite_bounce_a(a->onscreen->sprite, b->onscreen->sprite, t);
 }
 /** @implements CoverCollision */
 static void bounce_b(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->sprite_ref && *a->sprite_ref
-		&& b && b->sprite_ref && *b->sprite_ref);
-	sprite_bounce_a(*b->sprite_ref, *a->sprite_ref, t);
+	assert(a && a->onscreen && a->onscreen->sprite
+		&& b && b->onscreen && b->onscreen->sprite);
+	sprite_bounce_a(b->onscreen->sprite, a->onscreen->sprite, t);
 }
 /** @implements CoverCollision */
 static void wmd_generic(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->sprite_ref && *a->sprite_ref
-		&& b && b->sprite_ref && *b->sprite_ref);
-	sprite_inelastic_stick(*b->sprite_ref, *a->sprite_ref, t);
-	sprite_put_damage(*b->sprite_ref, sprite_get_damage(*a->sprite_ref));
-	/* @fixme Must check if b is deleted and delete it from the cover. */
-	sprite_delete(*a->sprite_ref), a->sprite_ref = 0;
+	assert(a && a->onscreen && a->onscreen->sprite
+		&& b && b->onscreen && b->onscreen->sprite);
+	sprite_inelastic_stick(b->onscreen->sprite, a->onscreen->sprite, t);
+	/* @fixme Must check if b is deleted and delete it from the cover. Should
+	 be SpritePredicate? */
+	/*if(!*/sprite_put_damage(b->onscreen->sprite, sprite_get_damage(a->onscreen->sprite)) /*) b->onscreen->sprite = 0; */;
+	sprite_delete(a->onscreen->sprite), a->onscreen->sprite = 0;
 }
 /** @implements CoverCollision */
 static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
@@ -195,12 +196,11 @@ static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
 
 /** @implements CoverCollision */
 static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
-	struct Sprite *const s = *cs->sprite_ref, *const g = *cg->sprite_ref;
+	struct Sprite *const s = cs->onscreen->sprite, *const g = cg->onscreen->sprite;
 	struct Ship *const ship = (struct Ship *)s;
 	struct Vec2f diff, gate_norm;
 	float proj;
-	assert(sprites && cs->sprite_ref && cg->sprite_ref && s && g
-		&& s->vt->class == SC_SHIP);
+	assert(sprites && s && g && s->vt->class == SC_SHIP);
 	diff.x = s->x.x - g->x.x;
 	diff.y = s->x.y - g->x.y;
 	gate_norm.x = cosf(g->x.theta);
@@ -216,7 +216,7 @@ static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 			 migrate sprites. */
 			EventsSpriteConsumer(0.0f, (SpriteConsumer)&ZoneChange, g);
 		} else {
-			sprite_delete(s), cs->sprite_ref = 0; /* Disappear! */
+			sprite_delete(s), cs->onscreen->sprite = 0; /* Disappear! */
 		}
 	}
 	ship->dist_to_horizon = proj; /* fixme: unreliable? */
@@ -386,11 +386,10 @@ static void collide_bin(unsigned bin) {
 	struct CoverStack *const covers = sprites->bins[bin].covers;
 	struct Cover *cover_a, *cover_b;
 	const struct Matrix *matrix;
-	struct Sprite *a, *b, *const*ref;
+	struct Sprite *a, *b;
 	float t;
 	size_t index_b;
 	assert(sprites && bin < LAYER_SIZE);
-	
 	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
 	/* This is {O({covers}^2)/2} within the bin. {a} is popped . . . */
 	while((cover_a = CoverStackPop(covers))) {
@@ -403,10 +402,9 @@ static void collide_bin(unsigned bin) {
 			/* Another {bin} takes care of it? */
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
 			/* Respond appropriately if it was deleted on the fly. */
-			if(!(ref = cover_a->sprite_ref)) break;
-			assert(ref), a = *ref, assert(a);
-			if(!(ref = cover_b->sprite_ref)) continue;
-			assert(ref), b = *ref, assert(b);
+			assert(cover_a->onscreen && cover_b->onscreen);
+			if(!(a = cover_a->onscreen->sprite)) break;
+			if(!(b = cover_b->onscreen->sprite)) continue;
 			/* Extract the info on the type of collision. */
 			matrix = &collision_matrix[a->vt->class][b->vt->class];
 			/* If the sprites have no collision handler, don't bother. */

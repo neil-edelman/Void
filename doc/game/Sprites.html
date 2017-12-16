@@ -49,9 +49,6 @@ Sprites is a polymorphic static structure. Initialise it with <em>Sprites</em> a
 before exiting, when all references have been resolved, <em>Sprites_</em>.
 </p>
 <p>
-Called from <em>bin_migrate</em>.
-</p>
-<p>
 Specific sprites.
 </p>
 <dl>
@@ -86,21 +83,6 @@ Specific sprites.
 }</pre>
 <p>
 Define abstract <em>Sprite</em>.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "struct Cover"><!-- --></a>
-<h3>struct Cover</h3>
-<pre><b>struct Cover</b> {
-	struct Sprite *const*sprite_ref;
-	int is_corner;
-}</pre>
-<p>
-Define a temporary reference to sprites for collision-detection; these will
-go in each bin that is covered by the sprite and be consumed by the functions
-responsible.
 </p>
 <dl>
 </dl>
@@ -143,7 +125,7 @@ Define <em>DebrisPool</em> and <em>DebrisPoolNode</em>, a subclass of <em>Sprite
 <pre><b>struct Wmd</b> {
 	struct SpriteListNode sprite;
 	const struct AutoWmdType *class;
-	const struct Sprite *from;
+	/*const struct Sprite *from;*/
 	float mass;
 	unsigned expires;
 	unsigned light;
@@ -163,6 +145,41 @@ Define <em>WmdPool</em> and <em>WmdPoolNode</em>, a subclass of <em>Sprite</em>.
 }</pre>
 <p>
 Define <em>GatePool</em> and <em>GatePoolNode</em>, a subclass of <em>Sprite</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Onscreen"><!-- --></a>
+<h3>struct Onscreen</h3>
+<pre><b>struct Onscreen</b> {
+	struct Sprite *sprite;
+}</pre>
+<p>
+It's really a pointer-to-<em>Sprite</em>, but it's super-awkward to have
+PointerToSpriteStack, and then double-pointers. This is one temporary
+structure that fills up with all the sprites onscreen on each frame. Many
+<em>Cover</em>s from different bins can reference this. The added level of
+indirection is so that we can safely delete stuff while we're iterating; viz,
+<em>Sprite *</em> has one more piece of information then <em>Sprite</em>: whether it's
+null. This is used to indicate deleted sprites that should not, (and cannot
+with this structure,) be accessed.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Cover"><!-- --></a>
+<h3>struct Cover</h3>
+<pre><b>struct Cover</b> {
+	struct Onscreen *onscreen;
+	int is_corner;
+}</pre>
+<p>
+Define a temporary reference to sprites for collision-detection; these will
+go in each bin that is covered by the sprite and be consumed by the functions
+responsible. Potentially, there are many <em>Covers</em>, one in each bin, that point
+to the same <em>Onscreen</em>.
 </p>
 <dl>
 </dl>
@@ -190,8 +207,7 @@ Debug.
 }</pre>
 <p>
 Collisions between sprites to apply later. This is a pool that sprites can
-use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>. <em>Pool</em> is used instead of
-<em>Stack</em> because we must have migrate.
+use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>.
 </p>
 <dl>
 </dl>
@@ -204,24 +220,25 @@ use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>. <em>Pool</em> i
 		struct SpriteList sprites;
 		struct CoverStack *covers;
 	} bins[LAYER_SIZE];
-	/* Backing for the {SpriteList} in the {Bin}s. */
+	/* Backing for the {SpriteList} in the bins. */
 	struct ShipPool *ships;
 	struct DebrisPool *debris;
 	struct WmdPool *wmds;
 	struct GatePool *gates;
-	/* Backing for temporary {CoverStack.sprite_ref}. */
-	struct SpriteRefStack *sprite_refs;
+	/* Backing for temporary {Cover.onscreen}. */
+	struct OnscreenStack *onscreens;
+	/* Backing for temporary {Sprite.collision}. */
+	struct CollisionStack *collisions;
 	/* Contains calculations for the {bins}. */
 	struct Layer *layer;
-	/*  */
 	/* Constantly updating frame time. */
 	float dt_ms;
-	struct CollisionStack *collisions;
 	struct InfoStack *info; /* Debug. */
 	struct {
 		int is_ship;
 		size_t ship_index;
 	} player;
+	/* Lights are a static structure with a hard-limit defined by the shader. */
 	struct Lights {
 		size_t size;
 		struct Light {

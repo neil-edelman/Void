@@ -23,7 +23,7 @@
 /** This is one polymorphic {Event}. */
 struct Event;
 struct EventVt;
-struct EventList;
+struct Events;
 
 struct Event { const struct EventVt *vt; };
 #define LIST_NAME Event
@@ -37,6 +37,7 @@ struct Runnable {
 };
 #define POOL_NAME Runnable
 #define POOL_TYPE struct Runnable
+#define POOL_MIGRATE struct Events
 #include "../templates/Pool.h"
 
 /** {IntConsumer} is an {Event}. */
@@ -47,6 +48,7 @@ struct IntConsumer {
 };
 #define POOL_NAME IntConsumer
 #define POOL_TYPE struct IntConsumer
+#define POOL_MIGRATE struct Events
 #include "../templates/Pool.h"
 
 /** {SpriteConsumer} is an {Event}. */
@@ -57,6 +59,7 @@ struct SpriteConsumer {
 };
 #define POOL_NAME SpriteConsumer
 #define POOL_TYPE struct SpriteConsumer
+#define POOL_MIGRATE struct Events
 #include "../templates/Pool.h"
 
 /** Events are fit to various bins depending on the length of the delay. Longer
@@ -72,6 +75,12 @@ static struct Events {
 	struct SpriteConsumerPool *sprite_consumers;
 } *events;
 
+static const size_t approx1s_size = sizeof((struct Events *)0)->approx1s
+	/ sizeof *((struct Events *)0)->approx1s;
+static const size_t approx8s_size = sizeof((struct Events *)0)->approx8s
+	/ sizeof *((struct Events *)0)->approx8s;
+static const size_t approx64s_size = sizeof((struct Events *)0)->approx64s
+	/ sizeof *((struct Events *)0)->approx64s;
 
 
 /******************* Define virtual functions. ********************/
@@ -117,11 +126,11 @@ static void clear_event_lists(void) {
 	unsigned i;
 	assert(events);
 	EventListClear(&events->immediate);
-	for(i = 0; i < sizeof events->approx1s / sizeof *events->approx1s; i++)
+	for(i = 0; i < approx1s_size; i++)
 		EventListClear(events->approx1s + i);
-	for(i = 0; i < sizeof events->approx8s / sizeof *events->approx8s; i++)
+	for(i = 0; i < approx8s_size; i++)
 		EventListClear(events->approx8s + i);
-	for(i = 0; i < sizeof events->approx64s / sizeof *events->approx64s; i++)
+	for(i = 0; i < approx64s_size; i++)
 		EventListClear(events->approx64s + i);
 }
 
@@ -137,6 +146,19 @@ static void clear_event_lists(void) {
 	for(i = 0; i < sizeof events->approx64s / sizeof *events->approx64s; i++)
 		EventListTakeIf(0, events->approx64s + i, predicate);
 } <- fixme: leaves Pool!! */
+
+/** @implements <Events>Migrate */
+static void events_migrate(struct Events *const e, const struct Migrate *const migrate) {
+	unsigned i;
+	assert(e && e == events && migrate);
+	EventListMigrate(&e->immediate, migrate);
+	for(i = 0; i < approx1s_size; i++)
+		EventListMigrate(e->approx1s + i, migrate);
+	for(i = 0; i < approx8s_size; i++)
+		EventListMigrate(e->approx8s + i, migrate);
+	for(i = 0; i < approx64s_size; i++)
+		EventListMigrate(e->approx64s + i, migrate);
+}
 
 /** Destructor. */
 void Events_(void) {
@@ -160,11 +182,11 @@ int Events(void) {
 	events->int_consumers = 0;
 	events->sprite_consumers = 0;
 	do {
-		if(!(events->runnables = RunnablePool(&EventListMigrate, events)))
+		if(!(events->runnables = RunnablePool(&events_migrate, events)))
 			{ e = RunnablePoolGetError(events->runnables); break; }
-		if(!(events->int_consumers = IntConsumerPool(&EventListMigrate,events)))
+		if(!(events->int_consumers = IntConsumerPool(&events_migrate, events)))
 			{ e = IntConsumerPoolGetError(events->int_consumers); break; }
-		if(!(events->sprite_consumers=SpriteConsumerPool(&EventListMigrate,
+		if(!(events->sprite_consumers=SpriteConsumerPool(&events_migrate,
 			events)))
 			{ e = SpriteConsumerPoolGetError(events->sprite_consumers); break; }
 	} while(0); if(e) {

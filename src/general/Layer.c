@@ -63,7 +63,7 @@ struct Layer *Layer(const size_t side_size, const float each_bin) {
 	return this;
 }
 
-/** Returns a {bin} in {[0, side_size^2[}. */
+/** @return A {bin} in {[0, side_size^2[}. */
 unsigned LayerGetOrtho(const struct Layer *const this, struct Ortho3f *const o){
 	struct Vec2i v2i;
 	if(!this || !o) return 0;
@@ -74,6 +74,16 @@ unsigned LayerGetOrtho(const struct Layer *const this, struct Ortho3f *const o){
 	if(v2i.y < 0) v2i.y = 0;
 	else if(v2i.y >= this->side_size) v2i.y = this->side_size - 1;
 	return v2i.y * this->side_size + v2i.x;
+}
+
+/** Used only in debugging.
+ @return If true, {vec} will be set from {bin}. */
+int LayerGetBin2(const struct Layer *const this, const unsigned bin,
+	struct Vec2i *const vec) {
+	if(!this || !vec || bin >= this->side_size * this->side_size) return 0;
+	vec->x = bin % this->side_size;
+	vec->y = bin / this->side_size;
+	return 1;
 }
 
 /** Private code for \see{LayerSet*Rectangle}.
@@ -159,6 +169,17 @@ void LayerForEachScreen(struct Layer *const this, const LayerAction action) {
 	step = this->step[LAYER_SCREEN];
 	size = IntStackGetSize(step);
 	for(i = 0; i < size; i++) action(*IntStackGetElement(step, i));
+}
+
+/** For each bin on screen; used for plotting. */
+void LayerForEachScreenPlot(struct Layer *const this,
+	const LayerAcceptPlot accept, struct PlotData *const plot) {
+	struct IntStack *step;
+	size_t i, size;
+	if(!this || !accept) return;
+	step = this->step[LAYER_SCREEN];
+	size = IntStackGetSize(step);
+	for(i = 0; i < size; i++) accept(*IntStackGetElement(step, i), plot);
 }
 
 /** For each bin crossing the sprite; used for collision-detection. */

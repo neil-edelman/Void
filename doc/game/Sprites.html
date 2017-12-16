@@ -247,6 +247,7 @@ use. Defines <em>CollisionPool</em>, <em>CollisionPoolNode</em>.
 		struct Vec2f x_table[MAX_LIGHTS];
 		struct Colour3f colour_table[MAX_LIGHTS];
 	} lights;
+	enum Plots { PLOT_NOTHING, PLOT_SPACE = 1 } plots;
 }</pre>
 <p>
 Sprites all together.
@@ -376,6 +377,11 @@ Define <em>SpriteVt</em>.
 	<td>struct Ship *</td>
 	<td><a href = "#SpritesGetPlayerShip">SpritesGetPlayerShip</a></td>
 	<td>void</td>
+</tr>
+<tr>
+	<td>char *</td>
+	<td><a href = "#SpritesToString">SpritesToString</a></td>
+	<td>const struct Sprite *const this</td>
 </tr>
 </table>
 
@@ -554,6 +560,16 @@ Gets a <em>Sprite</em> that goes to the <em>AutoSpaceZone</em>, if it exists.
 <pre>struct Ship * <b>SpritesGetPlayerShip</b> (void)</pre>
 <p>
 Gets the player's ship or null.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "SpritesToString"><!-- --></a>
+<h3>SpritesToString</h3>
+<pre>char * <b>SpritesToString</b> (const struct Sprite *const this)</pre>
+<p>
+Debug; only prints four at a time.
 </p>
 <dl>
 </dl>

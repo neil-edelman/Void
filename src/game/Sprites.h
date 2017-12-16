@@ -47,3 +47,6 @@ void SpritesLightClear(void);
 size_t SpritesLightGetSize(void);
 struct Vec2f *SpritesLightPositions(void);
 struct Colour3f *SpritesLightGetColours(void);
+
+/* In {SpritesPlot.h} */
+void SpritesPlotSpace(void);

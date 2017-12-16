@@ -21,120 +21,121 @@ void SpritesDrawInfo(InfoOutput draw) {
 	BinPoolBiForEach(draw_bins, &draw_bin_literally, &draw);
 	/*draw(&a, hair);*/
 }
+#endif
 
-/** Use when the Far GPU shader is loaded. */
-void SpritesDrawFar(LambertOutput draw) {
-	BinPoolBiForEach(bg_bins, &draw_bin, &draw);
-}
+
+
 
 /* This is a debug thing. */
 
-/* This is for communication with {sprite_data}, {sprite_arrow}, and
- {sprite_velocity} for outputting a gnu plot. */
-struct OutputData {
+/* This is for communication with {sprite_data}, {sprite_arrow},
+ {sprite_velocity}, and {gnu_draw_bins} for outputting a gnu plot. */
+struct PlotData {
 	FILE *fp;
-	unsigned i, n;
+	unsigned i, n, object;
+	const char *colour;
 };
 /** @implements <Sprite, OutputData>DiAction */
-static void sprite_count(struct Sprite *sprites, void *const void_out) {
-	struct OutputData *const out = void_out;
-	UNUSED(sprites);
+static void sprite_count(struct Sprite *sprite, void *const void_out) {
+	struct PlotData *const out = void_out;
+	UNUSED(sprite);
 	out->n++;
 }
 /** @implements <Sprite, OutputData>DiAction */
-static void print_sprite_data(struct Sprite *sprites, void *const void_out) {
-	struct OutputData *const out = void_out;
-	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\n", sprites->x.x, sprites->x.y,
-			sprites->bounding, (double)out->i++ / out->n, sprites->x_5.x, sprites->x_5.y,
-			sprites->bounding1);
+static void print_sprite_data(struct Sprite *sprite, void *const void_out) {
+	struct PlotData *const out = void_out;
+	char a[12];
+	sprite_to_string(sprite, &a);
+	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t\"%s\"\n",
+		sprite->x.x, sprite->x.y,
+		sprite->bounding, (double)out->i++ / out->n, sprite->x.x, sprite->x.y,
+		sprite->bounding, a);
 }
 /** @implements <Sprite, OutputData>DiAction */
-static void print_sprite_velocity(struct Sprite *sprites, void *const void_out) {
-	struct OutputData *const out = void_out;
+static void print_sprite_velocity(struct Sprite *sprite, void *const void_out) {
+	struct PlotData *const out = void_out;
 	fprintf(out->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"blue\" "
-			"front;\n", sprites->x.x, sprites->x.y,
-			sprites->x.x + sprites->v.x * dt_ms * 1000.0f,
-			sprites->x.y + sprites->v.y * dt_ms * 1000.0f);
+		"front;\n", sprite->x.x, sprite->x.y,
+		sprite->x.x + sprite->v.x * sprites->dt_ms * 1000.0f,
+		sprite->x.y + sprite->v.y * sprites->dt_ms * 1000.0f);
 }
-/** For communication with {gnu_draw_bins}. */
-struct ColourData {
-	FILE *fp;
-	const char *colour;
-	unsigned object;
-};
-/** Draws squares for highlighting bins.
- @implements <Bin, ColourData>DiAction */
-static void gnu_shade_bins(struct SpriteList **sprites, void *const void_col) {
-	struct ColourData *const col = void_col;
-	const unsigned bin = (unsigned)(*sprites - bins);
+/** Draws squares for highlighting bins. Called in \see{space_plot}.
+ @implements LayerAcceptPlot */
+static void gnu_shade_bins(const unsigned bin, struct PlotData *const plot) {
 	struct Vec2i bin2i;
-	assert(col);
-	assert(bin < BIN_BIN_FG_SIZE);
-	bin_to_Vec2i(bin, &bin2i);
-	fprintf(col->fp, "# bin %u -> %d,%d\n", bin, bin2i.x, bin2i.y);
-	fprintf(col->fp, "set object %u rect from %d,%d to %d,%d fc rgb \"%s\" "
-			"fs solid noborder;\n", col->object++, bin2i.x, bin2i.y,
-			bin2i.x + 256, bin2i.y + 256, col->colour);
+	assert(plot && sprites && bin < LAYER_SIZE);
+	LayerGetBin2(sprites->layer, bin, &bin2i);
+	fprintf(plot->fp, "# bin %u -> %d,%d\n", bin, bin2i.x, bin2i.y);
+	fprintf(plot->fp, "set object %u rect from %d,%d to %d,%d fc rgb \"%s\" "
+			"fs solid noborder;\n", plot->object++, bin2i.x, bin2i.y,
+			bin2i.x + 256, bin2i.y + 256, plot->colour);
 }
-#endif
 
 /** Debugging plot.
  @implements Action */
-static void plot(void) {
+static void space_plot(void) {
 	FILE *data = 0, *gnu = 0;
-	const char *data_fn = "sprite.data", *gnu_fn = "sprite.gnu",
-		*eps_fn = "sprite.eps";
+	const char *data_fn = "Space.data", *gnu_fn = "Space.gnu",
+		*eps_fn = "Space.eps";
 	enum { E_NO, E_DATA, E_GNU } e = E_NO;
+	assert(sprites);
 	fprintf(stderr, "Will output %s at the current time, and a gnuplot script, "
 		"%s of the current sprites.\n", data_fn, gnu_fn);
-#if 0
 	do {
-		struct OutputData out;
-		struct ColourData col;
+		struct PlotData plot;
 		unsigned i;
 		if(!(data = fopen(data_fn, "w"))) { e = E_DATA; break; }
 		if(!(gnu = fopen(gnu_fn, "w")))   { e = E_GNU;  break; }
-		out.fp = data, out.i = 0; out.n = 0;
-		for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-			SpriteListUnorderBiForEach(bins + i, &sprite_count, &out);
-		for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-			SpriteListUnorderBiForEach(bins + i, &print_sprite_data, &out);
+		plot.fp = data, plot.i = 0; plot.n = 0;
+		for(i = 0; i < LAYER_SIZE; i++)
+			SpriteListBiForEach(&sprites->bins[i].sprites, &sprite_count,&plot);
+		for(i = 0; i < LAYER_SIZE; i++)
+			SpriteListBiForEach(&sprites->bins[i].sprites, &print_sprite_data,
+			&plot);
 		fprintf(gnu, "set term postscript eps enhanced size 20cm, 20cm\n"
-				"set output \"%s\"\n"
-				"set size square;\n"
-				"set palette defined (1 \"#0000FF\", 2 \"#00FF00\", 3 \"#FF0000\");"
-				"\n"
-				"set xtics 256 rotate; set ytics 256;\n"
-				"set grid;\n"
-				"set xrange [-8192:8192];\n"
-				"set yrange [-8192:8192];\n"
-				"set cbrange [0.0:1.0];\n", eps_fn);
+			"set output \"%s\"\n"
+			"set size square;\n"
+			"set palette defined (1 \"#0000FF\", 2 \"#00FF00\", 3 \"#FF0000\");"
+			"\n"
+			"set xtics 256 rotate; set ytics 256;\n"
+			"set grid;\n"
+			"set xrange [-2048:2048];#[-8192:8192];\n"
+			"set yrange [-2048:2048];#[-8192:8192];\n"
+			"set cbrange [0.0:1.0];\n", eps_fn);
 		/* draw bins as squares behind */
 		fprintf(gnu, "set style fill transparent solid 0.3 noborder;\n");
-		col.fp = gnu, col.colour = "#ADD8E6", col.object = 1;
-		BinPoolBiForEach(draw_bins, &gnu_shade_bins, &col);
-		col.fp = gnu, col.colour = "#D3D3D3";
-		BinPoolBiForEach(update_bins, &gnu_shade_bins, &col);
+		plot.fp = gnu, plot.colour = "#ADD8E6", plot.object = 1;
+		LayerForEachScreenPlot(sprites->layer, &gnu_shade_bins, &plot);
+		/*col.fp = gnu, col.colour = "#D3D3D3";
+		BinPoolBiForEach(update_bins, &gnu_shade_bins, &col);*/
 		/* draw arrows from each of the sprites to their bins */
-		out.fp = gnu, out.i = 0;
-		for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-			SpriteListUnorderBiForEach(bins + i, &print_sprite_velocity, &out);
+		plot.fp = gnu, plot.i = 0;
+		for(i = 0; i < LAYER_SIZE; i++)
+			SpriteListBiForEach(&sprites->bins[i].sprites,
+			&print_sprite_velocity, &plot);
 		/* draw the sprites */
 		fprintf(gnu, "plot \"%s\" using 5:6:7 with circles \\\n"
-				"linecolor rgb(\"#00FF00\") fillstyle transparent "
-				"solid 1.0 noborder title \"Velocity\", \\\n"
-				"\"%s\" using 1:2:3:4 with circles \\\n"
-				"linecolor palette fillstyle transparent solid 0.3 noborder \\\n"
-				"title \"Sprites\";\n", data_fn, data_fn);
+			"linecolor rgb(\"#00FF00\") fillstyle transparent "
+			"solid 1.0 noborder title \"Velocity\", \\\n"
+			"\"%s\" using 1:2:3:4 with circles \\\n"
+			"linecolor palette fillstyle transparent solid 0.3 noborder \\\n"
+			"title \"Sprites\", \\\n"
+			"\"%s\" using 1:2:8 with labels notitle;\n",
+			data_fn, data_fn, data_fn);
 	} while(0); switch(e) {
 		case E_NO: break;
 		case E_DATA: perror(data_fn); break;
 		case E_GNU:  perror(gnu_fn);  break;
 	} {
 		if(fclose(data) == EOF) perror(data_fn);
-		if(fclose(gnu) == EOF)  perror(gnu_fn);
+		if(fclose(gnu)  == EOF) perror(gnu_fn);
 	}
-#endif
+}
+
+void SpritesPlotSpace(void) {
+	if(!sprites) return;
+	sprites->plots |= PLOT_SPACE;
+	TimerPause();
 }
 
 #if 0

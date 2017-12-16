@@ -221,7 +221,7 @@ static struct Sprites {
 		struct Vec2f x_table[MAX_LIGHTS];
 		struct Colour3f colour_table[MAX_LIGHTS];
 	} lights;
-	int is_snapshot; /* Debug. */
+	enum Plots { PLOT_NOTHING, PLOT_SPACE = 1 } plots;
 } *sprites;
 
 
@@ -584,7 +584,7 @@ int Sprites(void) {
 	sprites->player.is_ship = 0;
 	sprites->player.ship_index = 0;
 	sprites->lights.size = 0;
-	sprites->is_snapshot = 0;
+	sprites->plots = PLOT_NOTHING;
 	do {
 		for(i = 0; i < LAYER_SIZE; i++) {
 			if(!(sprites->bins[i].covers = CoverStack())) { e = BINS; break; }
@@ -903,6 +903,11 @@ void SpritesUpdate(const int dt_ms) {
 		LayerSetScreenRectangle(sprites->layer, &rect); }
 	/* Dynamics; puts temp values in {cover} for collisions. */
 	LayerForEachScreen(sprites->layer, &extrapolate_bin);
+	/* Debug. */
+	if(sprites->plots) {
+		if(sprites->plots & PLOT_SPACE) space_plot();
+		sprites->plots = PLOT_NOTHING;
+	}
 	/* Collision has to be called after {extrapolate}; it consumes {cover}.
 	 (fixme: really? 3 passes?) */
 	LayerForEachScreen(sprites->layer, &collide_bin);
@@ -910,8 +915,6 @@ void SpritesUpdate(const int dt_ms) {
 	OnscreenStackClear(sprites->onscreens);
 	/* Time-step. */
 	LayerForEachScreen(sprites->layer, &timestep_bin);
-	/* Debug. */
-	if(sprites->is_snapshot) plot(), sprites->is_snapshot = 0;
 }
 
 /* fixme: This is bullshit. Have it all in Draw? */

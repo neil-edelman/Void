@@ -81,6 +81,12 @@ size.
 </tr>
 <tr>
 	<td>int</td>
+	<td><a href = "#LayerGetBin2">LayerGetBin2</a></td>
+	<td>const struct Layer *const this, const unsigned bin,
+	struct Vec2i *const vec</td>
+</tr>
+<tr>
+	<td>int</td>
 	<td><a href = "#LayerSetScreenRectangle">LayerSetScreenRectangle</a></td>
 	<td>struct Layer *const this,
 	struct Rectangle4f *const rect</td>
@@ -100,6 +106,12 @@ size.
 	<td>void</td>
 	<td><a href = "#LayerForEachScreen">LayerForEachScreen</a></td>
 	<td>struct Layer *const this, const LayerAction action</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#LayerForEachScreenPlot">LayerForEachScreenPlot</a></td>
+	<td>struct Layer *const this,
+	const LayerAcceptPlot accept, struct PlotData *const plot</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -129,10 +141,22 @@ size.
 <div><a name = "LayerGetOrtho"><!-- --></a>
 <h3>LayerGetOrtho</h3>
 <pre>unsigned <b>LayerGetOrtho</b> (const struct Layer *const this, struct Ortho3f *const o)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>A <em>bin</em> in <em>[0, side_size^2[</em>.</dd>
+</dl>
+</div>
+
+<div><a name = "LayerGetBin2"><!-- --></a>
+<h3>LayerGetBin2</h3>
+<pre>int <b>LayerGetBin2</b> (const struct Layer *const this, const unsigned bin,
+	struct Vec2i *const vec)</pre>
 <p>
-Returns a <em>bin</em> in <em>[0, side_size^2[</em>.
+Used only in debugging.
 </p>
 <dl>
+	<dt>return</dt>
+	<dd>If true, <em>vec</em> will be set from <em>bin</em>.</dd>
 </dl>
 </div>
 
@@ -177,6 +201,17 @@ Set random.
 <pre>void <b>LayerForEachScreen</b> (struct Layer *const this, const LayerAction action)</pre>
 <p>
 For each bin on screen; used for drawing.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "LayerForEachScreenPlot"><!-- --></a>
+<h3>LayerForEachScreenPlot</h3>
+<pre>void <b>LayerForEachScreenPlot</b> (struct Layer *const this,
+	const LayerAcceptPlot accept, struct PlotData *const plot)</pre>
+<p>
+For each bin on screen; used for plotting.
 </p>
 <dl>
 </dl>

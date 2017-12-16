@@ -464,8 +464,6 @@ static const struct SpriteVt ship_human_vt = {
 
 /****************** Type functions. **************/
 
-#if 1
-
 /* These are the helpers for migrate each; these pick one pointer field out of
  the struct and migrate it. */
 
@@ -508,6 +506,9 @@ static void migrate_sprite(struct Sprites *const s,
 	/* {lights}->{sprites}. */
 	for(i = 0; i < s->lights.size; i++)
 		SpriteMigratePointer(&s->lights.light_table[i].sprite, migrate);
+	/* fixme: also in Events. */
+	/* fixme: also in Wmd. */
+	/* fixme: also player? */
 }
 
 /** @implements <Collision>Migrate */
@@ -530,120 +531,6 @@ static void migrate_onscreen(struct Sprites *const s,
 	/* {covers}->{onscreens} */
 	for(i = 0; i < LAYER_SIZE; i++) CoverStackMigrateEach(sprites->bins[i].covers, &cover_migrate_onscreen, migrate);	
 }
-
-#elif 0
-/** Called from {bin_migrate}.
- @implements <Cover>Migrate */
-static void cover_migrate(struct Cover *const this,
-						  const struct Migrate *const migrate) {
-	SpriteListMigratePointer(&this->sprite, migrate);
-}
-/** @param sprites_void: We don't need this because there's only one static.
- Should always equal {sprites}.
- @implements Migrate */
-static void bin_migrate(void *const sprites_void,
-						const struct Migrate *const migrate) {
-	struct Sprites *const sprites_pass = sprites_void;
-	unsigned i;
-	assert(sprites_pass && sprites_pass == sprites && migrate);
-	for(i = 0; i < LAYER_SIZE; i++) {
-		SpriteListMigrate(&sprites_pass->bins[i].sprites, migrate);
-		CoverStackMigrateEach(sprites_pass->bins[i].covers, &cover_migrate,
-							  migrate);
-	}
-	/* There is a dependancy in Lights. */
-	for(i = 0; i < sprites_pass->lights.size; i++) {
-		SpriteListMigrate(&sprites_pass->lights.light_table[i].sprite, migrate);
-	}
-	/* fixme: also in Events. */
-	/* fixme: also in Wmd. */
-}
-/** Called from \see{collision_migrate}.
- @implements <Sprite>ListMigrateElement */
-static void collision_migrate_sprite(struct Sprite *const this,
-									 const struct Migrate *const migrate) {
-	assert(this && migrate);
-	if(this->collision) CollisionMigratePointer(&this->collision, migrate);
-}
-/** @param sprites_void: We don't need this because there's only one static.
- Should always equal {sprites}.
- @implements Migrate */
-static void collision_migrate(void *const sprites_void,
-							  const struct Migrate *const migrate) {
-	struct Sprites *const sprites_pass = sprites_void;
-	unsigned i;
-	assert(sprites_pass && sprites_pass == sprites && migrate);
-	for(i = 0; i < LAYER_SIZE; i++) {
-		SpriteListMigrateEach(&sprites_pass->bins[i].sprites,
-							  &collision_migrate_sprite, migrate);
-	}
-}
-#else
-
-/** @implements Migrate */
-static void migrate_onscreen(void *const sprites_void,
-	const struct Migrate *const migrate) {
-	struct Sprites *const sprites_pass = sprites_void;
-	unsigned i;
-	assert(sprites_pass && sprites_pass == sprites && migrate);
-	/* {covers}->{onscreens} */
-	for(i = 0; i < LAYER_SIZE; i++)
-		OnscreenStackMigrate(&sprites->bins[i].covers, migrate);
-}
-
-/** Called in \see{migrate_sprite}.
- @implements <Onscreen>StackMigrateElement */
-static void onscreen_migrate_sprite(struct Onscreen *const element,
-	const struct Migrate *const migrate) {
-	SpriteMigratePointer(&element->sprite, migrate);
-}
-/** This should be called on sub-classes of sprites.
- @param sprites_void: We don't need this because there's only one static;
- should always equal {sprites}.
- @implements Migrate */
-static void migrate_sprite(void *const sprites_void,
-	const struct Migrate *const migrate) {
-	struct Sprites *const sprites_pass = sprites_void;
-	unsigned i;
-	assert(sprites_pass && sprites_pass == sprites && migrate);
-	/* {sub-classes}->{sprites}. */
-	for(i = 0; i < LAYER_SIZE; i++)
-		SpriteListMigrate(&sprites->bins[i].sprites, migrate);
-	/* {onscreens}->{sprites}. */
-	OnscreenStackMigrateEach(sprites->onscreens, &onscreen_migrate_sprite,
-		migrate);
-	/* {lights}->{sprites}. */
-	for(i = 0; i < sprites->lights.size; i++)
-		SpriteListMigrate(&sprites->lights.light_table[i].sprite, migrate);
-	/* fixme: also in Events. */
-	/* fixme: also in Wmd. */
-	/* fixme: also player? */
-}
-
-/** Called from \see{migrate_collision}.
- @implements <Sprite>ListMigrateElement */
-static void sprite_migrate_collision(struct Sprite *const this,
-	const struct Migrate *const migrate) {
-	assert(this && migrate);
-	CollisionMigratePointer(&this->collision, migrate);
-	printf("%u %f\n", this->collision->no, this->collision->t);
-}
-/** @param sprites_void: We don't need this because there's only one static.
- Should always equal {sprites}.
- @implements Migrate */
-static void migrate_collision(void *const sprites_void,
-	const struct Migrate *const migrate) {
-	struct Sprites *const sprites_pass = sprites_void;
-	unsigned i;
-	assert(sprites_pass && sprites_pass == sprites && migrate);
-	printf("Calling migrate collision.\n");
-	/* {sprites}->{collision} */
-	for(i = 0; i < LAYER_SIZE; i++) {
-		SpriteListMigrateEach(&sprites->bins[i].sprites,
-			&sprite_migrate_collision, migrate);
-	}
-}
-#endif
 
 
 

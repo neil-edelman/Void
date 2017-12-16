@@ -221,6 +221,7 @@ static struct Sprites {
 		struct Vec2f x_table[MAX_LIGHTS];
 		struct Colour3f colour_table[MAX_LIGHTS];
 	} lights;
+	int is_snapshot; /* Debug. */
 } *sprites;
 
 
@@ -583,6 +584,7 @@ int Sprites(void) {
 	sprites->player.is_ship = 0;
 	sprites->player.ship_index = 0;
 	sprites->lights.size = 0;
+	sprites->is_snapshot = 0;
 	do {
 		for(i = 0; i < LAYER_SIZE; i++) {
 			if(!(sprites->bins[i].covers = CoverStack())) { e = BINS; break; }
@@ -875,6 +877,9 @@ static struct Ship *get_player(void) {
 /* This is where \see{collide_bin} is located, but lots of helper functions. */
 #include "SpritesCollide.h"
 
+/* This includes some debuging functions, namely, {SpritesPlot}. */
+#include "SpritesPlot.h"
+
 /** Update each frame.
  @param target: What the camera focuses on; could be null. */
 void SpritesUpdate(const int dt_ms) {
@@ -901,10 +906,12 @@ void SpritesUpdate(const int dt_ms) {
 	/* Collision has to be called after {extrapolate}; it consumes {cover}.
 	 (fixme: really? 3 passes?) */
 	LayerForEachScreen(sprites->layer, &collide_bin);
-	/* Clear out the temporary {SpriteRef}s now that cover is consumed. */
+	/* Clear out the temporary {onscreens} now that cover is consumed. */
 	OnscreenStackClear(sprites->onscreens);
 	/* Time-step. */
 	LayerForEachScreen(sprites->layer, &timestep_bin);
+	/* Debug. */
+	if(sprites->is_snapshot) plot(), sprites->is_snapshot = 0;
 }
 
 /* fixme: This is bullshit. Have it all in Draw? */
@@ -1006,7 +1013,13 @@ struct Ship *SpritesGetPlayerShip(void) {
 	return get_player();
 }
 
-
-
-/* This includes some debuging functions, namely, {SpritesPlot}. */
-#include "SpritesPlot.h"
+/** Debug; only prints four at a time. */
+char *SpritesToString(const struct Sprite *const this) {
+	static char as[4][12];
+	static unsigned i;
+	char (*a)[12];
+	if(!this) return 0;
+	a = as + i++, i &= 3;
+	sprite_to_string(this, a);
+	return *a;
+}

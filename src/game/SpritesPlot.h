@@ -76,15 +76,18 @@ static void gnu_shade_bins(struct SpriteList **sprites, void *const void_col) {
 			"fs solid noborder;\n", col->object++, bin2i.x, bin2i.y,
 			bin2i.x + 256, bin2i.y + 256, col->colour);
 }
+#endif
+
 /** Debugging plot.
  @implements Action */
-void SpritesPlot(void) {
+static void plot(void) {
 	FILE *data = 0, *gnu = 0;
 	const char *data_fn = "sprite.data", *gnu_fn = "sprite.gnu",
-	*eps_fn = "sprite.eps";
+		*eps_fn = "sprite.eps";
 	enum { E_NO, E_DATA, E_GNU } e = E_NO;
 	fprintf(stderr, "Will output %s at the current time, and a gnuplot script, "
-			"%s of the current sprites.\n", data_fn, gnu_fn);
+		"%s of the current sprites.\n", data_fn, gnu_fn);
+#if 0
 	do {
 		struct OutputData out;
 		struct ColourData col;
@@ -131,8 +134,10 @@ void SpritesPlot(void) {
 		if(fclose(data) == EOF) perror(data_fn);
 		if(fclose(gnu) == EOF)  perror(gnu_fn);
 	}
+#endif
 }
 
+#if 0
 /** Output sprites. */
 void SpritesOut(void) {
 	struct OutputData out;

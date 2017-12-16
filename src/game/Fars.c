@@ -93,13 +93,12 @@ static const struct FarVt planetoid_vt = {
 /************* Type functions. **************/
 
 /** @implements Migrate */
-static void bin_migrate(void *const fars_void,
+static void bin_migrate(struct Fars *const f,
 	const struct Migrate *const migrate) {
-	struct Fars *const fars_pass = fars_void;
 	unsigned i;
-	assert(fars_pass && fars_pass == fars && migrate);
+	assert(f && f == fars && migrate);
 	for(i = 0; i < LAYER_SIZE; i++) {
-		FarListMigrate(fars_pass->bins + i, migrate);
+		FarListMigrate(f->bins + i, migrate);
 	}
 }
 

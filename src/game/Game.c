@@ -47,15 +47,34 @@ static const float asteroid_max_speed = 0.03f;
  Sprite */
 /*const float de_sitter = 8192.0f; !!! */
 
-/* private */
-static void quit(void);
-static void pause(void);
-static void fps(void);
-static void gametime(void);
-/*static float rnd(const float limit);*/
-/*static void add_sprites(void);*/
-/*static void poll_sprites(void);*/
-/*static void position(void);*/
+static void quit(void) {
+	printf("quit: key pressed.\n");
+	exit(EXIT_SUCCESS); /* meh */
+}
+
+static void pause(void) {
+	if(TimerIsRunning()) {
+		TimerPause();
+		printf("pause: on.\n");
+	} else {
+		TimerRun();
+		printf("pause: off.\n");
+	}
+}
+
+static void fps(void) {
+	unsigned mean = TimerGetMean();
+	info("%.1f fps, %ums average frame-time; %ums game-time.\n", 1000.0 / mean, mean, TimerGetGameTime());
+}
+
+static void position(void) {
+	const struct Ship *const player = SpritesGetPlayerShip();
+	const struct Ortho3f *x;
+	if(!player) { printf("You are scattered across space.\n"); return; }
+	x = SpriteGetPosition((const struct Sprite *)player);
+	printf("You are %s at (%.1f, %.1f: %.1f).\n",
+		SpritesToString((struct Sprite *)player), x->x, x->y, x->theta);
+}
 
 /* public */
 
@@ -70,7 +89,7 @@ void Game_(void) {
 
 /** Constructor. */
 int Game(void) {
-	struct Ortho3f position = { 0.0f, 0.0f, 0.0f };
+	struct Ortho3f posn = { 0.0f, 0.0f, 0.0f };
 	const unsigned keys[] = { k_left, k_right, k_down, k_up, 32 };
 
 	if(is_started) return 1;
@@ -89,9 +108,9 @@ int Game(void) {
 	KeyRegister('p',  &pause);
 	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &fps);
-	KeyRegister('t',  &gametime);
+	KeyRegister('x',  &position);
 	/******KeyRegister('1',  &SpritesPlot);************/
-	/*KeyRegister('a',  &position);
+	/*
 	KeyRegister('l',  &LightList);*/
 	/*KeyRegister('s',  &SpriteList);*/
 	/*if(KeyPress('q'))  printf("%dJ / %dJ\n", ShipGetHit(game.player), ShipGetMaxHit(game.player));
@@ -103,7 +122,7 @@ int Game(void) {
 	DrawSetShield("Bar.png");
 
 	Zone(game.start);
-	SpritesShip(game.nautilus, &position, AI_HUMAN);
+	SpritesShip(game.nautilus, &posn, AI_HUMAN);
 
 	EventsRunnable(7000, &fps);
 
@@ -122,30 +141,6 @@ void GameUpdate(const int dt_ms) {
 	SpritesUpdate(dt_ms);
 	/* Dispatch events; after update so that immidiate can be immediate. */
 	EventsUpdate();
-}
-
-/* private */
-
-static void quit(void) {
-	debug("quit: key pressed.\n");
-	exit(EXIT_SUCCESS); /* meh */
-}
-
-static void pause(void) {
-	if(TimerIsRunning()) {
-		TimerPause();
-	} else {
-		TimerRun();
-	}
-}
-
-static void fps(void) {
-	unsigned mean = TimerGetMean();
-	info("%.1f fps, %ums average frame-time; %ums game-time.\n", 1000.0 / mean, mean, TimerGetGameTime());
-}
-
-static void gametime(void) {
-	info("%u ms game time.\n", TimerGetGameTime());
 }
 
 /*static void add_sprites(void) {
@@ -169,13 +164,3 @@ static void gametime(void) {
 	}
 	Event(5000, 500, FN_RUNNABLE, &add_sprites);
 }*/
-
-#if 0
-static void position(void) {
-	if(!game.player) {
-		info("You are scattered across space.\n");
-		return;
-	}
-	/*SpriteOut((struct Sprite *)game.player);*/
-}
-#endif

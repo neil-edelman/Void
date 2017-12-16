@@ -42,11 +42,9 @@ static int all_except_player(const struct Sprite *const this) {
 } <- We need to have more in {Events.c}, perhaps? */
 /** Clears, then sets up a new zone. */
 void Zone(const struct AutoSpaceZone *const sz) {
-	/*const struct TypeOfObject *asteroid_type = TypeOfObjectSearch("asteroid");*/
 	const struct AutoShipClass *blob_class = AutoShipClassSearch("Blob");
-	/*const struct AutoShipClass *fox_class = AutoShipClassSearch("Fox");*/
 	const struct AutoDebris *asteroid = AutoDebrisSearch("Asteroid");
-	int i;
+	unsigned i;
 
 	debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars "
 		"%s, %s.\n", sz->name, sz->government->name, sz->gate1->name,
@@ -73,10 +71,10 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	current_zone = sz;
 
 	/* some asteroids */
-	for(i = 0; i < 6400; i++) SpritesDebris(asteroid, 0);
+	/*for(i = 0; i < 6400; i++) SpritesDebris(asteroid, 0);*/
 
 	/* sprinkle some ships */
-	for(i = 0; i < 3000; i++) SpritesShip(blob_class, 0, AI_DUMB);
+	for(i = 0; i < 3/*000*/; i++) SpritesShip(blob_class, 0, AI_DUMB);
 
 }
 

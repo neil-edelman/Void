@@ -491,14 +491,14 @@ static void cover_migrate_onscreen(struct Cover *const this,
 }
 
 /* There are three migrate-nodes that have dependancies in other sub-types
- of {Sprites}. All of these do not need the {sprites_void} because it is
- available statically. */
+ of {Sprites}. All of these do not need the {s} because it is available
+ statically, but they are passed it anyway. */
 
 /** @implements <Sprite>Migrate */
 static void migrate_sprite(struct Sprites *const s,
 	const struct Migrate *const migrate) {
 	unsigned i;
-	assert(s == sprites && migrate);
+	assert(s && s == sprites && migrate);
 	printf("migrate_sprite\n");
 	/* {sub types}->{sprites}. */
 	for(i = 0; i < LAYER_SIZE; i++)
@@ -513,15 +513,22 @@ static void migrate_sprite(struct Sprites *const s,
 /** @implements <Collision>Migrate */
 static void migrate_collision(struct Sprites *const s,
 	const struct Migrate *const migrate) {
-	assert(s == sprites && migrate);
-	assert(0);
+	unsigned i;
+	assert(s && s == sprites && migrate);
+	printf("migrate_collision\n");
+	/* {sprites}->{collisions} */
+	for(i = 0; i < LAYER_SIZE; i++) SpriteListMigrateEach(&s->bins[i].sprites,
+		&sprite_migrate_collision, migrate);
 }
 
 /** @implements <Onscreen>Migrate */
 static void migrate_onscreen(struct Sprites *const s,
 	const struct Migrate *const migrate) {
+	unsigned i;
 	assert(s == sprites && migrate);
-	assert(0);
+	printf("migrate_onscreen\n");
+	/* {covers}->{onscreens} */
+	for(i = 0; i < LAYER_SIZE; i++) CoverStackMigrateEach(sprites->bins[i].covers, &cover_migrate_onscreen, migrate);	
 }
 
 #elif 0

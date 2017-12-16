@@ -41,6 +41,7 @@ const struct AutoSpaceZone *GateGetTo(const struct Gate *const this);
 struct Gate *FindGate(const struct AutoSpaceZone *const to);
 struct Ship *SpritesGetPlayerShip(void);
 char *SpritesToString(const struct Sprite *const this);
+unsigned SpriteGetBin(const struct Sprite *const this);
 
 /* In {SpritesLight.h}. */
 void SpritesLightClear(void);

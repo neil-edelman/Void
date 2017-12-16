@@ -72,8 +72,9 @@ static void position(void) {
 	const struct Ortho3f *x;
 	if(!player) { printf("You are scattered across space.\n"); return; }
 	x = SpriteGetPosition((const struct Sprite *)player);
-	printf("You are %s at (%.1f, %.1f: %.1f).\n",
-		SpritesToString((struct Sprite *)player), x->x, x->y, x->theta);
+	printf("You are %s at (%.1f, %.1f: %.1f) in Bin%u.\n",
+		SpritesToString((struct Sprite *)player), x->x, x->y, x->theta,
+		SpriteGetBin((struct Sprite *)player));
 }
 
 /* public */

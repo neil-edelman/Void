@@ -1026,3 +1026,9 @@ char *SpritesToString(const struct Sprite *const this) {
 	sprite_to_string(this, a);
 	return *a;
 }
+
+/** Debug. */
+unsigned SpriteGetBin(const struct Sprite *const this) {
+	if(!this) return 0;
+	return this->bin;
+}

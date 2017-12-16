@@ -56,19 +56,19 @@ static void print_sprite_velocity(struct Sprite *sprite, void *const void_out) {
 	struct PlotData *const out = void_out;
 	fprintf(out->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"blue\" "
 		"front;\n", sprite->x.x, sprite->x.y,
-		sprite->x.x + sprite->v.x * sprites->dt_ms * 1000.0f,
-		sprite->x.y + sprite->v.y * sprites->dt_ms * 1000.0f);
+		sprite->x.x + sprite->v.x * sprites->dt_ms * 256.0f,
+		sprite->x.y + sprite->v.y * sprites->dt_ms * 256.0f);
 }
 /** Draws squares for highlighting bins. Called in \see{space_plot}.
  @implements LayerAcceptPlot */
 static void gnu_shade_bins(const unsigned bin, struct PlotData *const plot) {
-	struct Vec2i bin2i;
+	struct Vec2f marker;
 	assert(plot && sprites && bin < LAYER_SIZE);
-	LayerGetBin2(sprites->layer, bin, &bin2i);
-	fprintf(plot->fp, "# bin %u -> %d,%d\n", bin, bin2i.x, bin2i.y);
-	fprintf(plot->fp, "set object %u rect from %d,%d to %d,%d fc rgb \"%s\" "
-			"fs solid noborder;\n", plot->object++, bin2i.x, bin2i.y,
-			bin2i.x + 256, bin2i.y + 256, plot->colour);
+	LayerGetBinMarker(sprites->layer, bin, &marker);
+	fprintf(plot->fp, "# bin %u -> %.1f,%.1f\n", bin, marker.x, marker.y);
+	fprintf(plot->fp, "set object %u rect from %f,%f to %f,%f fc rgb \"%s\" "
+		"fs transparent pattern 4 noborder;\n", plot->object++,
+		marker.x, marker.y, marker.x + 256.0f, marker.y + 256.0f, plot->colour);
 }
 
 /** Debugging plot.
@@ -92,15 +92,15 @@ static void space_plot(void) {
 		for(i = 0; i < LAYER_SIZE; i++)
 			SpriteListBiForEach(&sprites->bins[i].sprites, &print_sprite_data,
 			&plot);
-		fprintf(gnu, "set term postscript eps enhanced size 20cm, 20cm\n"
+		fprintf(gnu, "set term postscript eps enhanced size 256cm, 256cm\n"
 			"set output \"%s\"\n"
 			"set size square;\n"
 			"set palette defined (1 \"#0000FF\", 2 \"#00FF00\", 3 \"#FF0000\");"
 			"\n"
 			"set xtics 256 rotate; set ytics 256;\n"
 			"set grid;\n"
-			"set xrange [-2048:2048];#[-8192:8192];\n"
-			"set yrange [-2048:2048];#[-8192:8192];\n"
+			"set xrange [-8192:8192];#[-2048:2048];\n"
+			"set yrange [-8192:8192];#[-2048:2048];\n"
 			"set cbrange [0.0:1.0];\n", eps_fn);
 		/* draw bins as squares behind */
 		fprintf(gnu, "set style fill transparent solid 0.3 noborder;\n");
@@ -135,7 +135,7 @@ static void space_plot(void) {
 void SpritesPlotSpace(void) {
 	if(!sprites) return;
 	sprites->plots |= PLOT_SPACE;
-	TimerPause();
+	EventsRunnable(0, &TimerPause); /* Delay this until it has time to plot. */
 }
 
 #if 0

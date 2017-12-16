@@ -78,11 +78,12 @@ unsigned LayerGetOrtho(const struct Layer *const this, struct Ortho3f *const o){
 
 /** Used only in debugging.
  @return If true, {vec} will be set from {bin}. */
-int LayerGetBin2(const struct Layer *const this, const unsigned bin,
-	struct Vec2i *const vec) {
-	if(!this || !vec || bin >= this->side_size * this->side_size) return 0;
-	vec->x = bin % this->side_size;
-	vec->y = bin / this->side_size;
+int LayerGetBinMarker(const struct Layer *const this, const unsigned bin,
+	struct Vec2f *const vec) {
+	if(!this || bin >= (unsigned)this->side_size * this->side_size || !vec)
+		return 0;
+	vec->x = (bin % this->side_size) / this->one_each_bin - this->half_space;
+	vec->y = (bin / this->side_size) / this->one_each_bin - this->half_space;
 	return 1;
 }
 

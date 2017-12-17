@@ -1,45 +1,36 @@
 /** Copyright 2000, 2014 Neil Edelman, distributed under the terms of the GNU
  General Public License, see copying.txt.
 
- This is an idempotent class dealing with the interface to OpenGL.
+ Interface to OpenGL.
 
  @title		Draw
  @author	Neil
- @version	3.2, 2015-05
- @since		1.0, 2000 */
+ @version	2015-05
+ @since		2000 */
 
 #include <stdio.h>  /* *printf */
 #include <stdlib.h> /* free */
 #include <assert.h> /* assert */
 #include <math.h>   /* sqrtf fminf fmodf atan2f */
-#include "../../build/Auto.h"
-#include "../game/Sprites.h"
-#include "../game/Fars.h"
-#include "../game/Game.h"       /* shield display */
-#include "../../external/lodepng.h"  /* texture() */
-#include "../../external/nanojpeg.h" /* texture() */
-#include "Glew.h"
+#include "../../build/Auto.h" /* for images */
+#include "../game/Sprites.h" /* in display */
+#include "../game/Fars.h" /* in display */
+#include "../../external/lodepng.h"  /* in texture */
+#include "../../external/nanojpeg.h" /* in texture */
+#include "Glew.h" /* all OpenGL prototypes */
+#include "Window.h" /* in Draw */
 #include "Draw.h"
-#include "Window.h"
-
-#include "../system/Timer.h" /* TimerGetTime */
-
 /* Auto-generated, hard coded resouce files from Vsfs2h; run "make"
  and this should be automated.
- @fixme Ignore errors about ISO C90 string length 509. */
+ @fixme Errors about ISO C90 string length 509. */
 #include "../../build/shaders/Background_vsfs.h"
-#include "../../build/shaders/Hud_vsfs.h"
-#include "../../build/shaders/Far_vsfs.h"
-#include "../../build/shaders/Lighting_vsfs.h"
-#include "../../build/shaders/Info_vsfs.h"
 #include "../../build/shaders/Lambert_vsfs.h"
+#include "../../build/shaders/Far_vsfs.h"
+#include "../../build/shaders/Info_vsfs.h"
+#include "../../build/shaders/Hud_vsfs.h"
 
 #define M_2PI 6.283185307179586476925286766559005768394338798750211641949889
 #define M_1_2PI 0.159154943091895335768883763372514362034459645740456448747667
-#ifndef M_SQRT1_2
-#define M_SQRT1_2 \
-	0.707106781186547524400844362104849039284835937688474036588339868995366239
-#endif
 
 extern struct AutoImage auto_images[];
 extern const int max_auto_images;
@@ -101,7 +92,7 @@ static const struct {
 /* private prototypes */
 static int texture(struct AutoImage *image); /* decompresses */
 static int light_compute_texture(void); /* creates image */
-static void display(void); /* callback for odisplay */
+static void display(void); /* callback for display */
 static void resize(int width, int height); /* callback  */
 
 /* globals */
@@ -159,9 +150,9 @@ int Draw(void) {
 	/* textures stored in imgs */
 	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
-	/* shader initialisation */
+	/* Shader initialisation. */
 	if(!auto_Background(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
-	/* these are constant; fixme: could they be declared as such? */
+	/* These are constant. @fixme Could they be declared as such? */
 	glUniform1i(auto_Background_shader.sampler, TEX_CLASS_BACKGROUND);
 	if(!auto_Far(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Far_shader.bmp_sprite, TEX_CLASS_SPRITE);
@@ -171,11 +162,6 @@ int Draw(void) {
 	glUniform1i(auto_Far_shader.foreshortening, 0.25f);
 	if(!auto_Hud(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Hud_shader.sampler, TEX_CLASS_SPRITE);
-	if(!auto_Lighting(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(),0;
-	glUniform1i(auto_Lighting_shader.sampler, TEX_CLASS_SPRITE);
-	glUniform1i(auto_Lighting_shader.sampler_light, TEX_CLASS_NORMAL);
-	glUniform1f(auto_Lighting_shader.directional_angle, -2.0f);
-	glUniform3fv(auto_Lighting_shader.directional_colour, 1, sunshine);
 	if(!auto_Info(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	glUniform1i(auto_Info_shader.bmp_sprite, TEX_CLASS_SPRITE);
 	if(!auto_Lambert(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
@@ -194,15 +180,14 @@ int Draw(void) {
 void Draw_(void) {
 	unsigned tex;
 	int i;
-
-	/* erase the shaders */
+	/* Erase the shaders. */
 	auto_Lambert_();
 	auto_Info_();
-	auto_Lighting_();
+	/*auto_Lighting_();*/
 	auto_Hud_();
 	auto_Far_();
 	auto_Background_();
-	/* erase the textures */
+	/* Erase the textures. */
 	for(i = max_auto_images - 1; i; i--) {
 		if(!(tex = auto_images[i].texture)) continue;
 		fprintf(stderr, "~Draw: erase texture, Tex%u.\n", tex);
@@ -219,9 +204,8 @@ void Draw_(void) {
 		glDeleteBuffers(1, &vbo_geom);
 		vbo_geom = 0;
 	}
-	/* get all the errors that we didn't catch */
+	/* Get all the errors that we didn't catch. */
 	WindowIsGlError("~Draw");
-
 	is_started = 0;
 }
 
@@ -241,13 +225,14 @@ void DrawGetScreen(struct Rectangle4f *const rect) {
 	rect->y_max = camera.y + camera_extent.y;
 }
 
-/** Sets background to the image with key key.
- @fixme allows you to set not {TexClassTexture(TEX_CLASS_BACKGROUND)} textures,
- which probably don't work, maybe? (oh, they do.) */
+
+
+/* Texture functions. */
+
+/** Sets background to the image with {key} key. */
 void DrawSetBackground(const char *const key) {
 	struct AutoImage *image;
-
-	/* clear the backgruoud; fixme: test, it isn't used at all */
+	/* clear the backgruoud; @fixme Test, it isn't used at all */
 	if(!key) {
 		background_tex = 0;
 		glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
@@ -502,10 +487,10 @@ void DrawDisplayInfo(const struct Vec2f *const x,
 
 
 
-/* This is the display callback for the main game. It sets up the shaders, then
- calls whatever draw functions use those shaders. */
+/* Display callbacks.  */
 
-/** Callback for glutDisplayFunc; this is where all of the drawing happens. */
+/** Callback for glutDisplayFunc; this is where all of the drawing happens. It
+ sets up the shaders, then calls whatever draw functions use those shaders. */
 static void display(void) {
 	unsigned lights;
 
@@ -597,7 +582,7 @@ static void display(void) {
 }
 
 /** Callback for glutReshapeFunc.
- @fixme not guaranteed to have a background! this will crash.
+ @fixme Not guaranteed to have a background! this will crash.
  @param width, height: The size of the client area. */
 static void resize(int width, int height) {
 	struct Vec2f two_screen;
@@ -609,7 +594,7 @@ static void resize(int width, int height) {
 	glViewport(0, 0, width, height);
 	camera_extent.x = width / 2.0f, camera_extent.y = height / 2.0f; /* global*/
 
-	/* resize the background */
+	/* Resize the background. */
 	/* glActiveTexture(TEX_CLASS_BACKGROUND); this does nothing? */
 	glBindTexture(GL_TEXTURE_2D, background_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
@@ -618,17 +603,19 @@ static void resize(int width, int height) {
 	w_w_tex = (float)width  / w_tex;
 	h_h_tex = (float)height / h_tex;
 
-	/* update the background texture vbo on the card with global data in here */
+	/* Update the background texture vbo on the card with global data here. */
 	vbo[0].s = vbo[1].s =  w_w_tex;
 	vbo[2].s = vbo[3].s = -w_w_tex;
 	vbo[0].t = vbo[2].t =  h_h_tex;
 	vbo[1].t = vbo[3].t = -h_h_tex;
 	glBufferSubData(GL_ARRAY_BUFFER, vbo_info_bg.first,
-		vbo_info_bg.count * (GLsizei)sizeof(struct Vertex), vbo + vbo_info_bg.first);
+		vbo_info_bg.count * (GLsizei)sizeof(struct Vertex),
+		vbo + vbo_info_bg.first);
 
-	/* the image may not cover the whole drawing area, so we may need a constant
-	 scaling; if it is so, the image will have to be linearly interpolated for
-	 quality */
+	/* Update the shaders; YOU MUST CALL THIS IF THE PROGRAMME HAS ANY
+	 DEPENDENCE ON SCREEN SIZE. For Background, the image may not cover the
+	 whole drawing area, so we may need a constant scaling; if it is so, the
+	 image will have to be linearly interpolated for quality. */
 	glUseProgram(auto_Background_shader.compiled);
 	glBindTexture(GL_TEXTURE_2D, background_tex);
 	if(w_w_tex > 1.0f || h_h_tex > 1.0f) {
@@ -641,22 +628,14 @@ static void resize(int width, int height) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}
-
-	/* update the shaders; YOU MUST CALL THIS IF THE PROGRAMME HAS ANY
-	 DEPENDENCE ON SCREEN SIZE */
-	/* update the inverse screen on the card */
 	two_screen.x = 2.0f / width;
 	two_screen.y = 2.0f / height;
-	/* fixme */
-	glUseProgram(auto_Hud_shader.compiled);
-	glUniform2f(auto_Hud_shader.two_screen, two_screen.x, two_screen.y);
-	glUseProgram(auto_Far_shader.compiled);
-	glUniform2f(auto_Far_shader.projection, two_screen.x, two_screen.y);
-	/* fixme! */
-	glUseProgram(auto_Lighting_shader.compiled);
-	glUniform2f(auto_Lighting_shader.two_screen, two_screen.x, two_screen.y);
-	glUseProgram(auto_Info_shader.compiled);
-	glUniform2f(auto_Info_shader.projection, two_screen.x, two_screen.y);
 	glUseProgram(auto_Lambert_shader.compiled);
 	glUniform2f(auto_Lambert_shader.projection, two_screen.x, two_screen.y);
+	glUseProgram(auto_Far_shader.compiled);
+	glUniform2f(auto_Far_shader.projection, two_screen.x, two_screen.y);
+	glUseProgram(auto_Info_shader.compiled);
+	glUniform2f(auto_Info_shader.projection, two_screen.x, two_screen.y);
+	glUseProgram(auto_Hud_shader.compiled);
+	glUniform2f(auto_Hud_shader.two_screen, two_screen.x, two_screen.y);
 }

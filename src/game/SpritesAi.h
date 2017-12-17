@@ -66,12 +66,13 @@ static int ship_update_ai(struct Ship *const this) {
 	return 1;
 }
 #else
-static void ship_update_ai(struct Ship *const this) {
+/** @implements <Ship>Predicate */
+static int ship_update_ai(struct Ship *const this) {
 	const struct Ship *const p = get_player();
 	struct Vec2f d;
 	float d_2, theta, t;
 	int ms_turning = 0, ms_acceleration = 0, ms_shoot = 0;
-	if(!p) return; /* @fixme The player is the only reason for being! */
+	if(!p) return 1; /* @fixme The player is the only reason for being! */
 	d.x = p->sprite.data.x.x - this->sprite.data.x.x,
 	d.y = p->sprite.data.x.y - this->sprite.data.x.y;
 	d_2   = d.x * d.x + d.y * d.y;
@@ -96,5 +97,6 @@ static void ship_update_ai(struct Ship *const this) {
 		ms_acceleration = ai_speed;
 	}
 	ship_input(this, ms_turning, ms_acceleration, ms_shoot);
+	return 1;
 }
 #endif

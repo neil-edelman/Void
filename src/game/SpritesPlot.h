@@ -1,38 +1,10 @@
-#if 0
-
-/** @implements <Bin*, InfoOutput*>DiAction */
-static void draw_bin_literally(struct SpriteList **const pthis, void *const pout_void) {
-	struct SpriteList *const sprites = *pthis;
-	const InfoOutput *const pout = pout_void, out = *pout;
-	const struct AutoImage *hair = AutoImageSearch("Hair.png");
-	struct Vec2i bin_in_space;
-	struct Vec2f bin_float;
-	assert(pthis && sprites && out && hair);
-	bin_to_Vec2i((unsigned)(sprites - bins), &bin_in_space);
-	bin_float.x = bin_in_space.x, bin_float.y = bin_in_space.y;
-	out(&bin_float, hair);
-}
-/** Must call \see{SpriteUpdate} before this, because it updates everything.
- Use when the Info GPU shader is loaded. */
-void SpritesDrawInfo(InfoOutput draw) {
-	/*const struct Vec2f a = { 10.0f, 10.0f };*/
-	/*const struct AutoImage *hair = AutoImageSearch("Hair.png");*/
-	assert(draw);
-	BinPoolBiForEach(draw_bins, &draw_bin_literally, &draw);
-	/*draw(&a, hair);*/
-}
-#endif
-
-
-
-
-/* This is a debug thing. */
+/* This is a debug thing; outputs data in Gnuplot form. */
 
 /* This is for communication with {sprite_data}, {sprite_arrow},
  {sprite_velocity}, and {gnu_draw_bins} for outputting a gnu plot. */
 struct PlotData {
 	FILE *fp;
-	unsigned i, n, object;
+	unsigned i, n, object, bin;
 	const char *colour;
 };
 /** @implements <Sprite, OutputData>DiAction */
@@ -59,10 +31,29 @@ static void print_sprite_velocity(struct Sprite *sprite, void *const void_out) {
 		sprite->x.x + sprite->v.x * sprites->dt_ms * 256.0f,
 		sprite->x.y + sprite->v.y * sprites->dt_ms * 256.0f);
 }
+/* @implements <Cover>BiAction */
+static void sprite_to_bin(struct Cover *const this, void *const plot_void) {
+	struct PlotData *const plot = plot_void;
+	struct Sprite *s;
+	struct Vec2f to = { 0.0f, 0.0f };
+	assert(this && this->onscreen && plot_void);
+	if(!(s = this->onscreen->sprite)) return;
+	LayerGetBinMarker(sprites->layer, plot->bin, &to);
+	to.x += 50.0f, to.y += 50.0f;
+	fprintf(plot->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"%s\" "
+		"front;\n", s->x.x, s->x.y, to.x, to.y,
+		this->is_corner ? "red" : "pink");
+}
+/* @implements LayerAcceptPlot */
+static void sprite_to_bin_bin(const unsigned idx, struct PlotData *const plot) {
+	assert(sprites && plot);
+	plot->bin = idx;
+	CoverStackBiForEach(sprites->bins[idx].covers, &sprite_to_bin, plot);
+}
 /** Draws squares for highlighting bins. Called in \see{space_plot}.
  @implements LayerAcceptPlot */
 static void gnu_shade_bins(const unsigned bin, struct PlotData *const plot) {
-	struct Vec2f marker;
+	struct Vec2f marker = { 0.0f, 0.0f };
 	assert(plot && sprites && bin < LAYER_SIZE);
 	LayerGetBinMarker(sprites->layer, bin, &marker);
 	fprintf(plot->fp, "# bin %u -> %.1f,%.1f\n", bin, marker.x, marker.y);
@@ -113,6 +104,7 @@ static void space_plot(void) {
 		for(i = 0; i < LAYER_SIZE; i++)
 			SpriteListBiForEach(&sprites->bins[i].sprites,
 			&print_sprite_velocity, &plot);
+		LayerForEachScreenPlot(sprites->layer, &sprite_to_bin_bin, &plot);
 		/* draw the sprites */
 		fprintf(gnu, "plot \"%s\" using 5:6:7 with circles \\\n"
 			"linecolor rgb(\"#00FF00\") fillstyle transparent "
@@ -132,25 +124,12 @@ static void space_plot(void) {
 	}
 }
 
+/** Sets a flag that indicates the space should be plotted on the next frame. */
 void SpritesPlotSpace(void) {
 	if(!sprites) return;
 	sprites->plots |= PLOT_SPACE;
 	EventsRunnable(0, &TimerPause); /* Delay this until it has time to plot. */
 }
-
-#if 0
-/** Output sprites. */
-void SpritesOut(void) {
-	struct OutputData out;
-	unsigned i;
-	out.fp = stdout, out.i = 0; out.n = 0;
-	for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-		SpriteListUnorderBiForEach(bins + i, &sprite_count, &out);
-	for(i = 0; i < BIN_BIN_FG_SIZE; i++)
-		SpriteListUnorderBiForEach(bins + i, &print_sprite_data, &out);
-}
-
-#endif
 
 /* THIS IS OLD CODE */
 

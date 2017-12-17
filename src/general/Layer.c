@@ -157,8 +157,8 @@ int LayerSetSpriteRectangle(struct Layer *const this,
 /** Set random. */
 void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o) {
 	if(!this || !o) return;
-	o->x = random_pm_max(this->half_space / 1000.0f); /* @fixme Remove. */
-	o->y = random_pm_max(this->half_space / 1000.0f);
+	o->x = random_pm_max(this->half_space);
+	o->y = random_pm_max(this->half_space);
 	o->theta = random_pm_max(M_PI_F);
 }
 

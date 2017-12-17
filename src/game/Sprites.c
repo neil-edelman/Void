@@ -789,12 +789,6 @@ static void put_cover(const unsigned bin, const unsigned no,
 		CoverStackGetError(sprites->bins[bin].covers)); return;}
 	cover->onscreen = on;
 	cover->is_corner = !no;
-	assert(sprites);
-	if(sprites->plots & PLOT_SPACE) {
-		char a[12];
-		sprite_to_string(on->sprite, &a);
-		printf("Bin%u: %s.\n", bin, a);
-	}
 }
 /** Moves the sprite. Calculates temporary values, {dx}, and {box}; sticks it
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
@@ -802,11 +796,6 @@ static void put_cover(const unsigned bin, const unsigned no,
 static void extrapolate(struct Sprite *const this) {
 	struct Onscreen *on;
 	assert(sprites && this);
-	if(sprites->plots & PLOT_SPACE) {
-		char a[12];
-		sprite_to_string(this, &a);
-		printf("(_%s_):\n", a);
-	}
 	/* If it returns false, it's deleted. */
 	if(!sprite_update(this)) return;
 	/* Kinematics. */
@@ -828,11 +817,6 @@ static void extrapolate(struct Sprite *const this) {
 		"extrapolate onscreen: %s.\n",
 		OnscreenStackGetError(sprites->onscreens)); return; }
 	on->sprite = this;
-	if(sprites->plots & PLOT_SPACE) {
-		char a[12];
-		sprite_to_string(on->sprite, &a);
-		printf("_%s_:\n", a);
-	}
 	LayerSpriteForEachSprite(sprites->layer, on, &put_cover);
 }
 /** Called in \see{SpritesUpdate}.

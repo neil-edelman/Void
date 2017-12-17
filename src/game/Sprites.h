@@ -40,6 +40,7 @@ void SpriteSetVelocity(struct Sprite *const this,const struct Ortho3f *const v);
 const struct AutoSpaceZone *GateGetTo(const struct Gate *const this);
 struct Gate *FindGate(const struct AutoSpaceZone *const to);
 struct Ship *SpritesGetPlayerShip(void);
+const struct Vec2f *ShipGetHit(const struct Ship *const this);
 char *SpritesToString(const struct Sprite *const this);
 unsigned SpriteGetBin(const struct Sprite *const this);
 

@@ -94,7 +94,8 @@ Define abstract <em>Sprite</em>.
 	struct SpriteListNode sprite;
 	struct ShipVt *vt;
 	float mass;
-	float shield, ms_recharge, max_speed2, acceleration, turn;
+	struct Vec2f hit;
+	float ms_recharge, max_speed2, acceleration, turn;
 	char name[16];
 	const struct AutoWmdType *wmd;
 	unsigned ms_recharge_wmd;
@@ -379,6 +380,11 @@ Define <em>SpriteVt</em>.
 	<td>void</td>
 </tr>
 <tr>
+	<td>const struct Vec2f *</td>
+	<td><a href = "#ShipGetHit">ShipGetHit</a></td>
+	<td>const struct Ship *const this</td>
+</tr>
+<tr>
 	<td>char *</td>
 	<td><a href = "#SpritesToString">SpritesToString</a></td>
 	<td>const struct Sprite *const this</td>
@@ -570,6 +576,16 @@ Gets the player's ship or null.
 </dl>
 </div>
 
+<div><a name = "ShipGetHit"><!-- --></a>
+<h3>ShipGetHit</h3>
+<pre>const struct Vec2f * <b>ShipGetHit</b> (const struct Ship *const this)</pre>
+<p>
+How much shields are left.
+</p>
+<dl>
+</dl>
+</div>
+
 <div><a name = "SpritesToString"><!-- --></a>
 <h3>SpritesToString</h3>
 <pre>char * <b>SpritesToString</b> (const struct Sprite *const this)</pre>
@@ -584,7 +600,7 @@ Debug; only prints four at a time.
 <h3>SpriteGetBin</h3>
 <pre>unsigned <b>SpriteGetBin</b> (const struct Sprite *const this)</pre>
 <p>
-Debug.
+Debug; called in Game.c or something once.
 </p>
 <dl>
 </dl>

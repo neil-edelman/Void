@@ -86,7 +86,8 @@ struct Ship {
 	struct SpriteListNode sprite;
 	struct ShipVt *vt;
 	float mass;
-	float shield, ms_recharge, max_speed2, acceleration, turn;
+	struct Vec2f hit;
+	float ms_recharge, max_speed2, acceleration, turn;
 	char name[16];
 	const struct AutoWmdType *wmd;
 	unsigned ms_recharge_wmd;
@@ -400,8 +401,9 @@ static void sprite_put_damage(struct Sprite *const this, const float damage) {
 /** @implements <Ship,Float>Predicate */
 static void ship_put_damage(struct Ship *const this, const float damage) {
 	printf("Hit!\n");
-	this->shield -= damage;
-	if(this->shield <= 0.0f) sprite_delete(&this->sprite.data);
+	this->hit.x -= damage;
+	if(this->hit.x <= 0.0f) sprite_delete(&this->sprite.data);
+	if(this->hit.x > this->hit.y) this->hit.x = this->hit.y; /* Full. */
 }
 /** @implements <Debris,Float>Predicate */
 static void debris_put_damage(struct Debris *const this, const float damage) {
@@ -689,7 +691,7 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 		ShipPoolGetError(sprites->ships)); return 0; }
 	sprite_filler(&this->sprite.data, vt, class->sprite, x);
 	this->mass = class->mass;
-	this->shield = class->shield;
+	this->hit.x = this->hit.y = class->shield;
 	this->ms_recharge = class->ms_recharge;
 	this->max_speed2 = class->speed * class->speed;
 	this->acceleration = class->acceleration;
@@ -920,8 +922,6 @@ void SpritesUpdate(const int dt_ms) {
 	LayerForEachScreen(sprites->layer, &timestep_bin);
 }
 
-/* fixme: This is bullshit. Have it all in Draw? */
-
 /** Called from \see{draw_bin}.
  @implements <Sprite>Action */
 static void draw_sprite(struct Sprite *const this) {
@@ -1019,6 +1019,12 @@ struct Ship *SpritesGetPlayerShip(void) {
 	return get_player();
 }
 
+/** How much shields are left. */
+const struct Vec2f *ShipGetHit(const struct Ship *const this) {
+	if(!this) return 0;
+	return &this->hit;
+}
+
 /** Debug; only prints four at a time. */
 char *SpritesToString(const struct Sprite *const this) {
 	static char as[4][12];
@@ -1030,7 +1036,7 @@ char *SpritesToString(const struct Sprite *const this) {
 	return *a;
 }
 
-/** Debug. */
+/** Debug; called in Game.c or something once. */
 unsigned SpriteGetBin(const struct Sprite *const this) {
 	if(!this) return 0;
 	return this->bin;

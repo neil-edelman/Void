@@ -13,7 +13,7 @@
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
 #include "../general/OrthoMath.h" /* for measurements and types */
 #include "../general/Layer.h" /* for descritising */
-#include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
+#include "../system/Draw.h" /* DrawGetScreen, DrawDisplayFar */
 #include "Fars.h"
 
 #define LAYER_FORESHORTENING_F 0.2f

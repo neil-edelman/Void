@@ -557,28 +557,27 @@ static void display(void) {
 	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
 	SpritesInfo();
 
-#if 0
-	/* overlay hud */
-	if(shield_tex && (player = GameGetPlayer())) {
-		struct Vec2f x;
-		struct Vec2i hit;
-		ShipGetPosition(player, &x);
-		glUseProgram(auto_Hud_shader.compiled);
-		glBindTexture(GL_TEXTURE_2D, shield_tex);
-		glUniform2f(auto_Hud_shader.camera, camera.x, camera.y);
-		glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
-		glUniform2f(auto_Hud_shader.position, x.x, x.y + 64.0f);
-		ShipGetHit(player, &hit);
-		glUniform2i(auto_Hud_shader.shield, hit.x, hit.y);
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
+	/* Overlay hud. */
+	if(shield_tex) {
+		struct Ship *player;
+		const struct Ortho3f *x;
+		const struct Vec2f *hit;
+		if((player = SpritesGetPlayerShip())
+			&& (x = SpriteGetPosition((struct Sprite *)player))
+			&& (hit = ShipGetHit(player))) {
+			glUseProgram(auto_Hud_shader.compiled);
+			glBindTexture(GL_TEXTURE_2D, shield_tex);
+			glUniform2f(auto_Hud_shader.camera, camera.x, camera.y);
+			glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
+			glUniform2f(auto_Hud_shader.position, x->x, x->y + 64.0f);
+			glUniform2i(auto_Hud_shader.shield, hit->x, hit->y);
+			glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
+		}
 	}
-#endif
 
 	/* Disable, swap. */
 	glUseProgram(0);
 	glutSwapBuffers();
-
-	/*WindowIsGlError("display");*/
 }
 
 /** Callback for glutReshapeFunc.

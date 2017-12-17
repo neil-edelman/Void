@@ -22,8 +22,8 @@ specimen, sample, instance, occurrence, manifestation, embodiment, epitome, repr
 
 Bug List
 --------
--lighting is wonky; put actual lights on the Info
--more complex scene lighting
+-Gate travel is wonky.
+-Re-show Info.
 
 Features
 --------

@@ -11,13 +11,12 @@ http://lodev.org/lodepng/
 external/nanojpeg: by Martin J. Fiedler <martin.fiedler@gmx.net>
 http://keyj.emphy.de/nanojpeg/
 
-Version 3.3.
-
 Usage: Void
 
 To win, blow up everything.
 
 Player controls: left, right, up, space, F1 (fullscreen.)
+x -- report position, f -- framerate, p -- pause, 1 -- Gnuplot dump.
 
 You downloaded the source code and want to build? If you have a
 Mac, xCode tools, viz, gcc; MacOSX has native support for OpenGL1.1

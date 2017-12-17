@@ -704,6 +704,7 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 			fprintf(stderr, "SpritesShip: overriding previous player.\n");
 		sprites->player.is_ship = 1;
 		sprites->player.ship_index = ShipPoolGetIndex(sprites->ships, this);
+		strcpy(this->name, "Player");
 	}
 	return this;
 }

@@ -8,11 +8,11 @@
  @version	3.2, 2015-05
  @since		1.0, 2000 */
 
+#include <stdio.h>  /* *printf */
 #include <stdlib.h> /* free */
 #include <assert.h> /* assert */
 #include <math.h>   /* sqrtf fminf fmodf atan2f */
 #include "../../build/Auto.h"
-#include "../Print.h"
 #include "../game/Sprites.h"
 #include "../game/Fars.h"
 #include "../game/Game.h"       /* shield display */
@@ -119,10 +119,7 @@ int Draw(void) {
 
 	if(is_started) return -1;
 
-	if(!WindowStarted()) {
-		warn("Draw: window not started.\n");
-		return 0;
-	}
+	if(!WindowStarted())return fprintf(stderr,"Draw: window not started.\n"), 0;
 
 	glutDisplayFunc(&display);
 	glutReshapeFunc(&resize);
@@ -151,14 +148,14 @@ int Draw(void) {
 		vbo_attrib[VBO_ATTRIB_TEXTURE].size,
 		vbo_attrib[VBO_ATTRIB_TEXTURE].type, GL_FALSE, sizeof(struct Vertex),
 		vbo_attrib[VBO_ATTRIB_TEXTURE].offset);
-	debug("Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
+	fprintf(stderr, "Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
 
 	/* textures */
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
 	/* lighting */
 	glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
 	if(!(light_tex = light_compute_texture()))
-		warn("Draw: failed computing light texture.\n");
+		fprintf(stderr, "Draw: failed computing light texture.\n");
 	/* textures stored in imgs */
 	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
@@ -208,17 +205,17 @@ void Draw_(void) {
 	/* erase the textures */
 	for(i = max_auto_images - 1; i; i--) {
 		if(!(tex = auto_images[i].texture)) continue;
-		debug("~Draw: erase texture, Tex%u.\n", tex);
+		fprintf(stderr, "~Draw: erase texture, Tex%u.\n", tex);
 		glDeleteTextures(1, &tex);
 		auto_images[i].texture = 0;
 	}
 	if(light_tex) {
-		debug("~Draw: erase lighting texture, Tex%u.\n", light_tex);
+		fprintf(stderr, "~Draw: erase lighting texture, Tex%u.\n", light_tex);
 		glDeleteTextures(1, &light_tex);
 		light_tex = 0;
 	}
 	if(vbo_geom && glIsBuffer(vbo_geom)) {
-		debug("~Draw: erase Vbo%u.\n", vbo_geom);
+		fprintf(stderr, "~Draw: erase Vbo%u.\n", vbo_geom);
 		glDeleteBuffers(1, &vbo_geom);
 		vbo_geom = 0;
 	}
@@ -255,32 +252,29 @@ void DrawSetBackground(const char *const key) {
 		background_tex = 0;
 		glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
 		glBindTexture(GL_TEXTURE_2D, 0);
-		debug("DrawSetBackground: image desktop cleared.\n");
+		fprintf(stderr, "DrawSetBackground: image desktop cleared.\n");
 		return;
 	}
-	if(!(image = AutoImageSearch(key))) {
-		warn("DrawSetBackground: image \"%s\" not found.\n", key);
-		return;
-	}
+	if(!(image = AutoImageSearch(key)))
+		{ fprintf(stderr, "DrawSetBackground: image \"%s\" not found.\n", key);
+		return; }
 	/* background_tex is a global; the witdh/height of the image can be found with background_tex */
 	background_tex = image->texture;
 	glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
 	glBindTexture(GL_TEXTURE_2D, background_tex);
-	debug("DrawSetBackground: image \"%s,\" (Tex%u,) set as desktop.\n",
-		image->name, background_tex);
+	fprintf(stderr, "DrawSetBackground: image \"%s,\" (Tex%u,) set as "
+		"desktop.\n", image->name, background_tex);
 }
 
 /** @param str: Resource name to set the shield indicator. */
 void DrawSetShield(const char *const key) {
 	struct AutoImage *image;
-	if(!(image = AutoImageSearch(key))) {
-		warn("DrawSetShield: image \"%s\" not found.\n", key);
-		return;
-	}
+	if(!(image = AutoImageSearch(key))) { fprintf(stderr,
+		"DrawSetShield: image \"%s\" not found.\n", key); return; }
 	shield_tex = image->texture;
 	glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
 	glBindTexture(GL_TEXTURE_2D, shield_tex);
-	debug("DrawSetShield: image \"%s,\" (Tex%u,) set as shield.\n",
+	fprintf(stderr, "DrawSetShield: image \"%s,\" (Tex%u,) set as shield.\n",
 		image->name, shield_tex);
 }
 
@@ -294,17 +288,15 @@ static int texture(struct AutoImage *image) {
 	int is_alloc = 0, is_bad = 0;
 	unsigned format = 0, internal = 0;
 	unsigned tex = 0;
-
 	if(!image || image->texture) return 0;
-
-	/* uncompress the image! */
+	/* Uncompress the image. */
 	switch(image->data_format) {
 		case IF_PNG:
-			/* fixme: this will force it to be 32-bit RGBA even if it doesn't
-			 have an alpha channel, extremely wasteful */
+			/* @fixme This will force it to be 32-bit RGBA even if it doesn't
+			 have an alpha channel, potentially wasteful. */
 			if((error = lodepng_decode32(&pic, &width, &height, image->data,
 				image->data_size))) {
-				warn("texture: lodepng error %u: %s\n", error,
+				fprintf(stderr, "texture: lodepng error %u: %s\n", error,
 					lodepng_error_text(error));
 				break;
 			}
@@ -322,22 +314,22 @@ static int texture(struct AutoImage *image) {
 			break;
 		case IF_UNKNOWN:
 		default:
-			warn("texture: unknown image format.\n");
+			fprintf(stderr, "texture: unknown image format.\n");
 	}
 	if(!is_alloc) {
-		warn("texture: allocation failed.\n");
+		fprintf(stderr, "texture: allocation failed.\n");
 		return 0;
 	}
-	if(width != image->width || height != image->height || depth != image->depth) {
-		warn("texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n",
+	if(width != image->width || height != image->height || depth!=image->depth){
+		fprintf(stderr, "texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n",
 			image->width, image->height, image->depth, width, height, depth);
 		is_bad = -1;
 	}
 	/* select image format */
 	switch(depth) {
 		case 1:
-			/* we use exclusively for shaders, so I don't think this matters */
-			/* GL_LUMINANCE; <- "core context depriciated," I was using that */
+			/* We use exclusively for shaders, so I don't think this matters. */
+			/* GL_LUMINANCE; <- "core context depriciated," I was using that. */
 			internal = GL_RGB;
 			format   = GL_RED;
 			break;
@@ -351,10 +343,10 @@ static int texture(struct AutoImage *image) {
 			format   = GL_RGBA;
 			break;
 		default:
-			warn("texture: not a recognised depth, %d.\n", depth);
+			fprintf(stderr, "texture: not a recognised depth, %d.\n", depth);
 			is_bad = -1;
 	}
-	/* invert to go with OpenGL's strict adherence to standards vs traditions */
+	/* Invert to go with OpenGL's strict adherence to standards vs traditions.*/
 	{
 		unsigned bytes_line = width * depth;
 		unsigned top, bottom, i;
@@ -362,14 +354,11 @@ static int texture(struct AutoImage *image) {
 		for(top = 0, bottom = height - 1; top < bottom; top++, bottom--) {
 			pb_t = pic + top    * bytes_line;
 			pb_b = pic + bottom * bytes_line;
-			for(i = 0; i < bytes_line; i++, pb_t++, pb_b++) {
-				*pb_t ^= *pb_b;
-				*pb_b ^= *pb_t;
-				*pb_t ^= *pb_b;
-			}
+			for(i = 0; i < bytes_line; i++, pb_t++, pb_b++)
+				*pb_t ^= *pb_b, *pb_b ^= *pb_t, *pb_t ^= *pb_b;
 		}
 	}
-	/* load the uncompressed image into a texture */
+	/* Load the uncompressed image into a texture. */
 	if(!is_bad) {
 		glGenTextures(1, (unsigned *)&tex);
 		glActiveTexture((unsigned)(image->depth == 3 ? TexClassTexture(TEX_CLASS_BACKGROUND) : TexClassTexture(TEX_CLASS_SPRITE)));
@@ -390,28 +379,21 @@ static int texture(struct AutoImage *image) {
 		image->texture = tex;
 		/* debug */
 #ifdef PRINT_PEDANTIC
-		pedantic("texture: %u:\n", image->texture);
+		printf("texture: %u:\n", image->texture);
 		if(image->width <= 80) image_print(image, pic);
-		else pedantic(" . . . too big to show.\n");
+		else printf(" . . . too big to show.\n");
 #endif
 	}
-	/* free the pic */
+	/* Free the pic. */
 	switch(image->data_format) {
-		case IF_PNG:
-			free(pic);
-			break;
-		case IF_JPEG:
-			njDone();
-			break;
-		default:
-			break;
+		case IF_PNG: free(pic); break;
+		case IF_JPEG: njDone(); break;
+		default: break;
 	}
-	debug("texture: created %dx%dx%d texture, Tex%u.\n",
+	fprintf(stderr, "texture: created %dx%dx%d texture, Tex%u.\n",
 		width, height, depth, tex);
-
 	WindowIsGlError("texture");
-
-	return tex ? -1 : 0;
+	return tex ? 1 : 0;
 }
 
 /* Creates a hardcoded lighting texture with the Red the radius and Green the
@@ -420,12 +402,10 @@ static int texture(struct AutoImage *image) {
 static int light_compute_texture(void) {
 	int   i, j;
 	float x, y;
-	float *buffer; /*[512][512][2]; MSVC does not have space on the stack*/
-	/*const int buffer_ysize = sizeof(buffer)  / sizeof(*buffer);
-	const int buffer_xsize = sizeof(*buffer) / sizeof(**buffer);*/
-	const int buffer_size = 1024/*512*/; /* width/height */
-	const float buffer_norm = (float)M_SQRT1_2 * 4.0f /
-		sqrtf(2.0f * buffer_size * buffer_size);
+	float *buffer;
+	const int buffer_size = 1024; /* width/height */
+	const float buffer_norm = (float)M_SQRT1_2 * 4.0f
+		/ sqrtf(2.0f * buffer_size * buffer_size);
 	unsigned name;
 
 	if(!(buffer = malloc(sizeof(float) * buffer_size * buffer_size << 1))) return 0;
@@ -454,16 +434,19 @@ static int light_compute_texture(void) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, buffer_size, buffer_size, 0,
 		GL_RG, GL_FLOAT, buffer);
 	free(buffer);
-	debug("texture: created %dx%dx%d hardcoded lighting texture, Tex%u.\n",
-		buffer_size, buffer_size, 2, name);
-
+	fprintf(stderr, "light_comute_texture: created %dx%dx%d hardcoded lighting texture, "
+		"Tex%u.\n", buffer_size, buffer_size, 2, name);
 	WindowIsGlError("light_compute_texture");
-
 	return name;
 }
 
-int draw_is_print_sprites;
-static unsigned old_texture;
+
+
+/* This is the shader texture display. Each one goes with a certian shader, so
+ the OpenGL state must be set to that shader before calling. */
+
+/* Current texture; don't want to switch textures to the same one. */
+static unsigned current_texture;
 
 /** Only used as a callback from \see{display} while OpenGL is using Lambert.
  For \see{SpritesDraw}.
@@ -471,12 +454,12 @@ static unsigned old_texture;
 void DrawDisplayLambert(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor) {
 	assert(x && tex && nor);
-	if(old_texture != tex->texture) {
+	if(current_texture != tex->texture) {
 		glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
 		glBindTexture(GL_TEXTURE_2D, nor->texture);
 		glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
 		glBindTexture(GL_TEXTURE_2D, tex->texture);
-		old_texture = tex->texture;
+		current_texture = tex->texture;
 		glUniform1f(auto_Lambert_shader.size, tex->width);
 	}
 	glUniform1f(auto_Lambert_shader.angle, x->theta);
@@ -490,12 +473,12 @@ void DrawDisplayLambert(const struct Ortho3f *const x,
 void DrawDisplayFar(const struct Ortho3f *const x,
 	const struct AutoImage *const tex, const struct AutoImage *const nor) {
 	assert(x && tex && nor);
-	if(old_texture != tex->texture) {
+	if(current_texture != tex->texture) {
 		glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
 		glBindTexture(GL_TEXTURE_2D, nor->texture);
 		glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
 		glBindTexture(GL_TEXTURE_2D, tex->texture);
-		old_texture = tex->texture;
+		current_texture = tex->texture;
 		glUniform1f(auto_Far_shader.size, tex->width);
 	}
 	glUniform1f(auto_Far_shader.angle, x->theta);
@@ -507,38 +490,40 @@ void DrawDisplayFar(const struct Ortho3f *const x,
 void DrawDisplayInfo(const struct Vec2f *const x,
 	const struct AutoImage *const tex) {
 	assert(x && tex);
-	if(old_texture != tex->texture) {
+	if(current_texture != tex->texture) {
 		glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
 		glBindTexture(GL_TEXTURE_2D, tex->texture);
-		old_texture = tex->texture;
+		current_texture = tex->texture;
 		glUniform1f(auto_Info_shader.size, tex->width);
 	}
 	glUniform2f(auto_Info_shader.object, x->x, x->y);
 	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
 }
 
+
+
+/* This is the display callback for the main game. It sets up the shaders, then
+ calls whatever draw functions use those shaders. */
+
 /** Callback for glutDisplayFunc; this is where all of the drawing happens. */
 static void display(void) {
-	/*struct Ship *player;*/
 	unsigned lights;
-	/* for SpriteIterate */
-	/*struct Ortho3f x;
-	unsigned old_tex = 0, tex, size;*/
 
-	/* glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	 <- https://www.khronos.org/opengl/wiki/Common_Mistakes
-	 "The buffers should always be cleared. On much older hardware, there was
-	 a technique to get away without clearing the scene, but on even semi-recent
-	 hardware, this will actually make things slower. So always do the clear."
-	 I'm not using those features, thought! and the screen cover is complete, I
-	 don't see how doing extra work for nothing is going to make it faster.
-	 "A technique," more like a mistake if you don't. */
+	/* @fixme https://www.khronos.org/opengl/wiki/Common_Mistakes
+	"The buffers should always be cleared. On much older hardware, there was
+	a technique to get away without clearing the scene, but on even semi-recent
+	hardware, this will actually make things slower. So always do the clear."
+	This is very, very sketchy indeed; I don't believe you. Obviously I set it
+	up to not do the clear. Maybe the clear has gotten faster, but like shit
+	it's faster then not doing it. Time it!
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	 */
 
-	/* use sprites; triangle strips, two to form a square, vertex buffer,
+	/* Use sprites; triangle strips, two to form a square, vertex buffer,
 	 [-0.5, 0.5 : -0.5, 0.5] */
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_geom);
 
-	/* fixme: don't use painters' algorithm; stencil test! */
+	/* @fixme Don't use painters' algorithm; stencil test! */
 
 	/* background (desktop):
 	 turn off transperency
@@ -587,11 +572,6 @@ static void display(void) {
 	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
 	SpritesInfo();
 
-	/* Reset texture for next frame. */
-	old_texture = 0;
-
-	if(draw_is_print_sprites) draw_is_print_sprites = 0;
-
 #if 0
 	/* overlay hud */
 	if(shield_tex && (player = GameGetPlayer())) {
@@ -624,7 +604,7 @@ static void resize(int width, int height) {
 	int w_tex, h_tex;
 	float w_w_tex, h_h_tex;
 
-	/*debug("resize: %dx%d.\n", width, height);*/
+	/*fprintf(stderr, "resize: %dx%d.\n", width, height);*/
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
 	camera_extent.x = width / 2.0f, camera_extent.y = height / 2.0f; /* global*/
@@ -634,7 +614,7 @@ static void resize(int width, int height) {
 	glBindTexture(GL_TEXTURE_2D, background_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);
-	/*debug("w %d h %d\n", w_tex, h_tex);*/
+	/*fprintf(stderr, "w %d h %d\n", w_tex, h_tex);*/
 	w_w_tex = (float)width  / w_tex;
 	h_h_tex = (float)height / h_tex;
 

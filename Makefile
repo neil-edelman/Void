@@ -1,8 +1,8 @@
 # Makefile 1.1 (GNU Make 3.81; MacOSX gcc 4.2.1; MacOSX MinGW 4.3.0)
 
 PROJ  := Void
-VA    := 3
-VB    := 3
+VA    := 2017
+VB    := 12
 
 MAKE  := make
 MKDIR := mkdir -p
@@ -29,7 +29,7 @@ ICON := icon.ico
 
 # files in bdir (RSRC is Windows icon, made programmatically)
 RSRC  := icon.rsrc
-INST  := $(PROJ)-$(VA)_$(VB)
+INST  := $(PROJ)_$(VA)-$(VB)
 
 MSVC := build/msvc2013
 
@@ -270,6 +270,6 @@ setup: default icon
 	# . . . setup on a Mac.
 	-@$(MKDIR) $(bin)/$(INST)
 	$(CP) $(bin)/$(PROJ) readme.txt gpl.txt copying.txt $(bin)/$(INST)
-	$(RM) $(bin)/$(INST)-MacOSX.dmg
-	hdiutil create $(bin)/$(INST)-MacOSX.dmg -volname "$(PROJ) $(VA).$(VB)" -srcfolder $(bin)/$(INST)
+	$(RM) $(bin)/$(INST)_MacOSX.dmg
+	hdiutil create $(bin)/$(INST)-MacOSX.dmg -volname "$(PROJ) $(VA)-$(VB)" -srcfolder $(bin)/$(INST)
 	$(RMDIR) $(bin)/$(INST)

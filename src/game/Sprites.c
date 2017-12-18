@@ -239,6 +239,13 @@ static void sprite_moved(struct Sprite *const this) {
 	SpriteListPush(&sprites->bins[bin].sprites, this);
 }
 
+/** Gets the player's ship. */
+static struct Ship *get_player(void) {
+	assert(sprites);
+	if(!sprites->player.is_ship) return 0;
+	return ShipPoolGetElement(sprites->ships, sprites->player.ship_index);
+}
+
 /*********** Define virtual functions. ***********/
 
 typedef float (*SpriteFloatAccessor)(const struct Sprite *const);
@@ -327,7 +334,6 @@ static int sprite_update(struct Sprite *const this) {
 	assert(this);
 	return this->vt->update(this);
 }
-static struct Ship *get_player(void);
 /* Includes {ship_update*} Human/AI. */
 #include "SpritesAi.h"
 /** Does nothing; just debris.
@@ -409,7 +415,6 @@ static void sprite_put_damage(struct Sprite *const this, const float damage) {
 }
 /** @implements <Ship,Float>Predicate */
 static void ship_put_damage(struct Ship *const this, const float damage) {
-	printf("Hit!\n");
 	this->hit.x -= damage;
 	if(this->hit.x <= 0.0f) sprite_delete(&this->sprite.data);
 	if(this->hit.x > this->hit.y) this->hit.x = this->hit.y; /* Full. */
@@ -894,13 +899,6 @@ static void timestep_bin(const unsigned idx) {
 	SpriteListForEach(&sprites->bins[idx].sprites, &timestep);
 	/* Collisions are consumed, but not erased; erase them. */
 	CollisionStackClear(sprites->collisions);
-}
-
-/** Gets the player's ship. */
-static struct Ship *get_player(void) {
-	assert(sprites);
-	if(!sprites->player.is_ship) return 0;
-	return ShipPoolGetElement(sprites->ships, sprites->player.ship_index);
 }
 
 /* This is where \see{collide_bin} is located, but lots of helper functions. */

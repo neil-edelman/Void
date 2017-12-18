@@ -22,14 +22,15 @@ specimen, sample, instance, occurrence, manifestation, embodiment, epitome, repr
 
 Bug List
 --------
--Gate travel is wonky.
--Re-do recharge.
--Have sprite lists for asteroid breakup.
+
+Gate travel is wonky again.
 
 Features
 --------
 
 relies on 1997 technology
+
+Have sprite lists for asteroid breakup.
 
 circle bounding -> multiple circle (AI could decide?) gartner1999fast esa99_final
 

@@ -116,22 +116,22 @@ Earth
 ShipClass
 Fox
 Fox
-50
-520
-1024
-50
-0.0001
-90
+50 # t
+520 # F
+1000 # mS
+50 # m/s
+0.0001 # m/s^2
+90 # \deg/s
 lazer
 ShipClass
 Blob
 Blob
-20
-60
-16384
-50
-0.0001
-30
+200 # t
+60 # F
+500 # mS
+50 # \deg/s
+0.0001 # m/s^2
+30 # \deg/s
 acid
 # Specimen name, Alignment align, ShipClass ship1, ship2, ship3, ship4
 Specimen

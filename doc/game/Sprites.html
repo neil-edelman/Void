@@ -93,9 +93,10 @@ Define abstract <em>Sprite</em>.
 <pre><b>struct Ship</b> {
 	struct SpriteListNode sprite;
 	struct ShipVt *vt;
-	float mass;
-	struct Vec2f hit;
-	float ms_recharge, max_speed2, acceleration, turn;
+	float mass; /* T */
+	struct Vec2f hit; /* F */
+	float recharge /* mS */, max_speed2 /* (m/ms)^2 */,
+		acceleration /* m/ms^2 */, turn /* radians/ms */;
 	char name[16];
 	const struct AutoWmdType *wmd;
 	unsigned ms_recharge_wmd;

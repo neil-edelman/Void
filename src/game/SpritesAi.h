@@ -52,20 +52,19 @@ static void ship_input(struct Ship *const this, const int ms_turning,
 		this->ms_recharge_wmd = TimerGetGameTime() + this->wmd->ms_recharge;
 	}
 }
+/** Recharge on frame. */
+static void ship_recharge(struct Ship *const this) {
+	assert(sprites && this);
+	if(this->hit.x >= this->hit.y) return;
+	this->hit.x += this->recharge * sprites->dt_ms;
+	if(this->hit.x > this->hit.y) this->hit.x = this->hit.y;
+}
 /** @implements <Ship>Predicate */
 static int ship_update_human(struct Ship *const this) {
 	ship_input(this, -PollGetRight(), PollGetUp(), PollGetShoot());
+	ship_recharge(this);
 	return 1;
 }
-
-#if 0
-/** @implements <Ship>Predicate */
-static int ship_update_ai(struct Ship *const this) {
-	assert(this);
-	this->sprite.data.v.theta = 0.0002f;
-	return 1;
-}
-#else
 /** @implements <Ship>Predicate */
 static int ship_update_ai(struct Ship *const this) {
 	const struct Ship *const p = get_player();
@@ -97,6 +96,6 @@ static int ship_update_ai(struct Ship *const this) {
 		ms_acceleration = ai_speed;
 	}
 	ship_input(this, ms_turning, ms_acceleration, ms_shoot);
+	ship_recharge(this);
 	return 1;
 }
-#endif

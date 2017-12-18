@@ -14,12 +14,12 @@ int y
 ShipClass
 string name
 Sprite sprite
-float mass		# t (ie Mg)
-int shield		# fixme: MJ?
-int ms_recharge		# ms
-int speed		# px/s \/ fixme: t/s^2
+int mass		# t (ie Mg)
+int shield		# F
+int recharge		# mS (ie 1/k\Omega)
+int speed		# m/s (ie pixel/s) # m/s^2
 float acceleration
-int turn		# fixme: deg/s, now it's rad/ms?
+int turn		# \deg/s
 WmdType weapon
 ~
 Gate

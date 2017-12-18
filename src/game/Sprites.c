@@ -85,9 +85,10 @@ struct ShipVt;
 struct Ship {
 	struct SpriteListNode sprite;
 	struct ShipVt *vt;
-	float mass;
-	struct Vec2f hit;
-	float ms_recharge, max_speed2, acceleration, turn;
+	float mass; /* T */
+	struct Vec2f hit; /* F */
+	float recharge /* mS */, max_speed2 /* (m/ms)^2 */,
+		acceleration /* m/ms^2 */, turn /* radians/ms */;
 	char name[16];
 	const struct AutoWmdType *wmd;
 	unsigned ms_recharge_wmd;
@@ -422,7 +423,8 @@ static void ship_put_damage(struct Ship *const this, const float damage) {
 /** @implements <Debris,Float>Predicate */
 static void debris_put_damage(struct Debris *const this, const float damage) {
 	this->energy += damage;
-	if(this->energy > this->mass * 5.0f) {
+	/* @fixme Arbitrary; depends on composition. */
+	if(this->energy > this->mass * mass_damage) {
 		/* @fixme This is not how explosions work. */
 		const struct AutoDebris *small = AutoDebrisSearch("SmallAsteroid");
 		struct Debris *d;
@@ -730,12 +732,16 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 		ShipPoolGetError(sprites->ships)); return 0; }
 	sprite_filler(&this->sprite.data, vt, class->sprite, x);
 	this->mass = class->mass;
-	this->hit.x = this->hit.y = class->shield;
-	this->ms_recharge = class->ms_recharge;
+	this->hit.x = this->hit.y = class->shield; /* F */
+	/* (1/1,000,000)F/ms = (1F/1000mF)(s/1000ms)mF/s = mS */
+	assert(class->recharge >= 0);
+	this->recharge = class->recharge * 0.000001f;
+	/* @fixme m^2/s^2 = m/s */
 	this->max_speed2 = class->speed * class->speed;
+	/* @fixme */
 	this->acceleration = class->acceleration;
-	this->turn = class->turn /* \deg/s */
-		* 0.001f /* s/ms */ * M_2PI_F / 360.0f /* \rad/\deg */;
+	/* 2\Pi/(1000*360)\rad/ms = (1s/1000ms)(2\Pi\rad/360\deg)\deg/s */
+	this->turn = class->turn * 0.001f * M_2PI_F / 360.0f;
 	Orcish(this->name, sizeof this->name);
 	this->wmd = class->weapon;
 	this->ms_recharge_wmd = 0;

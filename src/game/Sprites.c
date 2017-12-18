@@ -101,7 +101,7 @@ struct Ship {
 /** Define {DebrisPool} and {DebrisPoolNode}, a subclass of {Sprite}. */
 struct Debris {
 	struct SpriteListNode sprite;
-	float mass;
+	float mass, energy;
 };
 #define POOL_NAME Debris
 #define POOL_TYPE struct Debris
@@ -229,6 +229,15 @@ static struct Sprites {
 
 /* Include Light functions. */
 #include "SpritesLight.h"
+
+/** Update the bins when the {this} moves. */
+static void sprite_moved(struct Sprite *const this) {
+	const unsigned bin = LayerGetOrtho(sprites->layer, &this->x);
+	if(bin == this->bin) return;
+	SpriteListRemove(&sprites->bins[this->bin].sprites, this);
+	this->bin = bin;
+	SpriteListPush(&sprites->bins[bin].sprites, this);
+}
 
 /*********** Define virtual functions. ***********/
 
@@ -407,8 +416,30 @@ static void ship_put_damage(struct Ship *const this, const float damage) {
 }
 /** @implements <Debris,Float>Predicate */
 static void debris_put_damage(struct Debris *const this, const float damage) {
-	/* fixme */
-	if(damage > 4.0f) sprite_delete(&this->sprite.data);
+	this->energy += damage;
+	if(this->energy > this->mass * 5.0f) {
+		/* @fixme This is not real. */
+		const struct AutoDebris *small = AutoDebrisSearch("SmallAsteroid");
+		struct Debris *d;
+		struct Ortho3f v;
+		int no, base_omega;
+		float rem;
+		assert(small);
+		no = this->mass / small->mass - 1;
+		rem = small->mass * no - this->mass;
+		base_omega = v.theta;
+		while(no--) {
+			d = SpritesDebris(small, &this->sprite.data.x);
+			ortho3f_assign(&v, &this->sprite.data.v);
+			{
+				v.x += random_pm_max(0.05f);
+				v.y += random_pm_max(0.05f);
+				v.theta += random_pm_max(0.002f);
+			}
+			SpriteSetVelocity(&d->sprite.data, &v);
+		}
+		sprite_delete(&this->sprite.data);
+	}
 }
 /** Just dies.
  @implements <Wmd,Float>Predicate */
@@ -717,11 +748,11 @@ struct Debris *SpritesDebris(const struct AutoDebris *const class,
 	struct Debris *this;
 	if(!sprites || !class) return 0;
 	assert(class->sprite && class->sprite->image && class->sprite->normals);
-	if(!(this = DebrisPoolNew(sprites->debris)))
-		{ fprintf(stderr, "SpriteDebris: %s.\n",
-		DebrisPoolGetError(sprites->debris)); return 0; }
+	if(!(this = DebrisPoolNew(sprites->debris))) { fprintf(stderr,
+		"SpriteDebris: %s.\n", DebrisPoolGetError(sprites->debris)); return 0; }
 	sprite_filler(&this->sprite.data, &debris_vt, class->sprite, x);
 	this->mass = class->mass;
+	this->energy = 0.0f;
 	return this;
 }
 
@@ -835,7 +866,6 @@ static void extrapolate_bin(const unsigned idx) {
  @implements <Sprite>Action */
 static void timestep(struct Sprite *const this) {
 	const float t = sprites->dt_ms;
-	unsigned bin;
 	assert(sprites && this);
 	/* Velocity. */
 	if(this->collision) {
@@ -853,15 +883,7 @@ static void timestep(struct Sprite *const this) {
 	/* Angular velocity -- this is {\omega}. */
 	this->x.theta += this->v.theta * t;
 	branch_cut_pi_pi(&this->x.theta);
-	bin = LayerGetOrtho(sprites->layer, &this->x);
-	/* This happens when the sprite wanders out of the bin. */
-	if(bin != this->bin) {
-		/*char a[12]; this->vt->to_string(this, &a); printf("Sprite %s has "
-			"transferred bins %u -> %u.\n", a, this->bin, bin);*/
-		SpriteListRemove(&sprites->bins[this->bin].sprites, this);
-		this->bin = bin;
-		SpriteListPush(&sprites->bins[bin].sprites, this);
-	}
+	sprite_moved(this);
 }
 /** Called in \see{SpritesUpdate}.
  @implements <Bin>Action */
@@ -982,6 +1004,7 @@ const struct Ortho3f *SpriteGetVelocity(const struct Sprite *const this) {
 void SpriteSetPosition(struct Sprite *const this,const struct Ortho3f *const x){
 	if(!this || !x) return;
 	ortho3f_assign(&this->x, x);
+	sprite_moved(this);
 }
 /** Modifies {this}' velocity. */
 void SpriteSetVelocity(struct Sprite *const this,const struct Ortho3f *const v){

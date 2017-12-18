@@ -25,6 +25,8 @@ Bug List
 
 Gate travel is wonky again.
 
+Random (only in Jupiter) sprites expanding? check current_tex
+
 Features
 --------
 

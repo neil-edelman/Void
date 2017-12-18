@@ -418,23 +418,25 @@ static void ship_put_damage(struct Ship *const this, const float damage) {
 static void debris_put_damage(struct Debris *const this, const float damage) {
 	this->energy += damage;
 	if(this->energy > this->mass * 5.0f) {
-		/* @fixme This is not real. */
+		/* @fixme This is not how explosions work. */
 		const struct AutoDebris *small = AutoDebrisSearch("SmallAsteroid");
 		struct Debris *d;
-		struct Ortho3f v;
-		int no, base_omega;
-		float rem;
+		struct Ortho3f v, perturb, error;
+		int no;
 		assert(small);
 		no = this->mass / small->mass - 1;
-		rem = small->mass * no - this->mass;
-		base_omega = v.theta;
+		ortho3f_init(&error);
 		while(no--) {
 			d = SpritesDebris(small, &this->sprite.data.x);
 			ortho3f_assign(&v, &this->sprite.data.v);
-			{
-				v.x += random_pm_max(0.05f);
-				v.y += random_pm_max(0.05f);
-				v.theta += random_pm_max(0.002f);
+			if(!no) {
+				ortho3f_sub(&v, &v, &error);
+			} else {
+				perturb.x = random_pm_max(0.05f);
+				perturb.y = random_pm_max(0.05f);
+				perturb.theta = random_pm_max(0.002f);
+				ortho3f_sum(&v, &perturb);
+				ortho3f_sum(&error, &perturb);
 			}
 			SpriteSetVelocity(&d->sprite.data, &v);
 		}

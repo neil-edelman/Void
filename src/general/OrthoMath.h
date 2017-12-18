@@ -55,8 +55,17 @@ static void ortho3f_assign(struct Ortho3f *const this,
 	this->y     = that->y;
 	this->theta = that->theta;
 }
+/** {this} += {a}. */
+static void ortho3f_sum(struct Ortho3f *const this,
+	const struct Ortho3f *const a) {
+	assert(this && a);
+	this->x     += a->x;
+	this->y     += a->y;
+	this->theta += a->theta;
+}
 /** {this} = {a} - {b}. */
-static void ortho3f_sub(struct Ortho3f *const this, const struct Ortho3f *const a, const struct Ortho3f *const b) {
+static void ortho3f_sub(struct Ortho3f *const this,
+	const struct Ortho3f *const a, const struct Ortho3f *const b) {
 	assert(this && a && b);
 	this->x     = a->x - b->x;
 	this->y     = a->y - b->y;
@@ -117,6 +126,7 @@ static void orthomath_unused(void) {
 	random_pm_max(0);
 	ortho3f_init(0);
 	ortho3f_assign(0, 0);
+	ortho3f_sum(0, 0);
 	ortho3f_sub(0, 0, 0);
 	rectangle4i_init(0);
 	rectangle4f_init(0);

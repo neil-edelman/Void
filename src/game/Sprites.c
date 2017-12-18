@@ -429,12 +429,13 @@ static void debris_put_damage(struct Debris *const this, const float damage) {
 		struct Ortho3f v, perturb, error;
 		int no;
 		assert(small);
-		no = this->mass / small->mass - 1;
+		no = this->mass / small->mass;
+		if(no <= 1) no = 0;
 		ortho3f_init(&error);
-		while(no--) {
+		while(no) {
 			d = SpritesDebris(small, &this->sprite.data.x);
 			ortho3f_assign(&v, &this->sprite.data.v);
-			if(!no) {
+			if(!--no) {
 				ortho3f_sub(&v, &v, &error);
 			} else {
 				perturb.x = random_pm_max(0.05f);

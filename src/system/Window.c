@@ -8,121 +8,114 @@
  @version	3.0, 2015-05
  @since		3.0, 2015-05 */
 
-#include "../Print.h"
+#include <stdio.h>	/* *printf */
 #include <time.h>   /* for errors: can't rely on external libraries */
 #include <stdlib.h> /* exit */
+#include "../general/OrthoMath.h" /* Vec2i */
 #include "Glew.h"
 #include "Window.h"
 
-static const int    no_fails = 64;
-static const double forget_s = 20.0;
+static const unsigned max_gl_fails = 64;
+static const double forget_errors = 20.0; /* s */
 static const int    warn_texture_size = 1024;
 
-/* if is started, we don't and can't start it again */
-static int    is_started;
-static time_t last_error;
+static struct Window {
+	int is_started;
+	struct Vec2i size, position;
+	int is_full;
+	time_t last_error;
+	unsigned no_errors;
+} window;
 
 /** Gets the window started. There is no destructor.
- @param title	The title of the window (can be null.)
- @param argc
- @param argv	main() program arguments; passed to glutInit().
- @return		Whether the graphics library is ready. */
+ @param title The title of the window (can be null.)
+ @param argc, argv: {main} program arguments; passed to glutInit().
+ @return Whether the graphics library is ready and the window is started. */
 int Window(const char *title, int argc, char **argv) {
 	GLint max_tex;
-
-	if(is_started) return -1;
-
-	/* we keep track of how many errors per time; too many, we exit */
-	time(&last_error);
-
-	/* glut */
-	debug("Window: GLUT initialising.\n");
+	/* {is_started} serves as null. Initialise the {window}. This can only be
+	 done once. */
+	if(window.is_started) return 1;
+	window.size.x = 600, window.size.y = 400;
+	/* We keep track of how many errors per time; too many, we exit. */
+	if(time(&window.last_error) == (time_t)-1)
+		return fprintf(stderr, "Window: time function not working.\n"), 0;
+	/* Glut. */
+	fprintf(stderr, "Window: GLUT initialising.\n");
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE);
-	glutInitWindowSize(600, 400);
-	debug("Window: starting window.\n");
+	glutInitWindowSize(window.size.x, window.size.y);
 	glutCreateWindow(title ? title : "Untitled");
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex);
-	info("GLSL: vendor %s; version %s; renderer %s; shading language version "
-		"%s; combined texture image units %d; maximum texture size %d.\n",
-		glGetString(GL_VENDOR), glGetString(GL_VERSION),
+	fprintf(stderr, "Window: GLSL: vendor %s; version %s; renderer %s; shading "
+		"language version %s; combined texture image units %d; maximum texture "
+		"size %d.\n", glGetString(GL_VENDOR), glGetString(GL_VERSION),
 		glGetString(GL_RENDERER), glGetString(GL_SHADING_LANGUAGE_VERSION),
 		GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, max_tex);
 	if(max_tex < warn_texture_size)
-		warn("Window: maximum texture size is too small, %d/%d; warning! "
-			"bad! (supposed to be 8 or larger.)\n", max_tex, warn_texture_size);
+		fprintf(stderr, "Window: maximum texture size is probably too small, "
+		"%d/%d.\n", max_tex, warn_texture_size);
 	/*glutMouseFunc(&mouse);
 	 glutIdleFunc(0); */
-
-	/* load OpenGl2+ (AFTER THE WINDOW!) for those that need it */
+	/* Load OpenGl2+ after the window. */
 	if(!Glew()) return 0;
-
-	is_started = -1;
-	return -1;
+	window.is_started = 1;
+	return 1;
 }
 
-/** @return		is_started accessor. */
+/** @return Whether the window is active. */
 int WindowStarted(void) {
-	return is_started;
+	return window.is_started;
 }
 
 /** Begins animation with the hooks that have been placed in the window. Does
  not return! */
 void WindowGo(void) {
-	if(!is_started) return;
+	if(!window.is_started) return;
 	glutMainLoop();
 }
 
 /** Checks for all OpenGL errors and prints them to stderr.
- @param function	The calling function, for prepending to stderr.
- @return			Returns true if any errors (not very useful.) */
+ @param function: The calling function, for prepending to stderr.
+ @return Returns true if any errors, (not very useful.) */
 int WindowIsGlError(const char *function) {
-	static int no_errs;
 	GLenum err;
-	int ohoh = 0;
-
-	if(!is_started) return 0;
+	int is_some_error = 0;
+	if(!window.is_started) return 0;
 	while((err = glGetError()) != GL_NO_ERROR) {
 		time_t now;
 		time(&now);
-		/* reset the kill errors */
-		if(difftime(now, last_error) > forget_s) {
-			no_errs = 0;
-			time(&last_error);
-		}
-		warn("WindowIsGlError: OpenGL error caught in %s: %s.\n", function,
-			gluErrorString(err));
-		if(++no_errs > no_fails) {
-			warn("Window:IsGLError: too many errors! :[\n");
+		/* Reset errors after a time. */
+		if(difftime(now, window.last_error) > forget_errors)
+			window.no_errors = 0, time(&window.last_error);
+		fprintf(stderr, "WindowIsGlError: OpenGL error caught in %s: %s.\n",
+			function, gluErrorString(err));
+		if(++window.no_errors > max_gl_fails) {
+			fprintf(stderr, "Window:IsGLError: too many errors! :[\n");
 			exit(EXIT_FAILURE);
 		}
-		ohoh = -1;
+		is_some_error = 1;
 	}
-	return ohoh;
+	return is_some_error;
 }
 
-/** toggle fullscreen */
+/** Toggle fullscreen. */
 void WindowToggleFullScreen(void) {
-	static int x_size = 600, y_size = 400, x_pos = 0, y_pos = 0;
-	static int full = 0;
-
-	if(!full) {
-		debug("WindowToggleFullScreen: entering fullscreen.\n");
-		full = -1;
-		x_size = glutGet(GLUT_WINDOW_WIDTH);
-		y_size = glutGet(GLUT_WINDOW_HEIGHT);
-		x_pos  = glutGet(GLUT_WINDOW_X);
-		y_pos  = glutGet(GLUT_WINDOW_Y);
-		glutFullScreen();
+	if(!window.is_started) return;
+	if(!window.is_full) {
+		fprintf(stderr, "WindowToggleFullScreen: entering fullscreen.\n");
+		window.size.x     = glutGet(GLUT_WINDOW_WIDTH);
+		window.size.y     = glutGet(GLUT_WINDOW_HEIGHT);
+		window.position.x = glutGet(GLUT_WINDOW_X);
+		window.position.y = glutGet(GLUT_WINDOW_Y);
+		glutFullScreen(), window.is_full = 1;
 		glutSetCursor(GLUT_CURSOR_NONE);
 	} else {
-		debug("WindowToggleFullScreen: exiting fullscreen.\n");
-		full = 0;
-		glutReshapeWindow(x_size, y_size);
-		glutPositionWindow(x_pos, y_pos);
+		fprintf(stderr, "WindowToggleFullScreen: exiting fullscreen.\n");
+		glutReshapeWindow(window.size.x, window.size.y), window.is_full = 0;
+		glutPositionWindow(window.position.x, window.position.y);
 		glutSetCursor(GLUT_CURSOR_INHERIT);
 	}
-
 	WindowIsGlError("WindowToggleFullScreen");
 }
 
@@ -146,13 +139,12 @@ void OpenPrint(const char *fmt, ...) {
 	va_start(ap, fmt);
 	vsnprintf(open->console.buffer, console_buffer_size, fmt, ap);
 	va_end(ap);
-	debug("OpenPrint: in Window, console: \"%s\" (%d.)\n", open->console.buffer, console_buffer_size);
+	fprintf(stderr, "OpenPrint: in Window, console: \"%s\" (%d.)\n", open->console.buffer, console_buffer_size);
 }
 
 /** called by display every frame */
 static void rasterise_text(void) {
 	char *a;
-	
 	glPushAttrib(GL_TRANSFORM_BIT | GL_VIEWPORT_BIT);
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -160,13 +152,11 @@ static void rasterise_text(void) {
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	glTranslatef(-1, 0.9, 0);
+	glTranslatef(-1.0f, 0.9f, 0.0f);
 	/*glViewport(0, 0, open->screen.dim.x, open->screen.dim.y);*/
-	glColor4f(0, 1, 0, 0.7);
+	glColor4f(0.0f, 1.0f, 0.0f, 0.7f);
 	glRasterPos2i(0, 0);
-	
 	/* WTF!!!! it's drawing it in the bottom?? fuck I can't take this anymore */
-	
 	/* draw overlay */
 	/*glMatrixMode(GL_MODELVIEW);
 	 glPushMatrix();
@@ -182,12 +172,10 @@ static void rasterise_text(void) {
 	}
 	glColor4f(1, 1, 1, 1);
 	/*glPopMatrix();*/
-	
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glPopAttrib();
-	
 	isGLError("Open::Console::rasterise_text");
 }
 #endif

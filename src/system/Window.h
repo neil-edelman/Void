@@ -1,3 +1,5 @@
+struct Window;
+
 int Window(const char *title, int argc, char **argv);
 int WindowStarted(void);
 void WindowGo(void);

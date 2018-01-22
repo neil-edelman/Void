@@ -50,9 +50,9 @@ This is an idempotent class dealing with the interface to OpenGL.
 	<dt>author</dt>
 	<dd>Neil</dd>
 	<dt>version</dt>
-	<dd>3.0, 2015-05</dd>
+	<dd>2017-12 Added font.</dd>
 	<dt>since</dt>
-	<dd>3.0, 2015-05</dd>
+	<dd>2015-05</dd>
 </dl>
 
 
@@ -90,8 +90,13 @@ This is an idempotent class dealing with the interface to OpenGL.
 </tr>
 <tr>
 	<td>void</td>
-	<td><a href = "#OpenPrint">OpenPrint</a></td>
+	<td><a href = "#WindowPrint">WindowPrint</a></td>
 	<td>const char *fmt, ...</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#WindowRasteriseText">WindowRasteriseText</a></td>
+	<td>void</td>
 </tr>
 </table>
 
@@ -105,14 +110,12 @@ This is an idempotent class dealing with the interface to OpenGL.
 Gets the window started. There is no destructor.
 </p>
 <dl>
-	<dt>parameter: title</dt>
-	<dd>The title of the window (can be null.)</dd>
 	<dt>parameter</dt>
-	<dd>argc</dd>
-	<dt>parameter: argv</dt>
-	<dd>main() program arguments; passed to glutInit().</dd>
+	<dd>title The title of the window (can be null.)</dd>
+	<dt>parameter: argc, argv</dt>
+	<dd><em>main</em> program arguments; passed to glutInit().</dd>
 	<dt>return</dt>
-	<dd>Whether the graphics library is ready.</dd>
+	<dd>Whether the graphics library is ready and the window is started.</dd>
 </dl>
 </div>
 
@@ -121,7 +124,7 @@ Gets the window started. There is no destructor.
 <pre>int <b>WindowStarted</b> (void)</pre>
 <dl>
 	<dt>return</dt>
-	<dd>is_started accessor.</dd>
+	<dd>Whether the window is active.</dd>
 </dl>
 </div>
 
@@ -146,7 +149,7 @@ Checks for all OpenGL errors and prints them to stderr.
 	<dt>parameter: function</dt>
 	<dd>The calling function, for prepending to stderr.</dd>
 	<dt>return</dt>
-	<dd>Returns true if any errors (not very useful.)</dd>
+	<dd>Returns true if any errors, (not very useful.)</dd>
 </dl>
 </div>
 
@@ -154,19 +157,28 @@ Checks for all OpenGL errors and prints them to stderr.
 <h3>WindowToggleFullScreen</h3>
 <pre>void <b>WindowToggleFullScreen</b> (void)</pre>
 <p>
-toggle fullscreen
+Toggle fullscreen.
 </p>
 <dl>
 </dl>
 </div>
 
-<div><a name = "OpenPrint"><!-- --></a>
-<h3>OpenPrint</h3>
-<pre>void <b>OpenPrint</b> (const char *fmt, ...)</pre>
+<div><a name = "WindowPrint"><!-- --></a>
+<h3>WindowPrint</h3>
+<pre>void <b>WindowPrint</b> (const char *fmt, ...)</pre>
 <p>
-printf for the window
+Printf for the window.
 </p>
 <dl>
+</dl>
+</div>
+
+<div><a name = "WindowRasteriseText"><!-- --></a>
+<h3>WindowRasteriseText</h3>
+<pre>void <b>WindowRasteriseText</b> (void)</pre>
+<dl>
+	<dt>fixme</dt>
+	<dd>Called by display every frame.</dd>
 </dl>
 </div>
 

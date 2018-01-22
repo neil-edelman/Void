@@ -5,3 +5,5 @@ int WindowStarted(void);
 void WindowGo(void);
 int WindowIsGlError(const char *function);
 void WindowToggleFullScreen(void);
+void WindowPrint(const char *fmt, ...);
+void WindowRasteriseText(void);

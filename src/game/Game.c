@@ -103,6 +103,7 @@ int Game(void) {
 		debug("Game: couldn't find required game elements.\n");
 		return 0;
 	};
+	WindowPrint("Window %d!", 42);
 
 	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
 	KeyRegister(27,   &quit);

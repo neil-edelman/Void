@@ -92,12 +92,14 @@ static const struct {
 /* private prototypes */
 static int texture(struct AutoImage *image); /* decompresses */
 static int light_compute_texture(void); /* creates image */
+/*static int text_compute_texture(void);*/
 static void display(void); /* callback for display */
 static void resize(int width, int height); /* callback  */
 
 /* globals */
 static GLuint vbo_geom, light_tex, background_tex, shield_tex;
 static struct Vec2f camera, camera_extent;
+/*static int text_name;*/
 
 /** Gets all the graphics stuff started.
  @return All good to draw? */
@@ -111,6 +113,8 @@ int Draw(void) {
 	if(is_started) return -1;
 
 	if(!WindowStarted())return fprintf(stderr,"Draw: window not started.\n"), 0;
+
+	/*text_name = text_compute_texture();*/
 
 	glutDisplayFunc(&display);
 	glutReshapeFunc(&resize);
@@ -425,6 +429,33 @@ static int light_compute_texture(void) {
 	return name;
 }
 
+#if 0
+/** Doesn't work. */
+static int text_compute_texture(void) {
+	GLuint framebuffer_name = 0, rendered_texture;
+	GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0 };
+	/* http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/ */
+	glGenFramebuffers(1, &framebuffer_name);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_name);
+	glGenTextures(1, &rendered_texture);
+	glBindTexture(GL_TEXTURE_2D, rendered_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 100, 100, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rendered_texture, 0);
+	glDrawBuffers(sizeof draw_buffers / sizeof *draw_buffers, draw_buffers);
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		return 0;
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_name);
+	glViewport(0, 0, 100, 100);
+	glUseProgram(auto_Info_shader.compiled);
+	glUniform2f(auto_Info_shader.camera, 0.0f, 0.0f);
+	glutBitmapCharacter(GLUT_BITMAP_8_BY_13, 'X');
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return framebuffer_name;
+}
+#endif
+
 
 
 /* This is the shader texture display. Each one goes with a certian shader, so
@@ -552,12 +583,12 @@ static void display(void) {
 	}
 	SpritesDraw();
 
-	/* Display info on top. */
+	/* Display info on top without lighting. */
 	glUseProgram(auto_Info_shader.compiled);
 	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
 	SpritesInfo();
 
-	/* Overlay hud. */
+	/* Overlay hud. @fixme */
 	if(shield_tex) {
 		struct Ship *player;
 		const struct Ortho3f *x;
@@ -574,6 +605,16 @@ static void display(void) {
 			glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
 		}
 	}
+
+	/* @fixme */
+	WindowRasteriseText();
+	/* We want to do this:
+	 glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
+	glBindTexture(GL_TEXTURE_2D, text_name);
+	current_texture = text_name;
+	glUniform1f(auto_Info_shader.size, 100);
+	glUniform2f(auto_Info_shader.object, 0.0f, 0.0f);
+	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);*/
 
 	/* Disable, swap. */
 	glUseProgram(0);

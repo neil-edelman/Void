@@ -5,19 +5,20 @@
 
  @title		Window
  @author	Neil
- @version	3.0, 2015-05
- @since		3.0, 2015-05 */
+ @version	2017-12 Added font.
+ @since		2015-05 */
 
 #include <stdio.h>	/* *printf */
 #include <time.h>   /* for errors: can't rely on external libraries */
 #include <stdlib.h> /* exit */
+#include <stdarg.h>	/* va_* */
 #include "../general/OrthoMath.h" /* Vec2i */
 #include "Glew.h"
 #include "Window.h"
 
 static const unsigned max_gl_fails = 64;
-static const double forget_errors = 20.0; /* s */
-static const int    warn_texture_size = 1024;
+static const double forget_errors = 10.0; /* s */
+static const int warn_texture_size = 1024;
 
 static struct Window {
 	int is_started;
@@ -25,7 +26,11 @@ static struct Window {
 	int is_full;
 	time_t last_error;
 	unsigned no_errors;
+	unsigned console_start;
+	char console[4][80];
 } window;
+
+static const size_t console_size = sizeof ((struct Window *)0)->console[0];
 
 /** Gets the window started. There is no destructor.
  @param title The title of the window (can be null.)
@@ -119,32 +124,24 @@ void WindowToggleFullScreen(void) {
 	WindowIsGlError("WindowToggleFullScreen");
 }
 
-#if 0
-
-/** subclass Console */
-
-static void Console(struct Console *console) {
-	console->buffer[0] = 'f';
-	console->buffer[1] = 'o';
-	console->buffer[2] = 'o';
-	console->buffer[3] = '\0';
-}
-
-/** printf for the window */
-void OpenPrint(const char *fmt, ...) {
+/** Printf for the window. */
+void WindowPrint(const char *fmt, ...) {
 	va_list ap;
-	
-	if(!fmt || !open) return;
-	/* print the chars into the buffer */
+	if(!fmt || !window.is_started) return;
+	/* Print the chars into the buffer. */
 	va_start(ap, fmt);
-	vsnprintf(open->console.buffer, console_buffer_size, fmt, ap);
+	vsnprintf(window.console[window.console_start], console_size, fmt, ap);
 	va_end(ap);
-	fprintf(stderr, "OpenPrint: in Window, console: \"%s\" (%d.)\n", open->console.buffer, console_buffer_size);
+	fprintf(stderr, "WindowPrint: \"%s\" (%lu)\n",
+		window.console[window.console_start], (long unsigned)console_size);
+	++window.console_start, window.console_start &= 3;
 }
 
-/** called by display every frame */
-static void rasterise_text(void) {
+/** @fixme Called by display every frame. */
+void WindowRasteriseText(void) {
 	char *a;
+	if(!window.is_started) return;
+
 	glPushAttrib(GL_TRANSFORM_BIT | GL_VIEWPORT_BIT);
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -153,7 +150,8 @@ static void rasterise_text(void) {
 	glPushMatrix();
 	glLoadIdentity();
 	glTranslatef(-1.0f, 0.9f, 0.0f);
-	/*glViewport(0, 0, open->screen.dim.x, open->screen.dim.y);*/
+	glViewport(0, 0, window.size.x, window.size.y);
+
 	glColor4f(0.0f, 1.0f, 0.0f, 0.7f);
 	glRasterPos2i(0, 0);
 	/* WTF!!!! it's drawing it in the bottom?? fuck I can't take this anymore */
@@ -161,21 +159,14 @@ static void rasterise_text(void) {
 	/*glMatrixMode(GL_MODELVIEW);
 	 glPushMatrix();
 	 glTranslatef(-(float)open->screen.max.x * 1.f, -(float)open->screen.max.y * 1.f, 0);*/
-	for(a = open->console.buffer; *a; a++) {
-		switch(*a) {
-			case '\n':
-				glRasterPos2i(0, -1);
-				break;
-			default:
-				glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *a);
-		}
-	}
+	for(a = window.console[0]; *a; a++)
+		glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *a);
 	glColor4f(1, 1, 1, 1);
-	/*glPopMatrix();*/
+
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glPopAttrib();
-	isGLError("Open::Console::rasterise_text");
+
+	WindowIsGlError("rasterise_text");
 }
-#endif

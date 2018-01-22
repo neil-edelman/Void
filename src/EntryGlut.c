@@ -3,18 +3,17 @@
 
  Entry point for command-line, unix-like operating systems (ie, all of them.)
 
- @title		EntryPosix
+ @title		EntryGlut
  @author	Neil
  @version	3.2, 2015-05
  @since		3.2, 2015-05
- @fixme		Have separate entry points for MacOS and Windows that are user
-			friendly. */
+ @fixme		Tl? */
 
 #include <stdlib.h> /* exit */
 #include <stdio.h>  /* fprintf */
 #include <time.h>   /* srand(clock()) */
 #include <string.h> /* strcmp */
-#include "EntryPosix.h"
+#include "EntryGlut.h"
 #include "system/Window.h"
 #include "system/Draw.h"
 #include "system/Timer.h"

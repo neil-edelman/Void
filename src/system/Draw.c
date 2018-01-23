@@ -17,8 +17,7 @@
 #include "../game/Fars.h" /* in display */
 #include "../../external/lodepng.h"  /* in texture */
 #include "../../external/nanojpeg.h" /* in texture */
-#include "../WindowGlew.h"/*"Glew.h"*/ /* all OpenGL prototypes */
-/*#include "Window.h"*/ /* in Draw */
+#include "../WindowGl.h" /* all OpenGL prototypes */
 #include "Draw.h"
 /* Auto-generated, hard coded resouce files from Vsfs2h; run "make"
  and this should be automated.

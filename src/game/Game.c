@@ -13,7 +13,7 @@
 #include <string.h> /* strcmp for bsearch */
 #include <stdio.h>  /* printf */
 #include "../../build/Auto.h"
-#include "../Window.h"
+#include "../WindowKey.h"
 #include "../Print.h"
 #include "Sprites.h"
 #include "Zone.h"

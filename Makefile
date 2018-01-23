@@ -102,10 +102,10 @@ CF    := -Wall -Wextra -Wno-format-y2k -Wstrict-prototypes \
 -Wmissing-prototypes -Wpointer-arith -Wreturn-type -Wcast-qual -Wwrite-strings \
 -Wswitch -Wshadow -Wcast-align -Wbad-function-cast -Wchar-subscripts -Winline \
 -Wnested-externs -Wredundant-decls -O3 -fasm -fomit-frame-pointer -ffast-math \
--funroll-loops -pedantic -Wfatal-errors #-ansi
+-funroll-loops -pedantic -Wfatal-errors -DSDL #-ansi
 CF_LAX:= -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math \
 -funroll-loops -pedantic -std=c99
-OF    := -framework OpenGL -framework GLUT
+OF    := -framework OpenGL -framework GLUT #-framework SDL2
 
 # user-defined variable TARGET, if TARGET is defined, include that thing
 # presumably, it overrides the stuff above with more accurate guesses

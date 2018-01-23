@@ -17,8 +17,8 @@
 #include "../game/Fars.h" /* in display */
 #include "../../external/lodepng.h"  /* in texture */
 #include "../../external/nanojpeg.h" /* in texture */
-#include "Glew.h" /* all OpenGL prototypes */
-#include "Window.h" /* in Draw */
+#include "../WindowGlew.h"/*"Glew.h"*/ /* all OpenGL prototypes */
+/*#include "Window.h"*/ /* in Draw */
 #include "Draw.h"
 /* Auto-generated, hard coded resouce files from Vsfs2h; run "make"
  and this should be automated.
@@ -111,8 +111,6 @@ int Draw(void) {
 	assert(icon_light);
 
 	if(is_started) return -1;
-
-	if(!WindowStarted())return fprintf(stderr,"Draw: window not started.\n"), 0;
 
 	/*text_name = text_compute_texture();*/
 
@@ -606,8 +604,6 @@ static void display(void) {
 		}
 	}
 
-	/* @fixme */
-	WindowRasteriseText();
 	/* We want to do this:
 	 glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
 	glBindTexture(GL_TEXTURE_2D, text_name);

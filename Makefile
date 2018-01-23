@@ -1,4 +1,4 @@
-# Makefile 1.1 (GNU Make 3.81; MacOSX gcc 4.2.1; MacOSX MinGW 4.3.0)
+# Makefile 2017-01-22 (GNU Make 3.81; MacOSX gcc 4.2.1; MacOSX MinGW 4.3.0)
 
 PROJ  := Void
 VA    := 2017
@@ -34,13 +34,10 @@ INST  := $(PROJ)_$(VA)-$(VB)
 MSVC := build/msvc2013
 
 # extra stuff we should back up
-EXTRA := $(media)/icon.rc todo.txt build/msvc2010.txt build/unix.txt \
+EXTRA := $(media)/icon.rc todo.txt \
 performance.txt tests/TimerIsTime.c tests/SortingTest.c tests/Collision.c \
 tests/Fileformat/Makefile tests/Fileformat/src/Asteroid_png.h \
-tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c \
-$(MSVC)/Void.sln $(MSVC)/Void.v12.suo $(MSVC)/Void.vcxproj \
-$(MSVC)/Void.vcxproj.filters $(MSVC)/Void.vcxproj.user \
-build/Makefile-Redhat
+tests/Fileformat/src/Pluto_jpeg.h tests/Fileformat/src/Fileformat.c
 
 # John Graham-Cumming: recursive wildcard
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) \

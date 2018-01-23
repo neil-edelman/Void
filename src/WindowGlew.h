@@ -1,13 +1,17 @@
-/* we need to go about using glew? and then glew will include win.h which is
- has a bajillon warnings */
+/* GLEW is set ourselves in the Makefile; Glew will include win.h in Windows,
+ which is has a bajillon warnings. */
 #ifdef GLEW
 #pragma warning(push, 0)
+
+/* GLEW allows OpenGL2+. */
 
 #define GL_GLEXT_PROTOTYPES /* *duh* */
 #define GLEW_STATIC         /* (of course) */
 /* http://glew.sourceforge.net/
  add include directories eg ...\glew-1.9.0\include */
 #include <GL/glew.h>
+
+/* GLUT is a simple add-on to OpenGL that does other stuff. */
 
 /* I don't exactly know what this does, but it seems to do nothing */
 #define GLUT_DISABLE_ATEXIT_HACK
@@ -18,11 +22,8 @@
 
 #pragma warning(pop)
 #else
-/* supports OpenGL 2.0 intrinsically (hopefully) */
+/* Mac-like, supports OpenGL 2.0 intrinsically? */
 
 #include <GLUT/glut.h> /* GLUT, done */
 
 #endif
-
-int Glew(void);
-void GlewGo(void);

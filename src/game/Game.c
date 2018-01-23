@@ -13,13 +13,12 @@
 #include <string.h> /* strcmp for bsearch */
 #include <stdio.h>  /* printf */
 #include "../../build/Auto.h"
+#include "../Window.h"
 #include "../Print.h"
 #include "Sprites.h"
 #include "Zone.h"
 #include "../general/Events.h"
-#include "../system/Key.h"
 #include "../system/Poll.h"
-#include "../system/Window.h"
 #include "../system/Draw.h"
 #include "../system/Timer.h" /* only for reporting framerate */
 #include "Game.h"
@@ -84,7 +83,7 @@ void Game_(void) {
 	
 	if(!is_started) return;
 	
-	debug("~Game: over.\n");
+	fprintf(stderr, "~Game: over.\n");
 	is_started = 0;
 }
 
@@ -100,15 +99,14 @@ int Game(void) {
 		|| !(game.nautilus = AutoShipClassSearch("Fox"))
 		|| !(game.scorpion = AutoShipClassSearch("Blob"))
 		|| !(game.start    = AutoSpaceZoneSearch("Earth"))) {
-		debug("Game: couldn't find required game elements.\n");
+		fprintf(stderr, "Game: couldn't find required game elements.\n");
 		return 0;
 	};
-	WindowPrint("Window %d!", 42);
 
 	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
 	KeyRegister(27,   &quit);
 	KeyRegister('p',  &pause);
-	KeyRegister(k_f1, &WindowToggleFullScreen);
+	/*KeyRegister(k_f1, &WindowToggleFullScreen);*/
 	KeyRegister('f',  &fps);
 	KeyRegister('x',  &position);
 	KeyRegister('1',  &SpritesPlotSpace);
@@ -128,7 +126,7 @@ int Game(void) {
 
 	EventsRunnable(7000, &fps);
 
-	debug("Game: on.\n");
+	fprintf(stderr, "Game: on.\n");
 	is_started = 1;
 
 	return -1;
@@ -152,10 +150,10 @@ void GameUpdate(const int dt_ms) {
 	int i;
 	
 	if(no + rocks + aliens >= cap) {
-		debug("Game: reached the limit.\n");
+		fprintf(stderr, "Game: reached the limit.\n");
 		return;
 	}
-	debug("Game: adding more sprites.\n");
+	fprintf(stderr, "Game: adding more sprites.\n");
 	for(i = 0; i < rocks; i++) {
 		asteroid = Debris(game.asteroid->image, 10.0f);
 		DebrisSetOrientation(asteroid, rnd(de_sitter), rnd(de_sitter), rnd((float)M_PI), rnd(50.0f), rnd(50.0f), rnd(1.0f));

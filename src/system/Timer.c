@@ -11,7 +11,7 @@
 
 #include <limits.h> /* MAX_INT, MIN_INT */
 #include "../Print.h"
-#include "Glew.h"
+#include "../WindowGlew.h"
 #include "Timer.h"
 #include "../game/Game.h"
 

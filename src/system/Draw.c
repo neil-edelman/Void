@@ -18,6 +18,7 @@
 #include "../../external/lodepng.h"  /* in texture */
 #include "../../external/nanojpeg.h" /* in texture */
 #include "../WindowGl.h" /* all OpenGL prototypes */
+#include "../Window.h" /* WindowIsGlError */
 #include "Draw.h"
 /* Auto-generated, hard coded resouce files from Vsfs2h; run "make"
  and this should be automated.
@@ -113,8 +114,10 @@ int Draw(void) {
 
 	/*text_name = text_compute_texture();*/
 
+#ifdef GLUT /* <-- glut */
 	glutDisplayFunc(&display);
 	glutReshapeFunc(&resize);
+#endif /* glut --> */
 
 	/* http://www.opengl.org/sdk/docs/man2/xhtml/glBlendFunc.xml */
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -613,7 +616,12 @@ static void display(void) {
 
 	/* Disable, swap. */
 	glUseProgram(0);
+#ifdef GLUT /* <-- glut */
 	glutSwapBuffers();
+#elif defined(SDL) /* glut --><-- sdl */
+#else /* sdl --><-- nothing */
+#error Define GLUT or SDL.
+#endif /* nothing --> */
 }
 
 /** Callback for glutReshapeFunc.

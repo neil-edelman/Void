@@ -41,6 +41,7 @@
 #include <SDL_opengl.h>
 #else /* glew --><-- mac? */
 #include <OpenGL/gl.h>
+#include <OpenGL/glu.h> /* gluErrorString */
 #include <SDL2/SDL.h> /* SDL_* */
 /* #include <SDL2/SDL_opengl.h> what is this? */
 #endif /* mac? --> */

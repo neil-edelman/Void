@@ -26,13 +26,23 @@ static unsigned last_time;
 static unsigned paused_time;
 static unsigned game_time;
 
+static unsigned ms_time(void) {
+#ifdef GLUT /* <-- glut */
+	return glutGet(GLUT_ELAPSED_TIME);
+#elif defined(SDL) /* glut --><-- sdl */
+	return (unsigned)SDL_GetTicks();
+#else /* sdl --><-- nothing */
+#error Define GLUT or SDL.
+#endif /* nothing --> */	
+}
+
 /* private */
 
 static void update(int value);
 
 /** This starts the Timer. */
 void TimerRun(void) {
-	const unsigned time = glutGet(GLUT_ELAPSED_TIME);
+	const unsigned time = ms_time();
 
 	if(is_running) return;
 
@@ -44,7 +54,9 @@ void TimerRun(void) {
 		"%ums game. Aiming for %ums frametime.\n", paused_time, last_time,
 		TimerGetGameTime(), frametime_ms);
 
+#ifdef GLUT /* <-- glut */
 	glutTimerFunc(frametime_ms, &update, 0);
+#endif /* glut --> */
 
 }
 
@@ -86,7 +98,7 @@ int TimerIsTime(const unsigned t) {
 /** Callback for glutTimerFunc.
  @param zero: 0 */
 static void update(int zero) {
-	const unsigned time = glutGet(GLUT_ELAPSED_TIME);
+	const unsigned time = ms_time();
 	const unsigned dt   = time - last_time;
 
 	if(!is_running) return;

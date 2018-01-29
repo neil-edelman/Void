@@ -38,7 +38,23 @@ static unsigned ms_time(void) {
 
 /* private */
 
-static void update(int value);
+#ifdef GLUT /* <-- glut */
+/** Callback for glutTimerFunc.
+ @param zero: 0 */
+static void update(int zero) {
+	const unsigned time = ms_time();
+	const unsigned dt   = time - last_time;
+	
+	if(!is_running) return;
+	last_time = time;
+	game_time = last_time - paused_time;
+	mean_frametime = (mean_frametime*persistance + dt*(1024-persistance)) >> 10;
+	glutTimerFunc(frametime_ms, &update, 0);
+	GameUpdate(dt);
+	glutPostRedisplay();
+	UNUSED(zero);
+}
+#endif /* glut --> */
 
 /** This starts the Timer. */
 void TimerRun(void) {
@@ -93,20 +109,4 @@ int TimerIsTime(const unsigned t) {
 	const int p3 = (game_time <= INT_MAX);
 	/* this is literally the worst case for optimising; p3 is generally true */
 	return (p1 && p2) || ((p2 || p1) && p3);
-}
-
-/** Callback for glutTimerFunc.
- @param zero: 0 */
-static void update(int zero) {
-	const unsigned time = ms_time();
-	const unsigned dt   = time - last_time;
-
-	if(!is_running) return;
-	last_time = time;
-	game_time = last_time - paused_time;
-	mean_frametime = (mean_frametime*persistance + dt*(1024-persistance)) >> 10;
-	glutTimerFunc(frametime_ms, &update, 0);
-	GameUpdate(dt);
-	glutPostRedisplay();
-	UNUSED(zero);
 }

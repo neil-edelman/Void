@@ -1,0 +1,101 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title>Orcish</title>
+</head>
+
+
+<body>
+
+<h1>Orcish</h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<p>
+2014 Neil Edelman: neil dot edelman each mail dot mcgill dot ca.
+</p>
+<p>
+Orcish words are gathered off the Internet, SMAUG1.8, made up myself,
+etc. They originate or are inspired by JRR Tolkien's Orcish; this
+file has had many incarnations and was ported from Java. Random
+words are super-useful in testing and character generation;
+<a href = "http://en.wikipedia.org/wiki/Languages_constructed_by_J._R._R._Tolkien">http://en.wikipedia.org/wiki/Languages_constructed_by_J._R._R._Tolkien</a>.
+Provides one function, <a href = "#Orcish">Orcish</a>.
+</p>
+<dl>
+	<dt>minimum standard</dt>
+	<dd>ANSI C89/ISO C90</dd>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>version</dt>
+	<dd>1.2, 2016-09</dd>
+	<dt>since</dt>
+	<dd>2014</dd>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Orcish">Orcish</a></td>
+	<td>char *const name, const size_t name_size</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Orcish"><!-- --></a>
+<h3>Orcish</h3>
+<pre>void <b>Orcish</b> (char *const name, const size_t name_size)</pre>
+<p>
+Takes <em>name</em>, a string, and replaces it, to a maximum of <em>name_size</em>
+characters, with a <em>rand</em> Orcish name. You must have space for (at least)
+<em>name_size</em> (byte) characters.
+</p>
+<dl>
+	<dt>parameter: name</dt>
+	<dd>Filled with a random word in psudo-Orcish.</dd>
+	<dt>parameter: name_size</dt>
+	<dd>sizeof(name); suggest 16, which would be enough for
+ 2 syllables and a suffix.</dd>
+</dl>
+</div>
+
+
+</body>
+</html>

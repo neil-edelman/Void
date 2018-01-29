@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title>Key</title>
+<title>Random</title>
 </head>
 
 
 <body>
 
-<h1>Key</h1>
+<h1>Random</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -40,22 +40,21 @@
 </ul>
 
 <p>
-2018 Neil Edelman, distributed under the terms of the GNU General
-Public License 3, see copying.txt, or
-<a href = "https://opensource.org/licenses/GPL-3.0">https://opensource.org/licenses/GPL-3.0</a>.
+Copyright 2016 Neil Edelman, distributed under the terms of the
+GNU General Public License, see copying.txt.
 </p>
 <p>
-Keyboard routines.
+This provides access to random functions. There is no object, just static.
+These functions use rand(), so if you want it to return different values, you
+can use srand().
 </p>
 <dl>
-	<dt>minimum standard</dt>
-	<dd>C89/90</dd>
 	<dt>author</dt>
 	<dd>Neil</dd>
 	<dt>version</dt>
-	<dd>2018-01</dd>
+	<dd>3.3; 2016-01</dd>
 	<dt>since</dt>
-	<dd>2018-01</dd>
+	<dd>3.3; 2016-01</dd>
 </dl>
 
 
@@ -67,59 +66,45 @@ Keyboard routines.
 <table>
 <tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
 <tr>
-	<td>void</td>
-	<td><a href = "#Key">Key</a></td>
-	<td>void</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#KeyRegister">KeyRegister</a></td>
-	<td>const unsigned k, void (*const handler)(void)</td>
-</tr>
-<tr>
 	<td>int</td>
-	<td><a href = "#KeyTime">KeyTime</a></td>
-	<td>const int key</td>
+	<td><a href = "#RandomUniformInt">RandomUniformInt</a></td>
+	<td>const int max</td>
+</tr>
+<tr>
+	<td>float</td>
+	<td><a href = "#RandomUniformFloat">RandomUniformFloat</a></td>
+	<td>const float max</td>
 </tr>
 </table>
 
 
 <a name = "_detail"><!-- --></a><h2>Function Detail</h2>
 
-<div><a name = "Key"><!-- --></a>
-<h3>Key</h3>
-<pre>void <b>Key</b> (void)</pre>
+<div><a name = "RandomUniformInt"><!-- --></a>
+<h3>RandomUniformInt</h3>
+<pre>int <b>RandomUniformInt</b> (const int max)</pre>
 <p>
-Attach the static keys to the Window depending on whether the Timer is
-active (poll) or not (direct to functions.)
+Uniform integer.
 </p>
 <dl>
+	<dt>parameter</dt>
+	<dd>sigma</dd>
 	<dt>return</dt>
-	<dd>Success?</dd>
+	<dd>Random int about [-max, max].</dd>
 </dl>
 </div>
 
-<div><a name = "KeyRegister"><!-- --></a>
-<h3>KeyRegister</h3>
-<pre>void <b>KeyRegister</b> (const unsigned k, void (*const handler)(void))</pre>
+<div><a name = "RandomUniformFloat"><!-- --></a>
+<h3>RandomUniformFloat</h3>
+<pre>float <b>RandomUniformFloat</b> (const float max)</pre>
 <p>
-Registers a function to call asynchronously on press.
+Uniform float.
 </p>
 <dl>
-</dl>
-</div>
-
-<div><a name = "KeyTime"><!-- --></a>
-<h3>KeyTime</h3>
-<pre>int <b>KeyTime</b> (const int key)</pre>
-<p>
-Polls how long the key has been pressed, without repeat rate. Destructive.
-</p>
-<dl>
-	<dt>parameter: key</dt>
-	<dd>The key.</dd>
+	<dt>parameter</dt>
+	<dd>sigma</dd>
 	<dt>return</dt>
-	<dd>Number of ms.</dd>
+	<dd>Random int about [-max, max].</dd>
 </dl>
 </div>
 

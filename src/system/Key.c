@@ -4,7 +4,7 @@
 
  Keyboard routines.
 
- @file		Key
+ @title		Key
  @author	Neil
  @std		C89/90
  @version	2018-01
@@ -102,8 +102,6 @@ static enum Keys glut_to_keys(const int k) {
 	}
 }
 
-#endif /* glut --> */
-
 /** Callback for {glutKeyboardFunc}. */
 static void key_down(unsigned char k, int x, int y) {
 	struct Key *key = &keys[k];
@@ -146,3 +144,5 @@ static void key_up_special(int k, int x, int y) {
 	 key->integral);*/
 	UNUSED(x), UNUSED(y);
 }
+
+#endif /* glut --> */

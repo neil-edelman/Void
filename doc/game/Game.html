@@ -25,13 +25,13 @@
 		padding:          4px;
 	}
 </style>
-<title>Key</title>
+<title>Game</title>
 </head>
 
 
 <body>
 
-<h1>Key</h1>
+<h1>Game</h1>
 
 <ul>
 	<li><a href = "#_declarations">Declarations</a></li>
@@ -40,26 +40,33 @@
 </ul>
 
 <p>
-2018 Neil Edelman, distributed under the terms of the GNU General
-Public License 3, see copying.txt, or
-<a href = "https://opensource.org/licenses/GPL-3.0">https://opensource.org/licenses/GPL-3.0</a>.
+Copyright 2000, 2013 Neil Edelman, distributed under the terms of the
+GNU General Public License, see copying.txt.
 </p>
 <p>
-Keyboard routines.
+Used to set up the Game and get it running.
 </p>
 <dl>
-	<dt>minimum standard</dt>
-	<dd>C89/90</dd>
 	<dt>author</dt>
 	<dd>Neil</dd>
 	<dt>version</dt>
-	<dd>2018-01</dd>
+	<dd>3.3, 2015-12</dd>
 	<dt>since</dt>
-	<dd>2018-01</dd>
+	<dd>1.0, 1999</dd>
 </dl>
 
 
 <a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "struct Game"><!-- --></a>
+<h3>struct Game</h3>
+<pre><b>struct Game</b></pre>
+<p>
+See <a href = "#Game">Game</a>.
+</p>
+<dl>
+</dl>
+</div>
 
 
 <a name = "_summary"><!-- --></a><h2>Function Summary</h2>
@@ -68,58 +75,51 @@ Keyboard routines.
 <tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
 <tr>
 	<td>void</td>
-	<td><a href = "#Key">Key</a></td>
+	<td><a href = "#Game_">Game_</a></td>
 	<td>void</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#KeyRegister">KeyRegister</a></td>
-	<td>const unsigned k, void (*const handler)(void)</td>
 </tr>
 <tr>
 	<td>int</td>
-	<td><a href = "#KeyTime">KeyTime</a></td>
-	<td>const int key</td>
+	<td><a href = "#Game">Game</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#GameUpdate">GameUpdate</a></td>
+	<td>const int dt_ms</td>
 </tr>
 </table>
 
 
 <a name = "_detail"><!-- --></a><h2>Function Detail</h2>
 
-<div><a name = "Key"><!-- --></a>
-<h3>Key</h3>
-<pre>void <b>Key</b> (void)</pre>
+<div><a name = "Game_"><!-- --></a>
+<h3>Game_</h3>
+<pre>void <b>Game_</b> (void)</pre>
 <p>
-Attach the static keys to the Window depending on whether the Timer is
-active (poll) or not (direct to functions.)
-</p>
-<dl>
-	<dt>return</dt>
-	<dd>Success?</dd>
-</dl>
-</div>
-
-<div><a name = "KeyRegister"><!-- --></a>
-<h3>KeyRegister</h3>
-<pre>void <b>KeyRegister</b> (const unsigned k, void (*const handler)(void))</pre>
-<p>
-Registers a function to call asynchronously on press.
+destructor: fixme: what if there's a second game
 </p>
 <dl>
 </dl>
 </div>
 
-<div><a name = "KeyTime"><!-- --></a>
-<h3>KeyTime</h3>
-<pre>int <b>KeyTime</b> (const int key)</pre>
+<div><a name = "Game"><!-- --></a>
+<h3>Game</h3>
+<pre>int <b>Game</b> (void)</pre>
 <p>
-Polls how long the key has been pressed, without repeat rate. Destructive.
+Constructor.
 </p>
 <dl>
-	<dt>parameter: key</dt>
-	<dd>The key.</dd>
-	<dt>return</dt>
-	<dd>Number of ms.</dd>
+</dl>
+</div>
+
+<div><a name = "GameUpdate"><!-- --></a>
+<h3>GameUpdate</h3>
+<pre>void <b>GameUpdate</b> (const int dt_ms)</pre>
+<p>
+updates the gameplay
+</p>
+<dl>
 </dl>
 </div>
 

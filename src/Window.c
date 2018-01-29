@@ -3,12 +3,16 @@
 
  Entry-point. Deals with providing an interface to the libraries.
 
- Uses OpenGL for graphics; it's never that easy, of course. OpenGL comes in
+ Uses {OpenGL} for graphics; it's never that easy, of course. {OpenGL} comes in
  many different versions. Loading functions have to be queried from the library
- in a platform-specific way for all versions since {OpenGL1.0}. If GLEW is
- defined, (it should be, except MacOSX which provides native support), it loads
- the OpenGL2+ from the library using GLEW, \url{http://glew.sourceforge.net/}.
- 
+ in a platform-specific way for all versions since {OpenGL1.0}, on some
+ machines. If {GLEW} is defined by the environment, it loads the {OpenGL2+}
+ from the library using {GLEW}, \url{http://glew.sourceforge.net/}. We need a
+ cross-platform window manager; define {GLUT} or {SDL}. {SDL} ({SDL2}
+ \url{https://www.libsdl.org/}) has more features, but {GLUT} ({FreeGLUT}
+ \url{http://freeglut.sourceforge.net/}) may come with your {OpenGL}, but is
+ limited.
+
  @title		Window
  @author	Neil
  @version	2018-01
@@ -61,6 +65,7 @@ static struct Window {
 	struct Vec2i size, position;
 #elif defined(SDL) /* glut --><-- sdl */
 	SDL_Window *sdl_window;
+	SDL_GLContext *sdl_gl_context;
 #else /* sdl --><-- nothing */
 #error Define GLUT or SDL.
 #endif /* nothing --> */
@@ -92,15 +97,23 @@ static int Window(const char *title, int argc, char **argv) {
 	glutCreateWindow(title);
 #elif defined(SDL) /* glut --><-- sdl */
 	UNUSED(argc && argv);
-	{
+	if(window.sdl_window)
+		return fprintf(stderr, "Window: already started.\n"), 1;
+	{ /* Info. */
 		SDL_version linked;
 		SDL_GetVersion(&linked);
 		fprintf(stderr, "Window: SDL version %d.%d.%d.\n",
 			linked.major, linked.minor, linked.patch);
 	}
 	SDL_SetMainReady(); /* Doesn't do anything on SDL2? why is it there? */
-	if(SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO /*@fixme?*/))
-		return fprintf(stderr, "SDL failed: %s.\n", SDL_GetError()), 0;
+	if(SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO /*@fixme?*/)
+		|| !(window.sdl_window = SDL_CreateWindow(title,
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480,
+		SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS | SDL_WINDOW_RESIZABLE))
+		/* || !(window.sdl_renderer = SDL_CreateRenderer(window.sdl_window,
+		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC))*/
+		|| !(window.sdl_gl_context = SDL_GL_CreateContext(window.sdl_window)))
+		return fprintf(stderr, "Window: %s.\n", SDL_GetError()), 0;
 #else /* sdl --><-- nothing */
 #error Define GLUT or SDL.
 #endif /* nothing --> */
@@ -113,9 +126,15 @@ static int Window(const char *title, int argc, char **argv) {
 	if(max_tex < warn_texture_size)
 		fprintf(stderr, "Window: maximum texture size is probably too small, "
 		"%d/%d.\n", max_tex, warn_texture_size);
-	/*glutMouseFunc(&mouse);
-	 glutIdleFunc(0); */
 	return 1;
+}
+
+static void Window_(void) {
+#ifdef SDL /* <-- sdl */
+	if(window.sdl_gl_context) SDL_GL_DeleteContext(window.sdl_gl_context);
+	if(window.sdl_window) SDL_DestroyWindow(window.sdl_window);
+	SDL_Quit();
+#endif /* sdl --> */
 }
 
 /** Begins animation with the hooks that have been placed in the window. Does
@@ -173,18 +192,16 @@ static int glew(void) {
 	return 1;
 }
 
-/** Destructor (called with atexit().)
- @allow */
-static void main_(void) {
-	TimerPause();
-	Game_();
-	Draw_();
-	Fars_();
-	Sprites_();
-	Events_();
-#ifdef SDL
-	SDL_Quit();
-#endif
+/** Belongs in {main}, but maybe called with {atexit} if {GLUT}, so it's a bit
+ of a hack. */
+static void subsystems_(void) {
+	TimerPause(), Game_(), Draw_(), Fars_(), Sprites_(), Events_();
+}
+/** For symmetry. */
+static int subsystems(void) {
+	if(!glew() || !Key() || !Events() || !Sprites() || !Fars() || !Draw()
+		|| !Game()) return 0;
+	return 1;
 }
 
 /** Entry point.
@@ -192,30 +209,29 @@ static void main_(void) {
  @param argv the arguments
  @return     either EXIT_SUCCESS or EXIT_FAILURE */
 int main(int argc, char **argv) {
+	const char *e = 0;
 	/* @fixme More options (ie, load game, etc.) */
 	if(argc > 1) return usage(), EXIT_SUCCESS;
 #ifdef GLUT /* <-- glut */
-	/* we generally don't have return because glutMainLoop() never does */
-	if(atexit(&main_)) perror("atexit");
+	/* We generally don't have return because {glutMainLoop} never does. The
+	 window is entirely in {glut}'s control. */
+	if(atexit(&subsystems_)) perror("atexit");
 #endif /* glut --> */
-	/* entropy increase */
+	/* Entropy increase. */
 	srand((unsigned)clock());
-	/* start up subsystems; window has to be first; timer ms */
-	if(!Window(programme, argc, argv)
-		/* Load OpenGl2+ after the window. */
-		|| !glew()
-		|| !Key()
-		|| !Events()
-		|| !Sprites()
-		|| !Fars()
-		|| !Draw()
-		|| !Game()) return EXIT_FAILURE;
-	/* hand over control to the graphics library */
-	TimerRun();
-	WindowGo();
-	/* If GLUT, never get here. */
-	main_();
-	return EXIT_FAILURE;
+	do { /* try */
+		/* Window has to be first. */
+		if(!Window(programme, argc, argv)) { e = "window"; break; }
+		if(!subsystems()) { e = "sub-systems"; break; }
+		TimerRun();
+		WindowGo();
+	} while(0); if(e) { /* catch */
+		fprintf(stderr, "Error with the %s.\n", e);
+	} { /* finally */
+		subsystems_();
+		Window_();
+	}
+	return e ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 /** Checks for all OpenGL errors and prints them to stderr.

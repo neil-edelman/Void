@@ -1,0 +1,192 @@
+<!doctype html public "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<!-- steal these colour values from JavaDocs; meh -->
+<style type = "text/css">
+	a:link,  a:visited { color: #4a6782; }
+	a:hover, a:focus   { color: #bb7a2a; }
+	a:active           { color: #4A6782; }
+	tr:nth-child(even) { background: #dee3e9; }
+	div {
+		margin:  4px 0;
+		padding: 0 4px 4px 4px;
+	}
+	table      { width: 100%; }
+	td         { padding: 4px; }
+	h3, h1 {
+		color: #2c4557;
+		background-color: #dee3e9;
+		padding:          4px;
+	}
+	h3 {
+		margin:           0 -4px;
+		padding:          4px;
+	}
+</style>
+<title>Fars</title>
+</head>
+
+
+<body>
+
+<h1>Fars</h1>
+
+<ul>
+	<li><a href = "#_declarations">Declarations</a></li>
+	<li><a href = "#_summary">Function Summary</a></li>
+	<li><a href = "#_detail">Function Detail</a></li>
+</ul>
+
+<p>
+2017 Neil Edelman, distributed under the terms of the GNU General
+Public License 3, see copying.txt, or
+<a href = "https://opensource.org/licenses/GPL-3.0">https://opensource.org/licenses/GPL-3.0</a>.
+</p>
+<p>
+Fars are like sprites, but drawn far away; they are simpler.
+</p>
+<dl>
+	<dt>minimum standard</dt>
+	<dd>C89/90</dd>
+	<dt>author</dt>
+	<dd>Neil</dd>
+	<dt>version</dt>
+	<dd>1.0, 2017-10 start</dd>
+</dl>
+
+
+<a name = "_declarations"><!-- --></a><h2>Declarations</h2>
+
+<div><a name = "struct Far"><!-- --></a>
+<h3>struct Far</h3>
+<pre><b>struct Far</b> {
+	const struct FarVt *vt;
+	const struct AutoImage *image, *normals; /* what the sprite is */
+	unsigned bin; /* which bin is it in */
+	struct Ortho3f x; /* where it is */
+}</pre>
+<p>
+Define abstract <em>Far</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct Planetoid"><!-- --></a>
+<h3>struct Planetoid</h3>
+<pre><b>struct Planetoid</b> {
+	struct FarListNode far;
+	const char *name;
+}</pre>
+<p>
+Define <em>PlanetoidPool</em> and <em>PlanetoidPoolNode</em>, a subclass of <em>Far</em>.
+Planets and asteroids, everything that has a name and you can optionally land
+on, is a <em>Planetoid</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "static struct Fars"><!-- --></a>
+<h3>static struct Fars</h3>
+<pre><b>static struct Fars</b> {
+	struct FarList bins[LAYER_SIZE];
+	struct PlanetoidPool *planetoids;
+	struct Layer *layer;
+}</pre>
+<p>
+Fars all together.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "struct FarVt"><!-- --></a>
+<h3>struct FarVt</h3>
+<pre><b>struct FarVt</b> {
+	FarToString to_string;
+}</pre>
+<p>
+Define <em>FarVt</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+
+<a name = "_summary"><!-- --></a><h2>Function Summary</h2>
+
+<table>
+<tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Fars_">Fars_</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#Fars">Fars</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#FarsClear">FarsClear</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>struct Planetoid *</td>
+	<td><a href = "#FarsPlanetoid">FarsPlanetoid</a></td>
+	<td>const struct AutoObjectInSpace *const class</td>
+</tr>
+</table>
+
+
+<a name = "_detail"><!-- --></a><h2>Function Detail</h2>
+
+<div><a name = "Fars_"><!-- --></a>
+<h3>Fars_</h3>
+<pre>void <b>Fars_</b> (void)</pre>
+<p>
+Destructor.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "Fars"><!-- --></a>
+<h3>Fars</h3>
+<pre>int <b>Fars</b> (void)</pre>
+<p>
+Constructor.
+</p>
+<dl>
+	<dt>return</dt>
+	<dd>New <em>Fars</em>.</dd>
+</dl>
+</div>
+
+<div><a name = "FarsClear"><!-- --></a>
+<h3>FarsClear</h3>
+<pre>void <b>FarsClear</b> (void)</pre>
+<p>
+Clears all planets in preparation for jump.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "FarsPlanetoid"><!-- --></a>
+<h3>FarsPlanetoid</h3>
+<pre>struct Planetoid * <b>FarsPlanetoid</b> (const struct AutoObjectInSpace *const class)</pre>
+<p>
+Extends <em>far_filler</em>.
+</p>
+<dl>
+</dl>
+</div>
+
+
+</body>
+</html>

@@ -65,6 +65,11 @@ represented with <em>unsigned</em> that loops around.
 <table>
 <tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
 <tr>
+	<td>unsigned</td>
+	<td><a href = "#TimerUpdate">TimerUpdate</a></td>
+	<td>void</td>
+</tr>
+<tr>
 	<td>void</td>
 	<td><a href = "#TimerRun">TimerRun</a></td>
 	<td>void</td>
@@ -99,6 +104,18 @@ represented with <em>unsigned</em> that loops around.
 
 <a name = "_detail"><!-- --></a><h2>Function Detail</h2>
 
+<div><a name = "TimerUpdate"><!-- --></a>
+<h3>TimerUpdate</h3>
+<pre>unsigned <b>TimerUpdate</b> (void)</pre>
+<p>
+In SDL, you have the inefficient central event loop.
+</p>
+<dl>
+	<dt>return</dt>
+	<dd>The frame time.</dd>
+</dl>
+</div>
+
 <div><a name = "TimerRun"><!-- --></a>
 <h3>TimerRun</h3>
 <pre>void <b>TimerRun</b> (void)</pre>
@@ -124,26 +141,22 @@ This stops the Timer.
 <pre>int <b>TimerIsRunning</b> (void)</pre>
 <dl>
 	<dt>return</dt>
-	<dd>Boolean value.</dd>
+	<dd>Whether the timer is running.</dd>
 </dl>
 </div>
 
 <div><a name = "TimerGetGameTime"><!-- --></a>
 <h3>TimerGetGameTime</h3>
 <pre>unsigned <b>TimerGetGameTime</b> (void)</pre>
-<p>
-Last time an update was called.
-</p>
 <dl>
+	<dt>return</dt>
+	<dd>Last time an update was called in milliseconds.</dd>
 </dl>
 </div>
 
 <div><a name = "TimerGetMean"><!-- --></a>
 <h3>TimerGetMean</h3>
 <pre>unsigned <b>TimerGetMean</b> (void)</pre>
-<p>
-The value is a positive number.
-</p>
 <dl>
 	<dt>return</dt>
 	<dd>Moving average in milliseconds.</dd>
@@ -155,10 +168,10 @@ The value is a positive number.
 <pre>int <b>TimerIsTime</b> (const unsigned t)</pre>
 <dl>
 	<dt>return</dt>
-	<dd>If the game time is greater or equal t. Only game time is
+	<dd>If the game time is greater or equal <em>t</em>. Only game time is
  represented as a circular list; 'greater than' is not really defined, so as
- long as it's (t - INT_MIN, t] it's considered 'in.' This defines a limit of an
- interval of 24.85 days.</dd>
+ long as it's <em>(t - INT_MIN, t]</em> it's considered 'in.' This defines a limit of
+ an interval of 24.85 days.</dd>
 </dl>
 </div>
 

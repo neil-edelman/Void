@@ -112,7 +112,8 @@ static int Window(const char *title, int argc, char **argv) {
 		SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS | SDL_WINDOW_RESIZABLE))
 		/* || !(window.sdl_renderer = SDL_CreateRenderer(window.sdl_window,
 		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC))*/
-		|| !(window.sdl_gl_context = SDL_GL_CreateContext(window.sdl_window)))
+		|| !(window.sdl_gl_context = SDL_GL_CreateContext(window.sdl_window))
+		|| SDL_GL_SetSwapInterval(1))
 		return fprintf(stderr, "Window: %s.\n", SDL_GetError()), 0;
 #else /* sdl --><-- nothing */
 #error Define GLUT or SDL.
@@ -143,6 +144,30 @@ static void WindowGo(void) {
 #ifdef GLUT /* <-- glut */
 	glutMainLoop();
 #elif defined(SDL) /* glut --><-- sdl */
+	SDL_Event e;
+	unsigned dt;
+	int running = 1;
+	if(!window.sdl_window || !window.sdl_gl_context)
+		{ fprintf(stderr, "WindowGo: No window.\n"); return; }
+	TimerRun();
+	do {
+		/* So awkward. */
+		while(SDL_PollEvent(&e)) { switch(e.type) {
+			case SDL_WINDOWEVENT: if(e.window.event == SDL_WINDOWEVENT_RESIZED)
+					DrawResize((int)e.window.data1, (int)e.window.data2);
+				printf("Resize.\n");
+				break;
+			case SDL_KEYDOWN:
+			case SDL_QUIT: running = 0; break;
+		} }
+		if(!(dt = TimerUpdate())) {
+			SDL_Delay(200); /* Paused. */
+		} else {
+			GameUpdate(dt);
+			DrawDisplay();
+			SDL_GL_SwapWindow(window.sdl_window);
+		}
+	} while(running);
 #else /* sdl --><-- nothing */
 #error Define GLUT or SDL.
 #endif /* nothing --> */

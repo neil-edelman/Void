@@ -7,6 +7,10 @@ typedef void (*DrawOutput)(const struct Ortho3f *const x,
 
 int Draw(void);
 void Draw_(void);
+#ifdef SDL /* <-- awkward */
+void DrawDisplay(void);
+void DrawResize(const int w, const int h);
+#endif /* awkward --> */
 void DrawSetCamera(const struct Vec2f *const x);
 void DrawGetScreen(struct Rectangle4f *const rect);
 void DrawSetBackground(const char *const key);

@@ -213,6 +213,11 @@ void Draw_(void) {
 	is_started = 0;
 }
 
+#ifdef SDL /* <-- awkward */
+void DrawDisplay(void) { display(); }
+void DrawResize(const int w, const int h) { resize(w, h); }
+#endif /* awkward --> */
+
 /** Sets the camera location.
  @param x: (x, y) in pixels. */
 void DrawSetCamera(const struct Vec2f *const x) {
@@ -619,6 +624,7 @@ static void display(void) {
 #ifdef GLUT /* <-- glut */
 	glutSwapBuffers();
 #elif defined(SDL) /* glut --><-- sdl */
+	
 #else /* sdl --><-- nothing */
 #error Define GLUT or SDL.
 #endif /* nothing --> */

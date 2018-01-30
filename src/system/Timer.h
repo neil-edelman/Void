@@ -10,6 +10,9 @@
 #define UNUSED(x) ((void)(x))
 #endif
 
+#ifdef SDL /* <-- awkward */
+unsigned TimerUpdate(void);
+#endif /* awkward --> */
 void TimerRun(void);
 void TimerPause(void);
 int TimerIsRunning(void);

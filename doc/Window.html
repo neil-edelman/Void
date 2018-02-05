@@ -91,6 +91,21 @@ limited.
 	<td><a href = "#WindowToggleFullScreen">WindowToggleFullScreen</a></td>
 	<td>void</td>
 </tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#Key">Key</a></td>
+	<td>void</td>
+</tr>
+<tr>
+	<td>void</td>
+	<td><a href = "#KeyRegister">KeyRegister</a></td>
+	<td>const unsigned k, void (*const handler)(void)</td>
+</tr>
+<tr>
+	<td>int</td>
+	<td><a href = "#KeyTime">KeyTime</a></td>
+	<td>const int key</td>
+</tr>
 </table>
 
 
@@ -133,6 +148,43 @@ Checks for all OpenGL errors and prints them to stderr.
 Toggle fullscreen.
 </p>
 <dl>
+</dl>
+</div>
+
+<div><a name = "Key"><!-- --></a>
+<h3>Key</h3>
+<pre>void <b>Key</b> (void)</pre>
+<p>
+Attach the static keys to the Window depending on whether the Timer is
+active (poll) or not (direct to functions.)
+</p>
+<dl>
+	<dt>return</dt>
+	<dd>Success?</dd>
+</dl>
+</div>
+
+<div><a name = "KeyRegister"><!-- --></a>
+<h3>KeyRegister</h3>
+<pre>void <b>KeyRegister</b> (const unsigned k, void (*const handler)(void))</pre>
+<p>
+Registers a function to call asynchronously on press.
+</p>
+<dl>
+</dl>
+</div>
+
+<div><a name = "KeyTime"><!-- --></a>
+<h3>KeyTime</h3>
+<pre>int <b>KeyTime</b> (const int key)</pre>
+<p>
+Polls how long the key has been pressed, without repeat rate. Destructive.
+</p>
+<dl>
+	<dt>parameter: key</dt>
+	<dd>The key.</dd>
+	<dt>return</dt>
+	<dd>Number of ms.</dd>
 </dl>
 </div>
 

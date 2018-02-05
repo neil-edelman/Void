@@ -2,7 +2,7 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- Keyboard routines.
+ Very simple keyboard routines. {SDL} polls the keyboard, STILL! fuck that.
 
  @title		Key
  @author	Neil

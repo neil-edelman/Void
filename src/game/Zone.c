@@ -4,19 +4,15 @@
  @title Zone
  @fixme SpaceZone -> Sector */
 
+#include <stdio.h> /* fprintf */
 #include <stdlib.h> /* rand (fixme) */
-#include <math.h>	/* M_PI */
 #include "../../build/Auto.h"
-#include "../Print.h"
+#include "../Ortho.h"
 #include "../general/Events.h"
 #include "../system/Draw.h"
 #include "Sprites.h"
 #include "Fars.h"
 #include "Zone.h"
-
-#ifndef M_PI
-#define M_PI 3.141592653589793238462643383279502884197169399375105820974944592307816406
-#endif
 
 /* from Lore */
 extern const struct AutoSpaceZone auto_space_zone[];
@@ -46,8 +42,8 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	const struct AutoDebris *asteroid = AutoDebrisSearch("Asteroid");
 	unsigned i;
 
-	debug("Zone: SpaceZone %s is controlled by %s, contains gate %s and fars "
-		"%s, %s.\n", sz->name, sz->government->name, sz->gate1->name,
+	fprintf(stderr, "Zone: SpaceZone %s is controlled by %s, contains gate %s "
+		"and fars %s, %s.\n", sz->name, sz->government->name, sz->gate1->name,
 		sz->ois1->name, sz->ois2->name);
 
 	/* clear all objects */

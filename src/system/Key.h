@@ -1,7 +1,3 @@
-#ifndef UNUSED
-#define UNUSED(x) ((void)(x))
-#endif
-
 #define KEY_MAX 255
 
 /* We don't care what historical definition these had; map 'special' keys to

@@ -2,7 +2,7 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- Very simple keyboard routines. {SDL} polls the keyboard, STILL! fuck that.
+ Very simple keyboard routines.
 
  @title		Key
  @author	Neil
@@ -10,8 +10,9 @@
  @version	2018-01
  @since		2018-01 */
 
-#include <stdio.h> /* fprintf */
-#include "../WindowGl.h"
+#include <stdio.h>	/* fprintf */
+#include "../Window.h" /* glut */
+#include "../Unused.h"
 #include "Timer.h"
 #include "Key.h"
 
@@ -23,26 +24,24 @@ static struct Key {
 	void (*handler)(void);
 } keys[KEY_MAX];
 
-#ifdef GLUT /* <-- glut */
 /* private prototypes */
+/* <-- glut */
 static enum Keys glut_to_keys(const int k);
 static void key_down(unsigned char k, int x, int y);
 static void key_up(unsigned char k, int x, int y);
 static void key_down_special(int k, int x, int y);
 static void key_up_special(int k, int x, int y);
-#endif /* glut --> */
+/* glut --> */
 
-/** Attach the static keys to the Window depending on whether the Timer is
- active (poll) or not (direct to functions.)
- @return Success? */
+/** Attach the key handlers to a window. */
 void Key(void) {
-#ifdef GLUT /* <-- glut */
+	/* <-- glut */
 	glutKeyboardFunc(&key_down);
 	glutKeyboardUpFunc(&key_up);
 	glutSpecialFunc(&key_down_special);
 	glutSpecialUpFunc(&key_up_special); 
 	fprintf(stderr, "Key: handlers set-up.\n");
-#endif /* glut --> */
+	/* glut --> */
 }
 
 /** Registers a function to call asynchronously on press. */
@@ -60,7 +59,7 @@ int KeyTime(const int key) {
 	if(key < 0 || key >= KEY_MAX) return 0;
 	k = &keys[key];
 	if(k->state) {
-		int ct  = TimerGetMs();
+		int ct  = TimerGetTime();
 		time    = ct - k->down + k->integral;
 		k->down = ct;
 	} else {
@@ -70,7 +69,7 @@ int KeyTime(const int key) {
 	return time;
 }
 
-#ifdef GLUT /* <-- glut */
+/* <-- glut */
 
 /** GLUT_ to internal keys.
  @param k	Special key in OpenGl.
@@ -107,7 +106,7 @@ static void key_down(unsigned char k, int x, int y) {
 	struct Key *key = &keys[k];
 	if(key->state) return;
 	key->state = -1;
-	key->down  = TimerGetMs();
+	key->down  = TimerGetTime();
 	if(key->handler) key->handler();
 	/* fprintf(stderr, "key_down: key %d hit at %d ms.\n", k, key->down);*/
 	UNUSED(x), UNUSED(y);
@@ -118,7 +117,7 @@ static void key_up(unsigned char k, int x, int y) {
 	struct Key *key = &keys[k];
 	if(!key->state) return;
 	key->state = 0;
-	key->integral += TimerGetMs() - key->down;
+	key->integral += TimerGetTime() - key->down;
 	/* fprintf(stderr, "key_up: key %d pressed %d ms at end of frame.\n",k,key->integral);*/
 	UNUSED(x), UNUSED(y);
 }
@@ -128,7 +127,7 @@ static void key_down_special(int k, int x, int y) {
 	struct Key *key = &keys[glut_to_keys(k)];
 	if(key->state) return;
 	key->state  = -1;
-	key->down = TimerGetMs();
+	key->down = TimerGetTime();
 	if(key->handler) key->handler();
 	/* fprintf(stderr, "key_down_special: key %d hit at %d ms.\n", k, key->down);*/
 	UNUSED(x), UNUSED(y);
@@ -139,10 +138,10 @@ static void key_up_special(int k, int x, int y) {
 	struct Key *key = &keys[glut_to_keys(k)];
 	if(!key->state) return;
 	key->state = 0;
-	key->integral += TimerGetMs() - key->down;
+	key->integral += TimerGetTime() - key->down;
 	/* fprintf(stderr, "key_up_special: key %d pressed %d ms at end of frame.\n", k,
 	 key->integral);*/
 	UNUSED(x), UNUSED(y);
 }
 
-#endif /* glut --> */
+/* glut --> */

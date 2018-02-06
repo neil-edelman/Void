@@ -10,8 +10,8 @@
  @version	1.0, 2017-10 start */
 
 #include <assert.h>
+#include "../Ortho.h" /* for measurements and types */
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
-#include "../general/OrthoMath.h" /* for measurements and types */
 #include "../general/Layer.h" /* for descritising */
 #include "../system/Draw.h" /* DrawGetScreen, DrawDisplayFar */
 #include "Fars.h"

@@ -13,8 +13,7 @@
 
 #include <stdlib.h> /* malloc */
 #include <stdio.h> /* perror */
-#include "../general/OrthoMath.h"
-#include "../WindowKey.h"
+#include "Key.h"
 #include "Poll.h"
 
 struct PollKey {

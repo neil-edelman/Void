@@ -15,6 +15,7 @@
 
 #include <stdio.h> /* fprintf */
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
+#include "../Ortho.h" /* Vec2f, etc */
 #include "../general/Orcish.h" /* for human-readable ship names */
 #include "../general/Events.h" /* Event for delays */
 #include "../general/Layer.h" /* for descritising */
@@ -346,7 +347,8 @@ static int debris_update(struct Debris *const this) {
 /** @implements <Wmd>Predicate
  @fixme Replace delete with more dramatic death. */
 static int wmd_update(struct Wmd *const this) {
-	if(TimerIsTime(this->expires)) return sprite_delete(&this->sprite.data), 0;
+	if(TimerIsGameTime(this->expires))
+		return sprite_delete(&this->sprite.data), 0;
 	return 1;
 }
 /** @implements <Gate>Predicate */

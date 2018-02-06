@@ -9,18 +9,18 @@
  @since		1.0, 1999 */
 
 #include <stdlib.h> /* malloc free rand (fixme) */
-/*#include <math.h>*/   /* M_PI (fixme: no, GNU) */
 #include <string.h> /* strcmp for bsearch */
 #include <stdio.h>  /* printf */
 #include "../../build/Auto.h"
-#include "../WindowKey.h"
-#include "../Print.h"
+#include "../Window.h" /* glutLeaveMainLoop */
+#include "../Ortho.h"
 #include "Sprites.h"
 #include "Zone.h"
 #include "../general/Events.h"
+#include "../system/Key.h"
 #include "../system/Poll.h"
 #include "../system/Draw.h"
-#include "../system/Timer.h" /* only for reporting framerate */
+#include "../system/Timer.h"
 #include "Game.h"
 
 /* from Auto */
@@ -46,9 +46,29 @@ static const float asteroid_max_speed = 0.03f;
  Sprite */
 /*const float de_sitter = 8192.0f; !!! */
 
+
+/** Updates the gameplay.
+ @implements WindowGlutFunction */
+static void update(const int dt_ms) {
+	if(!is_started) return;
+	/* Update keys. */
+	PollUpdate();
+	printf("a\n");
+	/* Collision detect, move sprites, center on the player; a lot of work. */
+	SpritesUpdate(dt_ms);
+	/* Dispatch events; after update so that immidiate can be immediate. */
+	EventsUpdate();
+}
+
 static void quit(void) {
 	printf("quit: key pressed.\n");
-	exit(EXIT_SUCCESS); /* meh */
+	/* <-- glut */
+#ifdef FREEGLUT /* <-- free */
+	glutLeaveMainLoop();
+#else /* free --><-- !free */
+	exit(EXIT_SUCCESS); /* GLUT1998 */
+#endif /* !free --> */
+	/* glut --> */
 }
 
 static void pause(void) {
@@ -56,14 +76,14 @@ static void pause(void) {
 		TimerPause();
 		printf("pause: on.\n");
 	} else {
-		TimerRun();
+		TimerRun(&update);
 		printf("pause: off.\n");
 	}
 }
 
 static void fps(void) {
-	unsigned mean = TimerGetMean();
-	info("%.1f fps, %ums average frame-time; %ums game-time.\n", 1000.0 / mean, mean, TimerGetGameTime());
+	unsigned mean = TimerGetFrame();
+	printf("%.1f fps, %ums average frame-time; %ums game-time.\n", 1000.0 / mean, mean, TimerGetGameTime());
 }
 
 static void position(void) {
@@ -126,21 +146,12 @@ int Game(void) {
 
 	EventsRunnable(7000, &fps);
 
+	TimerRun(&update);
+
 	fprintf(stderr, "Game: on.\n");
 	is_started = 1;
 
 	return -1;
-}
-
-/** updates the gameplay */
-void GameUpdate(const int dt_ms) {
-	if(!is_started) return;
-	/* Update keys. */
-	PollUpdate();
-	/* Collision detect, move sprites, center on the player; a lot of work. */
-	SpritesUpdate(dt_ms);
-	/* Dispatch events; after update so that immidiate can be immediate. */
-	EventsUpdate();
 }
 
 /*static void add_sprites(void) {

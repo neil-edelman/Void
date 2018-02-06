@@ -1,12 +1,12 @@
-/** Orthogonal math components header file.
+/** Mostly orthogonal math components header file.
 
- @title		OrthoMath.h
+ @title		Ortho.h
  @author	Neil
  @version	3.3; 2017-06
  @since		3.3; 2017-06 */
 
-#ifndef ORTHOMATH_H
-#define ORTHOMATH_H
+#ifndef ORTHO_H
+#define ORTHO_H
 
 #include <assert.h>
 #include <math.h>	/* fmodf */
@@ -31,8 +31,10 @@ struct Rectangle4i { int x_min, x_max, y_min, y_max; };
 struct Rectangle4f { float x_min, x_max, y_min, y_max; };
 
 /* Branch cut to the principal branch (-Pi,Pi] for numerical stability. We
- should really use normalised {ints}, so this would not be a problem, but
- {OpenGl} doesn't like that. */
+ should really use fixed normalised {ints} for much more even accuracy and
+ roll-over, but {OpenGl} doesn't like that.
+ @fixme {floorf} may be slow.
+ https://stackoverflow.com/questions/824118/why-is-floor-so-slow */
 static void branch_cut_pi_pi(float *theta_ptr) {
 	assert(theta_ptr);
 	*theta_ptr -= M_2PI_F * floorf((*theta_ptr + M_PI_F) / M_2PI_F);
@@ -140,4 +142,4 @@ static void orthomath_unused_coda(void) {
 	orthomath_unused();
 }
 
-#endif /* ORTHOMATH_H */
+#endif /* ORTHO_H */

@@ -1,5 +1,5 @@
-#include <stdint.h>
-#include "../general/OrthoMath.h"
+struct Vec2f;
+struct Ortho3f;
 struct Rectangle4f;
 struct Layer;
 struct Onscreen;

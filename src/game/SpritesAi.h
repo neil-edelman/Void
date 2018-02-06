@@ -47,7 +47,7 @@ static void ship_input(struct Ship *const this, const int ms_turning,
 		this->sprite.data.v.theta *= turn_damping_per_25ms
 		- turn_damping_1st_order * (sprites->dt_ms - 25.0f);
 	}
-	if(ms_shoot && TimerIsTime(this->ms_recharge_wmd) && this->wmd) {
+	if(ms_shoot && TimerIsGameTime(this->ms_recharge_wmd) && this->wmd) {
 		SpritesWmd(this->wmd, this);
 		this->ms_recharge_wmd = TimerGetGameTime() + this->wmd->ms_recharge;
 	}

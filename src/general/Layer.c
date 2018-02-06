@@ -15,7 +15,7 @@
 
 #include <stdio.h> /* stderr */
 #include <limits.h> /* INT_MAX */
-#include "../general/OrthoMath.h" /* Rectangle4f, etc */
+#include "../Ortho.h" /* Rectangle4f, etc */
 #include "Layer.h"
 
 static const float epsilon = 0.0005f;

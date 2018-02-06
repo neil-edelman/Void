@@ -1,5 +1,5 @@
-#include "../general/OrthoMath.h"
-
+struct Vec2f;
+struct Ortho3f;
 struct Sprites;
 struct Sprite;
 struct Ship;

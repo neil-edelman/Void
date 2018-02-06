@@ -3,15 +3,14 @@
 
  Entry-point. Deals with providing an interface to the libraries.
 
- Uses {OpenGL} for graphics; it's never that easy, of course. {OpenGL} comes in
- many different versions. Loading functions have to be queried from the library
- in a platform-specific way for all versions since {OpenGL1.0}, on some
- machines. If {GLEW} is defined by the environment, it loads the {OpenGL2+}
- from the library using {GLEW}, \url{http://glew.sourceforge.net/}. We need a
- cross-platform window manager; define {GLUT} or {SDL}. {SDL} ({SDL2}
- \url{https://www.libsdl.org/}) has more features, but {GLUT} ({FreeGLUT}
- \url{http://freeglut.sourceforge.net/}) may come with your {OpenGL}, but is
- limited.
+ Uses the {OpenGL} API for graphics, https://www.opengl.org/. On some machines,
+ you have to query the library for {OpenGL2+}. If {GLEW} is defined by the
+ environment, it uses this, \url{http://glew.sourceforge.net/}. (Necessary for
+ Windows, Linux.)
+
+ {FreeGLUT}, \url{http://freeglut.sourceforge.net/}, is used for the
+ cross-platform window-manager. This may come with your {OpenGL}, but it may
+ not. {GLUT} was supported in case of time-travel, but is no longer.
 
  @title		Window
  @author	Neil
@@ -19,159 +18,53 @@
  @since		2015-05
  @fixme		Windowing: Tl? GTK+? */
 
-/* typedef Uint32 (SDLCALL * SDL_TimerCallback) (Uint32 interval, void *param); */
-
-#include <stdlib.h> /* exit */
+#include <stdlib.h> /* EXIT_ */
 #include <stdio.h>  /* fprintf */
-#include <time.h>   /* srand(clock()) */
+#include <time.h>   /* srand clock */
 #include <string.h> /* strcmp */
 #include <assert.h>
 
-/* GLEW is set ourselves in the Makefile; GLEW allows OpenGL2+ on machines
- where you need to query the library. Glew will include {win.h} in Windows,
- which has a bajillon warnings that are not the slightest bit useful. Before
- {WindowGl.h}. */
+/* {GLEW} is set ourselves in the Makefile; {GLEW} allows {OpenGL2+} on
+ machines where you need to query the library. Inexplicably, Glew will include
+ {win.h} in Windows, which has a bajillon warnings that are not the slightest
+ bit useful; assuming you are using {MSVC}, this silences them. Before
+ {Window.h}. */
 #ifdef GLEW /* <-- glew */
 #pragma warning(push, 0)
-#define GL_GLEXT_PROTOTYPES /* *duh* */
-#define GLEW_STATIC         /* (of course) */
-/* http://glew.sourceforge.net/
- add include directories eg ...\glew-1.9.0\include */
+#define GL_GLEXT_PROTOTYPES
+#define GLEW_STATIC
+/* http://glew.sourceforge.net/ add include directories \include */
 #include <GL/glew.h>
 #pragma warning(pop)
 #endif /* glew --> */
 
-#include "WindowGl.h"
-#include "WindowKey.h"
-#include "Window.h"
+#include "Ortho.h" /* Vec2i */
+#include "Unused.h"
 #include "system/Draw.h"
 #include "system/Timer.h"
+#include "system/Key.h"
 #include "general/Events.h"
-#include "general/OrthoMath.h" /* Vec2i */
 #include "game/Sprites.h"
 #include "game/Fars.h"
 #include "game/Game.h"
-
-#ifndef UNUSED
-#define UNUSED(x) ((void)(x))
-#endif
+#include "Window.h"
 
 /* constants */
 static const char *programme   = "Void";
 static const char *year        = "2015";
 
-static struct Window {
-#ifdef GLUT /* <-- glut */
-	struct Vec2i size, position;
-#elif defined(SDL) /* glut --><-- sdl */
-	SDL_Window *sdl_window;
-	SDL_GLContext *sdl_gl_context;
-#else /* sdl --><-- nothing */
-#error Define GLUT or SDL.
-#endif /* nothing --> */
-	int is_full;
-	time_t last_error;
-	unsigned no_errors;
-} window;
-
 static const unsigned max_gl_fails = 64;
 static const double forget_errors = 10.0; /* s */
 static const int warn_texture_size = 1024;
 
-/** Gets the window started. There is no destructor.
- @param title The title of the window (can be null.)
- @param argc, argv: {main} program arguments; passed to glutInit().
- @return Whether the graphics library is ready and the window is started. */
-static int Window(const char *title, int argc, char **argv) {
-	GLint max_tex;
-	assert(title);
-	/* We keep track of how many errors per time; too many, we exit. */
-	if(time(&window.last_error) == (time_t)-1)
-		return fprintf(stderr, "Window: time function not working.\n"), 0;
-#ifdef GLUT /* <-- glut */
-	fprintf(stderr, "Window: GLUT initialising.\n");
-	window.size.x = 600, window.size.y = 400;
-	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DOUBLE);
-	glutInitWindowSize(window.size.x, window.size.y);
-	glutCreateWindow(title);
-#elif defined(SDL) /* glut --><-- sdl */
-	UNUSED(argc && argv);
-	if(window.sdl_window)
-		return fprintf(stderr, "Window: already started.\n"), 1;
-	{ /* Info. */
-		SDL_version linked;
-		SDL_GetVersion(&linked);
-		fprintf(stderr, "Window: SDL version %d.%d.%d.\n",
-			linked.major, linked.minor, linked.patch);
-	}
-	SDL_SetMainReady(); /* Doesn't do anything on SDL2? why is it there? */
-	if(SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO /*@fixme?*/)
-		|| !(window.sdl_window = SDL_CreateWindow(title,
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480,
-		SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS | SDL_WINDOW_RESIZABLE))
-		/* || !(window.sdl_renderer = SDL_CreateRenderer(window.sdl_window,
-		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC))*/
-		|| !(window.sdl_gl_context = SDL_GL_CreateContext(window.sdl_window))
-		|| SDL_GL_SetSwapInterval(1))
-		return fprintf(stderr, "Window: %s.\n", SDL_GetError()), 0;
-#else /* sdl --><-- nothing */
-#error Define GLUT or SDL.
-#endif /* nothing --> */
-	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex);
-	fprintf(stderr, "Window: GLSL: vendor %s; version %s; renderer %s; shading "
-		"language version %s; combined texture image units %d; maximum texture "
-		"size %d.\n", glGetString(GL_VENDOR), glGetString(GL_VERSION),
-		glGetString(GL_RENDERER), glGetString(GL_SHADING_LANGUAGE_VERSION),
-		GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, max_tex);
-	if(max_tex < warn_texture_size)
-		fprintf(stderr, "Window: maximum texture size is probably too small, "
-		"%d/%d.\n", max_tex, warn_texture_size);
-	return 1;
-}
-
-static void Window_(void) {
-#ifdef SDL /* <-- sdl */
-	if(window.sdl_gl_context) SDL_GL_DeleteContext(window.sdl_gl_context);
-	if(window.sdl_window) SDL_DestroyWindow(window.sdl_window);
-	SDL_Quit();
-#endif /* sdl --> */
-}
-
-/** Begins animation with the hooks that have been placed in the window. Does
- not return if GLEW. */
-static void WindowGo(void) {
-#ifdef GLUT /* <-- glut */
-	glutMainLoop();
-#elif defined(SDL) /* glut --><-- sdl */
-	SDL_Event e;
-	unsigned dt;
-	int running = 1;
-	if(!window.sdl_window || !window.sdl_gl_context)
-		{ fprintf(stderr, "WindowGo: No window.\n"); return; }
-	TimerRun();
-	do {
-		/* So awkward. */
-		while(SDL_PollEvent(&e)) { switch(e.type) {
-			case SDL_WINDOWEVENT: if(e.window.event == SDL_WINDOWEVENT_RESIZED)
-					DrawResize((int)e.window.data1, (int)e.window.data2);
-				printf("Resize.\n");
-				break;
-			case SDL_KEYDOWN:
-			case SDL_QUIT: running = 0; break;
-		} }
-		if(!(dt = TimerUpdate())) {
-			SDL_Delay(200); /* Paused. */
-		} else {
-			GameUpdate(dt);
-			DrawDisplay();
-			SDL_GL_SwapWindow(window.sdl_window);
-		}
-	} while(running);
-#else /* sdl --><-- nothing */
-#error Define GLUT or SDL.
-#endif /* nothing --> */
-}
+static struct Window {
+	/* <-- glut */
+	struct Vec2i size, position;
+	int is_full;
+	/* glut --> */
+	time_t last_error;
+	unsigned no_errors;
+} window;
 
 /** Help screen. */
 static void usage(void) {
@@ -197,12 +90,11 @@ static void usage(void) {
 		"GLEW: by Milan Ikits and Marcelo Magallon\n"
 		"http://glew.sourceforge.net/\n\n"
 		"GLUT: by Mark Kilgard and FreeGLUT: by Pawel W. Olszta\n"
-		"http://freeglut.sourceforge.net/\n\n"
-		"SDL2:\nhttps://www.libsdl.org/\n\n");
+		"http://freeglut.sourceforge.net/\n\n");
 }
 
 /** Load {OpenGL2+} from the library under {-D GLEW}.
- @return True if success. */
+ @return Success. */
 static int glew(void) {
 #ifdef GLEW
 	GLenum err;
@@ -217,16 +109,40 @@ static int glew(void) {
 	return 1;
 }
 
-/** Belongs in {main}, but maybe called with {atexit} if {GLUT}, so it's a bit
- of a hack. */
-static void subsystems_(void) {
-	TimerPause(), Game_(), Draw_(), Fars_(), Sprites_(), Events_();
-}
-/** For symmetry. */
-static int subsystems(void) {
-	if(!glew() || !Key() || !Events() || !Sprites() || !Fars() || !Draw()
-		|| !Game()) return 0;
+/** Gets the window started.
+ @param title The title of the window (can be null.)
+ @param argc, argv: {main} program arguments; passed to glutInit().
+ @return Whether the graphics library is ready and the window is started. */
+static int Window(const char *title, int argc, char **argv) {
+	GLint max_tex;
+	assert(title);
+	/* We keep track of how many errors per time; too many, we exit. */
+	if(time(&window.last_error) == (time_t)-1)
+		return fprintf(stderr, "Window: time function not working.\n"), 0;
+	/* <-- glut */
+	fprintf(stderr, "Window: GLUT initialising.\n");
+	window.size.x = 600, window.size.y = 400;
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_DOUBLE);
+	glutInitWindowSize(window.size.x, window.size.y);
+	glutCreateWindow(title);
+	/* glut --> fixme: figure out how to do SDL_GL_SetSwapInterval(1) */
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_tex);
+	fprintf(stderr, "Window: GLSL: vendor %s; version %s; renderer %s; shading "
+		"language version %s; combined texture image units %d; maximum texture "
+		"size %d.\n", glGetString(GL_VENDOR), glGetString(GL_VERSION),
+		glGetString(GL_RENDERER), glGetString(GL_SHADING_LANGUAGE_VERSION),
+		GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, max_tex);
+	if(max_tex < warn_texture_size)
+		fprintf(stderr, "Window: maximum texture size is probably too small, "
+		"%d/%d.\n", max_tex, warn_texture_size);
 	return 1;
+}
+
+/** This is legacy code from 1998 when there was no way to get out of the main
+ loop. */
+static void atexit_hack(void) {
+	TimerPause(), Game_(), Draw_(), Fars_(), Sprites_(), Events_();
 }
 
 /** Entry point.
@@ -237,24 +153,30 @@ int main(int argc, char **argv) {
 	const char *e = 0;
 	/* @fixme More options (ie, load game, etc.) */
 	if(argc > 1) return usage(), EXIT_SUCCESS;
-#ifdef GLUT /* <-- glut */
-	/* We generally don't have return because {glutMainLoop} never does. The
-	 window is entirely in {glut}'s control. */
-	if(atexit(&subsystems_)) perror("atexit");
-#endif /* glut --> */
+#ifdef FREEGLUT /* <-- free */
+	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_GLUTMAINLOOP_RETURNS);
+#else /* free --><-- !free */
+	if(atexit(&atexit_hack)) perror("atexit");
+#endif /* !free --> */
 	/* Entropy increase. */
 	srand((unsigned)clock());
 	do { /* try */
 		/* Window has to be first. */
 		if(!Window(programme, argc, argv)) { e = "window"; break; }
-		if(!subsystems()) { e = "sub-systems"; break; }
-		TimerRun();
-		WindowGo();
+		if(!glew()) { e = "glew"; break; }
+		Key();
+		if(!Events()) { e = "events"; break; }
+		if(!Sprites()) { e = "sprites"; break; }
+		if(!Fars()) { e = "fars"; break; }
+		if(!Draw()) { e = "draw"; break; }
+		if(!Game()) { e = "game"; break; }
+		/* <-- glut */
+		glutMainLoop();
+		/* glut --> */
 	} while(0); if(e) { /* catch */
 		fprintf(stderr, "Error with the %s.\n", e);
 	} { /* finally */
-		subsystems_();
-		Window_();
+		atexit_hack();
 	}
 	return e ? EXIT_FAILURE : EXIT_SUCCESS;
 }
@@ -284,7 +206,7 @@ int WindowIsGlError(const char *function) {
 
 /** Toggle fullscreen. */
 void WindowToggleFullScreen(void) {
-#ifdef GLUT /* <-- glut */
+	/* <-- glut */
 	if(!window.is_full) {
 		fprintf(stderr, "WindowToggleFullScreen: entering fullscreen.\n");
 		window.size.x     = glutGet(GLUT_WINDOW_WIDTH);
@@ -299,144 +221,6 @@ void WindowToggleFullScreen(void) {
 		glutPositionWindow(window.position.x, window.position.y);
 		glutSetCursor(GLUT_CURSOR_INHERIT);
 	}
-#elif defined(SDL) /* glut --><-- sdl */
-	assert(window.sdl_window);
-	if(SDL_SetWindowFullscreen(window.sdl_window,
-		window.is_full ? SDL_WINDOW_FULLSCREEN : 0))
-		{ fprintf(stderr, "SDL Error: %s.\n", SDL_GetError()); return; }
-	window.is_full = ~window.is_full;
-#else /* sdl --><-- nothing */
-#error Define GLUT or SDL.
-#endif /* nothing --> */
+	/* glut --> */
 	WindowIsGlError("WindowToggleFullScreen");
 }
-
-
-#ifdef GLUT /* <-- glut */
-
-static struct Key {
-	int state;
-	int down;
-	int integral;
-	int time;
-	void (*handler)(void);
-} keys[KEY_MAX];
-
-/* private prototypes */
-static enum Keys glut_to_keys(const int k);
-static void key_down(unsigned char k, int x, int y);
-static void key_up(unsigned char k, int x, int y);
-static void key_down_special(int k, int x, int y);
-static void key_up_special(int k, int x, int y);
-
-/** Attach the static keys to the Window depending on whether the Timer is
- active (poll) or not (direct to functions.)
- @return Success? */
-void Key(void) {
-	glutKeyboardFunc(&key_down);
-	glutKeyboardUpFunc(&key_up);
-	glutSpecialFunc(&key_down_special);
-	glutSpecialUpFunc(&key_up_special); 
-	fprintf(stderr, "Key: handlers set-up.\n");
-}
-
-/** Registers a function to call asynchronously on press. */
-void KeyRegister(const unsigned k, void (*const handler)(void)) {
-	if(k >= KEY_MAX) return;
-	keys[k].handler = handler;
-}
-
-/** Polls how long the key has been pressed, without repeat rate. Destructive.
- @param key		The key.
- @return		Number of ms. */
-int KeyTime(const int key) {
-	int time;
-	struct Key *k;
-	if(key < 0 || key >= KEY_MAX) return 0;
-	k = &keys[key];
-	if(k->state) {
-		int ct  = TimerGetMs();
-		time    = ct - k->down + k->integral;
-		k->down = ct;
-	} else {
-		time    = k->integral;
-	}
-	k->integral = 0;
-	return time;
-}
-
-/** GLUT_ to internal keys.
- @param k	Special key in OpenGl.
- @return	Keys. */
-static enum Keys glut_to_keys(const int k) {
-	switch(k) {
-		case GLUT_KEY_LEFT:   return k_left;
-		case GLUT_KEY_UP:     return k_up;
-		case GLUT_KEY_RIGHT:  return k_right;
-		case GLUT_KEY_DOWN:   return k_down;
-		case GLUT_KEY_PAGE_UP:return k_pgup;
-		case GLUT_KEY_PAGE_DOWN: return k_pgdn;
-		case GLUT_KEY_HOME:   return k_home;
-		case GLUT_KEY_END:    return k_end;
-		case GLUT_KEY_INSERT: return k_ins;
-		case GLUT_KEY_F1:     return k_f1;
-		case GLUT_KEY_F2:     return k_f2;
-		case GLUT_KEY_F3:     return k_f3;
-		case GLUT_KEY_F4:     return k_f4;
-		case GLUT_KEY_F5:     return k_f5;
-		case GLUT_KEY_F6:     return k_f6;
-		case GLUT_KEY_F7:     return k_f7;
-		case GLUT_KEY_F8:     return k_f8;
-		case GLUT_KEY_F9:     return k_f9;
-		case GLUT_KEY_F10:    return k_f10;
-		case GLUT_KEY_F11:    return k_f11;
-		case GLUT_KEY_F12:    return k_f12;
-		default: return k_unknown;
-	}
-}
-
-/** Callback for {glutKeyboardFunc}. */
-static void key_down(unsigned char k, int x, int y) {
-	struct Key *key = &keys[k];
-	if(key->state) return;
-	key->state = -1;
-	key->down  = TimerGetMs();
-	if(key->handler) key->handler();
-	/* fprintf(stderr, "key_down: key %d hit at %d ms.\n", k, key->down);*/
-	UNUSED(x), UNUSED(y);
-}
-
-/** Callback for {glutKeyboardUpFunc}. */
-static void key_up(unsigned char k, int x, int y) {
-	struct Key *key = &keys[k];
-	if(!key->state) return;
-	key->state = 0;
-	key->integral += TimerGetMs() - key->down;
-	/* fprintf(stderr, "key_up: key %d pressed %d ms at end of frame.\n",k,key->integral);*/
-	UNUSED(x), UNUSED(y);
-}
-
-/** Callback for {glutSpecialFunc}. */
-static void key_down_special(int k, int x, int y) {
-	struct Key *key = &keys[glut_to_keys(k)];
-	if(key->state) return;
-	key->state  = -1;
-	key->down = TimerGetMs();
-	if(key->handler) key->handler();
-	/* fprintf(stderr, "key_down_special: key %d hit at %d ms.\n", k, key->down);*/
-	UNUSED(x), UNUSED(y);
-}
-
-/** Callback for {glutSpecialUpFunc}. */
-static void key_up_special(int k, int x, int y) {
-	struct Key *key = &keys[glut_to_keys(k)];
-	if(!key->state) return;
-	key->state = 0;
-	key->integral += TimerGetMs() - key->down;
-	/* fprintf(stderr, "key_up_special: key %d pressed %d ms at end of frame.\n", k,
-	 key->integral);*/
-	UNUSED(x), UNUSED(y);
-}
-
-#endif /* glut --> */
-

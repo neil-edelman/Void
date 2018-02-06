@@ -13,11 +13,11 @@
 #include <assert.h> /* assert */
 #include <math.h>   /* sqrtf fminf fmodf atan2f */
 #include "../../build/Auto.h" /* for images */
+#include "../Ortho.h"
 #include "../game/Sprites.h" /* in display */
 #include "../game/Fars.h" /* in display */
 #include "../../external/lodepng.h"  /* in texture */
 #include "../../external/nanojpeg.h" /* in texture */
-#include "../WindowGl.h" /* all OpenGL prototypes */
 #include "../Window.h" /* WindowIsGlError */
 #include "Draw.h"
 /* Auto-generated, hard coded resouce files from Vsfs2h; run "make"
@@ -89,19 +89,336 @@ static const struct {
 	GLsizei count;
 } vbo_info_bg = { 0, 4 }, vbo_info_square = { 4, 4 };
 
-/* private prototypes */
-static int texture(struct AutoImage *image); /* decompresses */
-static int light_compute_texture(void); /* creates image */
-/*static int text_compute_texture(void);*/
-static void display(void); /* callback for display */
-static void resize(int width, int height); /* callback  */
-
 /* globals */
 static GLuint vbo_geom, light_tex, background_tex, shield_tex;
 static struct Vec2f camera, camera_extent;
-/*static int text_name;*/
 
-/** Gets all the graphics stuff started.
+/** Callback for {glutDisplayFunc}; this is where all of the drawing happens.
+ It sets up the shaders, then calls whatever draw functions use those
+ shaders. */
+static void display(void) {
+	unsigned lights;
+
+	/* @fixme https://www.khronos.org/opengl/wiki/Common_Mistakes
+	 "The buffers should always be cleared. On much older hardware, there was
+	 a technique to get away without clearing the scene, but on even semi-recent
+	 hardware, this will actually make things slower. So always do the clear."
+	 This is very, very sketchy indeed; I don't believe you. Obviously I set it
+	 up to not do the clear. Maybe the clear has gotten faster, but like shit
+	 it's faster then not doing it. Time it!
+	 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	 */
+
+	/* Use sprites; triangle strips, two to form a square, vertex buffer,
+	 [-0.5, 0.5 : -0.5, 0.5] */
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_geom);
+
+	/* @fixme Don't use painters' algorithm; stencil test! */
+
+	/* background (desktop):
+	 turn off transperency
+	 background vbo
+	 update glUniform1i(GLint location, GLint v0)
+	 update glUniformMatrix4fv(location, count, transpose, *value)
+	 glDrawArrays(type flag, offset, no) */
+	if(background_tex) {
+		/* use background shader */
+		glUseProgram(auto_Background_shader.compiled);
+		/* turn transperency off */
+		glDisable(GL_BLEND);
+		/* why?? */
+		glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
+		/* fixme: of course it's a background, set once */
+		/*glUniform1i(background_sampler_location, TEX_CLASS_BACKGROUND);*/
+		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
+		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_bg.first, vbo_info_bg.count);
+	}
+
+	glEnable(GL_BLEND);
+
+	/* Draw far objects. */
+	glUseProgram(auto_Far_shader.compiled);
+	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
+	FarsDraw();
+
+	/* Set up lights, draw sprites in foreground. */
+	glUseProgram(auto_Lambert_shader.compiled);
+	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
+	glUniform1i(auto_Lambert_shader.points, lights = (unsigned)SpritesLightGetSize());
+	if(lights) {
+		struct Vec2f *parray = SpritesLightPositions();
+		unsigned i;
+		glUniform2fv(auto_Lambert_shader.point_position, lights,
+					 (GLfloat *)parray);
+		glUniform3fv(auto_Lambert_shader.point_colour, lights,
+					 (GLfloat *)SpritesLightGetColours());
+		/* Debug. */
+		for(i = 0; i < lights; i++) Info(parray + i, icon_light);
+	}
+	SpritesDraw();
+
+	/* Display info on top without lighting. */
+	glUseProgram(auto_Info_shader.compiled);
+	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
+	SpritesInfo();
+
+	/* Overlay hud. @fixme */
+	if(shield_tex) {
+		struct Ship *player;
+		const struct Ortho3f *x;
+		const struct Vec2f *hit;
+		if((player = SpritesGetPlayerShip())
+		   && (x = SpriteGetPosition((struct Sprite *)player))
+		   && (hit = ShipGetHit(player))) {
+			glUseProgram(auto_Hud_shader.compiled);
+			glBindTexture(GL_TEXTURE_2D, shield_tex);
+			glUniform2f(auto_Hud_shader.camera, camera.x, camera.y);
+			glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
+			glUniform2f(auto_Hud_shader.position, x->x, x->y + 64.0f);
+			glUniform2i(auto_Hud_shader.shield, hit->x, hit->y);
+			glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
+		}
+	}
+
+	/* We want to do this:
+	 glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
+	 glBindTexture(GL_TEXTURE_2D, text_name);
+	 current_texture = text_name;
+	 glUniform1f(auto_Info_shader.size, 100);
+	 glUniform2f(auto_Info_shader.object, 0.0f, 0.0f);
+	 glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);*/
+
+	/* Disable, swap. */
+	glUseProgram(0);
+	/* <-- glut */
+	glutSwapBuffers();
+	/* glut --> */
+	/* @fixme glFinish and have logic stepped up? what happens when the timer
+	 calls the fuction more times? does it build up in a queue? */
+}
+
+/** Callback for glutReshapeFunc.
+ @fixme Not guaranteed to have a background! this will crash.
+ @param width, height: The size of the client area. */
+static void resize(int width, int height) {
+	struct Vec2f two_screen;
+	int w_tex, h_tex;
+	float w_w_tex, h_h_tex;
+
+	/*fprintf(stderr, "resize: %dx%d.\n", width, height);*/
+	if(width <= 0 || height <= 0) return;
+	glViewport(0, 0, width, height);
+	camera_extent.x = width / 2.0f, camera_extent.y = height / 2.0f; /* global*/
+
+	/* Resize the background. */
+	/* glActiveTexture(TEX_CLASS_BACKGROUND); this does nothing? */
+	glBindTexture(GL_TEXTURE_2D, background_tex);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);
+	/*fprintf(stderr, "w %d h %d\n", w_tex, h_tex);*/
+	w_w_tex = (float)width  / w_tex;
+	h_h_tex = (float)height / h_tex;
+
+	/* Update the background texture vbo on the card with global data here. */
+	vbo[0].s = vbo[1].s =  w_w_tex;
+	vbo[2].s = vbo[3].s = -w_w_tex;
+	vbo[0].t = vbo[2].t =  h_h_tex;
+	vbo[1].t = vbo[3].t = -h_h_tex;
+	glBufferSubData(GL_ARRAY_BUFFER, vbo_info_bg.first,
+					vbo_info_bg.count * (GLsizei)sizeof(struct Vertex),
+					vbo + vbo_info_bg.first);
+
+	/* Update the shaders; YOU MUST CALL THIS IF THE PROGRAMME HAS ANY
+	 DEPENDENCE ON SCREEN SIZE. For Background, the image may not cover the
+	 whole drawing area, so we may need a constant scaling; if it is so, the
+	 image will have to be linearly interpolated for quality. */
+	glUseProgram(auto_Background_shader.compiled);
+	glBindTexture(GL_TEXTURE_2D, background_tex);
+	if(w_w_tex > 1.0f || h_h_tex > 1.0f) {
+		const float scale = 1.0f / ((w_w_tex > h_h_tex) ? w_w_tex : h_h_tex);
+		glUniform1f(auto_Background_shader.scale, scale);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	} else {
+		glUniform1f(auto_Background_shader.scale, 1.0f);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+	two_screen.x = 2.0f / width;
+	two_screen.y = 2.0f / height;
+	glUseProgram(auto_Lambert_shader.compiled);
+	glUniform2f(auto_Lambert_shader.projection, two_screen.x, two_screen.y);
+	glUseProgram(auto_Far_shader.compiled);
+	glUniform2f(auto_Far_shader.projection, two_screen.x, two_screen.y);
+	glUseProgram(auto_Info_shader.compiled);
+	glUniform2f(auto_Info_shader.projection, two_screen.x, two_screen.y);
+	glUseProgram(auto_Hud_shader.compiled);
+	glUniform2f(auto_Hud_shader.two_screen, two_screen.x, two_screen.y);
+}
+
+/** Creates a texture from an image; sets the image texture unit.
+ @fixme This should go in Auto?
+ @param image: The Image as seen in Lores.h.
+ @return Success. */
+static int texture(struct AutoImage *image) {
+	unsigned width, height, depth, error;
+	unsigned char *pic;
+	int is_alloc = 0, is_bad = 0;
+	unsigned format = 0, internal = 0;
+	unsigned tex = 0;
+	if(!image || image->texture) return 0;
+	/* Uncompress the image. */
+	switch(image->data_format) {
+		case IF_PNG:
+			/* @fixme This will force it to be 32-bit RGBA even if it doesn't
+			 have an alpha channel, potentially wasteful. */
+			if((error = lodepng_decode32(&pic, &width, &height, image->data,
+										 image->data_size))) {
+				fprintf(stderr, "texture: lodepng error %u: %s\n", error,
+						lodepng_error_text(error));
+				break;
+			}
+			is_alloc = -1;
+			depth    = 4;
+			break;
+		case IF_JPEG:
+			if(njDecode(image->data, (int)image->data_size)) break;
+			is_alloc = -1;
+			pic = njGetImage();
+			if(!njIsColor()) is_bad = -1;
+			width  = njGetWidth();
+			height = njGetHeight();
+			depth  = 3;
+			break;
+		case IF_UNKNOWN:
+		default:
+			fprintf(stderr, "texture: unknown image format.\n");
+	}
+	if(!is_alloc) {
+		fprintf(stderr, "texture: allocation failed.\n");
+		return 0;
+	}
+	if(width != image->width || height != image->height || depth!=image->depth){
+		fprintf(stderr, "texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n",
+				image->width, image->height, image->depth, width, height, depth);
+		is_bad = -1;
+	}
+	/* select image format */
+	switch(depth) {
+		case 1:
+			/* We use exclusively for shaders, so I don't think this matters. */
+			/* GL_LUMINANCE; <- "core context depriciated," I was using that. */
+			internal = GL_RGB;
+			format   = GL_RED;
+			break;
+		case 3:
+			/* non-transparent */
+			internal = GL_RGB8;
+			format   = GL_RGB;
+			break;
+		case 4:
+			internal = GL_RGBA8;
+			format   = GL_RGBA;
+			break;
+		default:
+			fprintf(stderr, "texture: not a recognised depth, %d.\n", depth);
+			is_bad = -1;
+	}
+	/* Invert to go with OpenGL's strict adherence to standards vs traditions.*/
+	{
+		unsigned bytes_line = width * depth;
+		unsigned top, bottom, i;
+		unsigned char *pb_t, *pb_b;
+		for(top = 0, bottom = height - 1; top < bottom; top++, bottom--) {
+			pb_t = pic + top    * bytes_line;
+			pb_b = pic + bottom * bytes_line;
+			for(i = 0; i < bytes_line; i++, pb_t++, pb_b++)
+				*pb_t ^= *pb_b, *pb_b ^= *pb_t, *pb_t ^= *pb_b;
+		}
+	}
+	/* Load the uncompressed image into a texture. */
+	if(!is_bad) {
+		glGenTextures(1, (unsigned *)&tex);
+		glActiveTexture((unsigned)(image->depth == 3 ? TexClassTexture(TEX_CLASS_BACKGROUND) : TexClassTexture(TEX_CLASS_SPRITE)));
+		glBindTexture(GL_TEXTURE_2D, tex);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		/* linear because fractional positioning; may be changed with
+		 backgrounds in resize */
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		/* no mipmap */
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		/* void glTexImage2D(target, level, internalFormat, width, height,
+		 border, format, type, *data); */
+		glTexImage2D(GL_TEXTURE_2D, 0, internal, (int)width, (int)height, 0,
+					 format, GL_UNSIGNED_BYTE, pic);
+		image->texture = tex;
+		/* debug */
+#ifdef PRINT_PEDANTIC
+		printf("texture: %u:\n", image->texture);
+		if(image->width <= 80) image_print(image, pic);
+		else printf(" . . . too big to show.\n");
+#endif
+	}
+	/* Free the pic. */
+	switch(image->data_format) {
+		case IF_PNG: free(pic); break;
+		case IF_JPEG: njDone(); break;
+		default: break;
+	}
+	fprintf(stderr, "texture: created %dx%dx%d texture, Tex%u.\n",
+			width, height, depth, tex);
+	WindowIsGlError("texture");
+	return tex ? 1 : 0;
+}
+
+/* Creates a hardcoded lighting texture with the Red the radius and Green the
+ angle.
+ @return The texture or zero. */
+static int light_compute_texture(void) {
+	int   i, j;
+	float x, y;
+	float *buffer;
+	const int buffer_size = 1024; /* width/height */
+	const float buffer_norm = (float)M_SQRT1_2 * 4.0f
+	/ sqrtf(2.0f * buffer_size * buffer_size);
+	unsigned name;
+
+	if(!(buffer = malloc(sizeof(float) * buffer_size * buffer_size << 1))) return 0;
+	for(j = 0; j < buffer_size; j++) {
+		for(i = 0; i < buffer_size; i++) {
+			x = (float)i - 0.5f*buffer_size + 0.5f;
+			y = (float)j - 0.5f*buffer_size + 0.5f;
+			buffer[((j*buffer_size + i) << 1) + 0] =
+			fminf(sqrtf(x*x + y*y) * buffer_norm, 1.0f);
+			/* NOTE: opengl clips [0, 1), even if it says different;
+			 maybe it's GL_LINEAR? */
+			buffer[((j*buffer_size + i) << 1) + 1] = fmodf(atan2f(y, x)
+														   + (float)M_2PI, (float)M_2PI) * (float)M_1_2PI;
+		}
+	}
+	glGenTextures(1, (unsigned *)&name);
+	glBindTexture(GL_TEXTURE_2D, name);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	/* NOTE: GL_LINEAR is a lot prettier, but causes a crease when the
+	 principal value goes from [0, 1), ie, [0, 2Pi) */
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	/* void glTexImage2D(target, level, internalFormat, width, height,
+	 border, format, type, *data); */
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, buffer_size, buffer_size, 0,
+				 GL_RG, GL_FLOAT, buffer);
+	free(buffer);
+	fprintf(stderr, "light_comute_texture: created %dx%dx%d hardcoded lighting "
+		"texture, Tex%u.\n", buffer_size, buffer_size, 2, name);
+	WindowIsGlError("light_compute_texture");
+	return name;
+}
+
+/** Gets all the graphics stuff started. Must have a window.
  @return All good to draw? */
 int Draw(void) {
 	const float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
@@ -114,10 +431,10 @@ int Draw(void) {
 
 	/*text_name = text_compute_texture();*/
 
-#ifdef GLUT /* <-- glut */
+	/* <-- glut */
 	glutDisplayFunc(&display);
 	glutReshapeFunc(&resize);
-#endif /* glut --> */
+	/* glut --> */
 
 	/* http://www.opengl.org/sdk/docs/man2/xhtml/glBlendFunc.xml */
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -213,11 +530,6 @@ void Draw_(void) {
 	is_started = 0;
 }
 
-#ifdef SDL /* <-- awkward */
-void DrawDisplay(void) { display(); }
-void DrawResize(const int w, const int h) { resize(w, h); }
-#endif /* awkward --> */
-
 /** Sets the camera location.
  @param x: (x, y) in pixels. */
 void DrawSetCamera(const struct Vec2f *const x) {
@@ -270,168 +582,6 @@ void DrawSetShield(const char *const key) {
 	glBindTexture(GL_TEXTURE_2D, shield_tex);
 	fprintf(stderr, "DrawSetShield: image \"%s,\" (Tex%u,) set as shield.\n",
 		image->name, shield_tex);
-}
-
-/** Creates a texture from an image; sets the image texture unit.
- @fixme This should go in Auto?
- @param image: The Image as seen in Lores.h.
- @return Success. */
-static int texture(struct AutoImage *image) {
-	unsigned width, height, depth, error;
-	unsigned char *pic;
-	int is_alloc = 0, is_bad = 0;
-	unsigned format = 0, internal = 0;
-	unsigned tex = 0;
-	if(!image || image->texture) return 0;
-	/* Uncompress the image. */
-	switch(image->data_format) {
-		case IF_PNG:
-			/* @fixme This will force it to be 32-bit RGBA even if it doesn't
-			 have an alpha channel, potentially wasteful. */
-			if((error = lodepng_decode32(&pic, &width, &height, image->data,
-				image->data_size))) {
-				fprintf(stderr, "texture: lodepng error %u: %s\n", error,
-					lodepng_error_text(error));
-				break;
-			}
-			is_alloc = -1;
-			depth    = 4;
-			break;
-		case IF_JPEG:
-			if(njDecode(image->data, (int)image->data_size)) break;
-			is_alloc = -1;
-			pic = njGetImage();
-			if(!njIsColor()) is_bad = -1;
-			width  = njGetWidth();
-			height = njGetHeight();
-			depth  = 3;
-			break;
-		case IF_UNKNOWN:
-		default:
-			fprintf(stderr, "texture: unknown image format.\n");
-	}
-	if(!is_alloc) {
-		fprintf(stderr, "texture: allocation failed.\n");
-		return 0;
-	}
-	if(width != image->width || height != image->height || depth!=image->depth){
-		fprintf(stderr, "texture: dimension mismatch %u:%ux%u vs %u:%ux%u.\n",
-			image->width, image->height, image->depth, width, height, depth);
-		is_bad = -1;
-	}
-	/* select image format */
-	switch(depth) {
-		case 1:
-			/* We use exclusively for shaders, so I don't think this matters. */
-			/* GL_LUMINANCE; <- "core context depriciated," I was using that. */
-			internal = GL_RGB;
-			format   = GL_RED;
-			break;
-		case 3:
-			/* non-transparent */
-			internal = GL_RGB8;
-			format   = GL_RGB;
-			break;
-		case 4:
-			internal = GL_RGBA8;
-			format   = GL_RGBA;
-			break;
-		default:
-			fprintf(stderr, "texture: not a recognised depth, %d.\n", depth);
-			is_bad = -1;
-	}
-	/* Invert to go with OpenGL's strict adherence to standards vs traditions.*/
-	{
-		unsigned bytes_line = width * depth;
-		unsigned top, bottom, i;
-		unsigned char *pb_t, *pb_b;
-		for(top = 0, bottom = height - 1; top < bottom; top++, bottom--) {
-			pb_t = pic + top    * bytes_line;
-			pb_b = pic + bottom * bytes_line;
-			for(i = 0; i < bytes_line; i++, pb_t++, pb_b++)
-				*pb_t ^= *pb_b, *pb_b ^= *pb_t, *pb_t ^= *pb_b;
-		}
-	}
-	/* Load the uncompressed image into a texture. */
-	if(!is_bad) {
-		glGenTextures(1, (unsigned *)&tex);
-		glActiveTexture((unsigned)(image->depth == 3 ? TexClassTexture(TEX_CLASS_BACKGROUND) : TexClassTexture(TEX_CLASS_SPRITE)));
-		glBindTexture(GL_TEXTURE_2D, tex);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		/* linear because fractional positioning; may be changed with
-		 backgrounds in resize */
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		/* no mipmap */
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-		/* void glTexImage2D(target, level, internalFormat, width, height,
-		 border, format, type, *data); */
-		glTexImage2D(GL_TEXTURE_2D, 0, internal, (int)width, (int)height, 0,
-			format, GL_UNSIGNED_BYTE, pic);
-		image->texture = tex;
-		/* debug */
-#ifdef PRINT_PEDANTIC
-		printf("texture: %u:\n", image->texture);
-		if(image->width <= 80) image_print(image, pic);
-		else printf(" . . . too big to show.\n");
-#endif
-	}
-	/* Free the pic. */
-	switch(image->data_format) {
-		case IF_PNG: free(pic); break;
-		case IF_JPEG: njDone(); break;
-		default: break;
-	}
-	fprintf(stderr, "texture: created %dx%dx%d texture, Tex%u.\n",
-		width, height, depth, tex);
-	WindowIsGlError("texture");
-	return tex ? 1 : 0;
-}
-
-/* Creates a hardcoded lighting texture with the Red the radius and Green the
- angle.
- @return The texture or zero. */
-static int light_compute_texture(void) {
-	int   i, j;
-	float x, y;
-	float *buffer;
-	const int buffer_size = 1024; /* width/height */
-	const float buffer_norm = (float)M_SQRT1_2 * 4.0f
-		/ sqrtf(2.0f * buffer_size * buffer_size);
-	unsigned name;
-
-	if(!(buffer = malloc(sizeof(float) * buffer_size * buffer_size << 1))) return 0;
-	for(j = 0; j < buffer_size; j++) {
-		for(i = 0; i < buffer_size; i++) {
-			x = (float)i - 0.5f*buffer_size + 0.5f;
-			y = (float)j - 0.5f*buffer_size + 0.5f;
-			buffer[((j*buffer_size + i) << 1) + 0] =
-				fminf(sqrtf(x*x + y*y) * buffer_norm, 1.0f);
-			/* NOTE: opengl clips [0, 1), even if it says different;
-			 maybe it's GL_LINEAR? */
-			buffer[((j*buffer_size + i) << 1) + 1] = fmodf(atan2f(y, x)
-				+ (float)M_2PI, (float)M_2PI) * (float)M_1_2PI;
-		}
-	}
-	glGenTextures(1, (unsigned *)&name);
-	glBindTexture(GL_TEXTURE_2D, name);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	/* NOTE: GL_LINEAR is a lot prettier, but causes a crease when the
-	 principal value goes from [0, 1), ie, [0, 2Pi) */
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	/* void glTexImage2D(target, level, internalFormat, width, height,
-	 border, format, type, *data); */
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, buffer_size, buffer_size, 0,
-		GL_RG, GL_FLOAT, buffer);
-	free(buffer);
-	fprintf(stderr, "light_comute_texture: created %dx%dx%d hardcoded lighting texture, "
-		"Tex%u.\n", buffer_size, buffer_size, 2, name);
-	WindowIsGlError("light_compute_texture");
-	return name;
 }
 
 #if 0
@@ -519,172 +669,4 @@ void DrawDisplayInfo(const struct Vec2f *const x,
 	}
 	glUniform2f(auto_Info_shader.object, x->x, x->y);
 	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
-}
-
-
-
-/* Display callbacks.  */
-
-/** Callback for glutDisplayFunc; this is where all of the drawing happens. It
- sets up the shaders, then calls whatever draw functions use those shaders. */
-static void display(void) {
-	unsigned lights;
-
-	/* @fixme https://www.khronos.org/opengl/wiki/Common_Mistakes
-	"The buffers should always be cleared. On much older hardware, there was
-	a technique to get away without clearing the scene, but on even semi-recent
-	hardware, this will actually make things slower. So always do the clear."
-	This is very, very sketchy indeed; I don't believe you. Obviously I set it
-	up to not do the clear. Maybe the clear has gotten faster, but like shit
-	it's faster then not doing it. Time it!
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	 */
-
-	/* Use sprites; triangle strips, two to form a square, vertex buffer,
-	 [-0.5, 0.5 : -0.5, 0.5] */
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_geom);
-
-	/* @fixme Don't use painters' algorithm; stencil test! */
-
-	/* background (desktop):
-	 turn off transperency
-	 background vbo
-	 update glUniform1i(GLint location, GLint v0)
-	 update glUniformMatrix4fv(location, count, transpose, *value)
-	 glDrawArrays(type flag, offset, no) */
-	if(background_tex) {
-		/* use background shader */
-		glUseProgram(auto_Background_shader.compiled);
-		/* turn transperency off */
-		glDisable(GL_BLEND);
-		/* why?? */
-		glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
-		/* fixme: of course it's a background, set once */
-		/*glUniform1i(background_sampler_location, TEX_CLASS_BACKGROUND);*/
-		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_bg.first, vbo_info_bg.count);
-	}
-
-	glEnable(GL_BLEND);
-
-	/* Draw far objects. */
-	glUseProgram(auto_Far_shader.compiled);
-	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
-	FarsDraw();
-
-	/* Set up lights, draw sprites in foreground. */
-	glUseProgram(auto_Lambert_shader.compiled);
-	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
-	glUniform1i(auto_Lambert_shader.points, lights = (unsigned)SpritesLightGetSize());
-	if(lights) {
-		struct Vec2f *parray = SpritesLightPositions();
-		unsigned i;
-		glUniform2fv(auto_Lambert_shader.point_position, lights,
-			(GLfloat *)parray);
-		glUniform3fv(auto_Lambert_shader.point_colour, lights,
-			(GLfloat *)SpritesLightGetColours());
-		/* Debug. */
-		for(i = 0; i < lights; i++) Info(parray + i, icon_light);
-	}
-	SpritesDraw();
-
-	/* Display info on top without lighting. */
-	glUseProgram(auto_Info_shader.compiled);
-	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
-	SpritesInfo();
-
-	/* Overlay hud. @fixme */
-	if(shield_tex) {
-		struct Ship *player;
-		const struct Ortho3f *x;
-		const struct Vec2f *hit;
-		if((player = SpritesGetPlayerShip())
-			&& (x = SpriteGetPosition((struct Sprite *)player))
-			&& (hit = ShipGetHit(player))) {
-			glUseProgram(auto_Hud_shader.compiled);
-			glBindTexture(GL_TEXTURE_2D, shield_tex);
-			glUniform2f(auto_Hud_shader.camera, camera.x, camera.y);
-			glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
-			glUniform2f(auto_Hud_shader.position, x->x, x->y + 64.0f);
-			glUniform2i(auto_Hud_shader.shield, hit->x, hit->y);
-			glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
-		}
-	}
-
-	/* We want to do this:
-	 glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
-	glBindTexture(GL_TEXTURE_2D, text_name);
-	current_texture = text_name;
-	glUniform1f(auto_Info_shader.size, 100);
-	glUniform2f(auto_Info_shader.object, 0.0f, 0.0f);
-	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);*/
-
-	/* Disable, swap. */
-	glUseProgram(0);
-#ifdef GLUT /* <-- glut */
-	glutSwapBuffers();
-#elif defined(SDL) /* glut --><-- sdl */
-	
-#else /* sdl --><-- nothing */
-#error Define GLUT or SDL.
-#endif /* nothing --> */
-}
-
-/** Callback for glutReshapeFunc.
- @fixme Not guaranteed to have a background! this will crash.
- @param width, height: The size of the client area. */
-static void resize(int width, int height) {
-	struct Vec2f two_screen;
-	int w_tex, h_tex;
-	float w_w_tex, h_h_tex;
-
-	/*fprintf(stderr, "resize: %dx%d.\n", width, height);*/
-	if(width <= 0 || height <= 0) return;
-	glViewport(0, 0, width, height);
-	camera_extent.x = width / 2.0f, camera_extent.y = height / 2.0f; /* global*/
-
-	/* Resize the background. */
-	/* glActiveTexture(TEX_CLASS_BACKGROUND); this does nothing? */
-	glBindTexture(GL_TEXTURE_2D, background_tex);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);
-	/*fprintf(stderr, "w %d h %d\n", w_tex, h_tex);*/
-	w_w_tex = (float)width  / w_tex;
-	h_h_tex = (float)height / h_tex;
-
-	/* Update the background texture vbo on the card with global data here. */
-	vbo[0].s = vbo[1].s =  w_w_tex;
-	vbo[2].s = vbo[3].s = -w_w_tex;
-	vbo[0].t = vbo[2].t =  h_h_tex;
-	vbo[1].t = vbo[3].t = -h_h_tex;
-	glBufferSubData(GL_ARRAY_BUFFER, vbo_info_bg.first,
-		vbo_info_bg.count * (GLsizei)sizeof(struct Vertex),
-		vbo + vbo_info_bg.first);
-
-	/* Update the shaders; YOU MUST CALL THIS IF THE PROGRAMME HAS ANY
-	 DEPENDENCE ON SCREEN SIZE. For Background, the image may not cover the
-	 whole drawing area, so we may need a constant scaling; if it is so, the
-	 image will have to be linearly interpolated for quality. */
-	glUseProgram(auto_Background_shader.compiled);
-	glBindTexture(GL_TEXTURE_2D, background_tex);
-	if(w_w_tex > 1.0f || h_h_tex > 1.0f) {
-		const float scale = 1.0f / ((w_w_tex > h_h_tex) ? w_w_tex : h_h_tex);
-		glUniform1f(auto_Background_shader.scale, scale);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	} else {
-		glUniform1f(auto_Background_shader.scale, 1.0f);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	}
-	two_screen.x = 2.0f / width;
-	two_screen.y = 2.0f / height;
-	glUseProgram(auto_Lambert_shader.compiled);
-	glUniform2f(auto_Lambert_shader.projection, two_screen.x, two_screen.y);
-	glUseProgram(auto_Far_shader.compiled);
-	glUniform2f(auto_Far_shader.projection, two_screen.x, two_screen.y);
-	glUseProgram(auto_Info_shader.compiled);
-	glUniform2f(auto_Info_shader.projection, two_screen.x, two_screen.y);
-	glUseProgram(auto_Hud_shader.compiled);
-	glUniform2f(auto_Hud_shader.two_screen, two_screen.x, two_screen.y);
 }

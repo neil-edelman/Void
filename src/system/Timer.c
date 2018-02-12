@@ -16,7 +16,7 @@
 
 /* 50 fps. @fixme Sync to refresh, why is it so hard? */
 static const int frametime_ms = 20;
-/* Smooths out the frame-rate reporting, fixed point :10 */
+/* Smooths out the frame-rate reporting, fixed point :10. */
 static const int persistance  = (int)(0.9 * 1024);
 
 static struct Timer {

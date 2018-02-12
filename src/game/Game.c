@@ -53,7 +53,6 @@ static void update(const int dt_ms) {
 	if(!is_started) return;
 	/* Update keys. */
 	PollUpdate();
-	printf("a\n");
 	/* Collision detect, move sprites, center on the player; a lot of work. */
 	SpritesUpdate(dt_ms);
 	/* Dispatch events; after update so that immidiate can be immediate. */

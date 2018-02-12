@@ -49,6 +49,8 @@ static const float turn_damping_per_25ms = 0.88222f;
 static const float turn_damping_1st_order = 0.00442217f;
 /* Damage/mass */
 static const float mass_damage = 5.0f;
+/* Max speed for a Debris. */
+static const float max_debris_speed2 = (0.2f)*(0.2f);
 
 
 
@@ -263,6 +265,7 @@ struct SpriteVt {
 	SpriteToString to_string;
 	SpriteAction delete;
 	SpritePredicate update;
+	SpriteAction on_collision;
 	SpriteFloatAccessor get_mass;
 	SpriteFloatAccessor get_damage;
 	SpriteFloatPredicate put_damage;
@@ -358,6 +361,62 @@ static int gate_update(struct Gate *const this) {
 }
 
 
+/** @fixme Stub.
+ @implements <Sprite>Action */
+static void sprite_on_collision(struct Sprite *const this) {
+	this->vt->on_collision(this);
+}
+/** @implements <Ship>Action */
+static void ship_on_collision(const struct Ship *const this) {
+	/* @fixme If v > max then cap, damage. */
+}
+/* @fixme This is not how explosions work. */
+static void debris_breakup(struct Debris *const this) {
+	const struct AutoDebris *small = AutoDebrisSearch("SmallAsteroid");
+	struct Debris *d;
+	struct Ortho3f v, perturb, error;
+	int no;
+	assert(small);
+	no = this->mass / small->mass;
+	if(no <= 1) no = 0;
+	ortho3f_init(&error);
+	while(no) {
+		d = SpritesDebris(small, &this->sprite.data.x);
+		ortho3f_assign(&v, &this->sprite.data.v);
+		if(!--no) {
+			ortho3f_sub(&v, &v, &error);
+		} else {
+			perturb.x = random_pm_max(0.05f);
+			perturb.y = random_pm_max(0.05f);
+			perturb.theta = random_pm_max(0.002f);
+			ortho3f_sum(&v, &perturb);
+			ortho3f_sum(&error, &perturb);
+		}
+		SpriteSetVelocity(&d->sprite.data, &v);
+	}
+	sprite_delete(&this->sprite.data);
+}
+/** @implements <Debris>Action (sort-of-cheating) */
+static void debris_on_collision(struct Debris *const this) {
+	float speed2;
+	speed2 = this->sprite.data.v.x * this->sprite.data.v.x
+		+ this->sprite.data.v.y * this->sprite.data.v.y;
+	if(speed2 > max_debris_speed2) debris_breakup(this);
+}
+/** @implements <Wmd>Action (sort-of-cheating) */
+static void wmd_on_collision(struct Wmd *const this) {
+	/* Just delete -- Wmd's are unstable. */
+	sprite_delete(&this->sprite.data);
+}
+/** @implements <Gate>Action */
+static void gate_on_collision(const struct Gate *const this) {
+	char a[12];
+	assert(this);
+	sprite_to_string(&this->sprite.data, &a);
+	printf("gate_on_collision(%s) strange because gates cannot collide.\n", a);
+}
+
+
 /** @implements <Sprite>FloatAccessor */
 static float sprite_get_mass(const struct Sprite *const this) {
 	assert(this);
@@ -426,32 +485,7 @@ static void ship_put_damage(struct Ship *const this, const float damage) {
 static void debris_put_damage(struct Debris *const this, const float damage) {
 	this->energy += damage;
 	/* @fixme Arbitrary; depends on composition. */
-	if(this->energy > this->mass * mass_damage) {
-		/* @fixme This is not how explosions work. */
-		const struct AutoDebris *small = AutoDebrisSearch("SmallAsteroid");
-		struct Debris *d;
-		struct Ortho3f v, perturb, error;
-		int no;
-		assert(small);
-		no = this->mass / small->mass;
-		if(no <= 1) no = 0;
-		ortho3f_init(&error);
-		while(no) {
-			d = SpritesDebris(small, &this->sprite.data.x);
-			ortho3f_assign(&v, &this->sprite.data.v);
-			if(!--no) {
-				ortho3f_sub(&v, &v, &error);
-			} else {
-				perturb.x = random_pm_max(0.05f);
-				perturb.y = random_pm_max(0.05f);
-				perturb.theta = random_pm_max(0.002f);
-				ortho3f_sum(&v, &perturb);
-				ortho3f_sum(&error, &perturb);
-			}
-			SpriteSetVelocity(&d->sprite.data, &v);
-		}
-		sprite_delete(&this->sprite.data);
-	}
+	if(this->energy > this->mass * mass_damage) debris_breakup(this);
 }
 /** Just dies.
  @implements <Wmd,Float>Predicate */
@@ -469,6 +503,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpritePredicate)&ship_update_human,
+	(SpriteAction)&ship_on_collision,
 	(SpriteFloatAccessor)&ship_get_mass,
 	(SpriteFloatAccessor)&ship_get_damage,
 	(SpriteFloatPredicate)&ship_put_damage
@@ -477,6 +512,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteToString)&ship_to_string,
 	(SpriteAction)&ship_delete,
 	(SpritePredicate)&ship_update_ai,
+	(SpriteAction)&ship_on_collision,
 	(SpriteFloatAccessor)&ship_get_mass,
 	(SpriteFloatAccessor)&ship_get_damage,
 	(SpriteFloatPredicate)&ship_put_damage
@@ -485,6 +521,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteToString)&debris_to_string,
 	(SpriteAction)&debris_delete,
 	(SpritePredicate)&debris_update,
+	(SpriteAction)&debris_on_collision,
 	(SpriteFloatAccessor)&debris_get_mass,
 	(SpriteFloatAccessor)&debris_get_damage,
 	(SpriteFloatPredicate)&debris_put_damage	
@@ -493,6 +530,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteToString)&wmd_to_string,
 	(SpriteAction)&wmd_delete,
 	(SpritePredicate)&wmd_update,
+	(SpriteAction)&wmd_on_collision,
 	(SpriteFloatAccessor)&wmd_get_mass,
 	(SpriteFloatAccessor)&wmd_get_damage,
 	(SpriteFloatPredicate)&wmd_put_damage	
@@ -501,6 +539,7 @@ static const struct SpriteVt ship_human_vt = {
 	(SpriteToString)&gate_to_string,
 	(SpriteAction)&gate_delete,
 	(SpritePredicate)&gate_update,
+	(SpriteAction)&gate_on_collision,
 	(SpriteFloatAccessor)&gate_get_mass,
 	(SpriteFloatAccessor)&gate_get_damage,
 	(SpriteFloatPredicate)&gate_put_damage	
@@ -890,8 +929,6 @@ static void timestep(struct Sprite *const this) {
 		this->x.x = this->x.x + this->v.x * t0 + v1->x * t1;
 		this->x.y = this->x.y + this->v.y * t0 + v1->y * t1;
 		this->v.x = v1->x, this->v.y = v1->y;
-		/* Erase the reference; will be erased all at once in {timestep_bin}. */
-		this->collision = 0;
 	} else {
 		this->x.x += this->v.x * t;
 		this->x.y += this->v.y * t;
@@ -900,6 +937,11 @@ static void timestep(struct Sprite *const this) {
 	this->x.theta += this->v.theta * t;
 	branch_cut_pi_pi(&this->x.theta);
 	sprite_moved(this);
+	if(this->collision) {
+		/* Erase the reference; will be erased all at once in {timestep_bin}. */
+		this->collision = 0;
+		sprite_on_collision(this);
+	}
 }
 /** Called in \see{SpritesUpdate}.
  @implements <Bin>Action */

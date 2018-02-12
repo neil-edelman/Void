@@ -190,11 +190,12 @@ static void display(void) {
 
 	/* Disable, swap. */
 	glUseProgram(0);
-	/* <-- glut */
-	glutSwapBuffers();
-	/* glut --> */
 	/* @fixme glFinish and have logic stepped up? what happens when the timer
 	 calls the fuction more times? does it build up in a queue? */
+	/*glFinish(); <- does nothing */
+	/* <-- glut glFlush implied. */
+	glutSwapBuffers();
+	/* glut --> */
 }
 
 /** Callback for glutReshapeFunc.

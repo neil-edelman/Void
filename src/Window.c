@@ -17,7 +17,9 @@
  @author	Neil
  @version	2018-01
  @since		2015-05
- @fixme		Windowing: Tl? GTK+? */
+ @fixme		Windowing: Tl? GTK+?
+ @fixme		{SDL}: opening a OS-specific window without the stupid terminal;
+ synch; had window is hidden control; had terrible polling input functions. */
 
 #include <stdlib.h> /* EXIT_ */
 #include <stdio.h>  /* fprintf */

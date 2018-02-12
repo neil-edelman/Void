@@ -65,14 +65,9 @@ represented with <em>unsigned</em> that loops around.
 <table>
 <tr><th>Return Type</th><th>Function Name</th><th>Argument List</th></tr>
 <tr>
-	<td>unsigned</td>
-	<td><a href = "#TimerUpdate">TimerUpdate</a></td>
-	<td>void</td>
-</tr>
-<tr>
 	<td>void</td>
 	<td><a href = "#TimerRun">TimerRun</a></td>
-	<td>void</td>
+	<td>const WindowGlutFunction logic</td>
 </tr>
 <tr>
 	<td>void</td>
@@ -90,35 +85,28 @@ represented with <em>unsigned</em> that loops around.
 	<td>void</td>
 </tr>
 <tr>
+	<td>int</td>
+	<td><a href = "#TimerIsGameTime">TimerIsGameTime</a></td>
+	<td>const unsigned t</td>
+</tr>
+<tr>
 	<td>unsigned</td>
-	<td><a href = "#TimerGetMean">TimerGetMean</a></td>
+	<td><a href = "#TimerGetFrame">TimerGetFrame</a></td>
 	<td>void</td>
 </tr>
 <tr>
-	<td>int</td>
-	<td><a href = "#TimerIsTime">TimerIsTime</a></td>
-	<td>const unsigned t</td>
+	<td>unsigned</td>
+	<td><a href = "#TimerGetTime">TimerGetTime</a></td>
+	<td>void</td>
 </tr>
 </table>
 
 
 <a name = "_detail"><!-- --></a><h2>Function Detail</h2>
 
-<div><a name = "TimerUpdate"><!-- --></a>
-<h3>TimerUpdate</h3>
-<pre>unsigned <b>TimerUpdate</b> (void)</pre>
-<p>
-In SDL, you have the inefficient central event loop.
-</p>
-<dl>
-	<dt>return</dt>
-	<dd>The frame time.</dd>
-</dl>
-</div>
-
 <div><a name = "TimerRun"><!-- --></a>
 <h3>TimerRun</h3>
-<pre>void <b>TimerRun</b> (void)</pre>
+<pre>void <b>TimerRun</b> (const WindowGlutFunction logic)</pre>
 <p>
 This starts the Timer.
 </p>
@@ -150,28 +138,39 @@ This stops the Timer.
 <pre>unsigned <b>TimerGetGameTime</b> (void)</pre>
 <dl>
 	<dt>return</dt>
-	<dd>Last time an update was called in milliseconds.</dd>
+	<dd>Last time an update was called in <em>ms</em>, taking into account the
+ pauses.</dd>
 </dl>
 </div>
 
-<div><a name = "TimerGetMean"><!-- --></a>
-<h3>TimerGetMean</h3>
-<pre>unsigned <b>TimerGetMean</b> (void)</pre>
-<dl>
-	<dt>return</dt>
-	<dd>Moving average in milliseconds.</dd>
-</dl>
-</div>
-
-<div><a name = "TimerIsTime"><!-- --></a>
-<h3>TimerIsTime</h3>
-<pre>int <b>TimerIsTime</b> (const unsigned t)</pre>
+<div><a name = "TimerIsGameTime"><!-- --></a>
+<h3>TimerIsGameTime</h3>
+<pre>int <b>TimerIsGameTime</b> (const unsigned t)</pre>
 <dl>
 	<dt>return</dt>
 	<dd>If the game time is greater or equal <em>t</em>. Only game time is
  represented as a circular list; 'greater than' is not really defined, so as
  long as it's <em>(t - INT_MIN, t]</em> it's considered 'in.' This defines a limit of
  an interval of 24.85 days.</dd>
+</dl>
+</div>
+
+<div><a name = "TimerGetFrame"><!-- --></a>
+<h3>TimerGetFrame</h3>
+<pre>unsigned <b>TimerGetFrame</b> (void)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>Moving average in milliseconds.</dd>
+</dl>
+</div>
+
+<div><a name = "TimerGetTime"><!-- --></a>
+<h3>TimerGetTime</h3>
+<pre>unsigned <b>TimerGetTime</b> (void)</pre>
+<dl>
+	<dt>return</dt>
+	<dd>The asynchronous time since the the programme was started in
+ <em>ms</em>.</dd>
 </dl>
 </div>
 

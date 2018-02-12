@@ -5,7 +5,7 @@
 #define WINDOW_H
 
 /* https://sourceforge.net/p/predef/wiki/OperatingSystems/ */
-#ifdef __APPLE__ && __MACH__ /* <-- macx */
+#if defined(__APPLE__) && defined(__MACH__) /* <-- macx */
 
 /* Supports OpenGL 2.0 intrinsically as well as the original GLUT, but has
  non-std include directory for some reason. */

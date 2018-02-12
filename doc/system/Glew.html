@@ -40,29 +40,21 @@
 </ul>
 
 <p>
-Copyright 2013 Neil Edelman, distributed under the terms of the
-GNU General Public License, see copying.txt.
+2018 Neil Edelman, distributed under the terms of the GNU General
+Public License 3, see copying.txt, or
+<a href = "https://opensource.org/licenses/GPL-3.0">https://opensource.org/licenses/GPL-3.0</a>.
 </p>
 <p>
-OpenGL not-on-a-mac is a little harder since OpenGL &gt; 1.0 functions have to
-be quiried from the library in a platform-specific way; I use glew to make it
-easier (ostensibly.)
-</p>
-<p>
-Unless GLEW is defined, this does exactly nothing. If GLEW is defined, it
-loads the OpenGL2+ from the library using GLEW,
-<a href = "http://glew.sourceforge.net/">http://glew.sourceforge.net/</a>.
-</p>
-<p>
-Include Glew.h for OpenGL functions.
+<em>GLEW</em> is set ourselves in the Makefile; <em>GLEW</em> allows <em>OpenGL2+</em> on
+machines where you need to query the library.
 </p>
 <dl>
+	<dt>minimum standard</dt>
+	<dd>C89/90</dd>
 	<dt>author</dt>
 	<dd>Neil</dd>
 	<dt>version</dt>
-	<dd>3.1, 2013</dd>
-	<dt>since</dt>
-	<dd>3.1, 2013</dd>
+	<dd>2018-01</dd>
 </dl>
 
 
@@ -87,7 +79,7 @@ Include Glew.h for OpenGL functions.
 <h3>Glew</h3>
 <pre>int <b>Glew</b> (void)</pre>
 <p>
-Load OpenGL2+ from the library.
+Load <em>OpenGL2+</em> from the library under <em>-D GLEW</em>.
 </p>
 <dl>
 	<dt>return</dt>

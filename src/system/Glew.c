@@ -1,27 +1,32 @@
-/** 20xx Neil Edelman, distributed under the terms of the GNU General
+/** 2018 Neil Edelman, distributed under the terms of the GNU General
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
- 20xx Neil Edelman, distributed under the terms of the MIT License;
- see readme.txt, or \url{ https://opensource.org/licenses/MIT }.
 
- This is a standard C file.
+ {GLEW} is set ourselves in the Makefile; {GLEW} allows {OpenGL2+} on
+ machines where you need to query the library.
 
- @file		Text
+ @title		Glew
  @author	Neil
  @std		C89/90
- @version	1.0; 20xx-xx
- @since		1.0; 20xx-xx
- @param
- @fixme
- @deprecated */
+ @version	2018-01 */
 
-#include <stdlib.h> /* malloc free */
 #include <stdio.h>  /* fprintf */
-#include "Cee.h"
+/* Inexplicably, Glew will include {win.h} in Windows, which has a bajillon
+ warnings that are not the slightest bit useful; assuming you are using {MSVC},
+ this silences them. Before {Window.h}. */
+#ifdef GLEW /* <-- glew */
+#pragma warning(push, 0)
+#define GL_GLEXT_PROTOTYPES
+#define GLEW_STATIC
+/* http://glew.sourceforge.net/ add include directories \include */
+#include <GL/glew.h>
+#pragma warning(pop)
+#endif /* glew --> */
+#include "Glew.h"
 
 /** Load {OpenGL2+} from the library under {-D GLEW}.
  @return True if success. */
-static int Glew(void) {
+int Glew(void) {
 #ifdef GLEW
 	GLenum err;
 	if((err = glewInit()) != GLEW_OK)
@@ -30,7 +35,7 @@ static int Glew(void) {
 		return fprintf(stderr,
 					   "Glew: OpenGL 2.0+ shaders are not supported.\n"), 0;
 	fprintf(stderr, "Glew: GLEW %s extension loading library ready for "
-			"OpenGL2+.\n", glewGetString(GLEW_VERSION));
+		"OpenGL2+.\n", glewGetString(GLEW_VERSION));
 #endif
 	return 1;
 }

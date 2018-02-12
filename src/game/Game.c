@@ -126,7 +126,7 @@ int Game(void) {
 	/* register gameplay keys -- motion keys are polled in {@see GameUpdate} */
 	KeyRegister(27,   &quit);
 	KeyRegister('p',  &pause);
-	/*KeyRegister(k_f1, &WindowToggleFullScreen);*/
+	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &fps);
 	KeyRegister('x',  &position);
 	KeyRegister('1',  &SpritesPlotSpace);

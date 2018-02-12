@@ -47,15 +47,16 @@ GNU General Public License, see copying.txt.
 Entry-point. Deals with providing an interface to the libraries.
 </p>
 <p>
-Uses <em>OpenGL</em> for graphics; it's never that easy, of course. <em>OpenGL</em> comes in
-many different versions. Loading functions have to be queried from the library
-in a platform-specific way for all versions since <em>OpenGL1.0</em>, on some
-machines. If <em>GLEW</em> is defined by the environment, it loads the <em>OpenGL2+</em>
-from the library using <em>GLEW</em>, <a href = "http://glew.sourceforge.net/">http://glew.sourceforge.net/</a>. We need a
-cross-platform window manager; define <em>GLUT</em> or <em>SDL</em>. <em>SDL</em> (<em>SDL2</em>
-<a href = "https://www.libsdl.org/">https://www.libsdl.org/</a>) has more features, but <em>GLUT</em> (<em>FreeGLUT</em>
-<a href = "http://freeglut.sourceforge.net/">http://freeglut.sourceforge.net/</a>) may come with your <em>OpenGL</em>, but is
-limited.
+Uses the <em>OpenGL</em> API for graphics, https://www.opengl.org/. On some machines,
+you have to query the library for <em>OpenGL2+</em>. If <em>GLEW</em> is defined by the
+environment, it uses this, <a href = "http://glew.sourceforge.net/">http://glew.sourceforge.net/</a>. (Necessary for
+Windows, Linux.)
+</p>
+<p>
+<em>FreeGLUT</em>, <a href = "http://freeglut.sourceforge.net/">http://freeglut.sourceforge.net/</a>, is used for the
+cross-platform window-manager. However, this is built-in
+1998-<em>GLUT</em>-compatible for Mac: <em>FreeGLUT</em> uses <em>XQuartz</em> or <em>X11</em>, which is
+absolutely unacceptable.
 </p>
 <dl>
 	<dt>author</dt>
@@ -90,21 +91,6 @@ limited.
 	<td>void</td>
 	<td><a href = "#WindowToggleFullScreen">WindowToggleFullScreen</a></td>
 	<td>void</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#Key">Key</a></td>
-	<td>void</td>
-</tr>
-<tr>
-	<td>void</td>
-	<td><a href = "#KeyRegister">KeyRegister</a></td>
-	<td>const unsigned k, void (*const handler)(void)</td>
-</tr>
-<tr>
-	<td>int</td>
-	<td><a href = "#KeyTime">KeyTime</a></td>
-	<td>const int key</td>
 </tr>
 </table>
 
@@ -148,43 +134,6 @@ Checks for all OpenGL errors and prints them to stderr.
 Toggle fullscreen.
 </p>
 <dl>
-</dl>
-</div>
-
-<div><a name = "Key"><!-- --></a>
-<h3>Key</h3>
-<pre>void <b>Key</b> (void)</pre>
-<p>
-Attach the static keys to the Window depending on whether the Timer is
-active (poll) or not (direct to functions.)
-</p>
-<dl>
-	<dt>return</dt>
-	<dd>Success?</dd>
-</dl>
-</div>
-
-<div><a name = "KeyRegister"><!-- --></a>
-<h3>KeyRegister</h3>
-<pre>void <b>KeyRegister</b> (const unsigned k, void (*const handler)(void))</pre>
-<p>
-Registers a function to call asynchronously on press.
-</p>
-<dl>
-</dl>
-</div>
-
-<div><a name = "KeyTime"><!-- --></a>
-<h3>KeyTime</h3>
-<pre>int <b>KeyTime</b> (const int key)</pre>
-<p>
-Polls how long the key has been pressed, without repeat rate. Destructive.
-</p>
-<dl>
-	<dt>parameter: key</dt>
-	<dd>The key.</dd>
-	<dt>return</dt>
-	<dd>Number of ms.</dd>
 </dl>
 </div>
 

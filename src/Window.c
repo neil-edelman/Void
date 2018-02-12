@@ -9,8 +9,9 @@
  Windows, Linux.)
 
  {FreeGLUT}, \url{http://freeglut.sourceforge.net/}, is used for the
- cross-platform window-manager. This may come with your {OpenGL}, but it may
- not. {GLUT} was supported in case of time-travel, but is no longer.
+ cross-platform window-manager. However, this is built-in
+ 1998-{GLUT}-compatible for Mac: {FreeGLUT} uses {XQuartz} or {X11}, which is
+ absolutely unacceptable.
 
  @title		Window
  @author	Neil
@@ -23,26 +24,12 @@
 #include <time.h>   /* srand clock */
 #include <string.h> /* strcmp */
 #include <assert.h>
-
-/* {GLEW} is set ourselves in the Makefile; {GLEW} allows {OpenGL2+} on
- machines where you need to query the library. Inexplicably, Glew will include
- {win.h} in Windows, which has a bajillon warnings that are not the slightest
- bit useful; assuming you are using {MSVC}, this silences them. Before
- {Window.h}. */
-#ifdef GLEW /* <-- glew */
-#pragma warning(push, 0)
-#define GL_GLEXT_PROTOTYPES
-#define GLEW_STATIC
-/* http://glew.sourceforge.net/ add include directories \include */
-#include <GL/glew.h>
-#pragma warning(pop)
-#endif /* glew --> */
-
 #include "Ortho.h" /* Vec2i */
 #include "Unused.h"
 #include "system/Draw.h"
 #include "system/Timer.h"
 #include "system/Key.h"
+#include "system/Glew.h"
 #include "general/Events.h"
 #include "game/Sprites.h"
 #include "game/Fars.h"
@@ -93,22 +80,6 @@ static void usage(void) {
 		"http://freeglut.sourceforge.net/\n\n");
 }
 
-/** Load {OpenGL2+} from the library under {-D GLEW}.
- @return Success. */
-static int glew(void) {
-#ifdef GLEW
-	GLenum err;
-	if((err = glewInit()) != GLEW_OK)
-		return fprintf(stderr, "Glew: %s", glewGetErrorString(err)), 0;
-	if(!glewIsSupported("GL_VERSION_2_0") /* !GLEW_VERSION_2_0 ? */)
-		return fprintf(stderr,
-		"Glew: OpenGL 2.0+ shaders are not supported.\n"), 0;
-	fprintf(stderr, "Glew: GLEW %s extension loading library ready for "
-		"OpenGL2+.\n", glewGetString(GLEW_VERSION));
-#endif
-	return 1;
-}
-
 /** Gets the window started.
  @param title The title of the window (can be null.)
  @param argc, argv: {main} program arguments; passed to glutInit().
@@ -153,6 +124,10 @@ int main(int argc, char **argv) {
 	const char *e = 0;
 	/* @fixme More options (ie, load game, etc.) */
 	if(argc > 1) return usage(), EXIT_SUCCESS;
+	/* Direct sdtout, stderr, to log files instead of to a awkward separate
+	 terminal window. Nope. */
+	/*freopen("stdout.txt", "a+", stdout);
+	freopen("stderr.txt", "a+", stderr);*/
 #ifdef FREEGLUT /* <-- free */
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 #else /* free --><-- !free */
@@ -163,7 +138,7 @@ int main(int argc, char **argv) {
 	do { /* try */
 		/* Window has to be first. */
 		if(!Window(programme, argc, argv)) { e = "window"; break; }
-		if(!glew()) { e = "glew"; break; }
+		if(!Glew()) { e = "glew"; break; }
 		Key();
 		if(!Events()) { e = "events"; break; }
 		if(!Sprites()) { e = "sprites"; break; }

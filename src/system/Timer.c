@@ -22,7 +22,7 @@ static const int persistance  = (int)(0.9 * 1024);
 static struct Timer {
 	unsigned last, paused, game, mean_frame;
 	int is_running;
-	WindowGlutFunction logic;
+	WindowIntAcceptor logic;
 } timer;
 
 static unsigned ms_time(void) {
@@ -50,7 +50,7 @@ static void update(int zero) {
 }
 
 /** This starts the Timer. */
-void TimerRun(const WindowGlutFunction logic) {
+void TimerRun(const WindowIntAcceptor logic) {
 	const unsigned time = ms_time();
 	if(timer.is_running || !logic) return;
 	timer.paused    += time - timer.last;

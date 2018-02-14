@@ -1,6 +1,6 @@
 #include "../Window.h" /* GLUT */
 
-void TimerRun(const WindowGlutFunction logic);
+void TimerRun(const WindowIntAcceptor logic);
 void TimerPause(void);
 int TimerIsRunning(void);
 unsigned TimerGetGameTime(void);

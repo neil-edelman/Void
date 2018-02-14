@@ -15,12 +15,20 @@
  warnings that are not the slightest bit useful; assuming you are using {MSVC},
  this silences them. Before {Window.h}. */
 #ifdef GLEW /* <-- glew */
+
+#ifdef _MSC_VER /* <-- msvc */
 #pragma warning(push, 0)
+#endif /* msvc --> */
+
 #define GL_GLEXT_PROTOTYPES
 #define GLEW_STATIC
 /* http://glew.sourceforge.net/ add include directories \include */
 #include <GL/glew.h>
+
+#ifdef _MSC_VER /* <-- msvc */
 #pragma warning(pop)
+#endif /* msvc --> */
+
 #endif /* glew --> */
 #include "Glew.h"
 
@@ -33,7 +41,7 @@ int Glew(void) {
 		return fprintf(stderr, "Glew: %s", glewGetErrorString(err)), 0;
 	if(!glewIsSupported("GL_VERSION_2_0") /* !GLEW_VERSION_2_0 ? */)
 		return fprintf(stderr,
-					   "Glew: OpenGL 2.0+ shaders are not supported.\n"), 0;
+			"Glew: OpenGL 2.0+ shaders are not supported.\n"), 0;
 	fprintf(stderr, "Glew: GLEW %s extension loading library ready for "
 		"OpenGL2+.\n", glewGetString(GLEW_VERSION));
 #endif

@@ -95,7 +95,6 @@ struct Ship {
 	char name[16];
 	const struct AutoWmdType *wmd;
 	unsigned ms_recharge_wmd;
-	float dist_to_horizon;
 };
 #define POOL_NAME Ship
 #define POOL_TYPE struct Ship
@@ -591,9 +590,9 @@ static void migrate_sprite(struct Sprites *const s,
 	/* {lights}->{sprites}. */
 	for(i = 0; i < s->lights.size; i++)
 		SpriteMigratePointer(&s->lights.light_table[i].sprite, migrate);
-	/* fixme: also in Events. */
-	/* fixme: also in Wmd. */
-	/* fixme: also player? */
+	/* @fixme: also in Events. */
+	/* @fixme: also in Wmd. */
+	/* @fixme: also player? */
 }
 
 /** @implements <Collision>Migrate */
@@ -786,7 +785,6 @@ struct Ship *SpritesShip(const struct AutoShipClass *const class,
 	Orcish(this->name, sizeof this->name);
 	this->wmd = class->weapon;
 	this->ms_recharge_wmd = 0;
-	this->dist_to_horizon = 0.0f;
 	if(ai == AI_HUMAN) {
 		if(sprites->player.is_ship)
 			fprintf(stderr, "SpritesShip: overriding previous player.\n");
@@ -850,7 +848,7 @@ struct Gate *SpritesGate(const struct AutoGate *const class) {
 	assert(gate_sprite && gate_sprite->image && gate_sprite->normals);
 	x.x     = class->x;
 	x.y     = class->y;
-	x.theta = class->theta;
+	x.theta = class->theta, deg_to_rad(&x.theta);
 	if(!(this = GatePoolNew(sprites->gates)))
 		{ fprintf(stderr, "SpritesGate: %s.\n",
 		GatePoolGetError(sprites->gates)); return 0; }
@@ -900,7 +898,10 @@ static void extrapolate(struct Sprite *const this) {
 	if(this->dx.y < 0) this->box.y_min += this->dx.y;
 	else this->box.y_max += this->dx.y;
 	/* Put it into appropriate {covers}. This is like a hashmap in space, but
-	 it is spread out, so it may cover multiple bins. */
+	 it is spread out, so it may cover multiple bins. {SpriteRectangle} is
+	 temporary, affecting {SpriteForEachSprite}. {Onscreen} is a pointer to a
+	 {Sprite} that can go in multiple bins in the {Layer}. Until the {Layer} is
+	 cleared, deleting a sprite causes dangling pointers. */
 	LayerSetSpriteRectangle(sprites->layer, &this->box);
 	if(!(on = OnscreenStackNew(sprites->onscreens))) { fprintf(stderr,
 		"extrapolate onscreen: %s.\n",
@@ -979,7 +980,8 @@ void SpritesUpdate(const int dt_ms) {
 		DrawGetScreen(&rect);
 		rectangle4f_expand(&rect, layer_space * 0.5f);
 		LayerSetScreenRectangle(sprites->layer, &rect); }
-	/* Dynamics; puts temp values in {cover} for collisions. */
+	/* Dynamics; puts temp values in {cover} for collisions. Don't delete a
+	 sprite until {onscreens} has been cleared. */
 	LayerForEachScreen(sprites->layer, &extrapolate_bin);
 	/* Debug. */
 	if(sprites->plots) {

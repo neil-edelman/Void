@@ -194,33 +194,44 @@ static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
 	wmd_generic(w, g, t);
 }
 
-/** @implements CoverCollision */
+/** Collisions with gates are okay, but we have to trigger going though a gate
+ if the ship enters the event horizon.
+ @implements CoverCollision */
 static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
-	struct Sprite *const s = cs->onscreen->sprite, *const g = cg->onscreen->sprite;
+	struct Sprite *const s = cs->onscreen->sprite,
+		*const g = cg->onscreen->sprite;
 	struct Ship *const ship = (struct Ship *)s;
 	struct Vec2f diff, gate_norm;
-	float proj;
 	assert(sprites && s && g && s->vt->class == SC_SHIP);
-	diff.x = s->x.x - g->x.x;
-	diff.y = s->x.y - g->x.y;
+	/* Not useful; t = 0 largely because it's interpenetrating all the time. */
+	UNUSED(t);
+	/* Gates don't move much so this is a good approximation. */
 	gate_norm.x = cosf(g->x.theta);
 	gate_norm.y = sinf(g->x.theta);
-	proj = diff.x * gate_norm.x + diff.y * gate_norm.y;
-	if(ship->dist_to_horizon > 0 && proj < 0) {
+	/* It has to be in front of the event horizon at {t = 0} to cross. */
+	diff.x = s->x.x - g->x.x;
+	diff.y = s->x.y - g->x.y;
+	if(diff.x * gate_norm.x + diff.y * gate_norm.y < 0) return;
+	/* Behind the horizon at {t = 1}. It's very difficult in our system to do
+	 collisions with less than a frame before the event horizon because we are
+	 doing it now and we are not finished, so just guess: where the sprite
+	 would be if it didn't collide with anything on this frame. */
+	diff.x += s->v.x * sprites->dt_ms;
+	diff.y += s->v.y * sprites->dt_ms;
+	if(diff.x * gate_norm.x + diff.y * gate_norm.y >= 0) return;
+	{
 		char a[12], b[12];
 		sprite_to_string(s, &a);
 		sprite_to_string(g, &b);
 		printf("ship_gate: %s crossed into the event horizon of %s.\n", a, b);
-		if(ship == get_player()) {
-			/* trasport to zone immediately. fixme!!!: events is not handled by
-			 migrate sprites. */
-			EventsSpriteConsumer(0.0f, (SpriteConsumer)&ZoneChange, g);
-		} else {
-			sprite_delete(s), cs->onscreen->sprite = 0; /* Disappear! */
-		}
 	}
-	ship->dist_to_horizon = proj; /* fixme: unreliable? */
-	UNUSED(t);
+	if(ship == get_player()) {
+		/* transport to zone immediately. @fixme Events is not handled by
+		 migrate sprites, so this could slightly cause a segfault. */
+		EventsSpriteConsumer(0.0f, (SpriteConsumer)&ZoneChange, g);
+	} else {
+		sprite_delete(s), cs->onscreen->sprite = 0; /* Disappear! */
+	}
 }
 /** @implements CoverCollision */
 static void gate_ship(struct Cover *g, struct Cover *s, const float t) {
@@ -381,7 +392,9 @@ static int collide_boxes(const struct Sprite *const a,
  that matters to the rest of {Sprites.c}. */
 
 /** Call after {extrapolate}; needs and consumes {covers}. This is {n^2} inside
- of the {bin}. */
+ of the {bin}. {covers} is pointing to the sprites, so we need to be careful
+ that we invalidate the {cover} on deleting the sprite. Also, position hasn't
+ been finalised. */
 static void collide_bin(unsigned bin) {
 	struct CoverStack *const covers = sprites->bins[bin].covers;
 	struct Cover *cover_a, *cover_b;

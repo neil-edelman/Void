@@ -99,7 +99,7 @@ PartyRock
 Asteroid
 50
 50
-# Gate name, TypeOfObject, x, y
+# Gate, string name, SpaceZone to, int x, int y, int theta
 Gate
 Exploring
 Jupiter

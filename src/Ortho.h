@@ -21,6 +21,10 @@
 #define M_2PI_F \
 	(6.283185307179586476925286766559005768394338798750211641949889f)
 #endif
+#ifndef M_1_2PI_F
+#define M_1_2PI_F \
+	(0.159154943091895335768883763372514362034459645740456448747667344058896f)
+#endif
 
 /** {Ortho3f} must be able to be reinterpreted as {Vec3f}. */
 struct Vec2i { int x, y; };
@@ -30,14 +34,22 @@ struct Colour3f { float r, g, b; };
 struct Rectangle4i { int x_min, x_max, y_min, y_max; };
 struct Rectangle4f { float x_min, x_max, y_min, y_max; };
 
-/* Branch cut to the principal branch (-Pi,Pi] for numerical stability. We
+/** Branch cut to the principal branch {(-Pi,Pi]} for numerical stability. We
  should really use fixed normalised {ints} for much more even accuracy and
  roll-over, but {OpenGl} doesn't like that.
  @fixme {floorf} may be slow.
  https://stackoverflow.com/questions/824118/why-is-floor-so-slow */
-static void branch_cut_pi_pi(float *theta_ptr) {
+static void branch_cut_pi_pi(float *const theta_ptr) {
 	assert(theta_ptr);
-	*theta_ptr -= M_2PI_F * floorf((*theta_ptr + M_PI_F) / M_2PI_F);
+	*theta_ptr -= M_2PI_F * floorf((*theta_ptr + M_PI_F) * M_1_2PI_F);
+}
+
+/** Degree is good for artists, but we use radians in the branch cut
+ {(-Pi, Pi]}. */
+static void deg_to_rad(float *const theta_ptr) {
+	assert(theta_ptr);
+	*theta_ptr *= M_2PI_F / 360.0f;
+	branch_cut_pi_pi(theta_ptr);
 }
 
 /** Generic uniform {(+/-max)} with {rand}. */
@@ -125,6 +137,7 @@ static void rectangle4f_expand(struct Rectangle4f *const this,
 static void orthomath_unused_coda(void);
 static void orthomath_unused(void) {
 	branch_cut_pi_pi(0);
+	deg_to_rad(0);
 	random_pm_max(0);
 	ortho3f_init(0);
 	ortho3f_assign(0, 0);

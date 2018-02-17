@@ -119,6 +119,19 @@ void ZoneChange(struct Gate *const gate) {
 	finalv.x     =-playerdv.x * dx_cos - playerdv.y * dx_sin;
 	finalv.y     = playerdv.x * dx_sin - playerdv.y * dx_cos;
 	finalv.theta = playerv->theta;
+	/* Sometimes it gets stuck in a loop; push it if it does. */
+	{
+		struct Vec2f gate_norm, diff;
+		float proj;
+		gate_norm.x = cosf(newx->theta);
+		gate_norm.y = sinf(newx->theta);
+		diff.x = finalx.x - newx->x;
+		diff.y = finalx.y - newx->y;
+		if((proj = diff.x * gate_norm.x + diff.y * gate_norm.y) >= 0) printf("\nOH WOE IS ME!!!!!!!!! gatenorm(%f, %f) diff(%f, %f)\n", gate_norm.x, gate_norm.y, diff.x, diff.y);
+		proj += 1.0f;
+		finalx.x -= gate_norm.x * proj;
+		finalx.y -= gate_norm.y * proj;
+	}
 	SpriteSetPosition((struct Sprite *)player, &finalx);
 	SpriteSetVelocity((struct Sprite *)player, &finalv);
 }

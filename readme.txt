@@ -18,6 +18,9 @@ To win, blow up everything.
 Player controls: left, right, up, space, F1 (fullscreen.)
 x -- report position, f -- framerate, p -- pause, 1 -- Gnuplot dump.
 
+The code is 
+Pre-compiling resources into generated code needs POSIX. Type 'make' on a GNU system. They are free if you don't have them.
+
 You downloaded the source code and want to build? If you have a
 Mac, xCode tools, viz, gcc; MacOSX has native support for OpenGL1.1
 and Glut-type functions are already included. Just type <make>,

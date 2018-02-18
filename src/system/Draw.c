@@ -90,7 +90,7 @@ static const struct {
 } vbo_info_bg = { 0, 4 }, vbo_info_square = { 4, 4 };
 
 /* globals */
-static GLuint vbo_geom, light_tex, background_tex, shield_tex;
+static GLuint vbo_geom, light_tex, background_tex, shield_tex, text_framebuffer;
 static struct Vec2f camera, camera_extent;
 
 /** Callback for {glutDisplayFunc}; this is where all of the drawing happens.
@@ -375,6 +375,39 @@ static int texture(struct AutoImage *image) {
 	return tex ? 1 : 0;
 }
 
+/** New texture with {str}.
+ \url{http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/},
+ \url{http://www.songho.ca/opengl/gl_fbo.html#example}.
+ @return Texture name or zero. */
+static int text_render(const char *const str) {
+	GLuint framebuffer_name, texture_name;
+	const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0 };
+	if(!str) return 0;
+	/*  */
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_name);
+	
+
+	glGenTextures(1, &texture_name);
+	glBindTexture(GL_TEXTURE_2D, texture_name);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1024, 768, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	/*glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture_name, 0);*/
+	glDrawBuffers(sizeof draw_buffers / sizeof *draw_buffers, draw_buffers);
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		return 0;
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_name);
+	glViewport(0, 0, 1024, 768);
+	glColor4f(0.0f, 0.0f, 0.0f, 0.0f);
+	glRasterPos3f(30.0f, 20.0f, 0.0f);
+	while(*str) glutBitmapCharacter(GLUT_BITMAP_9_BY_15, *str);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDeleteFramebuffers(1, &framebuffer_name);
+
+	return texture_name;
+}
+
 /* Creates a hardcoded lighting texture with the Red the radius and Green the
  angle.
  @return The texture or zero. */
@@ -387,7 +420,8 @@ static int light_compute_texture(void) {
 	/ sqrtf(2.0f * buffer_size * buffer_size);
 	unsigned name;
 
-	if(!(buffer = malloc(sizeof(float) * buffer_size * buffer_size << 1))) return 0;
+	if(!(buffer = malloc(sizeof(float) * buffer_size * buffer_size << 1)))
+		return 0;
 	for(j = 0; j < buffer_size; j++) {
 		for(i = 0; i < buffer_size; i++) {
 			x = (float)i - 0.5f*buffer_size + 0.5f;
@@ -397,7 +431,7 @@ static int light_compute_texture(void) {
 			/* NOTE: opengl clips [0, 1), even if it says different;
 			 maybe it's GL_LINEAR? */
 			buffer[((j*buffer_size + i) << 1) + 1] = fmodf(atan2f(y, x)
-														   + (float)M_2PI, (float)M_2PI) * (float)M_1_2PI;
+				+ (float)M_2PI, (float)M_2PI) * (float)M_1_2PI;
 		}
 	}
 	glGenTextures(1, (unsigned *)&name);
@@ -472,6 +506,9 @@ int Draw(void) {
 	/* textures stored in imgs */
 	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
+	/* Text rendering. */
+	glGenFramebuffers(1, &text_framebuffer);
+
 	/* Shader initialisation. */
 	if(!auto_Background(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
 	/* These are constant. @fixme Could they be declared as such? */
@@ -509,6 +546,8 @@ void Draw_(void) {
 	auto_Hud_();
 	auto_Far_();
 	auto_Background_();
+	/* Erase the text framebuffer if it exists. */
+	glDeleteFramebuffers(1, &text_framebuffer);
 	/* Erase the textures. */
 	for(i = max_auto_images - 1; i; i--) {
 		if(!(tex = auto_images[i].texture)) continue;

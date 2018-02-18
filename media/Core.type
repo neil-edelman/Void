@@ -8,6 +8,7 @@ image normals
 ObjectInSpace
 string name
 Sprite sprite
+text description
 int x
 int y
 ~

@@ -72,31 +72,44 @@ humans
 ObjectInSpace
 Mars
 Mars
+The red planet.
+.
 -390
 260
 ObjectInSpace
 Mercury
 Mercury
+It is very hot and cold.
+.
 0
 0
 ObjectInSpace
 Venus
 Venus
+It is very hot.
+.
 512
 0
 ObjectInSpace
 Pluto
 Pluto
+It is very cold.
+.
 0
 100
 ObjectInSpace
 Earth
 Earth
+Earth is infested with mosquitos.
+.
 0
 512
 ObjectInSpace
 PartyRock
 Asteroid
+Party!
+Yaah!
+.
 50
 50
 # Gate, string name, SpaceZone to, int x, int y, int theta

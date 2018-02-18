@@ -185,9 +185,23 @@ static int load_string(char **data_ptr, struct Reader *const r) {
 }
 
 static int load_paragraph(char **data_ptr, struct Reader *const r) {
-	UNUSED(data_ptr), UNUSED(r);
-	fprintf(stderr, "loading a paragraph is not done yet\n");
-	return 0;
+	char *par, *par_temp, *line;
+	int is_first = 1;
+	if(!(par = malloc(sizeof(char))))
+		return perror("paragraph"), Error(E_MEMORY), 0;
+	par[0] = '\0';
+	for( ; ; ) {
+		if(!(line = ReaderReadLine(r)))
+			return fprintf(stderr, "Unterminated text?\n"), 0;
+		if(!strcmp(line, ".")) break;
+		if(asprintf(&par_temp, "%s%s%s", par, is_first ? "" : "\\n", line) ==-1)
+			return perror("paragraph"), Error(E_MEMORY), 0;
+		free(par);
+		par = par_temp;
+		is_first = 0;
+	}
+	*data_ptr = par;
+	return -1;
 }
 
 /* writing fn's */

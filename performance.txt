@@ -45,7 +45,6 @@ Draw::resize: 1280x800.
 29.4 fps, 34ms average frame-time; 16649ms game-time.
 29.4 fps, 34ms average frame-time; 17033ms game-time.
 [800x600]
-You are <Ship>Gothronkmog[#7202] at position (18.3,-3.7:0.0) with 520GJ/520GJ.
 31.2 fps, 32ms average frame-time; 3427ms game-time.
 31.2 fps, 32ms average frame-time; 4108ms game-time.
 31.2 fps, 32ms average frame-time; 4555ms game-time.

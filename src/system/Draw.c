@@ -49,68 +49,61 @@ static GLuint TexClassTexture(const enum TexClass class) {
 	return class + GL_TEXTURE0;
 }
 
-/* Used in {vbo} as an index for {attribute} (careful about changing.) */
-enum { /* vec2 */ VBO_ATTRIB_VERTEX, /* vec2 */ VBO_ATTRIB_TEXTURE };
-/* Vertex buffer object static data. */
-static struct {
-	/* Shader attribute assignment, viz, entries in the  array: vertex and texture. */
-	const struct {
-		GLint size;
-		GLenum type;
-		const GLvoid *offset;
-	} attribute[2];
-	/* Indices in the {vertices} array. */
-	const struct {
-		GLint first;
-		GLsizei count;
-	} index_background, index_square;
-	/* Each index has four entries. */
-	struct {
-		GLfloat x, y;
-		GLfloat s, t;
-	} background[4], square[4];
-} vbo = {
-	/* There are 2 vectors: the normalised
-	 centre co-\:ordinates in which the sprite goes from [-1, 1], and the
-	 texture map [0, 1]. {attribute} */
-	{
-		/* VBO_ATTRIB_VERTEX */ { 2, GL_FLOAT, 0 },
-		/* VBO_ATTRIB_TEXTURE */ { 2, GL_FLOAT, (GLvoid *)(sizeof(GLfloat) * 2)}
-	},
-	/* Corresponds to the indices in the {vertices} array. */
-	{
-		0,
-		sizeof vbo.background / sizeof *vbo.background
-	},
-	{
-		sizeof vbo.background / sizeof *vbo.background,
-		sizeof vbo.square / sizeof *vbo.square
-	},
-	/** {vertices} is used ubiquitously for static geometry, uploaded into
-	 video memory. */
-	{
-		/* Background; {resize} changes on update; this is the only thing
-		 that's not constant. */
-		{  1.0f,  1.0f,  1.0f,  1.0f },
-		{  1.0f, -1.0f,  1.0f,  0.0f },
-		{ -1.0f,  1.0f,  0.0f,  1.0f },
-		{ -1.0f, -1.0f,  0.0f,  0.0f },
-		/* Generic square, for sprites, etc. Should be constant. */
-		{ 0.5f,  0.5f, 1.0f, 1.0f },
-		{ 0.5f, -0.5f, 1.0f, 0.0f },
-		{ -0.5f, 0.5f, 0.0f, 1.0f },
-		{ -0.5f,-0.5f, 0.0f, 0.0f }
-	}
+/** {vertices} is used ubiquitously for static geometry, uploaded into video
+ memory. It's pretty simple because all of the sprites have a square geometry.
+ The important part is what texture map we put on them. First we define the
+ data, and then the meaning of the data. */
+struct {
+	GLfloat x, y;
+	GLfloat s, t;
+} vertices[] = {
+	/* Background; {resize} changes on update; this is the only thing
+	 that's not constant. */
+	{  1.0f,  1.0f,  1.0f,  1.0f },
+	{  1.0f, -1.0f,  1.0f,  0.0f },
+	{ -1.0f,  1.0f,  0.0f,  1.0f },
+	{ -1.0f, -1.0f,  0.0f,  0.0f },
+	/* Generic square, for sprites, etc. Should be constant, but is not. */
+	{ 0.5f,  0.5f, 1.0f, 1.0f },
+	{ 0.5f, -0.5f, 1.0f, 0.0f },
+	{ -0.5f, 0.5f, 0.0f, 1.0f },
+	{ -0.5f,-0.5f, 0.0f, 0.0f }
 };
+/* Used in {vertex_attribute} as an index. */
+enum {
+	/* vec2 */ VBO_ATTRIB_VERTEX,
+	/* vec2 */ VBO_ATTRIB_TEXTURE
+};
+/** Shader attribute assignment. There are two two-vectors corresponding to the
+ two VBO enums, and hence four entries per vertex in {vertices}. */
+static const struct {
+	GLint size;
+	GLenum type;
+	const GLvoid *offset;
+} vertex_attribute[] = {
+	/* VBO_ATTRIB_VERTEX */  { 2, GL_FLOAT, 0 },
+	/* VBO_ATTRIB_TEXTURE */ { 2, GL_FLOAT, (GLvoid *)(sizeof(GLfloat) * 2) }
+};
+/* Corresponds to the indices in the {vertices} array. */
+static const struct {
+	GLint first;
+	GLsizei count;
+} vertex_index_background = { 0, 4 }, vertex_index_square = { 4, 4 };
 
-/*  */
+/* Internal draw things. */
 static struct {
-	/* if is started, we don't and can't start it again */
+	/* Used to render idempotent. */
 	int is_started;
 	/* Sprites used in debugging; initialised in {Draw}. */
 	const struct AutoImage *icon_light;
-	GLuint vbo_geom, light_tex, background_tex, shield_tex, text_framebuffer;
-	struct Vec2f camera, camera_extent;
+	/* Pointers to a GPU-buffers. */
+	struct { GLuint vertices; } arrays;
+	/* Pointers to GPU textures. */
+	struct { GLuint light, background, shield; } textures;
+	/* A separate frame-buffer is used to bake text. */
+	struct { GLuint text; } framebuffers;
+	/* The camera. */
+	struct { struct Vec2f x, extent; } camera;
 } draw;
 
 
@@ -124,15 +117,13 @@ static void display(void) {
 	 "The buffers should always be cleared. On much older hardware, there was
 	 a technique to get away without clearing the scene, but on even semi-recent
 	 hardware, this will actually make things slower. So always do the clear."
-	 This is very, very sketchy indeed; I don't believe you. Obviously I set it
-	 up to not do the clear. Maybe the clear has gotten faster, but like shit
-	 it's faster then not doing it. Time it!
+	 I call bullshit. Time it.
 	 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	 */
 
 	/* Use sprites; triangle strips, two to form a square, vertex buffer,
 	 [-0.5, 0.5 : -0.5, 0.5] */
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_geom);
+	glBindBuffer(GL_ARRAY_BUFFER, draw.arrays.vertices);
 
 	/* @fixme Don't use painters' algorithm; stencil test! */
 
@@ -142,7 +133,7 @@ static void display(void) {
 	 update glUniform1i(GLint location, GLint v0)
 	 update glUniformMatrix4fv(location, count, transpose, *value)
 	 glDrawArrays(type flag, offset, no) */
-	if(background_tex) {
+	if(draw.textures.background) {
 		/* use background shader */
 		glUseProgram(auto_Background_shader.compiled);
 		/* turn transperency off */
@@ -152,19 +143,19 @@ static void display(void) {
 		/* fixme: of course it's a background, set once */
 		/*glUniform1i(background_sampler_location, TEX_CLASS_BACKGROUND);*/
 		/*glUniformMatrix4fv(tex_map_matrix_location, 1, GL_FALSE, background_matrix);*/
-		glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_bg.first, vbo_info_bg.count);
+		glDrawArrays(GL_TRIANGLE_STRIP, vertex_index_background.first, vertex_index_background.count);
 	}
 
 	glEnable(GL_BLEND);
 
 	/* Draw far objects. */
 	glUseProgram(auto_Far_shader.compiled);
-	glUniform2f(auto_Far_shader.camera, camera.x, camera.y);
+	glUniform2f(auto_Far_shader.camera, draw.camera.x.x, draw.camera.x.y);
 	FarsDraw();
 
 	/* Set up lights, draw sprites in foreground. */
 	glUseProgram(auto_Lambert_shader.compiled);
-	glUniform2f(auto_Lambert_shader.camera, camera.x, camera.y);
+	glUniform2f(auto_Lambert_shader.camera, draw.camera.x.x, draw.camera.x.y);
 	glUniform1i(auto_Lambert_shader.points, lights = (unsigned)SpritesLightGetSize());
 	if(lights) {
 		struct Vec2f *parray = SpritesLightPositions();
@@ -174,17 +165,17 @@ static void display(void) {
 		glUniform3fv(auto_Lambert_shader.point_colour, lights,
 					 (GLfloat *)SpritesLightGetColours());
 		/* Debug. */
-		for(i = 0; i < lights; i++) Info(parray + i, icon_light);
+		for(i = 0; i < lights; i++) Info(parray + i, draw.icon_light);
 	}
 	SpritesDraw();
 
 	/* Display info on top without lighting. */
 	glUseProgram(auto_Info_shader.compiled);
-	glUniform2f(auto_Info_shader.camera, camera.x, camera.y);
+	glUniform2f(auto_Info_shader.camera, draw.camera.x.x, draw.camera.x.y);
 	SpritesInfo();
 
 	/* Overlay hud. @fixme */
-	if(shield_tex) {
+	if(draw.textures.shield) {
 		struct Ship *player;
 		const struct Ortho3f *x;
 		const struct Vec2f *hit;
@@ -192,12 +183,12 @@ static void display(void) {
 		   && (x = SpriteGetPosition((struct Sprite *)player))
 		   && (hit = ShipGetHit(player))) {
 			glUseProgram(auto_Hud_shader.compiled);
-			glBindTexture(GL_TEXTURE_2D, shield_tex);
-			glUniform2f(auto_Hud_shader.camera, camera.x, camera.y);
+			glBindTexture(GL_TEXTURE_2D, draw.textures.shield);
+			glUniform2f(auto_Hud_shader.camera,draw.camera.x.x,draw.camera.x.y);
 			glUniform2f(auto_Hud_shader.size, 256.0f, 8.0f);
 			glUniform2f(auto_Hud_shader.position, x->x, x->y + 64.0f);
 			glUniform2i(auto_Hud_shader.shield, hit->x, hit->y);
-			glDrawArrays(GL_TRIANGLE_STRIP, vbo_info_square.first, vbo_info_square.count);
+			glDrawArrays(GL_TRIANGLE_STRIP, vertex_index_square.first, vertex_index_square.count);
 		}
 	}
 
@@ -230,11 +221,12 @@ static void resize(int width, int height) {
 	/*fprintf(stderr, "resize: %dx%d.\n", width, height);*/
 	if(width <= 0 || height <= 0) return;
 	glViewport(0, 0, width, height);
-	camera_extent.x = width / 2.0f, camera_extent.y = height / 2.0f; /* global*/
+	draw.camera.extent.x = width  / 2.0f;
+	draw.camera.extent.y = height / 2.0f;
 
 	/* Resize the background. */
 	/* glActiveTexture(TEX_CLASS_BACKGROUND); this does nothing? */
-	glBindTexture(GL_TEXTURE_2D, background_tex);
+	glBindTexture(GL_TEXTURE_2D, draw.textures.background);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &w_tex);
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h_tex);
 	/*fprintf(stderr, "w %d h %d\n", w_tex, h_tex);*/
@@ -242,20 +234,20 @@ static void resize(int width, int height) {
 	h_h_tex = (float)height / h_tex;
 
 	/* Update the background texture vbo on the card with global data here. */
-	vbo[0].s = vbo[1].s =  w_w_tex;
-	vbo[2].s = vbo[3].s = -w_w_tex;
-	vbo[0].t = vbo[2].t =  h_h_tex;
-	vbo[1].t = vbo[3].t = -h_h_tex;
-	glBufferSubData(GL_ARRAY_BUFFER, vbo_info_bg.first,
-					vbo_info_bg.count * (GLsizei)sizeof(struct Vertex),
-					vbo + vbo_info_bg.first);
+	vertices[0].s = vertices[1].s =  w_w_tex;
+	vertices[2].s = vertices[3].s = -w_w_tex;
+	vertices[0].t = vertices[2].t =  h_h_tex;
+	vertices[1].t = vertices[3].t = -h_h_tex;
+	glBufferSubData(GL_ARRAY_BUFFER, vertex_index_background.first,
+		vertex_index_background.count * (GLsizei)sizeof *vertices,
+		vertices + vertex_index_background.first);
 
-	/* Update the shaders; YOU MUST CALL THIS IF THE PROGRAMME HAS ANY
-	 DEPENDENCE ON SCREEN SIZE. For Background, the image may not cover the
-	 whole drawing area, so we may need a constant scaling; if it is so, the
-	 image will have to be linearly interpolated for quality. */
+	/* Update the shaders; one must call this if ones shader is dependent on
+	 screen-size. For Background, the image may not cover the whole drawing
+	 area, so we may need a constant scaling; if it is so, the image will have
+	 to be linearly interpolated for quality. */
 	glUseProgram(auto_Background_shader.compiled);
-	glBindTexture(GL_TEXTURE_2D, background_tex);
+	glBindTexture(GL_TEXTURE_2D, draw.textures.background);
 	if(w_w_tex > 1.0f || h_h_tex > 1.0f) {
 		const float scale = 1.0f / ((w_w_tex > h_h_tex) ? w_w_tex : h_h_tex);
 		glUniform1f(auto_Background_shader.scale, scale);
@@ -480,10 +472,10 @@ int Draw(void) {
 	const float sunshine[] = { 1.0f * 3.0f, 1.0f * 3.0f, 1.0f * 3.0f };
 	int i;
 
-	if(!icon_light) icon_light = AutoImageSearch("Idea16.png");
-	assert(icon_light);
+	if(draw.is_started) return 1;
 
-	if(is_started) return -1;
+	draw.icon_light = AutoImageSearch("Idea16.png");
+	assert(draw.icon_light);
 
 	if(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS < TEX_CLASS_NO)
 		return fprintf(stderr,
@@ -507,33 +499,35 @@ int Draw(void) {
 	glDisable(GL_DEPTH_TEST);
 
 	/* vbo; glVertexAttribPointer(index attrib, size, type, normaised, stride, offset) */
-	glGenBuffers(1, (GLuint *)&vbo_geom);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_geom);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vbo), vbo, GL_STATIC_DRAW);
+	glGenBuffers(1, (GLuint *)&draw.arrays.vertices);
+	glBindBuffer(GL_ARRAY_BUFFER, draw.arrays.vertices);
+	glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
 	/* fixme: the texture should be the same as the vetices, half the data */
 	/* fixme: done per-frame, because apparently OpenGl does not keep track of the bindings per-buffer */
 	glEnableVertexAttribArray(VBO_ATTRIB_VERTEX);
-	glVertexAttribPointer(VBO_ATTRIB_VERTEX, vbo_attrib[VBO_ATTRIB_VERTEX].size,
-		vbo_attrib[VBO_ATTRIB_VERTEX].type, GL_FALSE, sizeof(struct Vertex),
-		vbo_attrib[VBO_ATTRIB_VERTEX].offset);
+	glVertexAttribPointer(VBO_ATTRIB_VERTEX,
+		vertex_attribute[VBO_ATTRIB_VERTEX].size,
+		vertex_attribute[VBO_ATTRIB_VERTEX].type, GL_FALSE, sizeof *vertices,
+		vertex_attribute[VBO_ATTRIB_VERTEX].offset);
     glEnableVertexAttribArray(VBO_ATTRIB_TEXTURE);
     glVertexAttribPointer(VBO_ATTRIB_TEXTURE,
-		vbo_attrib[VBO_ATTRIB_TEXTURE].size,
-		vbo_attrib[VBO_ATTRIB_TEXTURE].type, GL_FALSE, sizeof(struct Vertex),
-		vbo_attrib[VBO_ATTRIB_TEXTURE].offset);
-	fprintf(stderr, "Draw: created vertex buffer, Vbo%u.\n", vbo_geom);
+		vertex_attribute[VBO_ATTRIB_TEXTURE].size,
+		vertex_attribute[VBO_ATTRIB_TEXTURE].type, GL_FALSE, sizeof *vertices,
+		vertex_attribute[VBO_ATTRIB_TEXTURE].offset);
+	fprintf(stderr, "Draw: created vertex buffer, Vbo%u.\n",
+		draw.arrays.vertices);
 
 	/* textures */
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
 	/* lighting */
 	glActiveTexture(TexClassTexture(TEX_CLASS_NORMAL));
-	if(!(light_tex = light_compute_texture()))
+	if(!(draw.textures.light = light_compute_texture()))
 		fprintf(stderr, "Draw: failed computing light texture.\n");
 	/* textures stored in imgs */
 	for(i = 0; i < max_auto_images; i++) texture(&auto_images[i]);
 
 	/* Text rendering. */
-	glGenFramebuffers(1, &text_framebuffer);
+	glGenFramebuffers(1, &draw.framebuffers.text);
 
 	/* Shader initialisation. */
 	if(!auto_Background(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)) return Draw_(), 0;
@@ -557,7 +551,7 @@ int Draw(void) {
 
 	WindowIsGlError("Draw");
 
-	is_started = -1;
+	draw.is_started = 1;
 	return -1;
 }
 
@@ -572,44 +566,47 @@ void Draw_(void) {
 	auto_Hud_();
 	auto_Far_();
 	auto_Background_();
-	/* Erase the text framebuffer if it exists. */
-	glDeleteFramebuffers(1, &text_framebuffer);
-	/* Erase the textures. */
+	/* Erase the text frame-buffer if it exists. */
+	glDeleteFramebuffers(1, &draw.framebuffers.text);
+	/* Erase the textures. @fixme glDeleteTexture is safe to use. */
 	for(i = max_auto_images - 1; i; i--) {
 		if(!(tex = auto_images[i].texture)) continue;
 		fprintf(stderr, "~Draw: erase texture, Tex%u.\n", tex);
 		glDeleteTextures(1, &tex);
 		auto_images[i].texture = 0;
 	}
-	if(light_tex) {
-		fprintf(stderr, "~Draw: erase lighting texture, Tex%u.\n", light_tex);
-		glDeleteTextures(1, &light_tex);
-		light_tex = 0;
+	draw.textures.background = draw.textures.shield = 0;
+	/* Erase generated texture. */
+	if(draw.textures.light) {
+		fprintf(stderr, "~Draw: erase lighting texture, Tex%u.\n",
+				draw.textures.light);
+		glDeleteTextures(1, &draw.textures.light);
+		draw.textures.light = 0;
 	}
-	if(vbo_geom && glIsBuffer(vbo_geom)) {
-		fprintf(stderr, "~Draw: erase Vbo%u.\n", vbo_geom);
-		glDeleteBuffers(1, &vbo_geom);
-		vbo_geom = 0;
+	if(draw.arrays.vertices && glIsBuffer(draw.arrays.vertices)) {
+		fprintf(stderr, "~Draw: erase Vbo%u.\n", draw.arrays.vertices);
+		glDeleteBuffers(1, &draw.arrays.vertices);
+		draw.arrays.vertices = 0;
 	}
 	/* Get all the errors that we didn't catch. */
 	WindowIsGlError("~Draw");
-	is_started = 0;
+	draw.is_started = 0;
 }
 
 /** Sets the camera location.
  @param x: (x, y) in pixels. */
 void DrawSetCamera(const struct Vec2f *const x) {
 	if(!x) return;
-	camera.x = x->x, camera.y = x->y;
+	draw.camera.x.x = x->x, draw.camera.x.y = x->y;
 }
 
 /** Gets the visible part of the screen. */
 void DrawGetScreen(struct Rectangle4f *const rect) {
 	if(!rect) return;
-	rect->x_min = camera.x - camera_extent.x;
-	rect->x_max = camera.x + camera_extent.x;
-	rect->y_min = camera.y - camera_extent.y;
-	rect->y_max = camera.y + camera_extent.y;
+	rect->x_min = draw.camera.x.x - draw.camera.extent.x;
+	rect->x_max = draw.camera.x.x + draw.camera.extent.x;
+	rect->y_min = draw.camera.x.y - draw.camera.extent.y;
+	rect->y_max = draw.camera.x.y + draw.camera.extent.y;
 }
 
 
@@ -621,7 +618,7 @@ void DrawSetBackground(const char *const key) {
 	struct AutoImage *image;
 	/* clear the backgruoud; @fixme Test, it isn't used at all */
 	if(!key) {
-		background_tex = 0;
+		draw.textures.background = 0;
 		glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
 		glBindTexture(GL_TEXTURE_2D, 0);
 		fprintf(stderr, "DrawSetBackground: image desktop cleared.\n");
@@ -631,11 +628,11 @@ void DrawSetBackground(const char *const key) {
 		{ fprintf(stderr, "DrawSetBackground: image \"%s\" not found.\n", key);
 		return; }
 	/* background_tex is a global; the witdh/height of the image can be found with background_tex */
-	background_tex = image->texture;
+	draw.textures.background = image->texture;
 	glActiveTexture(TexClassTexture(TEX_CLASS_BACKGROUND));
-	glBindTexture(GL_TEXTURE_2D, background_tex);
+	glBindTexture(GL_TEXTURE_2D, draw.textures.background);
 	fprintf(stderr, "DrawSetBackground: image \"%s,\" (Tex%u,) set as "
-		"desktop.\n", image->name, background_tex);
+		"desktop.\n", image->name, draw.textures.background);
 }
 
 /** @param str: Resource name to set the shield indicator. */
@@ -643,11 +640,11 @@ void DrawSetShield(const char *const key) {
 	struct AutoImage *image;
 	if(!(image = AutoImageSearch(key))) { fprintf(stderr,
 		"DrawSetShield: image \"%s\" not found.\n", key); return; }
-	shield_tex = image->texture;
+	draw.textures.shield = image->texture;
 	glActiveTexture(TexClassTexture(TEX_CLASS_SPRITE));
-	glBindTexture(GL_TEXTURE_2D, shield_tex);
+	glBindTexture(GL_TEXTURE_2D, draw.textures.shield);
 	fprintf(stderr, "DrawSetShield: image \"%s,\" (Tex%u,) set as shield.\n",
-		image->name, shield_tex);
+		image->name, draw.textures.shield);
 }
 
 #if 0
@@ -701,7 +698,8 @@ void DrawDisplayLambert(const struct Ortho3f *const x,
 	}
 	glUniform1f(auto_Lambert_shader.angle, x->theta);
 	glUniform2f(auto_Lambert_shader.object, x->x, x->y);
-	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
+	glDrawArrays(GL_TRIANGLE_STRIP, vertex_index_square.first,
+		vertex_index_square.count);
 }
 
 /** Only used as a callback from \see{display} while OpenGL is using Far. For
@@ -720,7 +718,8 @@ void DrawDisplayFar(const struct Ortho3f *const x,
 	}
 	glUniform1f(auto_Far_shader.angle, x->theta);
 	glUniform2f(auto_Far_shader.object, x->x, x->y);
-	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
+	glDrawArrays(GL_TRIANGLE_STRIP, vertex_index_square.first,
+		vertex_index_square.count);
 }
 
 /** Only used as a callback from \see{display} while OpenGL is using Info. */
@@ -734,5 +733,6 @@ void DrawDisplayInfo(const struct Vec2f *const x,
 		glUniform1f(auto_Info_shader.size, tex->width);
 	}
 	glUniform2f(auto_Info_shader.object, x->x, x->y);
-	glDrawArrays(GL_TRIANGLE_STRIP,vbo_info_square.first,vbo_info_square.count);
+	glDrawArrays(GL_TRIANGLE_STRIP, vertex_index_square.first,
+		vertex_index_square.count);
 }

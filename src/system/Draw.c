@@ -35,63 +35,84 @@
 extern struct AutoImage auto_images[];
 extern const int max_auto_images;
 
-/* if is started, we don't and can't start it again */
-static int is_started;
-
-/* Sprites used in debugging; initialised in {Draw}. */
-static const struct AutoImage *icon_light;
-
 /** Texture addresses on the graphics card, when you want different textures
  simultaneously. Limit of {MAX_COMBINED_TEXTURE_IMAGE_UNITS}, which may be
- small, (like 2?) */
+ small, (like 2? then it will break.) */
 enum TexClass {
 	TEX_CLASS_SPRITE,
 	TEX_CLASS_NORMAL,
-	TEX_CLASS_BACKGROUND
+	TEX_CLASS_BACKGROUND,
+	TEX_CLASS_NO
 };
 static GLuint TexClassTexture(const enum TexClass class) {
 	assert(class < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 	return class + GL_TEXTURE0;
 }
 
-/** Shader attribute assignment. {VBO_ATTRIB_CENTERED} is the normalised centre
- co-ordinates in which the sprite goes from [-1, 1]; {VBO_ATTRIB_TEXTURE} maps
- that to [0, 1] for texture mapping the sprite. */
+/* Used in {vbo} as an index for {attribute} (careful about changing.) */
 enum { /* vec2 */ VBO_ATTRIB_VERTEX, /* vec2 */ VBO_ATTRIB_TEXTURE };
-/** Corresponds to {(VBO_ATTRIB_VERTEX, VBO_ATTRIB_TEXTURE)}. */
-static const struct {
-	GLint size;
-	GLenum type;
-	const GLvoid *offset;
-} vbo_attrib[] = {
-	{ 2, GL_FLOAT, 0 },
-	{ 2, GL_FLOAT, (GLvoid *)(sizeof(GLfloat) * 2) /* offset */ }
+/* Vertex buffer object static data. */
+static struct {
+	/* Shader attribute assignment, viz, entries in the  array: vertex and texture. */
+	const struct {
+		GLint size;
+		GLenum type;
+		const GLvoid *offset;
+	} attribute[2];
+	/* Indices in the {vertices} array. */
+	const struct {
+		GLint first;
+		GLsizei count;
+	} index_background, index_square;
+	/* Each index has four entries. */
+	struct {
+		GLfloat x, y;
+		GLfloat s, t;
+	} background[4], square[4];
+} vbo = {
+	/* There are 2 vectors: the normalised
+	 centre co-\:ordinates in which the sprite goes from [-1, 1], and the
+	 texture map [0, 1]. {attribute} */
+	{
+		/* VBO_ATTRIB_VERTEX */ { 2, GL_FLOAT, 0 },
+		/* VBO_ATTRIB_TEXTURE */ { 2, GL_FLOAT, (GLvoid *)(sizeof(GLfloat) * 2)}
+	},
+	/* Corresponds to the indices in the {vertices} array. */
+	{
+		0,
+		sizeof vbo.background / sizeof *vbo.background
+	},
+	{
+		sizeof vbo.background / sizeof *vbo.background,
+		sizeof vbo.square / sizeof *vbo.square
+	},
+	/** {vertices} is used ubiquitously for static geometry, uploaded into
+	 video memory. */
+	{
+		/* Background; {resize} changes on update; this is the only thing
+		 that's not constant. */
+		{  1.0f,  1.0f,  1.0f,  1.0f },
+		{  1.0f, -1.0f,  1.0f,  0.0f },
+		{ -1.0f,  1.0f,  0.0f,  1.0f },
+		{ -1.0f, -1.0f,  0.0f,  0.0f },
+		/* Generic square, for sprites, etc. Should be constant. */
+		{ 0.5f,  0.5f, 1.0f, 1.0f },
+		{ 0.5f, -0.5f, 1.0f, 0.0f },
+		{ -0.5f, 0.5f, 0.0f, 1.0f },
+		{ -0.5f,-0.5f, 0.0f, 0.0f }
+	}
 };
 
-/** {struct} corresponding to the above. {vbo} is used ubiquitously for static
- geometry, uploaded into video memory. Fixme: not fully variablised!? */
-static struct Vertex {
-	GLfloat x, y;
-	GLfloat s, t;
-} vbo[] = {
-	{  1.0f,  1.0f,  1.0f,  1.0f }, /* background; on update resize() changes */
-	{  1.0f, -1.0f,  1.0f,  0.0f },
-	{ -1.0f,  1.0f,  0.0f,  1.0f },
-	{ -1.0f, -1.0f,  0.0f,  0.0f },
-	{ 0.5f,  0.5f, 1.0f, 1.0f },    /* generic square, for sprites, etc */
-	{ 0.5f, -0.5f, 1.0f, 0.0f },
-	{ -0.5f, 0.5f, 0.0f, 1.0f },
-	{ -0.5f,-0.5f, 0.0f, 0.0f }
-};
-/* Corresponds to the values in {vbo}. */
-static const struct {
-	GLint first;
-	GLsizei count;
-} vbo_info_bg = { 0, 4 }, vbo_info_square = { 4, 4 };
+/*  */
+static struct {
+	/* if is started, we don't and can't start it again */
+	int is_started;
+	/* Sprites used in debugging; initialised in {Draw}. */
+	const struct AutoImage *icon_light;
+	GLuint vbo_geom, light_tex, background_tex, shield_tex, text_framebuffer;
+	struct Vec2f camera, camera_extent;
+} draw;
 
-/* globals */
-static GLuint vbo_geom, light_tex, background_tex, shield_tex, text_framebuffer;
-static struct Vec2f camera, camera_extent;
 
 /** Callback for {glutDisplayFunc}; this is where all of the drawing happens.
  It sets up the shaders, then calls whatever draw functions use those
@@ -463,6 +484,11 @@ int Draw(void) {
 	assert(icon_light);
 
 	if(is_started) return -1;
+
+	if(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS < TEX_CLASS_NO)
+		return fprintf(stderr,
+		"This graphics card supports %u combined textures; we need %u.\n",
+		GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, TEX_CLASS_NO), 0;
 
 	/*text_name = text_compute_texture();*/
 

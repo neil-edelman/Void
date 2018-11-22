@@ -14,7 +14,7 @@
 #include "../../build/Auto.h"
 #include "../Window.h" /* glutLeaveMainLoop */
 #include "../Ortho.h"
-#include "Sprites.h"
+#include "Items.h"
 #include "Zone.h"
 #include "../general/Events.h"
 #include "../system/Key.h"
@@ -54,7 +54,7 @@ static void update(const int dt_ms) {
 	/* Update keys. */
 	PollUpdate();
 	/* Collision detect, move sprites, center on the player; a lot of work. */
-	SpritesUpdate(dt_ms);
+	ItemsUpdate(dt_ms);
 	/* Dispatch events; after update so that immidiate can be immediate. */
 	EventsUpdate();
 }
@@ -86,13 +86,13 @@ static void fps(void) {
 }
 
 static void position(void) {
-	const struct Ship *const player = SpritesGetPlayerShip();
+	const struct Ship *const player = ItemsGetPlayerShip();
 	const struct Ortho3f *x;
 	if(!player) { printf("You are scattered across space.\n"); return; }
-	x = SpriteGetPosition((const struct Sprite *)player);
+	x = ItemGetPosition((const struct Item *)player); /* @fixme */
 	printf("You are %s at (%.1f, %.1f: %.1f) in Bin%u.\n",
-		SpritesToString((struct Sprite *)player), x->x, x->y, x->theta,
-		SpriteGetBin((struct Sprite *)player));
+		ItemsToString((struct Item *)player), x->x, x->y, x->theta,
+		ItemGetBin((struct Item *)player));
 }
 
 /* public */
@@ -128,7 +128,7 @@ int Game(void) {
 	KeyRegister(k_f1, &WindowToggleFullScreen);
 	KeyRegister('f',  &fps);
 	KeyRegister('x',  &position);
-	KeyRegister('1',  &SpritesPlotSpace);
+	KeyRegister('1',  &ItemsPlotSpace);
 	/*
 	KeyRegister('l',  &LightList);*/
 	/*KeyRegister('s',  &SpriteList);*/
@@ -141,7 +141,7 @@ int Game(void) {
 	DrawSetShield("Bar.png");
 
 	Zone(game.start);
-	SpritesShip(game.nautilus, &posn, AI_HUMAN);
+	Ship(game.nautilus, &posn, AI_HUMAN);
 
 	EventsRunnable(7000, &fps);
 

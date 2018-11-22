@@ -2,7 +2,8 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- Fars are like sprites, but drawn far away; they are simpler.
+ Fars are sprites, like Sprites, but drawn far away; they are simpler than
+ Sprites because they have no rotation, and have a different shader associated.
 
  @title		Fars
  @author	Neil
@@ -12,7 +13,7 @@
 #include <assert.h>
 #include "../Ortho.h" /* for measurements and types */
 #include "../../build/Auto.h" /* for AutoImage, AutoShipClass, etc */
-#include "../general/Layer.h" /* for descritising */
+#include "../general/Layer.h" /* for discretising */
 #include "../system/Draw.h" /* DrawGetScreen, DrawDisplayFar */
 #include "Fars.h"
 
@@ -31,6 +32,8 @@ struct Far {
 	unsigned bin; /* which bin is it in */
 	struct Ortho3f x; /* where it is */
 };
+typedef void (*FarToString)(const struct Far *const, char (*const)[12]);
+
 static void far_to_string(const struct Far *this, char (*const a)[12]);
 #define LIST_NAME Far
 #define LIST_TYPE struct Far
@@ -41,18 +44,29 @@ static void far_to_string(const struct Far *this, char (*const a)[12]);
  Planets and asteroids, everything that has a name and you can optionally land
  on, is a {Planetoid}. */
 struct Planetoid {
-	struct FarListNode far;
+	struct FarLink base;
 	const char *name;
 };
+/** @implements <Planetoid>Migrate */
+static void planetoid_migrate(struct Planetoid *const this,
+	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	FarLinkMigrate(&this->base.data, migrate);
+	/*unsigned i;
+	assert(f && f == fars && migrate);
+	for(i = 0; i < LAYER_SIZE; i++) {
+		FarListMigrate(f->bins + i, migrate);
+	}*/
+}
 #define POOL_NAME Planetoid
 #define POOL_TYPE struct Planetoid
-#define POOL_MIGRATE struct Fars
+#define POOL_MIGRATE_EACH &planetoid_migrate
 #include "../templates/Pool.h"
 
 /** Fars all together. */
 static struct Fars {
 	struct FarList bins[LAYER_SIZE];
-	struct PlanetoidPool *planetoids;
+	struct PlanetoidPool planetoids;
 	struct Layer *layer;
 } *fars;
 
@@ -92,16 +106,6 @@ static const struct FarVt planetoid_vt = {
 
 /************* Type functions. **************/
 
-/** @implements Migrate */
-static void bin_migrate(struct Fars *const f,
-	const struct Migrate *const migrate) {
-	unsigned i;
-	assert(f && f == fars && migrate);
-	for(i = 0; i < LAYER_SIZE; i++) {
-		FarListMigrate(f->bins + i, migrate);
-	}
-}
-
 /** Destructor. */
 void Fars_(void) {
 	unsigned i;
@@ -112,32 +116,20 @@ void Fars_(void) {
 }
 
 /** Constructor.
- @return New {Fars}. */
+ @return New {Fars} or {errno} will be set (probably.) */
 int Fars(void) {
 	unsigned i;
-	enum { NO, PLANETOID, LAYER } e = NO;
-	const char *ea = 0, *eb = 0;
+	int err = 1;
 	if(fars) return 1;
-	if(!(fars = malloc(sizeof *fars)))
-		{ perror("Fars"); Fars_(); return 0; }
+	if(!(fars = malloc(sizeof *fars))) return Fars_(), 0;
 	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars->bins + i);
-	fars->planetoids = 0;
 	fars->layer = 0;
+	PlanetoidPool(&fars->planetoids);
 	do {
-		if(!(fars->planetoids = PlanetoidPool(&bin_migrate, fars)))
-			{ e = PLANETOID; break; }
-		if(!(fars->layer = Layer(LAYER_SIDE_SIZE, layer_space))){e=LAYER;break;}
-	} while(0); switch(e) {
-		case NO: break;
-		case PLANETOID: ea = "planetoids",
-			eb = PlanetoidPoolGetError(fars->planetoids); break;
-		case LAYER: ea = "layer", eb = "couldn't get layer"; break;
-	} if(e) {
-		fprintf(stderr, "Fars %s buffer: %s.\n", ea, eb);
-		Fars_();
-		return 0;
-	}
-	return 1;
+		if(!(fars->layer = Layer(LAYER_SIDE_SIZE, layer_space))) break;
+		err = 0;
+	} while(0); if(err) Fars_();
+	return !err;
 }
 
 /** Clears all planets in preparation for jump. */
@@ -145,7 +137,7 @@ void FarsClear(void) {
 	unsigned i;
 	if(!fars) return;
 	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars->bins + i);
-	PlanetoidPoolClear(fars->planetoids);
+	PlanetoidPoolClear(&fars->planetoids);
 }
 
 
@@ -166,15 +158,14 @@ static void far_filler(struct Far *const this,
 	FarListPush(fars->bins + this->bin, this);
 }
 
-/** Extends {far_filler}. */
+/** @extends far_filler
+ @throws If return null, {errno} will probably be set. */
 struct Planetoid *FarsPlanetoid(const struct AutoObjectInSpace *const class) {
 	struct Planetoid *this;
 	if(!fars || !class) return 0;
 	assert(class->sprite && class->name);
-	if(!(this = PlanetoidPoolNew(fars->planetoids)))
-		{ fprintf(stderr, "FarsPlanetoid: %s.\n",
-		PlanetoidPoolGetError(fars->planetoids)); return 0; }
-	far_filler(&this->far.data, &planetoid_vt, class);
+	if(!(this = PlanetoidPoolNew(&fars->planetoids))) return 0;
+	far_filler(&this->base.data, &planetoid_vt, class);
 	this->name = class->name;
 	return this;
 }

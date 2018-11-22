@@ -32,7 +32,7 @@ struct Event { const struct EventVt *vt; };
 
 /** {Runnable} is an {Event}. */
 struct Runnable {
-	struct EventListNode event;
+	struct EventLink event;
 	Runnable run;
 };
 #define POOL_NAME Runnable
@@ -42,7 +42,7 @@ struct Runnable {
 
 /** {IntConsumer} is an {Event}. */
 struct IntConsumer {
-	struct EventListNode event;
+	struct EventLink event;
 	IntConsumer accept;
 	int param;
 };
@@ -51,14 +51,14 @@ struct IntConsumer {
 #define POOL_MIGRATE struct Events
 #include "../templates/Pool.h"
 
-/** {SpriteConsumer} is an {Event}. */
-struct SpriteConsumer {
-	struct EventListNode event;
-	SpriteConsumer accept;
-	struct Sprite *param;
+/** {ItemConsumer} is an {Event}. */
+struct ItemConsumer {
+	struct EventLink event;
+	ItemConsumer accept;
+	struct Item *param;
 };
-#define POOL_NAME SpriteConsumer
-#define POOL_TYPE struct SpriteConsumer
+#define POOL_NAME ItemConsumer
+#define POOL_TYPE struct ItemConsumer
 #define POOL_MIGRATE struct Events
 #include "../templates/Pool.h"
 
@@ -72,7 +72,7 @@ static struct Events {
 	struct EventList approx64s[8];
 	struct RunnablePool *runnables;
 	struct IntConsumerPool *int_consumers;
-	struct SpriteConsumerPool *sprite_consumers;
+	struct ItemConsumerPool *item_consumers;
 } *events;
 
 static const size_t approx1s_size = sizeof((struct Events *)0)->approx1s
@@ -106,16 +106,16 @@ static void int_consumer_call(struct IntConsumer *const this) {
 	this->accept(this->param);
 	IntConsumerPoolRemove(events->int_consumers, this);
 }
-/** @implements <SpriteConsumer>Action */
-static void sprite_consumer_call(struct SpriteConsumer *const this) {
+/** @implements <ItemConsumer>Action */
+static void item_consumer_call(struct ItemConsumer *const this) {
 	this->accept(this->param);
-	SpriteConsumerPoolRemove(events->sprite_consumers, this);
+	ItemConsumerPoolRemove(events->item_consumers, this);
 }
 
 static const struct EventVt
-	runnable_vt        = { (EventsAction)&runnable_call },
-	int_consumer_vt    = { (EventsAction)&int_consumer_call },
-	sprite_consumer_vt = { (EventsAction)&sprite_consumer_call };
+	runnable_vt      = { (EventsAction)&runnable_call },
+	int_consumer_vt  = { (EventsAction)&int_consumer_call },
+	item_consumer_vt = { (EventsAction)&item_consumer_call };
 
 
 
@@ -164,34 +164,21 @@ static void events_migrate(struct Events *const e, const struct Migrate *const m
 void Events_(void) {
 	if(!events) return;
 	clear_event_lists();
-	SpriteConsumerPool_(&events->sprite_consumers);
-	IntConsumerPool_(&events->int_consumers);
-	RunnablePool_(&events->runnables);
+	ItemConsumerPool_(events->item_consumers);
+	IntConsumerPool_(events->int_consumers);
+	RunnablePool_(events->runnables);
 	free(events), events = 0;
 }
 
 /** @return True if the Events pool has been set up. */
 int Events(void) {
-	const char *e = 0;
 	if(events) return 1;
-	if(!(events = malloc(sizeof *events)))
-		{ perror("Events"); Events_(); return 0; }
+	if(!(events = malloc(sizeof *events))) return 0;
 	events->update = TimerGetGameTime();
 	clear_event_lists();
-	events->runnables = 0;
-	events->int_consumers = 0;
-	events->sprite_consumers = 0;
-	do {
-		if(!(events->runnables = RunnablePool(&events_migrate, events)))
-			{ e = RunnablePoolGetError(events->runnables); break; }
-		if(!(events->int_consumers = IntConsumerPool(&events_migrate, events)))
-			{ e = IntConsumerPoolGetError(events->int_consumers); break; }
-		if(!(events->sprite_consumers=SpriteConsumerPool(&events_migrate,
-			events)))
-			{ e = SpriteConsumerPoolGetError(events->sprite_consumers); break; }
-	} while(0); if(e) {
-		fprintf(stderr, "Events: %s.\n", e); Events_(); return 0;
-	}
+	RunnablePool(events->runnables);
+	IntConsumerPool(events->int_consumers);
+	ItemConsumerPool(events->item_consumers);
 	return 1;
 }
 
@@ -237,24 +224,20 @@ static void event_filler(struct Event *const this,
 int EventsRunnable(const unsigned ms_future, const Runnable run) {
 	struct Runnable *this;
 	if(!events || !run) return 0;
-	if(!(this = RunnablePoolNew(events->runnables)))
-		{ fprintf(stderr, "EventsRunnable: %s.\n",
-		RunnablePoolGetError(events->runnables)); return 0; }
+	if(!(this = RunnablePoolNew(events->runnables))) return 0;
 	this->run = run;
 	event_filler(&this->event.data, ms_future, &runnable_vt);
 	return 1;
 }
 /** Creates a new {SpriteConsumer}. */
-int EventsSpriteConsumer(const unsigned ms_future,
-	const SpriteConsumer accept, struct Sprite *const param) {
-	struct SpriteConsumer *this;
+int EventsItemConsumer(const unsigned ms_future,
+	const ItemConsumer accept, struct Item *const param) {
+	struct ItemConsumer *this;
 	if(!events || !accept) return 0;
-	if(!(this = SpriteConsumerPoolNew(events->sprite_consumers)))
-		{ fprintf(stderr, "EventsSpriteConsumer: %s.\n",
-		SpriteConsumerPoolGetError(events->sprite_consumers)); return 0; }
+	if(!(this = ItemConsumerPoolNew(events->item_consumers))) return 0;
 	this->accept = accept;
 	this->param  = param;
-	event_filler(&this->event.data, ms_future, &sprite_consumer_vt);
+	event_filler(&this->event.data, ms_future, &item_consumer_vt);
 	return 1;
 }
 
@@ -266,7 +249,7 @@ void EventsClear(void) {
 	clear_event_lists();
 	RunnablePoolClear(events->runnables);
 	IntConsumerPoolClear(events->int_consumers);
-	SpriteConsumerPoolClear(events->sprite_consumers);
+	ItemConsumerPoolClear(events->item_consumers);
 }
 
 /*void EventsRemoveIf(const EventsPredicate predicate) {

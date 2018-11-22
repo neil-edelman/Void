@@ -14,10 +14,9 @@
 
 /** Deletes the light. */
 static void Light_(struct Light *const light) {
-	struct Lights *const lights = &sprites->lights;
+	struct Lights *const lights = &items.lights;
 	size_t no, r;
 	if(!light) return;
-	assert(sprites);
 	no = light - lights->light_table;
 	if(no >= lights->size) {printf("~light: %lu not in range of lights, %lu.\n",
 		(unsigned long)no, (unsigned long)lights->size); return; }
@@ -28,27 +27,27 @@ static void Light_(struct Light *const light) {
 			sizeof *lights->x_table);
 		memcpy(lights->colour_table + no, lights->colour_table + r,
 			sizeof *lights->colour_table);
-		assert(light->sprite && light->sprite->light == lights->light_table +r);
-		light->sprite->light = lights->light_table + no;
+		assert(light->item && light->item->light == lights->light_table +r);
+		light->item->light = lights->light_table + no;
 	}
-	sprites->lights.size--;
+	items.lights.size--;
 }
 /** @return True if the light was created.
  @fixme Have some random picks to replace if the capacity is full. */
-static int Light(struct Sprite *const sprite,
+static int Light(struct Item *const item,
 	const float r, const float g, const float b) {
-	struct Lights *const lights = &sprites->lights;
+	struct Lights *const lights = &items.lights;
 	struct Light *this;
 	struct Vec2f *x;
 	struct Colour3f *colour;
 	size_t l;
-	assert(sprites && sprite && r >= 0.0f && g >= 0.0f && b >= 0.0f);
-	if(sprite->light) return 0; /* Already associated with a light. */
+	assert(item && r >= 0.0f && g >= 0.0f && b >= 0.0f);
+	if(item->light) return 0; /* Already associated with a light. */
 	if(lights->size >= MAX_LIGHTS)
 		return fprintf(stderr, "light: capacity.\n"), 0;
 	l = lights->size++;
 	this = lights->light_table + l;
-	this->sprite = sprite, sprite->light = this;
+	this->item = item, item->light = this;
 	x = lights->x_table + l;
 	colour = lights->colour_table + l;
 	x->x = 0.0f, x->y = 0.0f;
@@ -56,40 +55,36 @@ static int Light(struct Sprite *const sprite,
 	return 1;
 }
 /** Delete all lights. */
-void SpritesLightClear(void) {
+void ItemsLightClear(void) {
 	struct Light *light;
 	size_t i, *psize;
-	if(!sprites) return;
-	psize = &sprites->lights.size;
-	light = sprites->lights.light_table;
+	psize = &items.lights.size;
+	light = items.lights.light_table;
 	/* Erase all spites' lights. */
 	for(i = 0; i < *psize; i++) {
-		assert(light[i].sprite);
-		light[i].sprite->light = 0;
+		assert(light[i].item);
+		light[i].item->light = 0;
 	}
 	*psize = 0;
 }
-size_t SpritesLightGetSize(void) {
-	if(!sprites) return 0;
-	return sprites->lights.size;
+size_t ItemsLightGetSize(void) {
+	return items.lights.size;
 }
-struct Vec2f *SpritesLightPositions(void) {
+struct Vec2f *ItemsLightPositions(void) {
 	struct Light *lights, *light;
 	struct Vec2f *xs, *x;
 	size_t i, size;
-	if(!sprites) return 0;
-	size = sprites->lights.size;
-	lights = sprites->lights.light_table;
-	xs = sprites->lights.x_table;
+	size = items.lights.size;
+	lights = items.lights.light_table;
+	xs = items.lights.x_table;
 	for(i = 0; i < size; i++) {
 		x = xs + i;
 		light = lights + i;
-		x->x = light->sprite->x.x;
-		x->y = light->sprite->x.y;
+		x->x = light->item->x.x;
+		x->y = light->item->x.y;
 	}
 	return xs;
 }
-struct Colour3f *SpritesLightGetColours(void) {
-	if(!sprites) return 0;
-	return sprites->lights.colour_table;
+struct Colour3f *ItemsLightGetColours(void) {
+	return items.lights.colour_table;
 }

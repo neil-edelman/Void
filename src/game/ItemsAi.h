@@ -2,9 +2,9 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- This is included in \see{Sprites.c}. AI/Human stuff.
+ This is included in \see{Items.c}. AI/Human stuff.
 
- @title		SpritesAi
+ @title		ItemsAi
  @author	Neil
  @std		C89/90
  @version	2017-11 Broke off from Sprites. */
@@ -22,41 +22,41 @@ static void ship_input(struct Ship *const this, const int ms_turning,
 	const int ms_acceleration, const int ms_shoot) {
 	assert(this);
 	if(ms_acceleration > 0) { /* not a forklift */
-		struct Vec2f v = { this->sprite.data.v.x, this->sprite.data.v.y };
+		struct Vec2f v = { this->base.data.v.x, this->base.data.v.y };
 		float a = ms_acceleration * this->acceleration, speed2;
-		v.x += cosf(this->sprite.data.x.theta) * a;
-		v.y += sinf(this->sprite.data.x.theta) * a;
+		v.x += cosf(this->base.data.x.theta) * a;
+		v.y += sinf(this->base.data.x.theta) * a;
 		if((speed2 = v.x * v.x + v.y * v.y) > this->max_speed2) {
 			float correction = sqrtf(this->max_speed2 / speed2);
 			v.x *= correction, v.y *= correction;
 		}
-		this->sprite.data.v.x = v.x, this->sprite.data.v.y = v.y;
+		this->base.data.v.x = v.x, this->base.data.v.y = v.y;
 	}
 	if(ms_turning) {
 		float t = ms_turning * this->turn * turn_acceleration;
-		this->sprite.data.v.theta += t;
-		if(this->sprite.data.v.theta < -this->turn) {
-			this->sprite.data.v.theta = -this->turn;
-		} else if(this->sprite.data.v.theta > this->turn) {
-			this->sprite.data.v.theta = this->turn;
+		this->base.data.v.theta += t;
+		if(this->base.data.v.theta < -this->turn) {
+			this->base.data.v.theta = -this->turn;
+		} else if(this->base.data.v.theta > this->turn) {
+			this->base.data.v.theta = this->turn;
 		}
 	} else {
 		/* \${turn_damping_per_ms^dt_ms}
 		 Taylor: d^25 + d^25(t-25)log d + O((t-25)^2).
 		 @fixme What about extreme values? */
-		this->sprite.data.v.theta *= turn_damping_per_25ms
-		- turn_damping_1st_order * (sprites->dt_ms - 25.0f);
+		this->base.data.v.theta *= turn_damping_per_25ms
+			- turn_damping_1st_order * (items.dt_ms - 25.0f);
 	}
 	if(ms_shoot && TimerIsGameTime(this->ms_recharge_wmd) && this->wmd) {
-		SpritesWmd(this->wmd, this);
+		Wmd(this->wmd, this);
 		this->ms_recharge_wmd = TimerGetGameTime() + this->wmd->ms_recharge;
 	}
 }
 /** Recharge on frame. */
 static void ship_recharge(struct Ship *const this) {
-	assert(sprites && this);
+	assert(this);
 	if(this->hit.x >= this->hit.y) return;
-	this->hit.x += this->recharge * sprites->dt_ms;
+	this->hit.x += this->recharge * items.dt_ms;
 	if(this->hit.x > this->hit.y) this->hit.x = this->hit.y;
 }
 /** @implements <Ship>Predicate */
@@ -72,12 +72,12 @@ static int ship_update_ai(struct Ship *const this) {
 	float d_2, theta, t;
 	int ms_turning = 0, ms_acceleration = 0, ms_shoot = 0;
 	if(!p) return 1; /* @fixme The player is the only reason for being! */
-	d.x = p->sprite.data.x.x - this->sprite.data.x.x,
-	d.y = p->sprite.data.x.y - this->sprite.data.x.y;
+	d.x = p->base.data.x.x - this->base.data.x.x,
+	d.y = p->base.data.x.y - this->base.data.x.y;
 	d_2   = d.x * d.x + d.y * d.y;
 	theta = atan2f(d.y, d.x);
 	/* {t} is the error of where wants vs where it's at. */
-	t = theta - this->sprite.data.x.theta;
+	t = theta - this->base.data.x.theta;
 	branch_cut_pi_pi(&t);
 	/* too close; ai only does one thing at once, or else it would be hard */
 	if(d_2 < ai_too_close) { if(t < 0) t += M_PI_F; else t -= M_PI_F; }

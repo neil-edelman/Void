@@ -10,7 +10,7 @@
 #include "../Ortho.h"
 #include "../general/Events.h"
 #include "../system/Draw.h"
-#include "Sprites.h"
+#include "Items.h"
 #include "Fars.h"
 #include "Zone.h"
 
@@ -25,9 +25,9 @@ extern const float de_sitter;
 
 const struct AutoSpaceZone *current_zone;
 
-/** @implements <Sprite>Predicate */
-static int all_except_player(const struct Sprite *const this) {
-	return this != (struct Sprite *)SpritesGetPlayerShip();
+/** @implements <Item>Predicate */
+static int all_except_player(const struct Item *const this) {
+	return this != (struct Item *)ItemsGetPlayerShip();
 }
 /* * @implements <Event>Predicate
  @fixme We don't erase the player's recharge event nor any (one?) event that
@@ -47,11 +47,11 @@ void Zone(const struct AutoSpaceZone *const sz) {
 		sz->ois1->name, sz->ois2->name);
 
 	/* clear all objects */
-	SpritesRemoveIf(&all_except_player);
+	ItemsRemoveIf(&all_except_player);
 	/* @fixme LightsClear();*/
 	EventsClear();
 	FarsClear();
-	SpritesLightClear();
+	ItemsLightClear();
 
 	/* set drawing elements */
 	DrawSetBackground("Dorado.jpeg");
@@ -61,21 +61,21 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	FarsPlanetoid(sz->ois2);
 	FarsPlanetoid(sz->ois3);
 
-	SpritesGate(sz->gate1);
+	Gate(sz->gate1);
 
 	/* update the current zone */
 	current_zone = sz;
 
 	/* some asteroids */
-	for(i = 0; i < 6400; i++) SpritesDebris(asteroid, 0);
+	for(i = 0; i < 6400; i++) Debris(asteroid, 0);
 
 	/* sprinkle some ships */
-	for(i = 0; i < 1000; i++) SpritesShip(blob_class, 0, AI_DUMB);
+	for(i = 0; i < 1000; i++) Ship(blob_class, 0, AI_DUMB);
 
 }
 
 /** Zone change with the {gate}.
- @implements SpriteConsumer<Gate>
+ @implements ItemConsumer<Gate>
  @fixme Broken. */
 void ZoneChange(struct Gate *const gate) {
 	const struct AutoSpaceZone *const new_zone = GateGetTo(gate),
@@ -87,8 +87,8 @@ void ZoneChange(struct Gate *const gate) {
 	float dx_cos, dx_sin;
 
 	/* Get old gate parametres. */
-	oldx = SpriteGetPosition((struct Sprite *)gate);
-	oldv = SpriteGetVelocity((struct Sprite *)gate);
+	oldx = ItemGetPosition((struct Item *)gate);
+	oldv = ItemGetVelocity((struct Item *)gate);
 	assert(oldx && oldv);
 	/* New zone. */
 	if(!new_zone) { fprintf(stderr,
@@ -97,18 +97,18 @@ void ZoneChange(struct Gate *const gate) {
 	/* Get new gate parametres; after the Zone changes. */
 	if(!(new_gate = FindGate(old_zone)))
 		{ fprintf(stderr, "ZoneChange: missing gate back.\n"); return; }
-	newx = SpriteGetPosition((struct Sprite *)new_gate);
-	newv = SpriteGetVelocity((struct Sprite *)new_gate);
+	newx = ItemGetPosition((struct Item *)new_gate);
+	newv = ItemGetVelocity((struct Item *)new_gate);
 	assert(newx && newv);
 	/* Difference between the gates. */
 	ortho3f_sub(&dx, newx, oldx);
 	ortho3f_sub(&dv, newv, oldv);
 	dx_cos = cosf(dx.theta), dx_sin = sinf(dx.theta);
 	/* Get player parametres; after the Zone changes! */
-	if(!(player = SpritesGetPlayerShip())) { fprintf(stderr,
+	if(!(player = ItemsGetPlayerShip())) { fprintf(stderr,
 		"ZoneChange: there doesn't seem to be a player.\n"); return; }
-	playerx = SpriteGetPosition((struct Sprite *)player);
-	playerv = SpriteGetVelocity((struct Sprite *)player);
+	playerx = ItemGetPosition((struct Item *)player);
+	playerv = ItemGetVelocity((struct Item *)player);
 	/* Difference between the player and the old gate. */
 	ortho3f_sub(&playerdx, playerx, oldx);
 	ortho3f_sub(&playerdv, playerv, oldv);
@@ -132,6 +132,6 @@ void ZoneChange(struct Gate *const gate) {
 		finalx.x -= gate_norm.x * proj;
 		finalx.y -= gate_norm.y * proj;
 	}
-	SpriteSetPosition((struct Sprite *)player, &finalx);
-	SpriteSetVelocity((struct Sprite *)player, &finalv);
+	ItemSetPosition((struct Item *)player, &finalx);
+	ItemSetVelocity((struct Item *)player, &finalv);
 }

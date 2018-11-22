@@ -33,7 +33,7 @@
 #include "system/Key.h"
 #include "system/Glew.h"
 #include "general/Events.h"
-#include "game/Sprites.h"
+#include "game/Items.h"
 #include "game/Fars.h"
 #include "game/Game.h"
 #include "Window.h"
@@ -115,7 +115,7 @@ static int Window(const char *title, int argc, char **argv) {
 /** This is legacy code from 1998 when there was no way to get out of the main
  loop. */
 static void atexit_hack(void) {
-	TimerPause(), Game_(), Draw_(), Fars_(), Sprites_(), Events_();
+	TimerPause(), Game_(), Draw_(), Fars_(), ItemsReset(), Events_();
 }
 
 /** Entry point.
@@ -143,7 +143,6 @@ int main(int argc, char **argv) {
 		if(!Glew()) { e = "glew"; break; }
 		Key();
 		if(!Events()) { e = "events"; break; }
-		if(!Sprites()) { e = "sprites"; break; }
 		if(!Fars()) { e = "fars"; break; }
 		if(!Draw()) { e = "draw"; break; }
 		if(!Game()) { e = "game"; break; }

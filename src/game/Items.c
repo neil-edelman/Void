@@ -73,9 +73,9 @@ struct Item {
 	/* The following are temporary: */
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
-	struct Fore *fore; /* needed in case of migrate */
-	struct Collision *collision; /* needed in case of migrate */
-	struct Light *light; /* pointer to a limited number of lights */
+	struct Proxy *proxy; /* needed in case of migrate */
+	struct Collision *collision; /* in case pointer to collisions */
+	struct Light *light; /* in case pointer to lights */
 };
 typedef void (*ItemToString)(const struct Item *const, char (*const)[12]);
 typedef void (*ItemAction)(struct Item *const);
@@ -85,6 +85,35 @@ static void item_to_string(const struct Item *this, char (*const a)[12]);
 #define LIST_TYPE struct Item
 #define LIST_TO_STRING &item_to_string
 #include "../templates/List.h"
+
+/** {Proxy} and {Cover} are collision-detection mechanisms; {Proxy} defines a
+ temporary pointer to an item that can be nullified if the item is destroyed,
+ yet remains as {Cover}s can refer to it, up until all the covers are
+ destroyed at each frame. It's important that {Proxy} lasts while {Cover} has a
+ refernce to it's index, even if the item value it has is null. */
+struct Proxy { struct Item *item; };
+#define POOL_NAME Proxy
+#define POOL_TYPE struct Proxy
+#define POOL_STACK
+#include "../templates/Pool.h"
+
+/** Many {Cover}s, one in each bin, can point at one {Proxy}. One {Cover} for
+ each {Proxy} has {is_corner}, the authoritative {Cover}. Because the
+ many-to-one relasionship we store an index not a pointer, or else we would
+ also have to store all the covers with the proxy in case of migrate. */
+struct Cover { size_t proxy_index; int is_corner; };
+#define POOL_NAME Cover
+#define POOL_TYPE struct Cover
+#define POOL_STACK
+#include "../templates/Pool.h"
+
+static void item_migrate(struct Item *const this,
+	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	ItemLinkMigrate(this, migrate);
+	if(this->proxy) ItemLinkMigratePointer(&this->proxy->item, migrate);
+	/* @fixme etc */
+}
 
 /* Declare {ShipVt}. */
 struct ShipVt;
@@ -103,8 +132,7 @@ struct Ship {
 static void ship_migrate(struct Ship *const this,
 	const struct Migrate *const migrate) {
 	assert(this && migrate);
-	ItemLinkMigrate(&this->base.data, migrate);
-	/* @fixme */
+	item_migrate(&this->base.data, migrate);
 }
 #define POOL_NAME Ship
 #define POOL_TYPE struct Ship
@@ -119,8 +147,7 @@ struct Debris {
 static void debris_migrate(struct Debris *const this,
 	const struct Migrate *const migrate) {
 	assert(this && migrate);
-	ItemLinkMigrate(&this->base.data, migrate);
-	/* @fixme */
+	item_migrate(&this->base.data, migrate);
 }
 #define POOL_NAME Debris
 #define POOL_TYPE struct Debris
@@ -139,8 +166,7 @@ struct Wmd {
 static void wmd_migrate(struct Wmd *const this,
 	const struct Migrate *const migrate) {
 	assert(this && migrate);
-	ItemLinkMigrate(&this->base.data, migrate);
-	/* @fixme */
+	item_migrate(&this->base.data, migrate);
 }
 #define POOL_NAME Wmd
 #define POOL_TYPE struct Wmd
@@ -153,52 +179,14 @@ struct Gate {
 	const struct AutoSpaceZone *to;
 };
 static void gate_migrate(struct Gate *const this,
-	const struct Migrate *const migrate);
+	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	item_migrate(&this->base.data, migrate);
+}
 #define POOL_NAME Gate
 #define POOL_TYPE struct Gate
 #define POOL_MIGRATE_EACH &gate_migrate
 #include "../templates/Pool.h"
-
-
-
-/** {Fore} and {Cover} are collision-detection mechanisms; {Fore} defines a
- temporary pointer to an item that can be nullified if the item is destroyed. */
-struct Fore {
-	struct Item *item;
-};
-#define POOL_NAME Fore
-#define POOL_TYPE struct Fore
-/*#define POOL_MIGRATE_EACH &...*/
-#define POOL_STACK
-#include "../templates/Pool.h"
-
-/** Many {Cover}s, one in each bin, can point at one {Fore}. One {Cover} for
- each {Fore} has {is_corner}, the authoritative {Cover}. */
-struct Cover {
-	struct Fore *fore;
-	int is_corner;
-};
-#define POOL_NAME Cover
-#define POOL_TYPE struct Cover
-#define POOL_STACK
-#include "../templates/Pool.h"
-
-
-/** Private: {container_of}. */
-/*static struct Gate *upcast_to_gate(struct Item *const item) {
-	return (struct Gate *)(void *)
-		((char *)item - offsetof(struct Gate, base));
-}
-*/
-
-static void gate_migrate(struct Gate *const this,
-	const struct Migrate *const migrate) {
-	assert(this && migrate);
-	ItemLinkMigrate(&this->base.data, migrate);
-	/*if(this->base.data.fore)
-		GatePoolMigratePointer(upcast_to_gate(this->base.data.fore->item), migrate);*/
-	/* @fixme */
-}
 
 
 
@@ -222,7 +210,8 @@ struct Collision {
 };
 #define POOL_NAME Collision
 #define POOL_TYPE struct Collision
-/*#define POOL_MIGRATE_EACH &...*/
+/*#define POOL_MIGRATE_EACH &...
+ @fixme Uhm, where's the Item? Now I'm confused. Wtf is no? */
 #define POOL_STACK
 #include "../templates/Pool.h"
 
@@ -230,7 +219,7 @@ struct Collision {
 
 /** All {Items} together. */
 static struct Items {
-	/* We can have a huge number of {Items}; to that end, space is separated
+	/* We can have a huge number of {Item}s; to that end, space is separated
 	 into rectangular bins, sort of like a hash map, to improve speed. */
 	struct Bin {
 		struct ItemList items;
@@ -242,9 +231,9 @@ static struct Items {
 	struct WmdPool wmds;
 	struct GatePool gates;
 	/* If we want to do collision detection, we have to account for items that
-	 cross bins. Backing for temporary {fores} (eg, pointer-to-object) and
+	 cross bins. Backing for temporary {proxies} (eg, pointer-to-object) and
 	 actual {collisions}; these will be built-up and torn down every frame. */
-	struct ForePool fores;
+	struct ProxyPool proxies;
 	struct CollisionPool collisions;
 	/* Contains calculations for the {bins}. */
 	struct Layer *layer;
@@ -588,8 +577,8 @@ static const struct ItemVt ship_human_vt = {
 /* These are the helpers for migrate each; these pick one pointer field out of
  the struct and migrate it. */
 
-/** @implements <Fore>StackMigrateElement */
-static void fore_migrate_sprite(struct Fore *const this,
+/** @implements <Proxy>StackMigrateElement */
+static void proxy_migrate_sprite(struct Proxy *const this,
 	const struct Migrate *const migrate) {
 	assert(this && migrate);
 	ItemMigratePointer(&this->item, migrate);
@@ -603,10 +592,10 @@ static void sprite_migrate_collision(struct Item *const this,
 }
 
 /** @implements <Cover>StackMigrateElement */
-static void cover_migrate_fore(struct Cover *const this,
+static void cover_migrate_proxy(struct Cover *const this,
 	const struct Migrate *const migrate) {
 	assert(this && migrate);
-	ForeMigratePointer(&this->fore, migrate);
+	ProxyMigratePointer(&this->proxy, migrate);
 }
 
 /* There are three migrate-nodes that have dependancies in other sub-types
@@ -622,8 +611,8 @@ static void migrate_sprite(struct Items *const s,
 	/* {sub types}->{sprites}. */
 	for(i = 0; i < LAYER_SIZE; i++)
 		ItemListMigrate(&s->bins[i].items, migrate);
-	/* {fores}->{sprites}. */
-	ForePoolMigrateEach(&s->fores, &fore_migrate_sprite, migrate);
+	/* {proxies}->{sprites}. */
+	ProxyPoolMigrateEach(&s->proxies, &proxy_migrate_sprite, migrate);
 	/* {lights}->{sprites}. */
 	for(i = 0; i < s->lights.size; i++)
 		ItemMigratePointer(&s->lights.light_table[i].item, migrate);
@@ -643,14 +632,14 @@ static void migrate_collision(struct Items *const s,
 		&sprite_migrate_collision, migrate);
 }
 
-/** @implements <Fore>Migrate */
-static void migrate_fore(struct Items *const s,
+/** @implements <Proxy>Migrate */
+static void migrate_proxy(struct Items *const s,
 	const struct Migrate *const migrate) {
 	unsigned i;
 	assert(s == &items && migrate);
-	printf("migrate_fore\n");
-	/* {covers}->{fores} */
-	for(i = 0; i < LAYER_SIZE; i++) CoverStackMigrateEach(items.bins[i].covers, &cover_migrate_fore, migrate);
+	printf("migrate_proxy\n");
+	/* {covers}->{proxies} */
+	for(i = 0; i < LAYER_SIZE; i++) CoverStackMigrateEach(items.bins[i].covers, &cover_migrate_proxy, migrate);
 }
 
 
@@ -665,7 +654,7 @@ void ItemsReset(void) {
 	InfoPool_(&items.info);
 	Layer_(&items.layer);
 	CollisionPool_(&items.collisions);
-	ForePool_(&items.fores);
+	ProxyPool_(&items.proxies);
 	GatePool_(&items.gates);
 	WmdPool_(&items.wmds);
 	DebrisPool_(&items.debris);
@@ -712,7 +701,7 @@ static void item_filler(struct Item *const this,
 	this->bin       = LayerGetOrtho(items.layer, &this->x);
 	this->dx.x      = this->dx.y = 0.0f;
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
-	this->fore      = 0;
+	this->proxy      = 0;
 	this->collision = 0;
 	this->light     = 0;
 	/* Put this in space. */
@@ -824,20 +813,20 @@ struct Gate *Gate(const struct AutoGate *const class) {
 /** Called in \see{extrapolate}.
  @implements LayerNoItemAction */
 static void put_cover(const unsigned bin, const unsigned no,
-	struct Fore *const on) {
+	struct Proxy *const on) {
 	struct Cover *cover;
 	/*char a[12];*/
 	assert(on && on->item && bin < LAYER_SIZE);
 	if(!(cover = CoverPoolNew(&items.bins[bin].covers)))
 		{ perror("put_cover"); return; } /* Not that important I guess. */
-	cover->fore = on;
+	cover->proxy = on;
 	cover->is_corner = !no;
 }
 /** Moves the sprite. Calculates temporary values, {dx}, and {box}; sticks it
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
  @implements <Item>Action */
 static void extrapolate(struct Item *const this) {
-	struct Fore *on;
+	struct Proxy *on;
 	assert(this);
 	/* If it returns false, it's deleted. */
 	if(!sprite_update(this)) return;
@@ -855,11 +844,11 @@ static void extrapolate(struct Item *const this) {
 	else this->box.y_max += this->dx.y;
 	/* Put it into appropriate {covers}. This is like a hashmap in space, but
 	 it is spread out, so it may cover multiple bins. {ItemRectangle} is
-	 temporary, affecting {ItemForEachItem}. {Fore} is a pointer to a
+	 temporary, affecting {ItemForEachItem}. {Proxy} is a pointer to a
 	 {Item} that can go in multiple bins in the {Layer}. Until the {Layer} is
 	 cleared, deleting a sprite causes dangling pointers. */
 	LayerSetItemRectangle(items.layer, &this->box);
-	if(!(on = ForePoolNew(&items.fores))) { perror("fore"); return; }
+	if(!(on = ProxyPoolNew(&items.proxies))) { perror("proxy"); return; }
 	on->item = this;
 	LayerItemForEachItem(items.layer, on, &put_cover);
 }
@@ -924,13 +913,13 @@ void ItemsUpdate(const int dt_ms) {
 			items.player.ship_index);
 		if(player) DrawSetCamera((struct Vec2f *)&player->base.data.x);
 	}
-	/* Foreground drawable sprites are a function of screen position. */
+	/* Proxyground drawable sprites are a function of screen position. */
 	{ 	struct Rectangle4f rect;
 		DrawGetScreen(&rect);
 		rectangle4f_expand(&rect, layer_space * 0.5f);
 		LayerSetScreenRectangle(items.layer, &rect); }
 	/* Dynamics; puts temp values in {cover} for collisions. Don't delete a
-	 sprite until {fores} has been cleared. */
+	 sprite until {proxies} has been cleared. */
 	LayerForEachScreen(items.layer, &extrapolate_bin);
 	/* Debug. */
 	if(items.plot) {
@@ -940,8 +929,8 @@ void ItemsUpdate(const int dt_ms) {
 	/* Collision has to be called after {extrapolate}; it consumes {cover}.
 	 (fixme: really? 3 passes?) */
 	LayerForEachScreen(items.layer, &collide_bin);
-	/* Clear out the temporary {fores} now that cover is consumed. */
-	ForePoolClear(&items.fores);
+	/* Clear out the temporary {proxies} now that cover is consumed. */
+	ProxyPoolClear(&items.proxies);
 	/* Time-step. */
 	LayerForEachScreen(items.layer, &timestep_bin);
 }
@@ -957,7 +946,7 @@ static void draw_bin(const unsigned idx) {
 	assert(idx < LAYER_SIZE);
 	ItemListForEach(&items.bins[idx].items, &draw_sprite);
 }
-/** Must call \see{ItemUpdate} before this, because it sets
+/** Must call \see{ItemUpdate} beproxy this, because it sets
  {sprites.layer}. Use when the Lambert GPU shader is loaded. */
 void ItemsDraw(void) {
 	LayerForEachScreen(items.layer, &draw_bin);

@@ -36,8 +36,8 @@ static void item_to_bin(struct Cover *const this, void *const plot_void) {
 	struct PlotData *const plot = plot_void;
 	struct Item *s;
 	struct Vec2f to = { 0.0f, 0.0f };
-	assert(this && this->fore && plot_void);
-	if(!(s = this->fore->item)) return;
+	assert(this && this->proxy && plot_void);
+	if(!(s = this->proxy->item)) return;
 	LayerGetBinMarker(items.layer, plot->bin, &to);
 	to.x += 50.0f, to.y += 50.0f;
 	fprintf(plot->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"%s\" "

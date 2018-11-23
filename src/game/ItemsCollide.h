@@ -162,31 +162,31 @@ static void item_bounce_a(struct Item *const a, struct Item *const b,
 
 /** @implements CoverCollision */
 static void elastic_bounce(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->fore && a->fore->item
-		&& b && b->fore && b->fore->item);
-	item_elastic_bounce(a->fore->item, b->fore->item, t);
+	assert(a && a->proxy && a->proxy->item
+		&& b && b->proxy && b->proxy->item);
+	item_elastic_bounce(a->proxy->item, b->proxy->item, t);
 }
 /** @implements CoverCollision */
 static void bounce_a(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->fore && a->fore->item
-		&& b && b->fore && b->fore->item);
-	item_bounce_a(a->fore->item, b->fore->item, t);
+	assert(a && a->proxy && a->proxy->item
+		&& b && b->proxy && b->proxy->item);
+	item_bounce_a(a->proxy->item, b->proxy->item, t);
 }
 /** @implements CoverCollision */
 static void bounce_b(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->fore && a->fore->item
-		&& b && b->fore && b->fore->item);
-	item_bounce_a(b->fore->item, a->fore->item, t);
+	assert(a && a->proxy && a->proxy->item
+		&& b && b->proxy && b->proxy->item);
+	item_bounce_a(b->proxy->item, a->proxy->item, t);
 }
 /** @implements CoverCollision */
 static void wmd_generic(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->fore && a->fore->item
-		&& b && b->fore && b->fore->item);
-	item_inelastic_stick(b->fore->item, a->fore->item, t);
+	assert(a && a->proxy && a->proxy->item
+		&& b && b->proxy && b->proxy->item);
+	item_inelastic_stick(b->proxy->item, a->proxy->item, t);
 	/* @fixme Must check if b is deleted and delete it from the cover. Should
 	 be ItemPredicate? */
-	/*if(!*/item_put_damage(b->fore->item, item_get_damage(a->fore->item)) /*) b->fore->item = 0; */;
-	item_delete(a->fore->item), a->fore->item = 0;
+	/*if(!*/item_put_damage(b->proxy->item, item_get_damage(a->proxy->item)) /*) b->proxy->item = 0; */;
+	item_delete(a->proxy->item), a->proxy->item = 0;
 }
 /** @implements CoverCollision */
 static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
@@ -197,8 +197,8 @@ static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
  if the ship enters the event horizon.
  @implements CoverCollision */
 static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
-	struct Item *const s = cs->fore->item,
-		*const g = cg->fore->item;
+	struct Item *const s = cs->proxy->item,
+		*const g = cg->proxy->item;
 	struct Ship *const ship = (struct Ship *)s;
 	struct Vec2f diff, gate_norm;
 	assert(s && g && s->vt->class == SC_SHIP);
@@ -212,7 +212,7 @@ static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 	diff.y = s->x.y - g->x.y;
 	if(diff.x * gate_norm.x + diff.y * gate_norm.y < 0) return;
 	/* Behind the horizon at {t = 1}. It's very difficult in our system to do
-	 collisions with less than a frame before the event horizon because we are
+	 collisions with less than a frame beproxy the event horizon because we are
 	 doing it now and we are not finished, so just guess: where the item
 	 would be if it didn't collide with anything on this frame. */
 	diff.x += s->v.x * items.dt_ms;
@@ -229,7 +229,7 @@ static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 		 migrate items, so this could slightly cause a segfault. */
 		EventsItemConsumer(0.0f, (ItemConsumer)&ZoneChange, g);
 	} else {
-		item_delete(s), cs->fore->item = 0; /* Disappear! */
+		item_delete(s), cs->proxy->item = 0; /* Disappear! */
 	}
 }
 /** @implements CoverCollision */
@@ -378,7 +378,7 @@ static int collide_circles(struct Item *const a, struct Item *const b,
 }
 /** This applies the most course-grained collision detection in two-dimensional
  space, Hahn–Banach separation theorem using {box}. The box must be set
- beforehand (viz, in \see{extrapolate}.) */
+ beproxyhand (viz, in \see{extrapolate}.) */
 static int collide_boxes(const struct Item *const a,
 	const struct Item *const b) {
 	assert(a && b);
@@ -409,6 +409,7 @@ static void collide_bin(unsigned bin) {
 	/* This is {O({covers}^2)/2} within the bin. {a} is popped . . . */
 	while((cover_a = CoverPoolPop(covers))) {
 		/* . . . then {b} goes down the list. */
+		/* @fixme If it's all the same, why not just use CoverPoolNext()? */
 		if(!(index_b = CoverPoolSize(covers))) break;
 		do {
 			index_b--;
@@ -417,9 +418,8 @@ static void collide_bin(unsigned bin) {
 			/* Another {bin} takes care of it? */
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
 			/* Respond appropriately if it was deleted on the fly. */
-			assert(cover_a->fore && cover_b->fore);
-			if(!(a = cover_a->fore->item)) break;
-			if(!(b = cover_b->fore->item)) continue;
+			if(!(a = cover_a->proxy->item)) break;
+			if(!(b = cover_b->proxy->item)) continue;
 			/* Extract the info on the type of collision. */
 			matrix = &collision_matrix[a->vt->class][b->vt->class];
 			/* If the items have no collision handler, don't bother. */

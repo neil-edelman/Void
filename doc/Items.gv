@@ -36,9 +36,9 @@ digraph {
 
 		# association (pointers)
 		edge [ arrowhead = normal, dir = forward, style = normal ];
-		Item -> ItemVt [ headlabel = " 1", taillabel = "*" ];
+		Item -> ItemVt [ headlabel = "  1", taillabel = "*" ];
 		Proxy -> Item -> Proxy;
-		Cover -> Proxy [ headlabel = " 1", taillabel = "*" ];
-		Collision;
+		Cover -> Proxy [ headlabel = "    1", taillabel = "*" ];
+		Item -> Collision;
 	}
 }

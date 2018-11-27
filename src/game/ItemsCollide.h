@@ -54,13 +54,14 @@ static void add_bounce(struct Item *const this, const struct Vec2f v,
 		col->v.y += (v.y - col->v.y) / col->no;
 		if(t < col->t) col->t = t;
 	} else {
-		/* New collision. */
+		/* New collision. Link the collision with the item. */
 		if(!(col = CollisionPoolNew(&items.collisions)))
 			{ perror("collision"); return; }
-		col->no  = 1;
-		col->v.x = v.x;
-		col->v.y = v.y;
-		col->t   = t;
+		col->item = this;
+		col->no   = 1;
+		col->v.x  = v.x;
+		col->v.y  = v.y;
+		col->t    = t;
 		this->collision = col;
 	}
 }
@@ -160,33 +161,39 @@ static void item_bounce_a(struct Item *const a, struct Item *const b,
 
 /* Collision handlers contained in {collision_matrix}. */
 
+/** @fixme Just have {Item} instead??? much simpler. */
+static struct Item *cover_to_item(struct Cover *const cover) {
+	struct Proxy *const proxy = ProxyPoolGet(&items.proxies,cover->proxy_index);
+	assert(cover && proxy && proxy->item);
+	return proxy->item;
+}
+/** This means nothing referring to it is valid anymore! */
+static void delete_cover(struct Cover *const cover) {
+	struct Proxy *const proxy = ProxyPoolGet(&items.proxies,cover->proxy_index);
+	assert(cover && proxy && proxy->item);
+	proxy->item = 0;
+}
+
 /** @implements CoverCollision */
 static void elastic_bounce(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->proxy && a->proxy->item
-		&& b && b->proxy && b->proxy->item);
-	item_elastic_bounce(a->proxy->item, b->proxy->item, t);
+	item_elastic_bounce(cover_to_item(a), cover_to_item(b), t);
 }
 /** @implements CoverCollision */
 static void bounce_a(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->proxy && a->proxy->item
-		&& b && b->proxy && b->proxy->item);
-	item_bounce_a(a->proxy->item, b->proxy->item, t);
+	item_bounce_a(cover_to_item(a), cover_to_item(b), t);
 }
 /** @implements CoverCollision */
 static void bounce_b(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->proxy && a->proxy->item
-		&& b && b->proxy && b->proxy->item);
-	item_bounce_a(b->proxy->item, a->proxy->item, t);
+	item_bounce_a(cover_to_item(b), cover_to_item(a), t);
 }
 /** @implements CoverCollision */
 static void wmd_generic(struct Cover *a, struct Cover *b, const float t) {
-	assert(a && a->proxy && a->proxy->item
-		&& b && b->proxy && b->proxy->item);
-	item_inelastic_stick(b->proxy->item, a->proxy->item, t);
+	struct Item *const ai = cover_to_item(a), *const bi = cover_to_item(b);
+	item_inelastic_stick(bi, ai, t);
 	/* @fixme Must check if b is deleted and delete it from the cover. Should
 	 be ItemPredicate? */
-	/*if(!*/item_put_damage(b->proxy->item, item_get_damage(a->proxy->item)) /*) b->proxy->item = 0; */;
-	item_delete(a->proxy->item), a->proxy->item = 0;
+	/*if(!*/put_damage(bi, get_damage(ai)) /*) b->proxy->item = 0; */;
+	delete_cover(a);
 }
 /** @implements CoverCollision */
 static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
@@ -197,8 +204,9 @@ static void generic_wmd(struct Cover *g, struct Cover *w, const float t) {
  if the ship enters the event horizon.
  @implements CoverCollision */
 static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
-	struct Item *const s = cs->proxy->item,
-		*const g = cg->proxy->item;
+	struct Item *const s = cover_to_item(cs),
+		*const g = cover_to_item(cg);
+	/* @fixme this will not work if it isn't the first in the struct */
 	struct Ship *const ship = (struct Ship *)s;
 	struct Vec2f diff, gate_norm;
 	assert(s && g && s->vt->class == SC_SHIP);
@@ -229,7 +237,7 @@ static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 		 migrate items, so this could slightly cause a segfault. */
 		EventsItemConsumer(0.0f, (ItemConsumer)&ZoneChange, g);
 	} else {
-		item_delete(s), cs->proxy->item = 0; /* Disappear! */
+		delete_cover(cs); /* Disappear! */
 	}
 }
 /** @implements CoverCollision */
@@ -402,24 +410,25 @@ static void collide_bin(unsigned bin) {
 	struct Cover *cover_a, *cover_b;
 	const struct Matrix *matrix;
 	struct Item *a, *b;
+	struct Proxy *ap, *bp;
 	float t;
-	size_t index_b;
 	assert(bin < LAYER_SIZE);
 	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
 	/* This is {O({covers}^2)/2} within the bin. {a} is popped . . . */
 	while((cover_a = CoverPoolPop(covers))) {
-		/* . . . then {b} goes down the list. */
-		/* @fixme If it's all the same, why not just use CoverPoolNext()? */
-		if(!(index_b = CoverPoolSize(covers))) break;
-		do {
-			index_b--;
-			cover_b = CoverPoolGet(covers, index_b);
-			assert(cover_a && cover_b);
+		/* . . . then {b} goes though each element. */
+		/* @fixme Uhm, could {is_corner} be off the screen? */
+		cover_b = 0;
+		while((cover_b = CoverPoolNext(covers, cover_b))) {
 			/* Another {bin} takes care of it? */
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
 			/* Respond appropriately if it was deleted on the fly. */
-			if(!(a = cover_a->proxy->item)) break;
-			if(!(b = cover_b->proxy->item)) continue;
+			ap = ProxyPoolGet(&items.proxies, cover_a->proxy_index);
+			assert(ap);
+			if(!(a = ap->item)) break;
+			bp = ProxyPoolGet(&items.proxies, cover_b->proxy_index);
+			assert(bp);
+			if(!(b = bp->item)) continue;
 			/* Extract the info on the type of collision. */
 			matrix = &collision_matrix[a->vt->class][b->vt->class];
 			/* If the items have no collision handler, don't bother. */
@@ -428,6 +437,6 @@ static void collide_bin(unsigned bin) {
 			if(!collide_boxes(a, b) || !collide_circles(a, b, &t)) continue;
 			/* Collision. */
 			matrix->handler(cover_a, cover_b, t);
-		} while(index_b);
+		}
 	}
 }

@@ -73,8 +73,8 @@ struct Item {
 	/* The following are temporary: */
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
-	struct Proxy *proxy; /* needed in case of migrate */
-	struct Collision *collision; /* in case pointer to collisions */
+	struct Proxy *proxy; /* optional link proxy--item */
+	struct Collision *collision; /* optional link collision--item */
 	struct Light *light; /* in case pointer to lights */
 };
 typedef void (*ItemToString)(const struct Item *const, char (*const)[12]);
@@ -85,6 +85,8 @@ static void item_to_string(const struct Item *this, char (*const a)[12]);
 #define LIST_TYPE struct Item
 #define LIST_TO_STRING &item_to_string
 #include "../templates/List.h"
+static void item_migrate(struct Item *const this,
+	const struct Migrate *const migrate);
 
 /** {Proxy} and {Cover} are collision-detection mechanisms; {Proxy} defines a
  temporary pointer to an item that can be nullified if the item is destroyed,
@@ -92,10 +94,19 @@ static void item_to_string(const struct Item *this, char (*const a)[12]);
  destroyed at each frame. It's important that {Proxy} lasts while {Cover} has a
  refernce to it's index, even if the item value it has is null. */
 struct Proxy { struct Item *item; };
+static void proxy_migrate(struct Proxy *const this,
+	const struct Migrate *const migrate);
 #define POOL_NAME Proxy
 #define POOL_TYPE struct Proxy
+#define POOL_MIGRATE_EACH &proxy_migrate
 #define POOL_STACK
 #include "../templates/Pool.h"
+static void proxy_migrate(struct Proxy *const this,
+	const struct Migrate *const migrate) {
+	assert(this && this->item && migrate);
+	ProxyPoolMigratePointer(&this->item->proxy, migrate);
+	assert(this == this->item->proxy);
+}
 
 /** Many {Cover}s, one in each bin, can point at one {Proxy}. One {Cover} for
  each {Proxy} has {is_corner}, the authoritative {Cover}. Because the
@@ -106,14 +117,6 @@ struct Cover { size_t proxy_index; int is_corner; };
 #define POOL_TYPE struct Cover
 #define POOL_STACK
 #include "../templates/Pool.h"
-
-static void item_migrate(struct Item *const this,
-	const struct Migrate *const migrate) {
-	assert(this && migrate);
-	ItemLinkMigrate(this, migrate);
-	if(this->proxy) ItemLinkMigratePointer(&this->proxy->item, migrate);
-	/* @fixme etc */
-}
 
 /* Declare {ShipVt}. */
 struct ShipVt;
@@ -204,16 +207,41 @@ struct Info {
 
 /** {Collision}s between sprites to apply later. */
 struct Collision {
-	unsigned no;
+	struct Item *item; /* 1:1 linking for Migrate. */
+	unsigned no; /* How many collisions is this the result of? */
 	struct Vec2f v;
 	float t;
 };
+static void collision_migrate(struct Collision *const this,
+	const struct Migrate *const migrate);
 #define POOL_NAME Collision
 #define POOL_TYPE struct Collision
-/*#define POOL_MIGRATE_EACH &...
- @fixme Uhm, where's the Item? Now I'm confused. Wtf is no? */
+#define POOL_MIGRATE_EACH &collision_migrate
 #define POOL_STACK
 #include "../templates/Pool.h"
+static void collision_migrate(struct Collision *const this,
+	const struct Migrate *const migrate) {
+	assert(this && this->item && migrate);
+	CollisionPoolMigratePointer(&this->item->collision, migrate);
+	assert(this == this->item->collision);
+}
+
+/** From {Item}, but we were waiting for everything to be defined.
+ @implements Migrate */
+static void item_migrate(struct Item *const this,
+	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	ItemLinkMigrate(this, migrate);
+	/* These are potentially temporarily linked pointers. */
+	if(this->proxy) {
+		ItemLinkMigratePointer(&this->proxy->item, migrate);
+		assert(this == this->proxy->item);
+	}
+	if(this->collision) {
+		ItemLinkMigratePointer(&this->collision->item, migrate);
+		assert(this == this->collision->item);
+	}
+}
 
 
 
@@ -265,7 +293,7 @@ static struct Items {
 static void sprite_moved(struct Item *const this) {
 	const unsigned bin = LayerGetOrtho(items.layer, &this->x);
 	if(bin == this->bin) return;
-	ItemListRemove(/*&items.bins[this->bin].sprites,*/ this);
+	ItemListRemove(this);
 	this->bin = bin;
 	ItemListPush(&items.bins[bin].items, this);
 }
@@ -470,7 +498,7 @@ static float gate_get_mass(const struct Gate *const this) {
 }
 
 /** @implements <Item>FloatAccessor */
-static float sprite_get_damage(const struct Item *const this) {
+static float get_damage(const struct Item *const this) {
 	assert(this);
 	return this->vt->get_damage(this);
 }
@@ -492,11 +520,11 @@ static float wmd_get_damage(const struct Wmd *const this) {
 /** @implements <Gate>FloatAccessor */
 static float gate_get_damage(const struct Gate *const this) {
 	assert(this);
-	return 1e36f; /* You are fucked. */
+	return 1e36f; /* Don't go picking a fight with a {Gate}. */
 }
 
 /** @implements <Item,Float>Action */
-static void sprite_put_damage(struct Item *const this, const float damage) {
+static void put_damage(struct Item *const this, const float damage) {
 	assert(this);
 	this->vt->put_damage(this, damage);
 }
@@ -574,83 +602,16 @@ static const struct ItemVt ship_human_vt = {
 
 /****************** Type functions. **************/
 
-/* These are the helpers for migrate each; these pick one pointer field out of
- the struct and migrate it. */
-
-/** @implements <Proxy>StackMigrateElement */
-static void proxy_migrate_sprite(struct Proxy *const this,
-	const struct Migrate *const migrate) {
-	assert(this && migrate);
-	ItemMigratePointer(&this->item, migrate);
-}
-
-/** @implements <Item>ListMigrateElement */
-static void sprite_migrate_collision(struct Item *const this,
-	const struct Migrate *const migrate) {
-	assert(this && migrate);
-	CollisionMigratePointer(&this->collision, migrate);
-}
-
-/** @implements <Cover>StackMigrateElement */
-static void cover_migrate_proxy(struct Cover *const this,
-	const struct Migrate *const migrate) {
-	assert(this && migrate);
-	ProxyMigratePointer(&this->proxy, migrate);
-}
-
-/* There are three migrate-nodes that have dependancies in other sub-types
- of {Items}. All of these do not need the {s} because it is available
- statically, but they are passed it anyway. */
-
-/** @implements <Item>Migrate */
-static void migrate_sprite(struct Items *const s,
-	const struct Migrate *const migrate) {
-	unsigned i;
-	assert(s && s == &items && migrate);
-	printf("migrate_sprite\n");
-	/* {sub types}->{sprites}. */
-	for(i = 0; i < LAYER_SIZE; i++)
-		ItemListMigrate(&s->bins[i].items, migrate);
-	/* {proxies}->{sprites}. */
-	ProxyPoolMigrateEach(&s->proxies, &proxy_migrate_sprite, migrate);
-	/* {lights}->{sprites}. */
-	for(i = 0; i < s->lights.size; i++)
-		ItemMigratePointer(&s->lights.light_table[i].item, migrate);
-	/* @fixme: also in Events. */
-	/* @fixme: also in Wmd. */
-	/* @fixme: also player? */
-}
-
-/** @implements <Collision>Migrate */
-static void migrate_collision(struct Items *const s,
-	const struct Migrate *const migrate) {
-	unsigned i;
-	assert(s && s == &items && migrate);
-	printf("migrate_collision\n");
-	/* {sprites}->{collisions} */
-	for(i = 0; i < LAYER_SIZE; i++) ItemListMigrateEach(&s->bins[i].items,
-		&sprite_migrate_collision, migrate);
-}
-
-/** @implements <Proxy>Migrate */
-static void migrate_proxy(struct Items *const s,
-	const struct Migrate *const migrate) {
-	unsigned i;
-	assert(s == &items && migrate);
-	printf("migrate_proxy\n");
-	/* {covers}->{proxies} */
-	for(i = 0; i < LAYER_SIZE; i++) CoverStackMigrateEach(items.bins[i].covers, &cover_migrate_proxy, migrate);
-}
-
-
-
+/** Clears all memory. References will all be invalid. */
 void ItemsReset(void) {
 	unsigned i;
-	/* We don't have to do the lights; all static. */
 	for(i = 0; i < LAYER_SIZE; i++) {
 		ItemListClear(&items.bins[i].items);
 		CoverPool_(&items.bins[i].covers);
 	}
+	items.plot = PLOT_NOTHING;
+	items.lights.size = 0;
+	items.player.is_ship = 0;
 	InfoPool_(&items.info);
 	Layer_(&items.layer);
 	CollisionPool_(&items.collisions);
@@ -661,14 +622,17 @@ void ItemsReset(void) {
 	ShipPool_(&items.ships);
 }
 
-/** Clear all space. */
+/** Clear all space and covers, (it should be removed already.) */
 void ItemsRemoveIf(const ItemsPredicate predicate) {
 	struct Bin *bin;
 	size_t i;
 	for(i = 0; i < LAYER_SIZE; i++) {
 		bin = items.bins + i;
 		ItemListTakeIf(0, &bin->items, predicate);
-		CoverPoolClear(&bin->covers); /* Should be empty anyway. */
+		if(CoverPoolPeek(&bin->covers)) {
+			fprintf(stderr, "Cover pool is not empty on end-of-frame.\n");
+			CoverPoolClear(&bin->covers);
+		}
 	}
 }
 
@@ -812,21 +776,21 @@ struct Gate *Gate(const struct AutoGate *const class) {
 
 /** Called in \see{extrapolate}.
  @implements LayerNoItemAction */
-static void put_cover(const unsigned bin, const unsigned no,
-	struct Proxy *const on) {
+static void put_cover(const unsigned bin, const unsigned proxy_index,
+	const unsigned counter) {
 	struct Cover *cover;
-	/*char a[12];*/
-	assert(on && on->item && bin < LAYER_SIZE);
+	assert(bin < LAYER_SIZE);
+	/* Not that important I guess. */
 	if(!(cover = CoverPoolNew(&items.bins[bin].covers)))
-		{ perror("put_cover"); return; } /* Not that important I guess. */
-	cover->proxy = on;
-	cover->is_corner = !no;
+		{ perror("put_cover"); return; }
+	cover->proxy_index = proxy_index;
+	cover->is_corner = !counter;
 }
 /** Moves the sprite. Calculates temporary values, {dx}, and {box}; sticks it
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
  @implements <Item>Action */
 static void extrapolate(struct Item *const this) {
-	struct Proxy *on;
+	struct Proxy *proxy;
 	assert(this);
 	/* If it returns false, it's deleted. */
 	if(!sprite_update(this)) return;
@@ -848,9 +812,10 @@ static void extrapolate(struct Item *const this) {
 	 {Item} that can go in multiple bins in the {Layer}. Until the {Layer} is
 	 cleared, deleting a sprite causes dangling pointers. */
 	LayerSetItemRectangle(items.layer, &this->box);
-	if(!(on = ProxyPoolNew(&items.proxies))) { perror("proxy"); return; }
-	on->item = this;
-	LayerItemForEachItem(items.layer, on, &put_cover);
+	if(!(proxy = ProxyPoolNew(&items.proxies))) { perror("proxy"); return; }
+	proxy->item = this;
+	/* @fixme This is ugly. */
+	LayerForEachItem(items.layer, (unsigned)ProxyPoolIndex(&items.proxies, proxy), &put_cover);
 }
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */

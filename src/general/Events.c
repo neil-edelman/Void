@@ -11,55 +11,65 @@
 			2016-01
 			2015-11 */
 
-#include <stdio.h> /* perror fprintf stderr */
 #include <assert.h>
 #include "../system/Timer.h"
 #include "Events.h"
 
 
 
-/*************** Declare types. ****************/
-
-/** This is one polymorphic {Event}. */
-struct Event;
 struct EventVt;
-struct Events;
 
+/** Abstract {Event}. */
 struct Event { const struct EventVt *vt; };
 #define LIST_NAME Event
 #define LIST_TYPE struct Event
 #include "../templates/List.h"
 
-/** {Runnable} is an {Event}. */
+/** {Runnable} extends {Event}. */
 struct Runnable {
-	struct EventLink event;
+	struct EventLink base;
 	Runnable run;
 };
+static void runnable_migrate(struct Runnable *const this,
+	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	EventLinkMigrate(&this->base.data, migrate);
+}
 #define POOL_NAME Runnable
 #define POOL_TYPE struct Runnable
-#define POOL_MIGRATE struct Events
+#define POOL_MIGRATE_EACH &runnable_migrate
 #include "../templates/Pool.h"
 
-/** {IntConsumer} is an {Event}. */
+/** {IntConsumer} extends {Event}. */
 struct IntConsumer {
-	struct EventLink event;
+	struct EventLink base;
 	IntConsumer accept;
 	int param;
 };
+static void int_consumer_migrate(struct IntConsumer *const this,
+	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	EventLinkMigrate(&this->base.data, migrate);
+}
 #define POOL_NAME IntConsumer
 #define POOL_TYPE struct IntConsumer
-#define POOL_MIGRATE struct Events
+#define POOL_MIGRATE_EACH &int_consumer_migrate
 #include "../templates/Pool.h"
 
-/** {ItemConsumer} is an {Event}. */
+/** {ItemConsumer} extends {Event}. */
 struct ItemConsumer {
-	struct EventLink event;
+	struct EventLink base;
 	ItemConsumer accept;
 	struct Item *param;
 };
+static void item_consumer_migrate(struct ItemConsumer *const this,
+	const struct Migrate *const migrate) {
+	assert(this && migrate);
+	EventLinkMigrate(&this->base.data, migrate);
+}
 #define POOL_NAME ItemConsumer
 #define POOL_TYPE struct ItemConsumer
-#define POOL_MIGRATE struct Events
+#define POOL_MIGRATE_EACH &item_consumer_migrate
 #include "../templates/Pool.h"
 
 /** Events are fit to various bins depending on the length of the delay. Longer
@@ -70,10 +80,10 @@ static struct Events {
 	struct EventList approx1s[8];
 	struct EventList approx8s[8];
 	struct EventList approx64s[8];
-	struct RunnablePool *runnables;
-	struct IntConsumerPool *int_consumers;
-	struct ItemConsumerPool *item_consumers;
-} *events;
+	struct RunnablePool runnables;
+	struct IntConsumerPool int_consumers;
+	struct ItemConsumerPool item_consumers;
+} events;
 
 static const size_t approx1s_size = sizeof((struct Events *)0)->approx1s
 	/ sizeof *((struct Events *)0)->approx1s;
@@ -93,23 +103,25 @@ struct EventVt { EventsAction call; };
  because the backing in the {Pool}s has been removed; important!
  @implements <Event>Action */
 static void event_call(struct Event *const this) {
-	assert(events && this);
+	assert(this);
 	this->vt->call(this);
 }
 /** @implements <Runnable>Action */
 static void runnable_call(struct Runnable *const this) {
+	assert(this);
 	this->run();
-	RunnablePoolRemove(events->runnables, this);
+	RunnablePoolRemove(&events.runnables, this);
 }
 /** @implements <IntConsumer>Action */
 static void int_consumer_call(struct IntConsumer *const this) {
+	assert(this);
 	this->accept(this->param);
-	IntConsumerPoolRemove(events->int_consumers, this);
+	IntConsumerPoolRemove(&events.int_consumers, this);
 }
 /** @implements <ItemConsumer>Action */
 static void item_consumer_call(struct ItemConsumer *const this) {
 	this->accept(this->param);
-	ItemConsumerPoolRemove(events->item_consumers, this);
+	ItemConsumerPoolRemove(&events.item_consumers, this);
 }
 
 static const struct EventVt
@@ -124,14 +136,13 @@ static const struct EventVt
 /** Used in {Events_}, {Events}, and {EventsClear}. */
 static void clear_event_lists(void) {
 	unsigned i;
-	assert(events);
-	EventListClear(&events->immediate);
+	EventListClear(&events.immediate);
 	for(i = 0; i < approx1s_size; i++)
-		EventListClear(events->approx1s + i);
+		EventListClear(events.approx1s + i);
 	for(i = 0; i < approx8s_size; i++)
-		EventListClear(events->approx8s + i);
+		EventListClear(events.approx8s + i);
 	for(i = 0; i < approx64s_size; i++)
-		EventListClear(events->approx64s + i);
+		EventListClear(events.approx64s + i);
 }
 
 /** Used in {EventsRemoveIf}. */
@@ -147,39 +158,12 @@ static void clear_event_lists(void) {
 		EventListTakeIf(0, events->approx64s + i, predicate);
 } <- fixme: leaves Pool!! */
 
-/** @implements <Events>Migrate */
-static void events_migrate(struct Events *const e, const struct Migrate *const migrate) {
-	unsigned i;
-	assert(e && e == events && migrate);
-	EventListMigrate(&e->immediate, migrate);
-	for(i = 0; i < approx1s_size; i++)
-		EventListMigrate(e->approx1s + i, migrate);
-	for(i = 0; i < approx8s_size; i++)
-		EventListMigrate(e->approx8s + i, migrate);
-	for(i = 0; i < approx64s_size; i++)
-		EventListMigrate(e->approx64s + i, migrate);
-}
-
-/** Destructor. */
-void Events_(void) {
-	if(!events) return;
+/** Clears events and all heap memory. */
+void EventsReset(void) {
 	clear_event_lists();
-	ItemConsumerPool_(events->item_consumers);
-	IntConsumerPool_(events->int_consumers);
-	RunnablePool_(events->runnables);
-	free(events), events = 0;
-}
-
-/** @return True if the Events pool has been set up. */
-int Events(void) {
-	if(events) return 1;
-	if(!(events = malloc(sizeof *events))) return 0;
-	events->update = TimerGetGameTime();
-	clear_event_lists();
-	RunnablePool(events->runnables);
-	IntConsumerPool(events->int_consumers);
-	ItemConsumerPool(events->item_consumers);
-	return 1;
+	ItemConsumerPool_(&events.item_consumers);
+	IntConsumerPool_(&events.int_consumers);
+	RunnablePool_(&events.runnables);
 }
 
 
@@ -187,26 +171,24 @@ int Events(void) {
 /*************** Sub-type constructors. ******************/
 
 /** Fits into a bin. */
-static struct EventList *fit_future(struct Events *const this,
-	const unsigned ms_future) {
+static struct EventList *fit_future(const unsigned ms_future) {
 	const unsigned ms_now = TimerGetGameTime(), ms = ms_now + ms_future;
 	unsigned select;
 	struct EventList *list;
-	assert(this);
 	if(ms_future < 0x200) {
-		list = &this->immediate;
+		list = &events.immediate;
 		select = 0;
 	} else if(ms_future < 0x2200) {
-		list = this->approx1s;
+		list = events.approx1s;
 		select = ((ms >> 10) & 7) + ((ms & (0x400 - 1)) > 0x200) ? 1 : 0;
 	} else if(ms_future < 0x11000) {
-		list = this->approx8s;
+		list = events.approx8s;
 		select = ((ms >> 13) & 7) + ((ms & (0x2000 - 1)) > 0x1000) ? 1 : 0;
 	} else if(ms_future < 0x88000) {
-		list = this->approx64s;
+		list = events.approx64s;
 		select = ((ms >> 16) & 7) + ((ms & (0x10000 - 1)) > 0x8000) ? 1 : 0;
 	} else { /* Maximum delay is, \${1.024s * 64 * 8 * (min/60s) <= 8.74min} */
-		list = this->approx64s;
+		list = events.approx64s;
 		select = ((ms_now >> 16) + 7) & 7;
 	}
 	assert(select < 8);
@@ -216,40 +198,41 @@ static struct EventList *fit_future(struct Events *const this,
 /** Abstract {Event} constructor. */
 static void event_filler(struct Event *const this,
 	const unsigned ms_future, const struct EventVt *const vt) {
-	assert(events && this && vt);
+	assert(this && vt);
 	this->vt = vt;
-	EventListPush(fit_future(events, ms_future), this);
+	EventListPush(fit_future(ms_future), this);
 }
-/** Creates a new {Runnable}. */
+/** Creates a new {Runnable}.
+ @return Success. */
 int EventsRunnable(const unsigned ms_future, const Runnable run) {
-	struct Runnable *this;
-	if(!events || !run) return 0;
-	if(!(this = RunnablePoolNew(events->runnables))) return 0;
-	this->run = run;
-	event_filler(&this->event.data, ms_future, &runnable_vt);
+	struct Runnable *e;
+	if(!run) return 0;
+	if(!(e = RunnablePoolNew(&events.runnables))) return 0;
+	e->run = run;
+	event_filler(&e->base.data, ms_future, &runnable_vt);
 	return 1;
 }
-/** Creates a new {SpriteConsumer}. */
+/** Creates a new {SpriteConsumer}.
+ @return Success. */
 int EventsItemConsumer(const unsigned ms_future,
 	const ItemConsumer accept, struct Item *const param) {
 	struct ItemConsumer *this;
-	if(!events || !accept) return 0;
-	if(!(this = ItemConsumerPoolNew(events->item_consumers))) return 0;
+	if(!accept) return 0;
+	if(!(this = ItemConsumerPoolNew(&events.item_consumers))) return 0;
 	this->accept = accept;
 	this->param  = param;
-	event_filler(&this->event.data, ms_future, &item_consumer_vt);
+	event_filler(&this->base.data, ms_future, &item_consumer_vt);
 	return 1;
 }
 
 
 
-/** Clears all events. */
+/** Clears all events but doesn't reset the memory. */
 void EventsClear(void) {
-	if(!events) return;
 	clear_event_lists();
-	RunnablePoolClear(events->runnables);
-	IntConsumerPoolClear(events->int_consumers);
-	ItemConsumerPoolClear(events->item_consumers);
+	RunnablePoolClear(&events.runnables);
+	IntConsumerPoolClear(&events.int_consumers);
+	ItemConsumerPoolClear(&events.item_consumers);
 }
 
 /*void EventsRemoveIf(const EventsPredicate predicate) {
@@ -258,7 +241,7 @@ void EventsClear(void) {
 }*/
 
 static void run_event_list(struct EventList *const list) {
-	assert(events && list);
+	assert(list);
 	EventListForEach(list, &event_call);
 	/* {event_call} strips away their backing, so this call is important! */
 	EventListClear(list);
@@ -270,16 +253,15 @@ void EventsUpdate(void) {
 	struct { unsigned cur, end; int done; } t1s, t8s, t64s;
 	const unsigned now = TimerGetGameTime();
 	enum { T64S, T8S, T1S } granularity = T64S;
-	if(!events) return;
 	/* Always run events that are immediate asap. */
-	run_event_list(&events->immediate);
+	run_event_list(&events.immediate);
 	/* Applies the timer with a granularity of whatever; all are [0, 7].
 	 fixme: Meh, could be better. */
-	t64s.cur = (events->update >> 16) & 7;
+	t64s.cur = (events.update >> 16) & 7;
 	t64s.end = (now >> 16) & 7;
-	t8s.cur  = (events->update >> 13) & 7;
+	t8s.cur  = (events.update >> 13) & 7;
 	t8s.end  = (now >> 13) & 7;
-	t1s.cur  = (events->update >> 10) & 7;
+	t1s.cur  = (events.update >> 10) & 7;
 	t1s.end  = (now >> 10) & 7;
 	do {
 		switch(granularity) {
@@ -288,16 +270,16 @@ void EventsUpdate(void) {
 			case T1S:  t1s.done  = t8s.done && (t1s.cur == t1s.end);
 		}
 		if(t1s.cur < 8) {
-			chosen = events->approx1s + t1s.cur++;
+			chosen = events.approx1s + t1s.cur++;
 			granularity = T1S;
 		} else {
 			t1s.cur = 0;
 			if(t8s.cur != 8) {
-				chosen = events->approx8s + t8s.cur++;
+				chosen = events.approx8s + t8s.cur++;
 				granularity = T8S;
 			} else {
 				t8s.cur = 0;
-				chosen = events->approx64s + t64s.cur++;
+				chosen = events.approx64s + t64s.cur++;
 				t64s.cur &= 7;
 				granularity = T64S;
 			}

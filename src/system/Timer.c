@@ -11,7 +11,6 @@
 
 #include <stdio.h>	/* fprintf */
 #include <limits.h> /* MAX_INT, MIN_INT */
-#include "../Unused.h"
 #include "Timer.h"
 
 /* 50 fps. @fixme Sync to refresh, why is it so hard? */
@@ -46,7 +45,7 @@ static void update(int zero) {
 	glutTimerFunc(frametime_ms, &update, 0);
 	timer.logic(dt);
 	glutPostRedisplay();
-	UNUSED(zero);
+	(void)zero;
 }
 
 /** This starts the Timer. */

@@ -27,7 +27,6 @@
 #include <string.h> /* strcmp */
 #include <assert.h>
 #include "Ortho.h" /* Vec2i */
-#include "Unused.h"
 #include "system/Draw.h"
 #include "system/Timer.h"
 #include "system/Key.h"
@@ -115,7 +114,7 @@ static int Window(const char *title, int argc, char **argv) {
 /** This is legacy code from 1998 when there was no way to get out of the main
  loop. */
 static void atexit_hack(void) {
-	TimerPause(), Game_(), Draw_(), Fars_(), ItemsReset(), Events_();
+	TimerPause(), Game_(), Draw_(), Fars_(), ItemsReset(), EventsReset();
 }
 
 /** Entry point.
@@ -142,7 +141,6 @@ int main(int argc, char **argv) {
 		if(!Window(programme, argc, argv)) { e = "window"; break; }
 		if(!Glew()) { e = "glew"; break; }
 		Key();
-		if(!Events()) { e = "events"; break; }
 		if(!Fars()) { e = "fars"; break; }
 		if(!Draw()) { e = "draw"; break; }
 		if(!Game()) { e = "game"; break; }

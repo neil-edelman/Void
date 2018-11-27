@@ -36,19 +36,20 @@ static void item_to_bin(struct Cover *const this, void *const plot_void) {
 	struct PlotData *const plot = plot_void;
 	struct Item *s;
 	struct Vec2f to = { 0.0f, 0.0f };
-	assert(this && this->proxy && plot_void);
-	if(!(s = this->proxy->item)) return;
+	assert(this && plot_void);
+	/* @fixme Uhmmmmm, how? */
+	/*if(!(s = this->proxy_index->item)) return;
 	LayerGetBinMarker(items.layer, plot->bin, &to);
 	to.x += 50.0f, to.y += 50.0f;
 	fprintf(plot->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"%s\" "
 		"front;\n", s->x.x, s->x.y, to.x, to.y,
-		this->is_corner ? "red" : "pink");
+		this->is_corner ? "red" : "pink");*/
 }
 /* @implements LayerAcceptPlot */
 static void item_to_bin_bin(const unsigned idx, struct PlotData *const plot) {
 	assert(plot);
 	plot->bin = idx;
-	CoverPoolBiForEach(items.bins[idx].covers, &item_to_bin, plot);
+	/* @fixme CoverPoolBiForEach(items.bins[idx].covers, &item_to_bin, plot);*/
 }
 /** Draws squares for highlighting bins. Called in \see{space_plot}.
  @implements LayerAcceptPlot */

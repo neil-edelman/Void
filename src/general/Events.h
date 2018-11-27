@@ -6,8 +6,7 @@ struct Events;
 struct Event;
 typedef int (*EventsPredicate)(const struct Event *const);
 
-void Events_(void);
-int Events(void);
+void EventsReset(void);
 void EventsClear(void);
 void EventsRemoveIf(const EventsPredicate predicate);
 void EventsUpdate(void);

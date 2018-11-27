@@ -12,7 +12,6 @@
 
 #include <stdio.h>	/* fprintf */
 #include "../Window.h" /* glut */
-#include "../Unused.h"
 #include "Timer.h"
 #include "Key.h"
 
@@ -109,7 +108,7 @@ static void key_down(unsigned char k, int x, int y) {
 	key->down  = TimerGetTime();
 	if(key->handler) key->handler();
 	/* fprintf(stderr, "key_down: key %d hit at %d ms.\n", k, key->down);*/
-	UNUSED(x), UNUSED(y);
+	(void)x, (void)y;
 }
 
 /** Callback for {glutKeyboardUpFunc}. */
@@ -119,7 +118,7 @@ static void key_up(unsigned char k, int x, int y) {
 	key->state = 0;
 	key->integral += TimerGetTime() - key->down;
 	/* fprintf(stderr, "key_up: key %d pressed %d ms at end of frame.\n",k,key->integral);*/
-	UNUSED(x), UNUSED(y);
+	(void)x, (void)y;
 }
 
 /** Callback for {glutSpecialFunc}. */
@@ -130,7 +129,7 @@ static void key_down_special(int k, int x, int y) {
 	key->down = TimerGetTime();
 	if(key->handler) key->handler();
 	/* fprintf(stderr, "key_down_special: key %d hit at %d ms.\n", k, key->down);*/
-	UNUSED(x), UNUSED(y);
+	(void)x, (void)y;
 }
 
 /** Callback for {glutSpecialUpFunc}. */
@@ -141,7 +140,7 @@ static void key_up_special(int k, int x, int y) {
 	key->integral += TimerGetTime() - key->down;
 	/* fprintf(stderr, "key_up_special: key %d pressed %d ms at end of frame.\n", k,
 	 key->integral);*/
-	UNUSED(x), UNUSED(y);
+	(void)x, (void)y;
 }
 
 /* glut --> */

@@ -15,14 +15,16 @@
 
 #include <stdio.h> /* stderr */
 #include <limits.h> /* INT_MAX */
+#include <errno.h>
 #include "../Ortho.h" /* Rectangle4f, etc */
 #include "Layer.h"
 
 static const float epsilon = 0.0005f;
 
-#define STACK_NAME Int
-#define STACK_TYPE int
-#include "../templates/Stack.h"
+#define POOL_NAME Int
+#define POOL_TYPE unsigned
+#define POOL_STACK
+#include "../templates/Pool.h"
 
 enum LayerStep { LAYER_SCREEN, LAYER_SPRITE, LAYER_NO };
 
@@ -30,14 +32,14 @@ struct Layer {
 	int side_size;
 	float half_space, one_each_bin;
 	struct Rectangle4i screen;
-	struct IntStack *step[LAYER_NO];
+	struct IntPool step[LAYER_NO];
 };
 
 void Layer_(struct Layer **const pthis) {
 	struct Layer *this;
 	unsigned i;
 	if(!pthis || !(this = *pthis)) return;
-	for(i = 0; i < LAYER_NO; i++) IntStack_(&this->step[i]);
+	for(i = 0; i < LAYER_NO; i++) IntPool_(this->step + i);
 	this = *pthis = 0;
 }
 
@@ -49,17 +51,13 @@ struct Layer *Layer(const size_t side_size, const float each_bin) {
 	struct Layer *this;
 	unsigned i;
 	if(!side_size || side_size > INT_MAX || each_bin < epsilon)
-		{ fprintf(stderr, "Layer: parameters out of range.\n"); return 0; }
-	if(!(this = malloc(sizeof *this))) {perror("Layer");Layer_(&this);return 0;}
+		{ errno = ERANGE; return 0; }
+	if(!(this = malloc(sizeof *this))) return 0;
 	this->side_size = (int)side_size;
 	this->half_space = (float)side_size * each_bin / 2.0f;
 	this->one_each_bin = 1.0f / each_bin;
 	rectangle4i_init(&this->screen);
-	for(i = 0; i < LAYER_NO; i++) this->step[i] = 0;
-	for(i = 0; i < LAYER_NO; i++) {
-		if(!(this->step[i] = IntStack())) { fprintf(stderr, "Layer: %s.\n",
-			IntStackGetError(0)); Layer_(&this); return 0; }
-	}
+	for(i = 0; i < LAYER_NO; i++) IntPool(this->step + i);
 	return this;
 }
 
@@ -96,10 +94,10 @@ static int set_rect_layer(struct Layer *const this,
 	struct Rectangle4f *const rect, const enum LayerStep layer_step) {
 	struct Rectangle4i bin4;
 	struct Vec2i bin2i;
-	int *bin;
-	struct IntStack *step = this->step[layer_step];
+	unsigned *bin;
+	struct IntPool *step = this->step + layer_step;
 	assert(this && rect && layer_step < LAYER_NO);
-	IntStackClear(step);
+	IntPoolClear(step);
 	/* Map floating point rectangle {rect} to index rectangle {bin4}. */
 	bin4.x_min = (rect->x_min + this->half_space) * this->one_each_bin;
 	bin4.x_max = (rect->x_max + this->half_space) * this->one_each_bin;
@@ -126,8 +124,7 @@ static int set_rect_layer(struct Layer *const this,
 	for(bin2i.y = bin4.y_max; bin2i.y >= bin4.y_min; bin2i.y--) {
 		for(bin2i.x = bin4.x_min; bin2i.x <= bin4.x_max; bin2i.x++) {
 			/*printf("sprite bin2i(%u, %u)\n", bin2i.x, bin2i.y);*/
-			if(!(bin = IntStackNew(step))) { fprintf(stderr,
-				"Layer rectangle: %s.\n", IntStackGetError(step)); return 0; }
+			if(!(bin = IntPoolNew(step))) return 0;
 			*bin = bin2i.y * this->side_size + bin2i.x;
 			/*bin_to_Vec2i(bin2i_to_fg_bin(bin2i), &bin_pos);
 			fprintf(gnu_glob, "set arrow from %f,%f to %d,%d lw 0.2 "
@@ -148,7 +145,7 @@ int LayerSetScreenRectangle(struct Layer *const this,
 
 /** Set sprite rectangle.
  @return Success. */
-int LayerSetSpriteRectangle(struct Layer *const this,
+int LayerSetItemRectangle(struct Layer *const this,
 	struct Rectangle4f *const rect) {
 	if(!this || !rect) return 0;
 	return set_rect_layer(this, rect, LAYER_SPRITE);
@@ -164,33 +161,26 @@ void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o) {
 
 /** For each bin on screen; used for drawing. */
 void LayerForEachScreen(struct Layer *const this, const LayerAction action) {
-	struct IntStack *step;
-	size_t i, size;
+	struct IntPool *const step = this->step + LAYER_SCREEN;
+	unsigned *i = 0;
 	if(!this || !action) return;
-	step = this->step[LAYER_SCREEN];
-	size = IntStackGetSize(step);
-	for(i = 0; i < size; i++) action(*IntStackGetElement(step, i));
+	while((i = IntPoolNext(step, i))) action(*i);
 }
 
 /** For each bin on screen; used for plotting. */
 void LayerForEachScreenPlot(struct Layer *const this,
 	const LayerAcceptPlot accept, struct PlotData *const plot) {
-	struct IntStack *step;
-	size_t i, size;
+	struct IntPool *const step = this->step + LAYER_SCREEN;
+	unsigned *i = 0;
 	if(!this || !accept) return;
-	step = this->step[LAYER_SCREEN];
-	size = IntStackGetSize(step);
-	for(i = 0; i < size; i++) accept(*IntStackGetElement(step, i), plot);
+	while((i = IntPoolNext(step, i))) accept(*i, plot);
 }
 
-/** For each bin crossing the sprite; used for collision-detection. */
-void LayerSpriteForEachSprite(struct Layer *const this,
-	struct Onscreen *const onscreen, const LayerNoOnscreenAction action) {
-	struct IntStack *step;
-	unsigned i, size;
-	if(!this || !onscreen || !action) return;
-	step = this->step[LAYER_SPRITE];
-	size = (unsigned)IntStackGetSize(step); /* Unsafe-ish. */
-	for(i = 0; i < size; i++)
-		action(*IntStackGetElement(step, i), i, onscreen);
+/** For each bin crossing the space item; used for collision-detection. */
+void LayerForEachItem(struct Layer *const this,
+	unsigned proxy_index, const LayerTriConsumer action) {
+	struct IntPool *const step = this->step + LAYER_SPRITE;
+	unsigned *i = 0, c = 0;
+	if(!this || !action) return;
+	while((i = IntPoolNext(step, i))) action(*i, proxy_index, c++);
 }

@@ -14,7 +14,7 @@
 #include <math.h>   /* sqrtf fminf fmodf atan2f */
 #include "../../build/Auto.h" /* for images */
 #include "../Ortho.h"
-#include "../game/Sprites.h" /* in display */
+#include "../game/Items.h" /* in display */
 #include "../game/Fars.h" /* in display */
 #include "../../external/lodepng.h"  /* in texture */
 #include "../../external/nanojpeg.h" /* in texture */
@@ -156,31 +156,31 @@ static void display(void) {
 	/* Set up lights, draw sprites in foreground. */
 	glUseProgram(auto_Lambert_shader.compiled);
 	glUniform2f(auto_Lambert_shader.camera, draw.camera.x.x, draw.camera.x.y);
-	glUniform1i(auto_Lambert_shader.points, lights = (unsigned)SpritesLightGetSize());
+	glUniform1i(auto_Lambert_shader.points, lights = (unsigned)ItemsLightGetSize());
 	if(lights) {
-		struct Vec2f *parray = SpritesLightPositions();
+		struct Vec2f *parray = ItemsLightPositions();
 		unsigned i;
 		glUniform2fv(auto_Lambert_shader.point_position, lights,
 					 (GLfloat *)parray);
 		glUniform3fv(auto_Lambert_shader.point_colour, lights,
-					 (GLfloat *)SpritesLightGetColours());
+					 (GLfloat *)ItemsLightGetColours());
 		/* Debug. */
 		for(i = 0; i < lights; i++) Info(parray + i, draw.icon_light);
 	}
-	SpritesDraw();
+	ItemsDraw();
 
 	/* Display info on top without lighting. */
 	glUseProgram(auto_Info_shader.compiled);
 	glUniform2f(auto_Info_shader.camera, draw.camera.x.x, draw.camera.x.y);
-	SpritesInfo();
+	ItemsInfo();
 
 	/* Overlay hud. @fixme */
 	if(draw.textures.shield) {
 		struct Ship *player;
 		const struct Ortho3f *x;
 		const struct Vec2f *hit;
-		if((player = SpritesGetPlayerShip())
-		   && (x = SpriteGetPosition((struct Sprite *)player))
+		if((player = ItemsGetPlayerShip())
+		   && (x = ItemGetPosition((struct Item *)player))
 		   && (hit = ShipGetHit(player))) {
 			glUseProgram(auto_Hud_shader.compiled);
 			glBindTexture(GL_TEXTURE_2D, draw.textures.shield);

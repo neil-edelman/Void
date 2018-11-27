@@ -5,6 +5,8 @@
  Lights are sent to the GPU for drawing. More accurately, lights are uploaded
  to the GPU every frame and every {Sprite} is affected by them in the shader.
 
+ Why don't we just use {struct} in the GPU? {struct} is not present in 1.0.
+
  @title		SpritesLight
  @author	Neil
  @std		C89/90

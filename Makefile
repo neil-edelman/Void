@@ -103,7 +103,7 @@ CF    := -Wall -Wextra -Wno-format-y2k -Wstrict-prototypes \
 -Wswitch -Wshadow -Wcast-align -Wbad-function-cast -Wchar-subscripts -Winline \
 -Wnested-externs -Wredundant-decls -O3 -fasm -fomit-frame-pointer -ffast-math \
 -funroll-loops -pedantic -Wfatal-errors -ansi
-CF_LAX:= -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math \
+#CF_LAX:= -Wall -Wextra -O3 -fasm -fomit-frame-pointer -ffast-math \
 -funroll-loops -pedantic -std=c99
 OF    := -framework OpenGL -framework GLUT #-framework SDL2
 
@@ -162,7 +162,7 @@ $(EXTSO): $(build)/$(external)/%.o: $(external)/%.c $(EXTSH)
 	-@$(MKDIR) $(bin)
 	-@$(MKDIR) $(build)
 	-@$(MKDIR) $(build)/$(external)
-	$(CC) $(CF_LAX) -c $(external)/$*.c -o $@
+	$(CC) $(CF) -c $(external)/$*.c -o $@
 
 # vertex and fragment shaders are processed by Vsfs2h
 $(VSFS_H): $(build)/$(shaders)/%_vsfs.h: $(shaders)/%.vs $(shaders)/%.fs $(VSFS2H)

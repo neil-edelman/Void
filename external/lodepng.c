@@ -28,6 +28,9 @@ The manual and changelog are in the header file "lodepng.h"
 Rename this file to lodepng.cpp to use it for C++, or to lodepng.c to use it for C.
 */
 
+/* I've grown tired of warnings, fixed them. unsigned/useless size_t
+ conversions mostly. -Neil */
+
 #include "lodepng.h"
 
 #include <stdio.h>
@@ -687,7 +690,7 @@ typedef struct BPMLists
 } BPMLists;
 
 /*creates a new chain node with the given parameters, from the memory in the lists */
-static BPMNode* bpmnode_create(BPMLists* lists, int weight, unsigned index, BPMNode* tail)
+static BPMNode* bpmnode_create(BPMLists* lists, int weight, unsigned idx, BPMNode* tail)
 {
   unsigned i;
   BPMNode* result;
@@ -714,7 +717,7 @@ static BPMNode* bpmnode_create(BPMLists* lists, int weight, unsigned index, BPMN
 
   result = lists->freelist[lists->nextfree++];
   result->weight = weight;
-  result->index = index;
+  result->index = idx;
   result->tail = tail;
   return result;
 }
@@ -868,14 +871,14 @@ static unsigned HuffmanTree_makeFromFrequencies(HuffmanTree* tree, const unsigne
   return error;
 }
 
-static unsigned HuffmanTree_getCode(const HuffmanTree* tree, unsigned index)
+static unsigned HuffmanTree_getCode(const HuffmanTree* tree, unsigned idx)
 {
-  return tree->tree1d[index];
+  return tree->tree1d[idx];
 }
 
-static unsigned HuffmanTree_getLength(const HuffmanTree* tree, unsigned index)
+static unsigned HuffmanTree_getLength(const HuffmanTree* tree, unsigned idx)
 {
-  return tree->lengths[index];
+  return tree->lengths[idx];
 }
 #endif /*LODEPNG_COMPILE_ENCODER*/
 
@@ -1434,11 +1437,11 @@ static void updateHashChain(Hash* hash, size_t wpos, unsigned hashval, unsigned 
 {
   hash->val[wpos] = (int)hashval;
   if(hash->head[hashval] != -1) hash->chain[wpos] = hash->head[hashval];
-  hash->head[hashval] = wpos;
+  hash->head[hashval] = (int)wpos;
 
   hash->zeros[wpos] = numzeros;
   if(hash->headz[numzeros] != -1) hash->chainz[wpos] = hash->headz[numzeros];
-  hash->headz[numzeros] = wpos;
+  hash->headz[numzeros] = (int)wpos;
 }
 
 /*
@@ -1458,7 +1461,7 @@ static unsigned encodeLZ77(uivector* out, Hash* hash,
   unsigned i, error = 0;
   /*for large window lengths, assume the user wants no compression loss. Otherwise, max hash chain length speedup.*/
   unsigned maxchainlength = windowsize >= 8192 ? windowsize : windowsize / 8;
-  unsigned maxlazymatch = windowsize >= 8192 ? MAX_SUPPORTED_DEFLATE_LENGTH : 64;
+  unsigned maxlazymatch = windowsize >= 8192 ? (unsigned)MAX_SUPPORTED_DEFLATE_LENGTH : 64;
 
   unsigned usezeros = 1; /*not sure if setting it to false for windowsize < 8192 is better or worse*/
   unsigned numzeros = 0;
@@ -1476,7 +1479,7 @@ static unsigned encodeLZ77(uivector* out, Hash* hash,
   if(windowsize == 0 || windowsize > 32768) return 60; /*error: windowsize smaller/larger than allowed*/
   if((windowsize & (windowsize - 1)) != 0) return 90; /*error: must be power of two*/
 
-  if(nicematch > MAX_SUPPORTED_DEFLATE_LENGTH) nicematch = MAX_SUPPORTED_DEFLATE_LENGTH;
+  if(nicematch > MAX_SUPPORTED_DEFLATE_LENGTH) nicematch = (unsigned)MAX_SUPPORTED_DEFLATE_LENGTH;
 
   for(pos = inpos; pos < insize; ++pos)
   {
@@ -1510,7 +1513,7 @@ static unsigned encodeLZ77(uivector* out, Hash* hash,
     for(;;)
     {
       if(chainlength++ >= maxchainlength) break;
-      current_offset = hashpos <= wpos ? wpos - hashpos : wpos - hashpos + windowsize;
+      current_offset = hashpos <= (unsigned)wpos ? (unsigned)wpos - hashpos : (unsigned)wpos - hashpos + windowsize;
 
       if(current_offset < prev_offset) break; /*stop when went completely around the circular buffer*/
       prev_offset = current_offset;
@@ -2342,7 +2345,7 @@ unsigned lodepng_crc32(const unsigned char* buf, size_t len)
   {
     c = lodepng_crc32_table[(c ^ buf[n]) & 0xff] ^ (c >> 8);
   }
-  return c ^ 0xffffffffL;
+  return c ^ (unsigned)0xffffffffL;
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -2679,10 +2682,11 @@ size_t lodepng_get_raw_size(unsigned w, unsigned h, const LodePNGColorMode* colo
   return (w * h * lodepng_get_bpp(color) + 7) / 8;
 }
 
-size_t lodepng_get_raw_size_lct(unsigned w, unsigned h, LodePNGColorType colortype, unsigned bitdepth)
+/* This is . . . unused? -Neil
+ size_t lodepng_get_raw_size_lct(unsigned w, unsigned h, LodePNGColorType colortype, unsigned bitdepth)
 {
   return (w * h * lodepng_get_bpp_lct(colortype, bitdepth) + 7) / 8;
-}
+}*/
 
 
 #ifdef LODEPNG_COMPILE_PNG
@@ -2928,25 +2932,26 @@ unsigned lodepng_info_copy(LodePNGInfo* dest, const LodePNGInfo* source)
   return 0;
 }
 
-void lodepng_info_swap(LodePNGInfo* a, LodePNGInfo* b)
+/* This is . . . unused? -Neil
+ void lodepng_info_swap(LodePNGInfo* a, LodePNGInfo* b)
 {
   LodePNGInfo temp = *a;
   *a = *b;
   *b = temp;
-}
+}*/
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
 /*index: bitgroup index, bits: bitgroup size(1, 2 or 4), in: bitgroup value, out: octet array to add bits to*/
-static void addColorBits(unsigned char* out, size_t index, unsigned bits, unsigned in)
+static void addColorBits(unsigned char* out, size_t idx, unsigned bits, unsigned in)
 {
   unsigned m = bits == 1 ? 7 : bits == 2 ? 3 : 1; /*8 / bits - 1*/
   /*p = the partial index in the byte, e.g. with 4 palettebits it is 0 for first half or 1 for second half*/
-  unsigned p = index & m;
+  unsigned p = (unsigned)idx & m;
   in &= (1u << bits) - 1u; /*filter out any other bits of the input value*/
   in = in << (bits * (m - p));
-  if(p == 0) out[index * bits / 8] = in;
-  else out[index * bits / 8] |= in;
+  if(p == 0) out[idx * bits / 8] = in;
+  else out[idx * bits / 8] |= in;
 }
 
 typedef struct ColorTree ColorTree;
@@ -3006,7 +3011,7 @@ static int color_tree_has(ColorTree* tree, unsigned char r, unsigned char g, uns
 /*color is not allowed to already exist.
 Index should be >= 0 (it's signed to be compatible with using -1 for "doesn't exist")*/
 static void color_tree_add(ColorTree* tree,
-                           unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned index)
+                           unsigned char r, unsigned char g, unsigned char b, unsigned char a, unsigned idx)
 {
   int bit;
   for(bit = 0; bit < 8; ++bit)
@@ -3019,7 +3024,7 @@ static void color_tree_add(ColorTree* tree,
     }
     tree = tree->children[i];
   }
-  tree->index = (int)index;
+  tree->index = (int)idx;
 }
 
 /*put a pixel, given its RGBA color, into image of any color type*/
@@ -3056,10 +3061,10 @@ static unsigned rgba8ToPixel(unsigned char* out, size_t i,
   }
   else if(mode->colortype == LCT_PALETTE)
   {
-    int index = color_tree_get(tree, r, g, b, a);
-    if(index < 0) return 82; /*color not in palette*/
-    if(mode->bitdepth == 8) out[i] = index;
-    else addColorBits(out, i, mode->bitdepth, (unsigned)index);
+    int idx = color_tree_get(tree, r, g, b, a);
+    if(idx < 0) return 82; /*color not in palette*/
+    if(mode->bitdepth == 8) out[i] = idx;
+    else addColorBits(out, i, mode->bitdepth, (unsigned)idx);
   }
   else if(mode->colortype == LCT_GREY_ALPHA)
   {
@@ -3188,15 +3193,15 @@ static void getPixelColorRGBA8(unsigned char* r, unsigned char* g,
   }
   else if(mode->colortype == LCT_PALETTE)
   {
-    unsigned index;
-    if(mode->bitdepth == 8) index = in[i];
+    unsigned idx;
+    if(mode->bitdepth == 8) idx = in[i];
     else
     {
       size_t j = i * mode->bitdepth;
-      index = readBitsFromReversedStream(&j, in, mode->bitdepth);
+      idx = readBitsFromReversedStream(&j, in, mode->bitdepth);
     }
 
-    if(index >= mode->palettesize)
+    if(idx >= mode->palettesize)
     {
       /*This is an error according to the PNG spec, but common PNG decoders make it black instead.
       Done here too, slightly faster due to no error handling needed.*/
@@ -3205,10 +3210,10 @@ static void getPixelColorRGBA8(unsigned char* r, unsigned char* g,
     }
     else
     {
-      *r = mode->palette[index * 4 + 0];
-      *g = mode->palette[index * 4 + 1];
-      *b = mode->palette[index * 4 + 2];
-      *a = mode->palette[index * 4 + 3];
+      *r = mode->palette[idx * 4 + 0];
+      *g = mode->palette[idx * 4 + 1];
+      *b = mode->palette[idx * 4 + 2];
+      *a = mode->palette[idx * 4 + 3];
     }
   }
   else if(mode->colortype == LCT_GREY_ALPHA)
@@ -3313,14 +3318,14 @@ static void getPixelColorsRGBA8(unsigned char* buffer, size_t numpixels,
   }
   else if(mode->colortype == LCT_PALETTE)
   {
-    unsigned index;
+    unsigned idx;
     size_t j = 0;
     for(i = 0; i != numpixels; ++i, buffer += num_channels)
     {
-      if(mode->bitdepth == 8) index = in[i];
-      else index = readBitsFromReversedStream(&j, in, mode->bitdepth);
+      if(mode->bitdepth == 8) idx = in[i];
+      else idx = readBitsFromReversedStream(&j, in, mode->bitdepth);
 
-      if(index >= mode->palettesize)
+      if(idx >= mode->palettesize)
       {
         /*This is an error according to the PNG spec, but most PNG decoders make it black instead.
         Done here too, slightly faster due to no error handling needed.*/
@@ -3329,10 +3334,10 @@ static void getPixelColorsRGBA8(unsigned char* buffer, size_t numpixels,
       }
       else
       {
-        buffer[0] = mode->palette[index * 4 + 0];
-        buffer[1] = mode->palette[index * 4 + 1];
-        buffer[2] = mode->palette[index * 4 + 2];
-        if(has_alpha) buffer[3] = mode->palette[index * 4 + 3];
+        buffer[0] = mode->palette[idx * 4 + 0];
+        buffer[1] = mode->palette[idx * 4 + 1];
+        buffer[2] = mode->palette[idx * 4 + 2];
+        if(has_alpha) buffer[3] = mode->palette[idx * 4 + 3];
       }
     }
   }
@@ -3438,7 +3443,7 @@ unsigned lodepng_convert(unsigned char* out, const unsigned char* in,
     for(i = 0; i != palsize; ++i)
     {
       unsigned char* p = &mode_out->palette[i * 4];
-      color_tree_add(&tree, p[0], p[1], p[2], p[3], i);
+      color_tree_add(&tree, p[0], p[1], p[2], p[3], (unsigned)i);
     }
   }
 
@@ -4241,7 +4246,7 @@ static unsigned readChunk_tEXt(LodePNGInfo* info, const unsigned char* data, siz
 
     string2_begin = length + 1; /*skip keyword null terminator*/
 
-    length = chunkLength < string2_begin ? 0 : chunkLength - string2_begin;
+    length = chunkLength < string2_begin ? 0 : (unsigned)chunkLength - string2_begin;
     str = (char*)lodepng_malloc(length + 1);
     if(!str) CERROR_BREAK(error, 83); /*alloc fail*/
 
@@ -4289,7 +4294,7 @@ static unsigned readChunk_zTXt(LodePNGInfo* info, const LodePNGDecompressSetting
     string2_begin = length + 2;
     if(string2_begin > chunkLength) CERROR_BREAK(error, 75); /*no null termination, corrupt?*/
 
-    length = chunkLength - string2_begin;
+    length = (unsigned)chunkLength - string2_begin;
     /*will fail if zlib error, e.g. if length is too small*/
     error = zlib_decompress(&decoded.data, &decoded.size,
                             (unsigned char*)(&data[string2_begin]),
@@ -4369,7 +4374,7 @@ static unsigned readChunk_iTXt(LodePNGInfo* info, const LodePNGDecompressSetting
     /*read the actual text*/
     begin += length + 1;
 
-    length = chunkLength < begin ? 0 : chunkLength - begin;
+    length = chunkLength < begin ? 0 : (unsigned)chunkLength - begin;
 
     if(compressed)
     {
@@ -5309,7 +5314,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
     {
       for(type = 0; type != 5; ++type)
       {
-        unsigned testsize = attempt[type].size;
+        unsigned testsize = (unsigned)attempt[type].size;
         /*if(testsize > 8) testsize /= 8;*/ /*it already works good enough by testing a part of the row*/
 
         filterScanline(attempt[type].data, &in[y * linebytes], prevline, linebytes, bytewidth, type);

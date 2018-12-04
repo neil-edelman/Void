@@ -280,7 +280,7 @@ static struct Items {
 		struct Colour3f colour_table[MAX_LIGHTS];
 	} lights;
 	enum Plots { PLOT_NOTHING, PLOT_SPACE = 1 } plot; /* debug */
-} items;
+} items; /* Not in a valid state until ItemsReset(); */
 
 
 
@@ -602,10 +602,12 @@ static const struct ItemVt ship_human_vt = {
 
 /****************** Type functions. **************/
 
-/** Clears all memory. References will all be invalid. */
+/** Clears all memory. Previous references will all be invalid. */
 void ItemsReset(void) {
 	unsigned i;
 	for(i = 0; i < LAYER_SIZE; i++) {
+		/* This is the only thing that matters in startup; everything else is
+		 zero anyway: */
 		ItemListClear(&items.bins[i].items);
 		CoverPool_(&items.bins[i].covers);
 	}

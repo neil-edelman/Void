@@ -142,6 +142,7 @@ int main(int argc, char **argv) {
 		if(!Glew()) { e = "glew"; break; }
 		Key();
 		if(!Fars()) { e = "fars"; break; }
+		ItemsReset();
 		if(!Draw()) { e = "draw"; break; }
 		if(!Game()) { e = "game"; break; }
 		/* <-- glut */
@@ -149,6 +150,7 @@ int main(int argc, char **argv) {
 		/* glut --> */
 	} while(0); if(e) { /* catch */
 		fprintf(stderr, "Error with the %s.\n", e);
+		perror(e);
 	} { /* finally */
 		atexit_hack();
 	}

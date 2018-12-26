@@ -66,13 +66,11 @@ void Zone(const struct AutoSpaceZone *const sz) {
 	/* update the current zone */
 	current_zone = sz;
 
-#if 0
 	/* some asteroids */
-	for(i = 0; i < 64/*00*/; i++) Debris(asteroid, 0);
+	for(i = 0; i < 6400; i++) Debris(asteroid, 0);
 
 	/* sprinkle some ships */
-	for(i = 0; i < 10/*00*/; i++) Ship(blob_class, 0, AI_DUMB);
-#endif
+	for(i = 0; i < 1000; i++) Ship(blob_class, 0, AI_DUMB);
 
 }
 

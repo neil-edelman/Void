@@ -104,7 +104,7 @@ static void proxy_migrate(struct Proxy *const this,
 	const struct Migrate *const migrate) {
 	assert(this && this->item && migrate);
 	ProxyPoolMigratePointer(&this->item->proxy, migrate);
-	assert(this == this->item->proxy);
+	assert(!this->item->proxy || this == this->item->proxy);
 }
 
 /** Many {Cover}s, one in each bin, can point at one {Proxy}. One {Cover} for

@@ -20,7 +20,7 @@ static void print_item_data(struct Item *item, void *const void_out) {
 	item_to_string(item, &a);
 	fprintf(out->fp, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t\"%s\"\n",
 		item->x.x, item->x.y,
-		item->bounding, (double)out->i++ / out->n, item->x.x, item->x.y,
+		item->bounding, (double)out->i++ / out->n, item->v.x, item->v.y, /*??*/
 		item->bounding, a);
 }
 /** @implements <Sprite, OutputData>DiAction */

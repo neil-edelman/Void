@@ -163,7 +163,12 @@ void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o) {
 void LayerForEachScreen(struct Layer *const this, const LayerAction action) {
 	struct IntPool *const step = this->step + LAYER_SCREEN;
 	unsigned *i = 0;
+	static int is_rep = 1;
 	if(!this || !action) return;
+	if(is_rep) {
+		is_rep = 0;
+		printf("LayerForEachScreen:\n");
+	}
 	while((i = IntPoolNext(step, i))) action(*i);
 }
 

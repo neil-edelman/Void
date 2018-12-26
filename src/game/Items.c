@@ -62,8 +62,7 @@ static const float max_debris_speed2 = (0.2f)*(0.2f);
 
 struct ItemVt;
 struct Collision;
-
-/** Abstract {Item}. */
+/* Abstract. */
 struct Item {
 	const struct ItemVt *vt; /* virtual table pointer */
 	const struct AutoImage *image, *normals; /* extracted from sprite */
@@ -118,7 +117,6 @@ struct Cover { size_t proxy_index; int is_corner; };
 #define POOL_STACK
 #include "../templates/Pool.h"
 
-/* Declare {ShipVt}. */
 struct ShipVt;
 /** {Ship} extends {Item}. */
 struct Ship {
@@ -280,7 +278,7 @@ static struct Items {
 		struct Colour3f colour_table[MAX_LIGHTS];
 	} lights;
 	enum Plots { PLOT_NOTHING, PLOT_SPACE = 1 } plot; /* debug */
-} items; /* Not in a valid state until ItemsReset(); */
+} items; /* Not in a valid state until \see{ItemsReset}. */
 
 
 
@@ -313,7 +311,7 @@ typedef int (*ItemFloatPredicate)(struct Item *const, const float);
  eg collision resolution. */
 enum ItemClass { SC_SHIP, SC_DEBRIS, SC_WMD, SC_GATE };
 
-/** Define {ItemVt}. */
+/** Define virtual functions. */
 struct ItemVt {
 	enum ItemClass class;
 	ItemToString to_string;
@@ -603,11 +601,11 @@ static const struct ItemVt ship_human_vt = {
 /****************** Type functions. **************/
 
 /** Clears all memory. Previous references will all be invalid. */
-void ItemsReset(void) {
+static void items_reset(void) {
 	unsigned i;
 	for(i = 0; i < LAYER_SIZE; i++) {
 		/* This is the only thing that matters in startup; everything else is
-		 zero anyway: */
+		 zero anyway. */
 		ItemListClear(&items.bins[i].items);
 		CoverPool_(&items.bins[i].covers);
 	}
@@ -622,6 +620,16 @@ void ItemsReset(void) {
 	WmdPool_(&items.wmds);
 	DebrisPool_(&items.debris);
 	ShipPool_(&items.ships);
+}
+
+void Items_(void) {
+	items_reset();
+}
+
+int Items(void) {
+	items_reset();
+	if(!(items.layer = Layer(LAYER_SIDE_SIZE, layer_space))) return 0;
+	return 1;
 }
 
 /** Clear all space and covers, (it should be removed already.) */

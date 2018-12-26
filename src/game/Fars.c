@@ -2,8 +2,9 @@
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
- Fars are sprites, like Sprites, but drawn far away; they are simpler than
- Sprites because they have no rotation, and have a different shader associated.
+ Fars are sprites, like Items, but drawn far away; they are simpler because
+ they have no rotation, and have a different shader associated. Also a
+ different layer.
 
  @title		Fars
  @author	Neil
@@ -25,12 +26,12 @@ static const float layer_space = 1024.0f / LAYER_FORESHORTENING_F;
 /**************** Declare types. **************/
 
 struct FarVt;
-/** Define abstract {Far}. */
+/* Abstract. */
 struct Far {
 	const struct FarVt *vt;
-	const struct AutoImage *image, *normals; /* what the sprite is */
-	unsigned bin; /* which bin is it in */
-	struct Ortho3f x; /* where it is */
+	const struct AutoImage *image, *normals; /* Sprite. */
+	unsigned bin;
+	struct Ortho3f x; /* Where it is determines which bin; like a key. */
 };
 typedef void (*FarToString)(const struct Far *const, char (*const)[12]);
 
@@ -40,9 +41,8 @@ static void far_to_string(const struct Far *this, char (*const a)[12]);
 #define LIST_TO_STRING &far_to_string
 #include "../templates/List.h"
 
-/** Define {PlanetoidPool} and {PlanetoidPoolNode}, a subclass of {Far}.
- Planets and asteroids, everything that has a name and you can optionally land
- on, is a {Planetoid}. */
+/** {Planetoid} extends {Far}. Planets and asteroids, everything that has a
+ name and you can optionally land on, is a {Planetoid}. */
 struct Planetoid {
 	struct FarLink base;
 	const char *name;
@@ -52,11 +52,6 @@ static void planetoid_migrate(struct Planetoid *const this,
 	const struct Migrate *const migrate) {
 	assert(this && migrate);
 	FarLinkMigrate(&this->base.data, migrate);
-	/*unsigned i;
-	assert(f && f == fars && migrate);
-	for(i = 0; i < LAYER_SIZE; i++) {
-		FarListMigrate(f->bins + i, migrate);
-	}*/
 }
 #define POOL_NAME Planetoid
 #define POOL_TYPE struct Planetoid
@@ -68,7 +63,7 @@ static struct Fars {
 	struct FarList bins[LAYER_SIZE];
 	struct PlanetoidPool planetoids;
 	struct Layer *layer;
-} *fars;
+} fars; /* Not in a valid state until \see{FarsReset}. */
 
 
 
@@ -109,35 +104,26 @@ static const struct FarVt planetoid_vt = {
 /** Destructor. */
 void Fars_(void) {
 	unsigned i;
-	if(!fars) return;
-	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars->bins + i);
-	PlanetoidPool_(&fars->planetoids);
-	free(fars), fars = 0;
+	for(i = 0; i < LAYER_SIZE; i++) FarListClear(&fars.bins[i]);
+	PlanetoidPool_(&fars.planetoids);
 }
 
 /** Constructor.
  @return New {Fars} or {errno} will be set (probably.) */
 int Fars(void) {
 	unsigned i;
-	int err = 1;
-	if(fars) return 1;
-	if(!(fars = malloc(sizeof *fars))) return Fars_(), 0;
-	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars->bins + i);
-	fars->layer = 0;
-	PlanetoidPool(&fars->planetoids);
-	do {
-		if(!(fars->layer = Layer(LAYER_SIDE_SIZE, layer_space))) break;
-		err = 0;
-	} while(0); if(err) Fars_();
-	return !err;
+	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars.bins + i);
+	fars.layer = 0;
+	PlanetoidPool(&fars.planetoids);
+	if(!(fars.layer = Layer(LAYER_SIDE_SIZE, layer_space))) return 0;
+	return 1;
 }
 
 /** Clears all planets in preparation for jump. */
 void FarsClear(void) {
 	unsigned i;
-	if(!fars) return;
-	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars->bins + i);
-	PlanetoidPoolClear(&fars->planetoids);
+	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars.bins + i);
+	PlanetoidPoolClear(&fars.planetoids);
 }
 
 
@@ -147,24 +133,24 @@ void FarsClear(void) {
 /** Only called from constructors of children. */
 static void far_filler(struct Far *const this,
 	const struct FarVt *const vt, const struct AutoObjectInSpace *const class) {
-	assert(fars && this && vt && class && class->sprite);
+	assert(this && vt && class && class->sprite);
  	this->vt = vt;
 	this->image = class->sprite->image;
 	this->normals = class->sprite->normals;
 	this->x.x = class->x;
 	this->x.y = class->y;
 	this->x.theta = 0.0f;
-	this->bin = LayerGetOrtho(fars->layer, &this->x);
-	FarListPush(fars->bins + this->bin, this);
+	this->bin = LayerGetOrtho(fars.layer, &this->x);
+	FarListPush(fars.bins + this->bin, this);
 }
 
 /** @extends far_filler
  @throws If return null, {errno} will probably be set. */
 struct Planetoid *FarsPlanetoid(const struct AutoObjectInSpace *const class) {
 	struct Planetoid *this;
-	if(!fars || !class) return 0;
+	if(!class) return 0;
 	assert(class->sprite && class->name);
-	if(!(this = PlanetoidPoolNew(&fars->planetoids))) return 0;
+	if(!(this = PlanetoidPoolNew(&fars.planetoids))) return 0;
 	far_filler(&this->base.data, &planetoid_vt, class);
 	this->name = class->name;
 	return this;
@@ -173,23 +159,21 @@ struct Planetoid *FarsPlanetoid(const struct AutoObjectInSpace *const class) {
 /** Called from \see{draw_bin}.
  @implements <Sprite, ContainsLambertOutput>BiAction */
 static void draw_far(struct Far *const this) {
-	assert(fars);
 	DrawDisplayFar(&this->x, this->image, this->normals);
 }
 /** Called from \see{SpritesDraw}.
  @implements LayerAction */
 static void draw_bin(const unsigned idx) {
-	assert(fars && idx < LAYER_SIZE);
-	FarListForEach(fars->bins + idx, &draw_far);
+	assert(idx < LAYER_SIZE);
+	FarListForEach(fars.bins + idx, &draw_far);
 }
 /* Must call \see{SpriteUpdate} because it sets the camera. Use when Far GPU
  shader is loaded. */
 void FarsDraw(void) {
 	struct Rectangle4f rect;
-	if(!fars) return;
 	DrawGetScreen(&rect);
 	rectangle4f_expand(&rect, layer_space * 0.5f); /* fixme: maybe? */
 	rectangle4f_scale(&rect, LAYER_FORESHORTENING_F);
-	LayerSetScreenRectangle(fars->layer, &rect);
-	LayerForEachScreen(fars->layer, &draw_bin);
+	LayerSetScreenRectangle(fars.layer, &rect);
+	LayerForEachScreen(fars.layer, &draw_bin);
 }

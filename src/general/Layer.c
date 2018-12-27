@@ -182,8 +182,8 @@ void LayerForEachScreenPlot(struct Layer *const this,
 }
 
 /** For each bin crossing the space item; used for collision-detection. */
-void LayerForEachItem(struct Layer *const this,
-	unsigned proxy_index, const LayerTriConsumer action) {
+void LayerForEachItem(struct Layer *const this, const size_t proxy_index,
+	const LayerTriConsumer action) {
 	struct IntPool *const step = this->step + LAYER_SPRITE;
 	unsigned *i = 0, c = 0;
 	if(!this || !action) return;

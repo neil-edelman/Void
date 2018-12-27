@@ -32,18 +32,19 @@ static void print_item_velocity(struct Item *item, void *const void_out) {
 		item->x.y + item->v.y * items.dt_ms * 256.0f);
 }
 /* @implements <Cover>BiAction */
-static void item_to_bin(struct Cover *const this, void *const plot_void) {
+static void item_to_bin(struct Cover *const cover, void *const plot_void) {
 	struct PlotData *const plot = plot_void;
 	struct Item *s;
 	struct Vec2f to = { 0.0f, 0.0f };
-	assert(this && plot_void);
+	assert(cover && plot_void);
 	/* @fixme Uhmmmmm, how? */
-	/*if(!(s = this->proxy_index->item)) return;
+	if(!(s = cover_to_item(cover))) return;
+	/*if(!(s = cover->proxy_index->item)) return;*/
 	LayerGetBinMarker(items.layer, plot->bin, &to);
 	to.x += 50.0f, to.y += 50.0f;
 	fprintf(plot->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"%s\" "
 		"front;\n", s->x.x, s->x.y, to.x, to.y,
-		this->is_corner ? "red" : "pink");*/
+		cover->is_corner ? "red" : "pink");
 }
 /* @implements LayerAcceptPlot */
 static void item_to_bin_bin(const unsigned idx, struct PlotData *const plot) {

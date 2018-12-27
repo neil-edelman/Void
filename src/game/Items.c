@@ -100,16 +100,16 @@ static void proxy_migrate(struct Proxy *const this,
 #define POOL_MIGRATE_EACH &proxy_migrate
 #define POOL_STACK
 #include "../templates/Pool.h"
-static void proxy_migrate(struct Proxy *const this,
+static void proxy_migrate(struct Proxy *const proxy,
 	const struct Migrate *const migrate) {
-	assert(this && this->item && migrate);
-	ProxyPoolMigratePointer(&this->item->proxy, migrate);
-	assert(!this->item->proxy || this == this->item->proxy);
+	assert(proxy && proxy->item && migrate);
+	ProxyPoolMigratePointer(&proxy->item->proxy, migrate);
+	assert(proxy == proxy->item->proxy);
 }
 
 /** Many {Cover}s, one in each bin, can point at one {Proxy}. One {Cover} for
  each {Proxy} has {is_corner}, the authoritative {Cover}. Because the
- many-to-one relasionship we store an index not a pointer, or else we would
+ many-to-one relationship we store an index not a pointer, or else we would
  also have to store all the covers with the proxy in case of migrate. */
 struct Cover { size_t proxy_index; int is_corner; };
 #define POOL_NAME Cover
@@ -226,18 +226,18 @@ static void collision_migrate(struct Collision *const this,
 
 /** From {Item}, but we were waiting for everything to be defined.
  @implements Migrate */
-static void item_migrate(struct Item *const this,
+static void item_migrate(struct Item *const item,
 	const struct Migrate *const migrate) {
-	assert(this && migrate);
-	ItemLinkMigrate(this, migrate);
+	assert(item && migrate);
+	ItemLinkMigrate(item, migrate);
 	/* These are potentially temporarily linked pointers. */
-	if(this->proxy) {
-		ItemLinkMigratePointer(&this->proxy->item, migrate);
-		assert(this == this->proxy->item);
+	if(item->proxy) {
+		ItemLinkMigratePointer(&item->proxy->item, migrate);
+		assert(item == item->proxy->item);
 	}
-	if(this->collision) {
-		ItemLinkMigratePointer(&this->collision->item, migrate);
-		assert(this == this->collision->item);
+	if(item->collision) {
+		ItemLinkMigratePointer(&item->collision->item, migrate);
+		assert(item == item->collision->item);
 	}
 }
 
@@ -246,7 +246,9 @@ static void item_migrate(struct Item *const this,
 /** All {Items} together. */
 static struct Items {
 	/* We can have a huge number of {Item}s; to that end, space is separated
-	 into rectangular bins, sort of like a hash map, to improve speed. */
+	 into rectangular bins, sort of like a hash map, to improve speed. Covers
+	 are references to all items in the bin, but there could be more items from
+	 surrounding bins if they are touching this one; covers are not unique. */
 	struct Bin {
 		struct ItemList items;
 		struct CoverPool covers;
@@ -257,7 +259,7 @@ static struct Items {
 	struct WmdPool wmds;
 	struct GatePool gates;
 	/* If we want to do collision detection, we have to account for items that
-	 cross bins. Backing for temporary {proxies} (eg, pointer-to-object) and
+	 cross bins. Backing for temporary {proxies} (eg, pointer-to-{Item}) and
 	 actual {collisions}; these will be built-up and torn down every frame. */
 	struct ProxyPool proxies;
 	struct CollisionPool collisions;
@@ -675,7 +677,7 @@ static void item_filler(struct Item *const this,
 	this->bin       = LayerGetOrtho(items.layer, &this->x);
 	this->dx.x      = this->dx.y = 0.0f;
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
-	this->proxy      = 0;
+	this->proxy     = 0;
 	this->collision = 0;
 	this->light     = 0;
 	/* Put this in space. */
@@ -786,7 +788,7 @@ struct Gate *Gate(const struct AutoGate *const class) {
 
 /** Called in \see{extrapolate}.
  @implements LayerNoItemAction */
-static void put_cover(const unsigned bin, const unsigned proxy_index,
+static void put_cover(const unsigned bin, const size_t proxy_index,
 	const unsigned counter) {
 	struct Cover *cover;
 	assert(bin < LAYER_SIZE);
@@ -799,33 +801,39 @@ static void put_cover(const unsigned bin, const unsigned proxy_index,
 /** Moves the sprite. Calculates temporary values, {dx}, and {box}; sticks it
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
  @implements <Item>Action */
-static void extrapolate(struct Item *const this) {
+static void extrapolate(struct Item *const item) {
 	struct Proxy *proxy;
-	assert(this);
+	assert(item);
 	/* If it returns false, it's deleted. */
-	if(!sprite_update(this)) return;
+	if(!sprite_update(item)) return;
 	/* Kinematics. */
-	this->dx.x = this->v.x * items.dt_ms;
-	this->dx.y = this->v.y * items.dt_ms;
+	item->dx.x = item->v.x * items.dt_ms;
+	item->dx.y = item->v.y * items.dt_ms;
 	/* Dynamic bounding rectangle. */
-	this->box.x_min = this->x.x - this->bounding;
-	this->box.x_max = this->x.x + this->bounding;
-	if(this->dx.x < 0) this->box.x_min += this->dx.x;
-	else this->box.x_max += this->dx.x;
-	this->box.y_min = this->x.y - this->bounding;
-	this->box.y_max = this->x.y + this->bounding;
-	if(this->dx.y < 0) this->box.y_min += this->dx.y;
-	else this->box.y_max += this->dx.y;
+	item->box.x_min = item->x.x - item->bounding;
+	item->box.x_max = item->x.x + item->bounding;
+	if(item->dx.x < 0) item->box.x_min += item->dx.x;
+	else item->box.x_max += item->dx.x;
+	item->box.y_min = item->x.y - item->bounding;
+	item->box.y_max = item->x.y + item->bounding;
+	if(item->dx.y < 0) item->box.y_min += item->dx.y;
+	else item->box.y_max += item->dx.y;
 	/* Put it into appropriate {covers}. This is like a hashmap in space, but
 	 it is spread out, so it may cover multiple bins. {ItemRectangle} is
 	 temporary, affecting {ItemForEachItem}. {Proxy} is a pointer to a
 	 {Item} that can go in multiple bins in the {Layer}. Until the {Layer} is
 	 cleared, deleting a sprite causes dangling pointers. */
-	LayerSetItemRectangle(items.layer, &this->box);
+	assert(!item->proxy); /*<- allow invalid pointers?
+	 Hmmmm, causes problems with migrate? Probably. */
+	LayerSetItemRectangle(items.layer, &item->box);
 	if(!(proxy = ProxyPoolNew(&items.proxies))) { perror("proxy"); return; }
-	proxy->item = this;
+	proxy->item = item;
+	item->proxy = proxy;
 	/* @fixme This is ugly. */
-	LayerForEachItem(items.layer, (unsigned)ProxyPoolIndex(&items.proxies, proxy), &put_cover);
+	assert(ProxyPoolIndex(&items.proxies, proxy) <= ProxyPoolSize(&items.proxies)); /* duh */
+	LayerForEachItem(items.layer, ProxyPoolIndex(&items.proxies, proxy),
+		&put_cover);
+	/* @fixme It probably doesn't work. Wtf? */
 }
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */
@@ -837,42 +845,41 @@ static void extrapolate_bin(const unsigned idx) {
  and values are advanced. Collisions are used up and need to be cleared after.
  Called from \see{timestep_bin}.
  @implements <Item>Action */
-static void timestep(struct Item *const this) {
+static void timestep(struct Item *const item) {
 	const float t = items.dt_ms;
-	assert(this);
+	assert(item);
 	/* Velocity. */
-	if(this->collision) {
-		const float t0 = this->collision->t, t1 = t - t0;
-		const struct Vec2f *const v1 = &this->collision->v;
-		this->x.x = this->x.x + this->v.x * t0 + v1->x * t1;
-		this->x.y = this->x.y + this->v.y * t0 + v1->y * t1;
-		this->v.x = v1->x, this->v.y = v1->y;
+	if(item->collision) {
+		const float t0 = item->collision->t, t1 = t - t0;
+		const struct Vec2f *const v1 = &item->collision->v;
+		item->x.x = item->x.x + item->v.x * t0 + v1->x * t1;
+		item->x.y = item->x.y + item->v.y * t0 + v1->y * t1;
+		item->v.x = v1->x, item->v.y = v1->y;
 	} else {
-		this->x.x += this->v.x * t;
-		this->x.y += this->v.y * t;
+		item->x.x += item->v.x * t;
+		item->x.y += item->v.y * t;
 	}
 	/* Angular velocity -- this is {\omega}. */
-	this->x.theta += this->v.theta * t;
-	branch_cut_pi_pi(&this->x.theta);
-	sprite_moved(this);
-	if(this->collision) {
-		/* Erase the reference; will be erased all at once in {timestep_bin}. */
-		this->collision = 0;
-		sprite_on_collision(this);
+	item->x.theta += item->v.theta * t;
+	branch_cut_pi_pi(&item->x.theta);
+	sprite_moved(item);
+	if(item->collision) {
+		/* Erase the reference; will be erased all at once in {ItemsUpdate}. */
+		item->collision = 0;
+		sprite_on_collision(item);
 	}
+	item->proxy = 0; /*??*/
 }
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */
 static void timestep_bin(const unsigned idx) {
 	ItemListForEach(&items.bins[idx].items, &timestep);
-	/* Collisions are consumed, but not erased; erase them. */
-	CollisionPoolClear(&items.collisions);
 }
 
 /* This is where \see{collide_bin} is located, but lots of helper functions. */
 #include "ItemsCollide.h"
 
-/* This includes some debuging functions, namely, {ItemsPlot}. */
+/* This includes some debugging functions, namely, {ItemsPlot}. */
 #include "ItemsPlot.h"
 
 /** Update each frame.
@@ -888,7 +895,7 @@ void ItemsUpdate(const int dt_ms) {
 			items.player.ship_index);
 		if(player) DrawSetCamera((struct Vec2f *)&player->base.data.x);
 	}
-	/* Proxyground drawable sprites are a function of screen position. */
+	/* Background drawable sprites are a function of screen position. */
 	{ 	struct Rectangle4f rect;
 		DrawGetScreen(&rect);
 		rectangle4f_expand(&rect, layer_space * 0.5f);
@@ -905,9 +912,16 @@ void ItemsUpdate(const int dt_ms) {
 	 (fixme: really? 3 passes?) */
 	LayerForEachScreen(items.layer, &collide_bin);
 	/* Clear out the temporary {proxies} now that cover is consumed. */
-	ProxyPoolClear(&items.proxies);
+	{
+		struct Proxy *proxy;
+		while((proxy = ProxyPoolPop(&items.proxies)))
+			if(proxy->item) proxy->item->proxy = 0;
+	} /* Still crashing! */
+	/*ProxyPoolClear(&items.proxies);*/
 	/* Time-step. */
 	LayerForEachScreen(items.layer, &timestep_bin);
+	/* Collisions are consumed in {timestep_bin}, but not erased; erase them. */
+	CollisionPoolClear(&items.collisions);
 }
 
 /** Called from \see{draw_bin}.
@@ -921,8 +935,8 @@ static void draw_bin(const unsigned idx) {
 	assert(idx < LAYER_SIZE);
 	ItemListForEach(&items.bins[idx].items, &draw_sprite);
 }
-/** Must call \see{ItemUpdate} beproxy this, because it sets
- {sprites.layer}. Use when the Lambert GPU shader is loaded. */
+/** Must call \see{ItemUpdate}, because it sets {sprites.layer}. Use when the
+ Lambert GPU shader is loaded. */
 void ItemsDraw(void) {
 	LayerForEachScreen(items.layer, &draw_bin);
 }

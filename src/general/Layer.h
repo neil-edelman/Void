@@ -6,7 +6,7 @@ struct Onscreen;
 struct PlotData;
 typedef void (*LayerAction)(const unsigned);
 typedef void (*LayerAcceptPlot)(const unsigned, struct PlotData *const);
-typedef void (*LayerTriConsumer)(const unsigned, const unsigned,const unsigned);
+typedef void (*LayerTriConsumer)(const unsigned, const size_t, const unsigned);
 
 void Layer_(struct Layer **const pthis);
 struct Layer *Layer(const size_t size_side, const float each_bin);
@@ -21,5 +21,5 @@ void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o);
 void LayerForEachScreen(struct Layer *const this, const LayerAction action);
 void LayerForEachScreenPlot(struct Layer *const this,
 	const LayerAcceptPlot accept, struct PlotData *const plot);
-void LayerForEachItem(struct Layer *const this,
-	unsigned proxy_index, const LayerTriConsumer action);
+void LayerForEachItem(struct Layer *const this, const size_t proxy_index,
+	const LayerTriConsumer action);

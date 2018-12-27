@@ -417,7 +417,7 @@ static void collide_bin(unsigned bin) {
 	/* This is {O({covers}^2)/2} within the bin. {a} is popped . . . */
 	while((cover_a = CoverPoolPop(covers))) {
 		/* . . . then {b} goes though each element. */
-		/* @fixme Uhm, could {is_corner} be off the screen? */
+		/* @fixme Uhm, could {is_corner} be off the screen? I don't think so. */
 		cover_b = 0;
 		while((cover_b = CoverPoolNext(covers, cover_b))) {
 			/* Another {bin} takes care of it? */
@@ -427,7 +427,7 @@ static void collide_bin(unsigned bin) {
 			assert(ap);
 			if(!(a = ap->item)) break;
 			bp = ProxyPoolGet(&items.proxies, cover_b->proxy_index);
-			assert(bp);
+			assert(bp); /* @fixme This assertion fails . . . size 22, proxy_index 28. Doesn't make any sense. */
 			if(!(b = bp->item)) continue;
 			/* Extract the info on the type of collision. */
 			matrix = &collision_matrix[a->vt->class][b->vt->class];

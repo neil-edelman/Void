@@ -818,22 +818,17 @@ static void extrapolate(struct Item *const item) {
 	item->box.y_max = item->x.y + item->bounding;
 	if(item->dx.y < 0) item->box.y_min += item->dx.y;
 	else item->box.y_max += item->dx.y;
-	/* Put it into appropriate {covers}. This is like a hashmap in space, but
-	 it is spread out, so it may cover multiple bins. {ItemRectangle} is
-	 temporary, affecting {ItemForEachItem}. {Proxy} is a pointer to a
-	 {Item} that can go in multiple bins in the {Layer}. Until the {Layer} is
-	 cleared, deleting a sprite causes dangling pointers. */
-	assert(!item->proxy); /*<- allow invalid pointers?
-	 Hmmmm, causes problems with migrate? Probably. */
-	LayerSetItemRectangle(items.layer, &item->box);
+	/*  It is important that {proxy} now points to a valid {item} or
+	 {proxy->item == null} on delete. This will be deleted after the frame. */
+	assert(!item->proxy);
 	if(!(proxy = ProxyPoolNew(&items.proxies))) { perror("proxy"); return; }
 	proxy->item = item;
 	item->proxy = proxy;
-	/* @fixme This is ugly. */
-	assert(ProxyPoolIndex(&items.proxies, proxy) <= ProxyPoolSize(&items.proxies)); /* duh */
+	/* This is like a hashmap in space, but it is spread out, so it may cover
+	 multiple bins. The {proxy} into all bins which it covers. */
+	LayerSetItemRectangle(items.layer, &item->box);
 	LayerForEachItem(items.layer, ProxyPoolIndex(&items.proxies, proxy),
 		&put_cover);
-	/* @fixme It probably doesn't work. Wtf? */
 }
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */
@@ -900,8 +895,8 @@ void ItemsUpdate(const int dt_ms) {
 		DrawGetScreen(&rect);
 		rectangle4f_expand(&rect, layer_space * 0.5f);
 		LayerSetScreenRectangle(items.layer, &rect); }
-	/* Dynamics; puts temp values in {cover} for collisions. Don't delete a
-	 sprite until {proxies} has been cleared. */
+	/* Dynamics; assigns all items on-screen a {proxy}, puts temp values in
+	 {cover} for collisions, and extrapolates the positions if no force. */
 	LayerForEachScreen(items.layer, &extrapolate_bin);
 	/* Debug. */
 	if(items.plot) {
@@ -909,7 +904,8 @@ void ItemsUpdate(const int dt_ms) {
 		items.plot = PLOT_NOTHING;
 	}
 	/* Collision has to be called after {extrapolate}; it consumes {cover}.
-	 (fixme: really? 3 passes?) */
+	 (@fixme: really? 3 passes?)
+	 (@fixme: we already have a {proxy}, no need to complicate things!) */
 	LayerForEachScreen(items.layer, &collide_bin);
 	/* Clear out the temporary {proxies} now that cover is consumed. */
 	{

@@ -28,6 +28,10 @@ static const float epsilon = 0.0005f;
 
 enum LayerStep { LAYER_SCREEN, LAYER_SPRITE, LAYER_NO };
 
+/* This needs to be updated.
+ LayerMask(items.layer, &rect);
+ and then all layer ops fit within that rect! */
+
 struct Layer {
 	int side_size;
 	float half_space, one_each_bin;

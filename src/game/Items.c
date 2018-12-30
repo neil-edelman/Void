@@ -21,7 +21,7 @@
 #include "../Ortho.h" /* Vec2f, etc */
 #include "../general/Orcish.h" /* for human-readable ship names */
 #include "../general/Events.h" /* Event for delays */
-#include "../general/Layer.h" /* for descritising */
+#include "../general/Layer.h" /* For descritising. */
 #include "../system/Poll.h" /* input */
 #include "../system/Draw.h" /* DrawSetCamera, DrawGetScreen */
 #include "../system/Timer.h" /* for expiring */
@@ -277,7 +277,7 @@ static struct Items {
 		struct Colour3f colour_table[MAX_LIGHTS];
 	} lights;
 	enum Plots { PLOT_NOTHING, PLOT_SPACE = 1 } plot; /* debug */
-} items; /* Not in a valid state until \see{ItemsReset}. */
+} items; /* Not in a valid state until \see{Items}. */
 
 
 
@@ -823,7 +823,7 @@ static void extrapolate(struct Item *const item) {
 	active->item = item;
 	item->active = active;
 	/* This is like a hashmap in space, but it is spread out, so it may cover
-	 multiple bins. The {proxy} into all bins which it covers. */
+	 multiple bins. The {active} into all bins which it covers. */
 	LayerSetItemRectangle(items.layer, &item->box);
 	LayerForEachItem(items.layer, ActivePoolIndex(&items.actives, active),
 		&put_cover); /* @fixme */
@@ -893,7 +893,7 @@ void ItemsUpdate(const int dt_ms) {
 		DrawGetScreen(&rect);
 		rectangle4f_expand(&rect, layer_space * 0.5f);
 		LayerSetScreenRectangle(items.layer, &rect); }
-	/* Dynamics; assigns all items on-screen a {proxy}, puts temp values in
+	/* Dynamics; assigns all items on-screen an {active}, puts temp values in
 	 {cover} for collisions, and extrapolates the positions if no force. */
 	LayerForEachScreen(items.layer, &extrapolate_bin);
 	/* Debug. */

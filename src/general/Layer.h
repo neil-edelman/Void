@@ -13,8 +13,7 @@ struct Layer *Layer(const size_t size_side, const float each_bin);
 unsigned LayerGetOrtho(const struct Layer *const this, struct Ortho3f *const o);
 int LayerGetBinMarker(const struct Layer *const this, const unsigned bin,
 	struct Vec2f *const vec);
-int LayerSetScreenRectangle(struct Layer *const this,
-	struct Rectangle4f *const rect);
+int LayerMask(struct Layer *const this, struct Rectangle4f *const rect);
 int LayerSetItemRectangle(struct Layer *const this,
 	struct Rectangle4f *const rect);
 void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o);

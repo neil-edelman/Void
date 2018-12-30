@@ -13,8 +13,8 @@
 			2016-01
 			2015-06 */
 
-#include <stdio.h> /* stderr */
-#include <limits.h> /* INT_MAX */
+#include <stdio.h>    /* stderr */
+#include <limits.h>   /* INT_MAX */
 #include <errno.h>
 #include "../Ortho.h" /* Rectangle4f, etc */
 #include "Layer.h"
@@ -35,7 +35,7 @@ enum LayerStep { LAYER_SCREEN, LAYER_SPRITE, LAYER_NO };
 struct Layer {
 	int side_size;
 	float half_space, one_each_bin;
-	struct Rectangle4i screen;
+	struct Rectangle4i bin_mask;
 	struct IntPool step[LAYER_NO];
 };
 
@@ -60,8 +60,9 @@ struct Layer *Layer(const size_t side_size, const float each_bin) {
 	this->side_size = (int)side_size;
 	this->half_space = (float)side_size * each_bin / 2.0f;
 	this->one_each_bin = 1.0f / each_bin;
-	rectangle4i_init(&this->screen);
+	rectangle4i_init(&this->bin_mask);
 	for(i = 0; i < LAYER_NO; i++) IntPool(this->step + i);
+	rectangle4i_init(&this->bin_mask);
 	return this;
 }
 
@@ -112,16 +113,16 @@ static int set_rect_layer(struct Layer *const this,
 		if(bin4.x_max >= this->side_size) bin4.x_max = this->side_size - 1;
 		if(bin4.y_min < 0) bin4.y_min = 0;
 		if(bin4.y_max >= this->side_size) bin4.y_max = this->side_size - 1;
-		/* Save the screen rectangle. */
-		rectangle4i_assign(&this->screen, &bin4);
+		/* Save the bin_mask rectangle. */
+		rectangle4i_assign(&this->bin_mask, &bin4);
 		/*printf("Far (%d:%d, %d:%d)\n", bin4.x_min, bin4.x_max, bin4.y_min, bin4.y_max);*/
 	} else {
-		const struct Rectangle4i *const screen = &this->screen;
-		/* Clip it to the screen. */
-		if(bin4.x_min < screen->x_min) bin4.x_min = screen->x_min;
-		if(bin4.x_max > screen->x_max) bin4.x_max = screen->x_max;
-		if(bin4.y_min < screen->x_min) bin4.y_min = screen->y_min;
-		if(bin4.y_max > screen->y_max) bin4.y_max = screen->y_max;
+		const struct Rectangle4i *const bin_mask = &this->bin_mask;
+		/* Clip it to the bin_mask. */
+		if(bin4.x_min < bin_mask->x_min) bin4.x_min = bin_mask->x_min;
+		if(bin4.x_max > bin_mask->x_max) bin4.x_max = bin_mask->x_max;
+		if(bin4.y_min < bin_mask->x_min) bin4.y_min = bin_mask->y_min;
+		if(bin4.y_max > bin_mask->y_max) bin4.y_max = bin_mask->y_max;
 	}
 	/* Generally goes faster when you follow the scan-lines; not sure whether
 	 this is so important with buffering. fixme: uhm, is this pop or dequeue? */
@@ -139,10 +140,26 @@ static int set_rect_layer(struct Layer *const this,
 	return 1;
 }
 
+/** Sets the layer mask, used to set the screen rectangle. Every operation is 
+ {and}'ed with the mask. */
+int LayerSetMask(struct Layer *const this, struct Rectangle4f *const rect) {
+	if(!this || !rect) return 0;
+	/* Map floating point rectangle {rect} to the bin rectangle {mask}. */
+	if((this->bin_mask.x_min = (rect->x_min + this->half_space)
+		* this->one_each_bin) < 0) this->bin_mask.x_min = 0;
+	if((this->bin_mask.x_max = (rect->x_max + this->half_space)
+		* this->one_each_bin) >= this->side_size) this->bin_mask.x_max
+		= this->side_size - 1;
+	if((this->bin_mask.y_min = (rect->y_min + this->half_space)
+		* this->one_each_bin) < 0) this->bin_mask.y_min = 0;
+	if((this->bin_mask.y_max = (rect->y_max + this->half_space)
+		* this->one_each_bin) >= this->side_size) this->bin_mask.y_max
+		= this->side_size - 1;
+}
+
 /** Set screen rectangle.
  @return Success. */
-int LayerSetScreenRectangle(struct Layer *const this,
-	struct Rectangle4f *const rect) {
+int LayerMask(struct Layer *const this, struct Rectangle4f *const rect) {
 	if(!this || !rect) return 0;
 	return set_rect_layer(this, rect, LAYER_SCREEN);
 }
@@ -186,10 +203,10 @@ void LayerForEachScreenPlot(struct Layer *const this,
 }
 
 /** For each bin crossing the space item; used for collision-detection. */
-void LayerForEachItem(struct Layer *const this, const size_t proxy_index,
+void LayerForEachItem(struct Layer *const this, const size_t active_index,
 	const LayerTriConsumer action) {
 	struct IntPool *const step = this->step + LAYER_SPRITE;
 	unsigned *i = 0, c = 0;
 	if(!this || !action) return;
-	while((i = IntPoolNext(step, i))) action(*i, proxy_index, c++);
+	while((i = IntPoolNext(step, i))) action(*i, active_index, c++);
 }

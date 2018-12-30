@@ -104,10 +104,10 @@ static void active_migrate(struct Active *const active,
 	assert(active == active->item->active);
 }
 
-/** Potentially many {Cover} for each {Active}, one in each bin they cross. It
- has {is_corner}, the authoritative. Collision-detection mechanisms. Because
- the many-to-one relationship, we store an index not a pointer, or else we
- would also have to store all the covers with the proxy in case of migrate. */
+/** {Cover} covers all bins that each {Active} touches. {is_corner} is the
+ authoritative cover for collision-detection mechanisms. Because the
+ many-to-one relationship, we store an index not a pointer, or else we would
+ also have to store all the covers with the proxy in case of migrate. */
 struct Cover { size_t active_index; int is_corner; };
 #define POOL_NAME Cover
 #define POOL_TYPE struct Cover

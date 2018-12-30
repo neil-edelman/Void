@@ -3,10 +3,9 @@
  \url{ https://opensource.org/licenses/GPL-3.0 }.
 
  Space {Item}s are a polymorphic static structure representing all normal
- physical game entites that are in the foreground, have collisions, and
- lighting. This is handled internally but a static variable, {items}, that is
- already initialised to zero; to re-initialise and clear up all the memory, do
- \see{ItemsReset}; then, all references to the old items are invalidated.
+ physical game entities that are in the foreground, have collisions, and
+ lighting. This is handled internally but a static variable, {items}; to
+ initialise, do \see{Items}, and to end, \see{Items_}.
 
  @title		Items
  @author	Neil
@@ -72,7 +71,7 @@ struct Item {
 	/* The following are temporary: */
 	struct Vec2f dx; /* temporary displacement */
 	struct Rectangle4f box; /* bounding box between one frame and the next */
-	struct Proxy *proxy; /* optional link proxy--item */
+	struct Active *active; /* optional link active--item */
 	struct Collision *collision; /* optional link collision--item */
 	struct Light *light; /* in case pointer to lights */
 };
@@ -87,31 +86,29 @@ static void item_to_string(const struct Item *this, char (*const a)[12]);
 static void item_migrate(struct Item *const this,
 	const struct Migrate *const migrate);
 
-/** {Proxy} and {Cover} are collision-detection mechanisms; {Proxy} defines a
- temporary pointer to an item that can be nullified if the item is destroyed,
- yet remains as {Cover}s can refer to it, up until all the covers are
- destroyed at each frame. It's important that {Proxy} lasts while {Cover} has a
- refernce to it's index, even if the item value it has is null. */
-struct Proxy { struct Item *item; };
-static void proxy_migrate(struct Proxy *const this,
+/** These are temporary items that are on-screen; it can be nullified if the
+ item is destroyed, yet remains for the length of the frame. */
+struct Active { struct Item *item; };
+static void active_migrate(struct Active *const this,
 	const struct Migrate *const migrate);
-#define POOL_NAME Proxy
-#define POOL_TYPE struct Proxy
-#define POOL_MIGRATE_EACH &proxy_migrate
+#define POOL_NAME Active
+#define POOL_TYPE struct Active
+#define POOL_MIGRATE_EACH &active_migrate
 #define POOL_STACK
 #include "../templates/Pool.h"
-static void proxy_migrate(struct Proxy *const proxy,
+static void active_migrate(struct Active *const active,
 	const struct Migrate *const migrate) {
-	assert(proxy && proxy->item && migrate);
-	ProxyPoolMigratePointer(&proxy->item->proxy, migrate);
-	assert(proxy == proxy->item->proxy);
+	assert(active && migrate);
+	if(!active->item) return;
+	ActivePoolMigratePointer(&active->item->active, migrate);
+	assert(active == active->item->active);
 }
 
-/** Many {Cover}s, one in each bin, can point at one {Proxy}. One {Cover} for
- each {Proxy} has {is_corner}, the authoritative {Cover}. Because the
- many-to-one relationship we store an index not a pointer, or else we would
- also have to store all the covers with the proxy in case of migrate. */
-struct Cover { size_t proxy_index; int is_corner; };
+/** Potentially many {Cover} for each {Active}, one in each bin they cross. It
+ has {is_corner}, the authoritative. Collision-detection mechanisms. Because
+ the many-to-one relationship, we store an index not a pointer, or else we
+ would also have to store all the covers with the proxy in case of migrate. */
+struct Cover { size_t active_index; int is_corner; };
 #define POOL_NAME Cover
 #define POOL_TYPE struct Cover
 #define POOL_STACK
@@ -231,9 +228,9 @@ static void item_migrate(struct Item *const item,
 	assert(item && migrate);
 	ItemLinkMigrate(item, migrate);
 	/* These are potentially temporarily linked pointers. */
-	if(item->proxy) {
-		ItemLinkMigratePointer(&item->proxy->item, migrate);
-		assert(item == item->proxy->item);
+	if(item->active) {
+		ItemLinkMigratePointer(&item->active->item, migrate);
+		assert(item == item->active->item);
 	}
 	if(item->collision) {
 		ItemLinkMigratePointer(&item->collision->item, migrate);
@@ -261,7 +258,7 @@ static struct Items {
 	/* If we want to do collision detection, we have to account for items that
 	 cross bins. Backing for temporary {proxies} (eg, pointer-to-{Item}) and
 	 actual {collisions}; these will be built-up and torn down every frame. */
-	struct ProxyPool proxies;
+	struct ActivePool actives;
 	struct CollisionPool collisions;
 	/* Contains calculations for the {bins}. */
 	struct Layer *layer;
@@ -617,7 +614,7 @@ static void items_reset(void) {
 	InfoPool_(&items.info);
 	Layer_(&items.layer);
 	CollisionPool_(&items.collisions);
-	ProxyPool_(&items.proxies);
+	ActivePool_(&items.actives);
 	GatePool_(&items.gates);
 	WmdPool_(&items.wmds);
 	DebrisPool_(&items.debris);
@@ -642,7 +639,7 @@ void ItemsRemoveIf(const ItemsPredicate predicate) {
 		bin = items.bins + i;
 		ItemListTakeIf(0, &bin->items, predicate);
 		if(CoverPoolPeek(&bin->covers)) {
-			fprintf(stderr, "Cover pool is not empty on end-of-frame.\n");
+			fprintf(stderr, "Covers pool is not empty on end-of-frame.\n");
 			CoverPoolClear(&bin->covers);
 		}
 	}
@@ -677,7 +674,7 @@ static void item_filler(struct Item *const this,
 	this->bin       = LayerGetOrtho(items.layer, &this->x);
 	this->dx.x      = this->dx.y = 0.0f;
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
-	this->proxy     = 0;
+	this->active    = 0;
 	this->collision = 0;
 	this->light     = 0;
 	/* Put this in space. */
@@ -787,22 +784,23 @@ struct Gate *Gate(const struct AutoGate *const class) {
 /*************** Functions. *****************/
 
 /** Called in \see{extrapolate}.
- @implements LayerNoItemAction */
-static void put_cover(const unsigned bin, const size_t proxy_index,
+ @implements LayerNoItemAction
+ @fixme not unsigned */
+static void put_cover(const unsigned bin, const size_t active_index,
 	const unsigned counter) {
 	struct Cover *cover;
 	assert(bin < LAYER_SIZE);
 	/* Not that important I guess. */
 	if(!(cover = CoverPoolNew(&items.bins[bin].covers)))
 		{ perror("put_cover"); return; }
-	cover->proxy_index = proxy_index;
+	cover->active_index = active_index;
 	cover->is_corner = !counter;
 }
 /** Moves the sprite. Calculates temporary values, {dx}, and {box}; sticks it
  into the appropriate {covers}. Called in \see{extrapolate_bin}.
  @implements <Item>Action */
 static void extrapolate(struct Item *const item) {
-	struct Proxy *proxy;
+	struct Active *active;
 	assert(item);
 	/* If it returns false, it's deleted. */
 	if(!sprite_update(item)) return;
@@ -820,15 +818,15 @@ static void extrapolate(struct Item *const item) {
 	else item->box.y_max += item->dx.y;
 	/*  It is important that {proxy} now points to a valid {item} or
 	 {proxy->item == null} on delete. This will be deleted after the frame. */
-	assert(!item->proxy);
-	if(!(proxy = ProxyPoolNew(&items.proxies))) { perror("proxy"); return; }
-	proxy->item = item;
-	item->proxy = proxy;
+	assert(!item->active);
+	if(!(active = ActivePoolNew(&items.actives))) { perror("proxy"); return; }
+	active->item = item;
+	item->active = active;
 	/* This is like a hashmap in space, but it is spread out, so it may cover
 	 multiple bins. The {proxy} into all bins which it covers. */
 	LayerSetItemRectangle(items.layer, &item->box);
-	LayerForEachItem(items.layer, ProxyPoolIndex(&items.proxies, proxy),
-		&put_cover);
+	LayerForEachItem(items.layer, ActivePoolIndex(&items.actives, active),
+		&put_cover); /* @fixme */
 }
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */
@@ -863,7 +861,7 @@ static void timestep(struct Item *const item) {
 		item->collision = 0;
 		sprite_on_collision(item);
 	}
-	item->proxy = 0; /*??*/
+	item->active = 0; /*??*/
 }
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */
@@ -909,9 +907,9 @@ void ItemsUpdate(const int dt_ms) {
 	LayerForEachScreen(items.layer, &collide_bin);
 	/* Clear out the temporary {proxies} now that cover is consumed. */
 	{
-		struct Proxy *proxy;
-		while((proxy = ProxyPoolPop(&items.proxies)))
-			if(proxy->item) proxy->item->proxy = 0;
+		struct Active *active;
+		while((active = ActivePoolPop(&items.actives)))
+			if(active->item) active->item->active = 0;
 	} /* Still crashing! */
 	/*ProxyPoolClear(&items.proxies);*/
 	/* Time-step. */

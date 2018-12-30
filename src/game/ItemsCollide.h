@@ -161,17 +161,22 @@ static void item_bounce_a(struct Item *const a, struct Item *const b,
 
 /* Collision handlers contained in {collision_matrix}. */
 
-/** @fixme Just have {Item} instead??? much simpler. */
+/** This is only within the frame; deleted covers are possible, so it can
+ return null. */
 static struct Item *cover_to_item(struct Cover *const cover) {
-	struct Proxy *const proxy = ProxyPoolGet(&items.proxies,cover->proxy_index);
-	assert(cover && proxy && proxy->item);
-	return proxy->item;
+	struct Active *const active
+		= ActivePoolGet(&items.actives, cover->active_index);
+	assert(cover && active);
+	return active->item;
 }
-/** This means nothing referring to it is valid anymore! */
+/** This means nothing referring to it is valid anymore; breaks the link
+ between the {item} and {active}; we can't delete it yet because multiple
+ covers might refer to it still. */
 static void delete_cover(struct Cover *const cover) {
-	struct Proxy *const proxy = ProxyPoolGet(&items.proxies,cover->proxy_index);
-	assert(cover && proxy && proxy->item);
-	proxy->item = 0;
+	struct Active *const active = ActivePoolGet(&items.actives, cover->active_index);
+	assert(cover && active && active->item && active == active->item->active);
+	active->item->active = 0;
+	active->item = 0;
 }
 
 /** @implements CoverCollision */
@@ -410,7 +415,7 @@ static void collide_bin(unsigned bin) {
 	struct Cover *cover_a, *cover_b;
 	const struct Matrix *matrix;
 	struct Item *a, *b;
-	struct Proxy *ap, *bp;
+	struct Active *ap, *bp;
 	float t;
 	assert(bin < LAYER_SIZE);
 	/*printf("bin %u: %lu covers\n", bin, ref->size);*/
@@ -423,10 +428,10 @@ static void collide_bin(unsigned bin) {
 			/* Another {bin} takes care of it? */
 			if(!cover_a->is_corner && !cover_b->is_corner) continue;
 			/* Respond appropriately if it was deleted on the fly. */
-			ap = ProxyPoolGet(&items.proxies, cover_a->proxy_index);
+			ap = ActivePoolGet(&items.actives, cover_a->active_index);
 			assert(ap);
 			if(!(a = ap->item)) break;
-			bp = ProxyPoolGet(&items.proxies, cover_b->proxy_index);
+			bp = ActivePoolGet(&items.actives, cover_b->active_index);
 			assert(bp); /* @fixme This assertion fails . . . size 22, proxy_index 28. Doesn't make any sense. */
 			if(!(b = bp->item)) continue;
 			/* Extract the info on the type of collision. */

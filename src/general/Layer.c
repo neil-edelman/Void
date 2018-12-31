@@ -21,8 +21,13 @@
 
 static const float epsilon = 0.0005f;
 
+/** Debug. */
+static void int_to_string(const int *i, char (*const a)[12]) {
+	sprintf(*a, "%u", *i);
+}
 #define POOL_NAME Int
 #define POOL_TYPE unsigned
+#define POOL_TO_STRING &int_to_string
 #define POOL_STACK
 #include "../templates/Pool.h"
 
@@ -149,8 +154,7 @@ int LayerMask(struct Layer *const this, struct Rectangle4f *const rect) {
 
 /** Set sprite rectangle.
  @return Success. */
-int LayerSetItemRectangle(struct Layer *const this,
-	struct Rectangle4f *const rect) {
+int LayerRectangle(struct Layer *const this, struct Rectangle4f *const rect) {
 	if(!this || !rect) return 0;
 	return set_rect_layer(this, rect, LAYER_SPRITE);
 }
@@ -164,7 +168,7 @@ void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o) {
 }
 
 /** For each bin on screen; used for drawing. */
-void LayerForEachScreen(struct Layer *const this, const LayerAction action) {
+void LayerForEachMask(struct Layer *const this, const LayerAction action) {
 	struct IntPool *const step = this->step + LAYER_SCREEN;
 	unsigned *i = 0;
 	static int is_rep = 1;
@@ -177,7 +181,7 @@ void LayerForEachScreen(struct Layer *const this, const LayerAction action) {
 }
 
 /** For each bin on screen; used for plotting. */
-void LayerForEachScreenPlot(struct Layer *const this,
+void LayerForEachMaskPlot(struct Layer *const this,
 	const LayerAcceptPlot accept, struct PlotData *const plot) {
 	struct IntPool *const step = this->step + LAYER_SCREEN;
 	unsigned *i = 0;
@@ -186,10 +190,14 @@ void LayerForEachScreenPlot(struct Layer *const this,
 }
 
 /** For each bin crossing the space item; used for collision-detection. */
-void LayerForEachItem(struct Layer *const this, const size_t active_index,
+void LayerForEachRectangle(struct Layer *const this, const size_t active_index,
 	const LayerTriConsumer action) {
 	struct IntPool *const step = this->step + LAYER_SPRITE;
 	unsigned *i = 0, c = 0;
 	if(!this || !action) return;
 	while((i = IntPoolNext(step, i))) action(*i, active_index, c++);
+}
+
+const char *LayerToString(const struct Layer *const layer) {
+	return IntPoolToString(layer->step + LAYER_SCREEN);
 }

@@ -97,7 +97,7 @@ static void space_plot(void) {
 		/* draw bins as squares behind */
 		fprintf(gnu, "set style fill transparent solid 0.3 noborder;\n");
 		plot.fp = gnu, plot.colour = "#ADD8E6", plot.object = 1;
-		LayerForEachScreenPlot(items.layer, &gnu_shade_bins, &plot);
+		LayerForEachMaskPlot(items.layer, &gnu_shade_bins, &plot);
 		/*col.fp = gnu, col.colour = "#D3D3D3";
 		BinPoolBiForEach(update_bins, &gnu_shade_bins, &col);*/
 		/* draw arrows from each of the items to their bins */
@@ -105,7 +105,7 @@ static void space_plot(void) {
 		for(i = 0; i < LAYER_SIZE; i++)
 			ItemListBiForEach(&items.bins[i].items,
 			&print_item_velocity, &plot);
-		LayerForEachScreenPlot(items.layer, &item_to_bin_bin, &plot);
+		LayerForEachMaskPlot(items.layer, &item_to_bin_bin, &plot);
 		/* draw the items */
 		fprintf(gnu, "plot \"%s\" using 5:6:7 with circles \\\n"
 			"linecolor rgb(\"#00FF00\") fillstyle transparent "

@@ -175,5 +175,5 @@ void FarsDraw(void) {
 	rectangle4f_expand(&rect, layer_space * 0.5f); /* fixme: maybe? */
 	rectangle4f_scale(&rect, LAYER_FORESHORTENING_F);
 	LayerMask(fars.layer, &rect);
-	LayerForEachScreen(fars.layer, &draw_bin);
+	LayerForEachMask(fars.layer, &draw_bin);
 }

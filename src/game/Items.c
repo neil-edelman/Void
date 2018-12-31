@@ -109,8 +109,12 @@ static void active_migrate(struct Active *const active,
  many-to-one relationship, we store an index not a pointer, or else we would
  also have to store all the covers with the proxy in case of migrate. */
 struct Cover { size_t active_index; int is_corner; };
+static void cover_to_string(const struct Cover *cover, char (*const a)[12]) {
+	sprintf(*a, "%lu(%d)", cover->active_index, cover->is_corner);
+}
 #define POOL_NAME Cover
 #define POOL_TYPE struct Cover
+#define POOL_TO_STRING &cover_to_string
 #define POOL_STACK
 #include "../templates/Pool.h"
 
@@ -293,6 +297,7 @@ static void sprite_moved(struct Item *const this) {
 	ItemListRemove(this);
 	this->bin = bin;
 	ItemListPush(&items.bins[bin].items, this);
+	assert(!this->active);
 }
 
 /** Gets the player's ship. */
@@ -824,8 +829,8 @@ static void extrapolate(struct Item *const item) {
 	item->active = active;
 	/* This is like a hashmap in space, but it is spread out, so it may cover
 	 multiple bins. The {active} into all bins which it covers. */
-	LayerSetItemRectangle(items.layer, &item->box);
-	LayerForEachItem(items.layer, ActivePoolIndex(&items.actives, active),
+	LayerRectangle(items.layer, &item->box);
+	LayerForEachRectangle(items.layer, ActivePoolIndex(&items.actives, active),
 		&put_cover); /* @fixme */
 }
 /** Called in \see{ItemsUpdate}.
@@ -840,7 +845,7 @@ static void extrapolate_bin(const unsigned idx) {
  @implements <Item>Action */
 static void timestep(struct Item *const item) {
 	const float t = items.dt_ms;
-	assert(item);
+	assert(item && !item->active);
 	/* Velocity. */
 	if(item->collision) {
 		const float t0 = item->collision->t, t1 = t - t0;
@@ -861,7 +866,6 @@ static void timestep(struct Item *const item) {
 		item->collision = 0;
 		sprite_on_collision(item);
 	}
-	item->active = 0; /*??*/
 }
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */
@@ -895,7 +899,7 @@ void ItemsUpdate(const int dt_ms) {
 		LayerMask(items.layer, &rect); }
 	/* Dynamics; assigns all items on-screen an {active}, puts temp values in
 	 {cover} for collisions, and extrapolates the positions if no force. */
-	LayerForEachScreen(items.layer, &extrapolate_bin);
+	LayerForEachMask(items.layer, &extrapolate_bin);
 	/* Debug. */
 	if(items.plot) {
 		if(items.plot & PLOT_SPACE) space_plot();
@@ -904,18 +908,31 @@ void ItemsUpdate(const int dt_ms) {
 	/* Collision has to be called after {extrapolate}; it consumes {cover}.
 	 (@fixme: really? 3 passes?)
 	 (@fixme: we already have a {proxy}, no need to complicate things!) */
-	LayerForEachScreen(items.layer, &collide_bin);
-	/* Clear out the temporary {proxies} now that cover is consumed. */
+	LayerForEachMask(items.layer, &collide_bin);
+	{ /* @fixme It's not consuming {cover}, even though it clearly does. */
+		size_t i;
+		for(i = 0; i < LAYER_SIZE; i++) {
+			struct Bin *bin = &items.bins[i];
+			if(CoverPoolSize(&bin->covers) != 0) {
+				printf("%lu: [%s]\n", i, CoverPoolToString(&bin->covers));
+				printf("bin mask: %s\n", LayerToString(items.layer));
+				assert(0);
+			}
+		}
+	}
+	/* Clear out the temporary {actives} now that cover is consumed. */
 	{
 		struct Active *active;
-		while((active = ActivePoolPop(&items.actives)))
+		while((active = ActivePoolPop(&items.actives))) {
 			if(active->item) active->item->active = 0;
+		}
 	} /* Still crashing! */
 	/*ProxyPoolClear(&items.proxies);*/
 	/* Time-step. */
-	LayerForEachScreen(items.layer, &timestep_bin);
+	LayerForEachMask(items.layer, &timestep_bin);
 	/* Collisions are consumed in {timestep_bin}, but not erased; erase them. */
 	CollisionPoolClear(&items.collisions);
+	assert(ActivePoolSize(&items.actives) == 0);
 }
 
 /** Called from \see{draw_bin}.
@@ -932,7 +949,7 @@ static void draw_bin(const unsigned idx) {
 /** Must call \see{ItemUpdate}, because it sets {sprites.layer}. Use when the
  Lambert GPU shader is loaded. */
 void ItemsDraw(void) {
-	LayerForEachScreen(items.layer, &draw_bin);
+	LayerForEachMask(items.layer, &draw_bin);
 }
 
 /* Debug info. */

@@ -14,11 +14,11 @@ unsigned LayerGetOrtho(const struct Layer *const this, struct Ortho3f *const o);
 int LayerGetBinMarker(const struct Layer *const this, const unsigned bin,
 	struct Vec2f *const vec);
 int LayerMask(struct Layer *const this, struct Rectangle4f *const rect);
-int LayerSetItemRectangle(struct Layer *const this,
-	struct Rectangle4f *const rect);
+int LayerRectangle(struct Layer *const this, struct Rectangle4f *const rect);
 void LayerSetRandom(struct Layer *const this, struct Ortho3f *const o);
-void LayerForEachScreen(struct Layer *const this, const LayerAction action);
-void LayerForEachScreenPlot(struct Layer *const this,
+void LayerForEachMask(struct Layer *const this, const LayerAction action);
+void LayerForEachMaskPlot(struct Layer *const this,
 	const LayerAcceptPlot accept, struct PlotData *const plot);
-void LayerForEachItem(struct Layer *const this, const size_t proxy_index,
+void LayerForEachRectangle(struct Layer *const this, const size_t proxy_index,
 	const LayerTriConsumer action);
+const char *LayerToString(const struct Layer *const layer);

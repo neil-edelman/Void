@@ -21,4 +21,6 @@ void LayerForEachMaskPlot(struct Layer *const this,
 	const LayerAcceptPlot accept, struct PlotData *const plot);
 void LayerForEachRectangle(struct Layer *const this, const size_t proxy_index,
 	const LayerTriConsumer action);
-const char *LayerToString(const struct Layer *const layer);
+const char *LayerMaskToString(const struct Layer *const layer);
+const char *LayerRectangleToString(const struct Layer *const layer);
+int LayerIsMask(const struct Layer *const layer, const unsigned bin);

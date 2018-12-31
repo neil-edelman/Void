@@ -109,9 +109,7 @@ static void active_migrate(struct Active *const active,
  many-to-one relationship, we store an index not a pointer, or else we would
  also have to store all the covers with the proxy in case of migrate. */
 struct Cover { size_t active_index; int is_corner; };
-static void cover_to_string(const struct Cover *cover, char (*const a)[12]) {
-	sprintf(*a, "%lu(%d)", cover->active_index, cover->is_corner);
-}
+static void cover_to_string(const struct Cover *cover, char (*const a)[12]);
 #define POOL_NAME Cover
 #define POOL_TYPE struct Cover
 #define POOL_TO_STRING &cover_to_string
@@ -285,6 +283,11 @@ static struct Items {
 
 
 
+static void cover_to_string(const struct Cover *cover, char (*const a)[12]) {
+	sprintf(*a, "A%c%lu", cover->is_corner ? 'Y' : 'N',
+		cover->active_index % 100000000ul);
+}
+
 /* Include Light functions. */
 #include "ItemsLight.h"
 
@@ -293,7 +296,10 @@ static struct Items {
  doing this sequentially. */
 static void sprite_moved(struct Item *const this) {
 	const unsigned bin = LayerGetOrtho(items.layer, &this->x);
+	char a[12];
 	if(bin == this->bin) return;
+	item_to_string(this, &a);
+	printf("Item %s moving bin %u -> %u.\n", a, this->bin, bin);
 	ItemListRemove(this);
 	this->bin = bin;
 	ItemListPush(&items.bins[bin].items, this);
@@ -340,7 +346,7 @@ static void ship_to_string(const struct Ship *this, char (*const a)[12]) {
 /** @implements <Debris>ToString */
 static void debris_to_string(const struct Debris *this, char (*const a)[12]) {
 	(void)this;
-	sprintf(*a, "Debris",
+	sprintf(*a, "Deb%u",
 		(unsigned)DebrisPoolIndex(&items.debris, this) % 100000);
 }
 /** @implements <Wmd>ToString */
@@ -806,6 +812,7 @@ static void put_cover(const unsigned bin, const size_t active_index,
  @implements <Item>Action */
 static void extrapolate(struct Item *const item) {
 	struct Active *active;
+	char a[12];
 	assert(item);
 	/* If it returns false, it's deleted. */
 	if(!sprite_update(item)) return;
@@ -821,12 +828,14 @@ static void extrapolate(struct Item *const item) {
 	item->box.y_max = item->x.y + item->bounding;
 	if(item->dx.y < 0) item->box.y_min += item->dx.y;
 	else item->box.y_max += item->dx.y;
-	/*  It is important that {proxy} now points to a valid {item} or
-	 {proxy->item == null} on delete. This will be deleted after the frame. */
+	/*  It is important that {active} now points to a valid {item} or {null} on
+	 delete. This will be deleted after the frame. */
 	assert(!item->active);
-	if(!(active = ActivePoolNew(&items.actives))) { perror("proxy"); return; }
+	if(!(active = ActivePoolNew(&items.actives))) { perror("actives"); return; }
 	active->item = item;
 	item->active = active;
+	item_to_string(item, &a);
+	printf("Item %s is active in bin %u.\n", a, item->bin);
 	/* This is like a hashmap in space, but it is spread out, so it may cover
 	 multiple bins. The {active} into all bins which it covers. */
 	LayerRectangle(items.layer, &item->box);
@@ -836,6 +845,7 @@ static void extrapolate(struct Item *const item) {
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */
 static void extrapolate_bin(const unsigned idx) {
+	printf("extrapolate: %u\n", idx);
 	ItemListForEach(&items.bins[idx].items, &extrapolate);
 }
 
@@ -897,9 +907,56 @@ void ItemsUpdate(const int dt_ms) {
 		DrawGetScreen(&rect);
 		rectangle4f_expand(&rect, layer_space * 0.5f);
 		LayerMask(items.layer, &rect); }
+	{
+		unsigned bin_idx;
+		for(bin_idx = 0; bin_idx < LAYER_SIZE; bin_idx++) {
+			struct Bin *bin = &items.bins[bin_idx];
+			struct Item *item = 0;
+			assert(!CoverPoolSize(&bin->covers));
+			for(item = ItemListFirst(&bin->items); item; item = ItemListNext(item)) {
+				assert(!item->active && !item->collision);
+			}
+		}
+		assert(!ActivePoolSize(&items.actives)
+			&& !CollisionPoolSize(&items.collisions));
+	}
 	/* Dynamics; assigns all items on-screen an {active}, puts temp values in
 	 {cover} for collisions, and extrapolates the positions if no force. */
 	LayerForEachMask(items.layer, &extrapolate_bin);
+	{
+		/* @fixme It's not consuming {cover}, even though it clearly does.
+		 It appears to be always when the player switches bins. It is a bin
+		 number not in the mask mistakenly holding an item that is. */
+		unsigned bin_idx;
+		for(bin_idx = 0; bin_idx < LAYER_SIZE; bin_idx++) {
+			struct Bin *bin = &items.bins[bin_idx];
+			struct Cover *cover = 0;
+			/* Tautology. */
+			if(!CoverPoolSize(&bin->covers)
+				|| LayerIsMask(items.layer, bin_idx)) continue;
+			printf("escaped bin %u: items %s, covers %s; layer mask %s.\n", bin_idx, ItemListToString(&bin->items),
+				CoverPoolToString(&bin->covers),
+				LayerMaskToString(items.layer));
+			while((cover = CoverPoolNext(&bin->covers, cover))) {
+				char a[12];
+				struct Active *act;
+				cover_to_string(cover, &a);
+				printf("enum: %s.\n", a);
+				if((act = ActivePoolGet(&items.actives, cover->active_index))) {
+					struct Item *const item = act->item;
+					if(!item) {
+						printf("(item is deleted.)\n");
+					} else {
+						item_to_string(item, &a);
+						printf("(item is %s at bin %d which has items %s.)\n", a, item->bin, ItemListToString(&items.bins[item->bin].items));
+					}
+				} else {
+					printf("(item is a range error?)\n");
+				}
+			}
+			assert(0);
+		}
+	}
 	/* Debug. */
 	if(items.plot) {
 		if(items.plot & PLOT_SPACE) space_plot();
@@ -909,17 +966,6 @@ void ItemsUpdate(const int dt_ms) {
 	 (@fixme: really? 3 passes?)
 	 (@fixme: we already have a {proxy}, no need to complicate things!) */
 	LayerForEachMask(items.layer, &collide_bin);
-	{ /* @fixme It's not consuming {cover}, even though it clearly does. */
-		size_t i;
-		for(i = 0; i < LAYER_SIZE; i++) {
-			struct Bin *bin = &items.bins[i];
-			if(CoverPoolSize(&bin->covers) != 0) {
-				printf("%lu: [%s]\n", i, CoverPoolToString(&bin->covers));
-				printf("bin mask: %s\n", LayerToString(items.layer));
-				assert(0);
-			}
-		}
-	}
 	/* Clear out the temporary {actives} now that cover is consumed. */
 	{
 		struct Active *active;
@@ -933,6 +979,14 @@ void ItemsUpdate(const int dt_ms) {
 	/* Collisions are consumed in {timestep_bin}, but not erased; erase them. */
 	CollisionPoolClear(&items.collisions);
 	assert(ActivePoolSize(&items.actives) == 0);
+	printf("__ItemsUpdate__\n");
+	{
+		unsigned bin_idx;
+		for(bin_idx = 0; bin_idx < LAYER_SIZE; bin_idx++) {
+			struct Bin *bin = &items.bins[bin_idx];
+			assert(!CoverPoolSize(&bin->covers));
+		}
+	}
 }
 
 /** Called from \see{draw_bin}.

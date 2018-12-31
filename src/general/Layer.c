@@ -195,9 +195,23 @@ void LayerForEachRectangle(struct Layer *const this, const size_t active_index,
 	struct IntPool *const step = this->step + LAYER_SPRITE;
 	unsigned *i = 0, c = 0;
 	if(!this || !action) return;
+	printf("Layer rect: %s.\n", LayerRectangleToString(this));
 	while((i = IntPoolNext(step, i))) action(*i, active_index, c++);
 }
 
-const char *LayerToString(const struct Layer *const layer) {
+/* debug */
+
+const char *LayerMaskToString(const struct Layer *const layer) {
 	return IntPoolToString(layer->step + LAYER_SCREEN);
+}
+
+const char *LayerRectangleToString(const struct Layer *const layer) {
+	return IntPoolToString(layer->step + LAYER_SPRITE);
+}
+
+int LayerIsMask(const struct Layer *const layer, const unsigned bin) {
+	const struct IntPool *step = layer->step + LAYER_SCREEN;
+	unsigned *b = 0;
+	while((b = IntPoolNext(step, b))) if(*b == bin) return 1;
+	return 0;
 }

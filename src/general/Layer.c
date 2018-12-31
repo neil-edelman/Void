@@ -140,23 +140,6 @@ static int set_rect_layer(struct Layer *const this,
 	return 1;
 }
 
-/** Sets the layer mask, used to set the screen rectangle. Every operation is 
- {and}'ed with the mask. */
-int LayerSetMask(struct Layer *const this, struct Rectangle4f *const rect) {
-	if(!this || !rect) return 0;
-	/* Map floating point rectangle {rect} to the bin rectangle {mask}. */
-	if((this->bin_mask.x_min = (rect->x_min + this->half_space)
-		* this->one_each_bin) < 0) this->bin_mask.x_min = 0;
-	if((this->bin_mask.x_max = (rect->x_max + this->half_space)
-		* this->one_each_bin) >= this->side_size) this->bin_mask.x_max
-		= this->side_size - 1;
-	if((this->bin_mask.y_min = (rect->y_min + this->half_space)
-		* this->one_each_bin) < 0) this->bin_mask.y_min = 0;
-	if((this->bin_mask.y_max = (rect->y_max + this->half_space)
-		* this->one_each_bin) >= this->side_size) this->bin_mask.y_max
-		= this->side_size - 1;
-}
-
 /** Set screen rectangle.
  @return Success. */
 int LayerMask(struct Layer *const this, struct Rectangle4f *const rect) {

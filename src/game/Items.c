@@ -892,7 +892,7 @@ void ItemsUpdate(const int dt_ms) {
 	{ 	struct Rectangle4f rect;
 		DrawGetScreen(&rect);
 		rectangle4f_expand(&rect, layer_space * 0.5f);
-		LayerSetScreenRectangle(items.layer, &rect); }
+		LayerMask(items.layer, &rect); }
 	/* Dynamics; assigns all items on-screen an {active}, puts temp values in
 	 {cover} for collisions, and extrapolates the positions if no force. */
 	LayerForEachScreen(items.layer, &extrapolate_bin);

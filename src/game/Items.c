@@ -634,6 +634,7 @@ static void items_reset(void) {
 
 void Items_(void) {
 	items_reset();
+	Layer_(&items.layer);
 }
 
 int Items(void) {
@@ -892,6 +893,7 @@ static void timestep_bin(const unsigned idx) {
 /** Update each frame.
  @param target: What the camera focuses on; could be null. */
 void ItemsUpdate(const int dt_ms) {
+	struct Rectangle4f rect; /*@fixme*/
 	/* Update with the passed parameter. */
 	items.dt_ms = dt_ms;
 	/* Clear info on every frame. */
@@ -903,11 +905,12 @@ void ItemsUpdate(const int dt_ms) {
 		if(player) DrawSetCamera((struct Vec2f *)&player->base.data.x);
 	}
 	/* Background drawable sprites are a function of screen position. */
-	{ 	struct Rectangle4f rect;
+	{	
+		/*struct Rectangle4f rect;*/
 		DrawGetScreen(&rect);
 		rectangle4f_expand(&rect, layer_space * 0.5f);
-		LayerMask(items.layer, &rect); }
-	{
+		LayerMask(items.layer, &rect);
+	} {
 		unsigned bin_idx;
 		for(bin_idx = 0; bin_idx < LAYER_SIZE; bin_idx++) {
 			struct Bin *bin = &items.bins[bin_idx];

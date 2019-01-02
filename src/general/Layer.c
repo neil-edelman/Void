@@ -156,6 +156,7 @@ int LayerMask(struct Layer *const this, struct Rectangle4f *const rect) {
  @return Success. */
 int LayerRectangle(struct Layer *const this, struct Rectangle4f *const rect) {
 	if(!this || !rect) return 0;
+	printf("Layer::rectangle %f %f %f %f.\n", rect->x_min, rect->x_max, rect->y_min, rect->y_max);
 	return set_rect_layer(this, rect, LAYER_SPRITE);
 }
 

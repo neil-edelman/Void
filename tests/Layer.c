@@ -1,12 +1,12 @@
-#include <stdlib.h> /* malloc free */
+#include <stdlib.h> /* EXIT_* */
 #include <stdio.h>  /* fprintf */
 
 /** 2017 Neil Edelman, distributed under the terms of the GNU General
  Public License 3, see copying.txt, or
  \url{ https://opensource.org/licenses/GPL-3.0 }.
  
- Used to map a floating point zero-centred position into an array of discrete
- size.
+ Used to map a floating point zero-centred position in space into an array of
+ discrete size, bins.
  
  @title		Layer
  @author	Neil
@@ -30,20 +30,6 @@ struct PlotData;
 typedef void (*LayerAction)(const unsigned);
 typedef void (*LayerAcceptPlot)(const unsigned, struct PlotData *const);
 typedef void (*LayerTriConsumer)(const unsigned, const size_t, const unsigned);
-
-static const float epsilon = 0.0005f;
-
-/** Debug. */
-static void int_to_string(const unsigned *const i, char (*const a)[12]) {
-	sprintf(*a, "%u", *i);
-}
-#define POOL_NAME Int
-#define POOL_TYPE unsigned
-#define POOL_TO_STRING &int_to_string
-#define POOL_STACK
-#include "../src/templates/Pool.h"
-
-enum LayerStep { LAYER_SCREEN, LAYER_SPRITE, LAYER_NO };
 
 struct Layer {
 	const int full_side_size;
@@ -128,47 +114,6 @@ struct Vec2f LayerBinToVec(const struct Layer *const layer,
 	assert(layer && (int)bin < layer->full_side_size * layer->full_side_size);
 	return vec;
 }
-
-#if 0
-
-/** Private code for \see{LayerSet*Rectangle}.
- @param rect: The rectangle that will be tranformed.
- @param layer: A IntStack layer, eg. {this->pool[BIN_LAYER_SCREEN]}.
- @param min: Optional.
- @return Success. */
-static int set_rect_layer(struct Layer *const this,
-	struct Rectangle4f *const rect, const enum LayerStep layer_step) {
-	struct Rectangle4i bin4;
-	struct Vec2i bin2i;
-	unsigned *bin;
-	struct IntPool *step = this->step + layer_step;
-	assert(this && rect && layer_step < LAYER_NO);
-	IntPoolClear(step);
-	/* Map floating point rectangle {rect} to index rectangle {bin4}. */
-	bin4.x_min = (rect->x_min + this->half_space) * this->one_each_bin;
-	bin4.x_max = (rect->x_max + this->half_space) * this->one_each_bin;
-	bin4.y_min = (rect->y_min + this->half_space) * this->one_each_bin;
-	bin4.y_max = (rect->y_max + this->half_space) * this->one_each_bin;
-	if(layer_step == LAYER_SCREEN) {
-		if(bin4.x_min < 0) bin4.x_min = 0;
-		if(bin4.x_max >= this->side_size) bin4.x_max = this->side_size - 1;
-		if(bin4.y_min < 0) bin4.y_min = 0;
-		if(bin4.y_max >= this->side_size) bin4.y_max = this->side_size - 1;
-		/* Save the bin_mask rectangle. */
-		rectangle4i_assign(&this->bin_mask, &bin4);
-		/*printf("Far (%d:%d, %d:%d)\n", bin4.x_min, bin4.x_max, bin4.y_min, bin4.y_max);*/
-	} else {
-		const struct Rectangle4i *const bin_mask = &this->bin_mask;
-		/* Clip it to the bin_mask. */
-		if(bin4.x_min < bin_mask->x_min) bin4.x_min = bin_mask->x_min;
-		if(bin4.x_max > bin_mask->x_max) bin4.x_max = bin_mask->x_max;
-		if(bin4.y_min < bin_mask->x_min) bin4.y_min = bin_mask->y_min;
-		if(bin4.y_max > bin_mask->y_max) bin4.y_max = bin_mask->y_max;
-	}
-	return 1;
-}
-
-#endif
 
 /** Set screen rectangle.
  @return Success. */

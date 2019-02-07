@@ -220,11 +220,3 @@ void LayerForEachAreaPlot(const struct Layer *const layer,
 	assert(layer && accept && plot);
 	for_each_accept(layer, &layer->area, accept, plot);
 }
-
-/** Debug. */
-const char *LayerMaskToString(const struct Layer *const layer) {
-	static char a[80];
-	snprintf(a, sizeof a, "[%d-%d,%d-%d]", layer->mask.x_min,
-		layer->mask.x_max, layer->mask.y_min, layer->mask.y_max);
-	return a;
-}

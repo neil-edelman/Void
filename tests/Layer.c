@@ -38,31 +38,37 @@ struct Layer {
 	struct Rectangle4i mask, area;
 };
 
-static void vec_clip(struct Vec2i *const i,
-	const struct Rectangle4i *const area) {
-	assert(i && area
-		&& area->x_min <= area->x_max && area->y_min <= area->y_max);
-	if(i->x      < area->x_min) i->x = area->x_min;
-	else if(i->x > area->x_max) i->x = area->x_max;
-	if(i->y      < area->y_min) i->y = area->y_min;
-	else if(i->y > area->y_max) i->y = area->y_max;
+/** Clips integer vector {i} to {clip}, inclusive.
+ @param i: A non-null vector.
+ @param clip: A valid rectangle. */
+static void clip_ivec(struct Vec2i *const i,
+	const struct Rectangle4i *const clip) {
+	assert(i && clip
+		&& clip->x_min <= clip->x_max && clip->y_min <= clip->y_max);
+	if(i->x      < clip->x_min) i->x = clip->x_min;
+	else if(i->x > clip->x_max) i->x = clip->x_max;
+	if(i->y      < clip->y_min) i->y = clip->y_min;
+	else if(i->y > clip->y_max) i->y = clip->y_max;
 }
 
-static void rect_clip(struct Rectangle4i *const r,
-	const struct Rectangle4i *const area) {
-	assert(r && area
+/** Clips integer rectangle {r} to {clip}, inclusive.
+ @param r, clip: Valid rectangles touching each other. */
+static void clip_touching_irect(struct Rectangle4i *const r,
+	const struct Rectangle4i *const clip) {
+	assert(r && clip
 		&& r->x_min    <= r->x_max    && r->y_min    <= r->y_max
-		&& area->x_min <= area->x_max && area->y_min <= area->y_max
-		/* Only clips the rectangle if it is touching. */
-		&& r->x_min <= area->x_max && r->x_max >= area->x_min
-		&& r->y_min <= area->y_max && r->y_max >= area->y_min);
-	if(r->x_min < area->x_min) r->x_min = area->x_min;
-	if(r->x_max > area->x_max) r->x_max = area->x_max;
-	if(r->y_min < area->y_min) r->y_min = area->y_min;
-	if(r->y_max > area->y_max) r->y_max = area->y_max;
+		&& clip->x_min <= clip->x_max && clip->y_min <= clip->y_max
+		&& r->x_min <= clip->x_max && r->x_max >= clip->x_min
+		&& r->y_min <= clip->y_max && r->y_max >= clip->y_min);
+	if(r->x_min < clip->x_min) r->x_min = clip->x_min;
+	if(r->x_max > clip->x_max) r->x_max = clip->x_max;
+	if(r->y_min < clip->y_min) r->y_min = clip->y_min;
+	if(r->y_max > clip->y_max) r->y_max = clip->y_max;
 }
 
-static struct Rectangle4i space_rect_fit_in(const struct Layer *const l,
+/** Descritise space co\:oridinates in {area} to bins in {l} fitting in bin
+ mask {mask}. Must not be empty. */
+static struct Rectangle4i descritise_frect(const struct Layer *const l,
 	const struct Rectangle4f *const area,
 	const struct Rectangle4i *const mask) {
 	const float h = l->half_space, o = l->one_each_bin;
@@ -73,11 +79,12 @@ static struct Rectangle4i space_rect_fit_in(const struct Layer *const l,
 		(area->y_max + h) * o
 	};
 	assert(l && area && mask);
-	rect_clip(&fit, mask);
+	clip_touching_irect(&fit, mask);
 	return fit;
 }
 
-static unsigned vec_to_bin(const struct Layer *const l,
+/** Serialise bin vector {i} according to {l}. */
+static unsigned hash_ivec(const struct Layer *const l,
 	const struct Vec2i *const i) {
 	assert(l && i
 		&& i->x >= 0 && i->x < l->full_side_size
@@ -85,46 +92,47 @@ static unsigned vec_to_bin(const struct Layer *const l,
 	return i->y * l->full_side_size + i->x;
 }
 
-static unsigned space_vec_to_bin(const struct Layer *const l,
+/** Serialise space vector {v} according to {l}. */
+static unsigned hash_fvec(const struct Layer *const l,
 	const struct Vec2f *const v) {
 	struct Vec2i i = {
 		(v->x + l->half_space) * l->one_each_bin,
 		(v->y + l->half_space) * l->one_each_bin
 	};
 	assert(l && v);
-	vec_clip(&i, &l->full);
-	return vec_to_bin(l, &i);
+	clip_ivec(&i, &l->full);
+	return hash_ivec(l, &i);
 }
 
 /** @return A {bin} in {[0, side_size^2)}. */
-unsigned LayerOrthoToBin(const struct Layer *const layer,
+unsigned LayerHashOrtho(const struct Layer *const layer,
 	struct Ortho3f *const o) {
 	assert(layer && o);
-	return space_vec_to_bin(layer, (struct Vec2f *)o);
+	return hash_fvec(layer, (struct Vec2f *)o);
 }
 
 /** Used only in debugging.
  @return If true, {vec} will be set from {bin}. */
-struct Vec2f LayerBinToVec(const struct Layer *const layer,
-	const unsigned bin) {
+struct Vec2f LayerHashToVec(const struct Layer *const layer,
+	const unsigned hash) {
 	const struct Vec2f vec = {
-		(bin % layer->full_side_size) / layer->one_each_bin - layer->half_space,
-		(bin / layer->full_side_size) / layer->one_each_bin - layer->half_space
+		(hash % layer->full_side_size) / layer->one_each_bin -layer->half_space,
+		(hash / layer->full_side_size) / layer->one_each_bin -layer->half_space
 	};
-	assert(layer && (int)bin < layer->full_side_size * layer->full_side_size);
+	assert(layer && (int)hash < layer->full_side_size * layer->full_side_size);
 	return vec;
 }
 
 /** Set screen rectangle.
  @return Success. */
 void LayerMask(struct Layer *const layer, struct Rectangle4f *const area) {
-	layer->mask = space_rect_fit_in(layer, area, &layer->full);
+	layer->mask = descritise_frect(layer, area, &layer->full);
 }
 
 /** Set sprite rectangle; clips to the \see{LayerMask}.
  @return Success. */
 void LayerArea(struct Layer *const layer, struct Rectangle4f *const area) {
-	layer->area = space_rect_fit_in(layer, area, &layer->mask);
+	layer->area = descritise_frect(layer, area, &layer->mask);
 }
 
 /** Set random. */
@@ -142,7 +150,8 @@ static void for_each_action(const struct Layer *const layer,
 	assert(layer && rect && action);
 	for(x.y = rect->y_max; x.y >= rect->y_min; x.y--) {
 		for(x.x = rect->x_min; x.x <= rect->x_max; x.x++) {
-			action(vec_to_bin(layer, &x));
+			/* @fixme I hope it optimises {hash_ivec} out; check. */
+			action(hash_ivec(layer, &x));
 		}
 	}
 }
@@ -154,7 +163,7 @@ static void for_each_accept(const struct Layer *const layer,
 	assert(layer && rect && accept && plot);
 	for(x.y = rect->y_max; x.y >= rect->y_min; x.y--) {
 		for(x.x = rect->x_min; x.x <= rect->x_max; x.x++) {
-			accept(vec_to_bin(layer, &x), plot);
+			accept(hash_ivec(layer, &x), plot);
 		}
 	}
 }
@@ -167,31 +176,39 @@ static void for_each_consumer(const struct Layer *const layer,
 	assert(layer && rect && consumer);
 	for(x.y = rect->y_max; x.y >= rect->y_min; x.y--) {
 		for(x.x = rect->x_min; x.x <= rect->x_max; x.x++) {
-			consumer(vec_to_bin(layer, &x), param, c++);
+			consumer(hash_ivec(layer, &x), param, c++);
 		}
 	}
 }
 
-/** For each bin on screen; used for drawing. */
+/** For each bin on screen; used for drawing.
+ @param layer, action: Must be non-null. */
 void LayerForEachMask(struct Layer *const layer, const LayerAction action) {
+	assert(layer && action);
 	for_each_action(layer, &layer->mask, action);
 }
 
-/** For each bin on screen; used for plotting. */
+/** For each bin on screen; used for plotting.
+ @param layer, accept, plot: Must be non-null. */
 void LayerForEachMaskPlot(const struct Layer *const layer,
 	const LayerAcceptPlot accept, struct PlotData *const plot) {
+	assert(layer && accept && plot);
 	for_each_accept(layer, &layer->mask, accept, plot);
 }
 
-/** For each bin crossing the space item; used for collision-detection. */
+/** For each bin crossing the space item; used for collision-detection.
+ @param layer, consumer: Must be non-null. */
 void LayerForEachArea(struct Layer *const layer,
 	const LayerTriConsumer consumer, const size_t param) {
+	assert(layer && consumer);
 	for_each_consumer(layer, &layer->area, consumer, param);
 }
 
-/** For each bin on screen; used for plotting. */
+/** For each bin on screen; used for plotting.
+ @param layer, accept, plot: Must be non-null. */
 void LayerForEachAreaPlot(const struct Layer *const layer,
 	const LayerAcceptPlot accept, struct PlotData *const plot) {
+	assert(layer && accept && plot);
 	for_each_accept(layer, &layer->area, accept, plot);
 }
 
@@ -212,8 +229,8 @@ int LayerIsMask(const struct Layer *const layer, const unsigned bin) {
 	return 0;
 }*/
 
-#define LAYER_SIDE_SIZE (64)
-#define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)
+/*#define LAYER_SIDE_SIZE (64)
+#define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)*/
 
 const char *data_fn = "Layer.data", *gnu_fn = "Layer.gnu",
 	*eps_fn = "Layer.eps";
@@ -227,11 +244,12 @@ struct PlotData {
 
 /** Draws squares for highlighting bins. Called in \see{space_plot}.
  @implements LayerAcceptPlot */
-static void gnu_shade_bins(const unsigned bin, struct PlotData *const plot) {
+static void gnu_shade_bins(const unsigned hash, struct PlotData *const plot) {
 	struct Vec2f marker = { 0.0f, 0.0f };
-	assert(plot && bin < LAYER_SIZE);
-	marker = LayerBinToVec(plot->layer, bin);
-	fprintf(plot->fp, "# bin %u -> %.1f,%.1f\n", bin, marker.x, marker.y);
+	assert(plot && hash < /*LAYER_SIZE*/(unsigned)plot->layer->full_side_size *
+		plot->layer->full_side_size);
+	marker = LayerHashToVec(plot->layer, hash);
+	fprintf(plot->fp, "# bin %u -> %.1f,%.1f\n", hash, marker.x, marker.y);
 	fprintf(plot->fp, "set object %u rect from %f,%f to %f,%f fc rgb \"%s\" "
 		"fs transparent pattern 4 noborder;\n", plot->object++,
 		marker.x, marker.y, marker.x + 256.0f, marker.y + 256.0f, plot->colour);
@@ -284,6 +302,12 @@ int main(void) {
 	LayerMask(&layer, &mask);
 	LayerArea(&layer, &area);
 	/*printf("mask: %s; rect: %s.\n", LayerMaskToString(&layer), LayerRectangleToString(&layer));*/
-	bin_plot(&layer);
-	return EXIT_SUCCESS;
+	if(bin_plot(&layer)) {
+		fprintf(stderr, "Saved data %s, gnuplot script %s, which outputs %s.\n",
+			data_fn, gnu_fn, eps_fn);
+		return EXIT_SUCCESS;
+	} else {
+		perror("Bad");
+		return EXIT_FAILURE;
+	}
 }

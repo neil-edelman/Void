@@ -32,9 +32,11 @@
 
 #define LAYER_SIDE_SIZE (64)
 #define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)
-static const float layer_space = 256.0f;
+#define LAYER_SPACE (256.0f)
 /* Must be the same as in {Lighting.fs}! */
 #define MAX_LIGHTS (64)
+/* Contains calculations for the {bins}. */
+struct Layer layer = LAYER_STATIC_INIT(LAYER_SIDE_SIZE, LAYER_SPACE);
 
 /* This is used for small floating-point values. The value doesn't have any
  significance. */
@@ -262,8 +264,6 @@ static struct Items {
 	 actual {collisions}; these will be built-up and torn down every frame. */
 	struct ActivePool actives;
 	struct CollisionPool collisions;
-	/* Contains calculations for the {bins}. */
-	struct Layer *layer;
 	/* Constantly updating frame time. */
 	float dt_ms;
 	struct InfoPool info; /* Debug. */
@@ -295,7 +295,7 @@ static void cover_to_string(const struct Cover *cover, char (*const a)[12]) {
  @fixme I have a sneaking suspicion that this makes it wobbly because we're
  doing this sequentially. */
 static void sprite_moved(struct Item *const this) {
-	const unsigned bin = LayerGetOrtho(items.layer, &this->x);
+	const unsigned bin = LayerHashOrtho(&layer, &this->x);
 	char a[12];
 	if(bin == this->bin) return;
 	item_to_string(this, &a);
@@ -623,7 +623,6 @@ static void items_reset(void) {
 	items.lights.size = 0;
 	items.player.is_ship = 0;
 	InfoPool_(&items.info);
-	Layer_(&items.layer);
 	CollisionPool_(&items.collisions);
 	ActivePool_(&items.actives);
 	GatePool_(&items.gates);
@@ -632,15 +631,8 @@ static void items_reset(void) {
 	ShipPool_(&items.ships);
 }
 
-void Items_(void) {
+void Items(void) {
 	items_reset();
-	Layer_(&items.layer);
-}
-
-int Items(void) {
-	items_reset();
-	if(!(items.layer = Layer(LAYER_SIDE_SIZE, layer_space))) return 0;
-	return 1;
 }
 
 /** Clear all space and covers, (it should be removed already.) */
@@ -680,10 +672,10 @@ static void item_filler(struct Item *const this,
 	if(x) {
 		ortho3f_assign(&this->x, x);
 	} else {
-		LayerSetRandom(items.layer, &this->x);
+		LayerSetRandom(&layer, &this->x);
 	}
 	ortho3f_init(&this->v);
-	this->bin       = LayerGetOrtho(items.layer, &this->x);
+	this->bin       = LayerHashOrtho(&layer, &this->x);
 	this->dx.x      = this->dx.y = 0.0f;
 	this->box.x_min = this->box.x_max = this->box.y_min = this->box.y_max =0.0f;
 	this->active    = 0;
@@ -839,9 +831,9 @@ static void extrapolate(struct Item *const item) {
 	printf("Item %s is active in bin %u.\n", a, item->bin);
 	/* This is like a hashmap in space, but it is spread out, so it may cover
 	 multiple bins. The {active} into all bins which it covers. */
-	LayerRectangle(items.layer, &item->box);
-	LayerForEachRectangle(items.layer, ActivePoolIndex(&items.actives, active),
-		&put_cover); /* @fixme */
+	LayerArea(&layer, &item->box);
+	LayerForEachArea(&layer, &put_cover,
+		ActivePoolIndex(&items.actives, active));
 }
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */
@@ -908,8 +900,8 @@ void ItemsUpdate(const int dt_ms) {
 	{	
 		/*struct Rectangle4f rect;*/
 		DrawGetScreen(&rect);
-		rectangle4f_expand(&rect, layer_space * 0.5f);
-		LayerMask(items.layer, &rect);
+		rectangle4f_expand(&rect, LAYER_SPACE * 0.5f);
+		LayerMask(&layer, &rect);
 	} {
 		unsigned bin_idx;
 		for(bin_idx = 0; bin_idx < LAYER_SIZE; bin_idx++) {
@@ -925,41 +917,7 @@ void ItemsUpdate(const int dt_ms) {
 	}
 	/* Dynamics; assigns all items on-screen an {active}, puts temp values in
 	 {cover} for collisions, and extrapolates the positions if no force. */
-	LayerForEachMask(items.layer, &extrapolate_bin);
-	{
-		/* @fixme It's not consuming {cover}, even though it clearly does.
-		 It appears to be always when the player switches bins. It is a bin
-		 number not in the mask mistakenly holding an item that is. */
-		unsigned bin_idx;
-		for(bin_idx = 0; bin_idx < LAYER_SIZE; bin_idx++) {
-			struct Bin *bin = &items.bins[bin_idx];
-			struct Cover *cover = 0;
-			/* Tautology. */
-			if(!CoverPoolSize(&bin->covers)
-				|| LayerIsMask(items.layer, bin_idx)) continue;
-			printf("escaped bin %u: items %s, covers %s; layer mask %s.\n", bin_idx, ItemListToString(&bin->items),
-				CoverPoolToString(&bin->covers),
-				LayerMaskToString(items.layer));
-			while((cover = CoverPoolNext(&bin->covers, cover))) {
-				char a[12];
-				struct Active *act;
-				cover_to_string(cover, &a);
-				printf("enum: %s.\n", a);
-				if((act = ActivePoolGet(&items.actives, cover->active_index))) {
-					struct Item *const item = act->item;
-					if(!item) {
-						printf("(item is deleted.)\n");
-					} else {
-						item_to_string(item, &a);
-						printf("(item is %s at bin %d which has items %s.)\n", a, item->bin, ItemListToString(&items.bins[item->bin].items));
-					}
-				} else {
-					printf("(item is a range error?)\n");
-				}
-			}
-			assert(0);
-		}
-	}
+	LayerForEachMask(&layer, &extrapolate_bin);
 	/* Debug. */
 	if(items.plot) {
 		if(items.plot & PLOT_SPACE) space_plot();
@@ -968,7 +926,7 @@ void ItemsUpdate(const int dt_ms) {
 	/* Collision has to be called after {extrapolate}; it consumes {cover}.
 	 (@fixme: really? 3 passes?)
 	 (@fixme: we already have a {proxy}, no need to complicate things!) */
-	LayerForEachMask(items.layer, &collide_bin);
+	LayerForEachMask(&layer, &collide_bin);
 	/* Clear out the temporary {actives} now that cover is consumed. */
 	{
 		struct Active *active;
@@ -978,7 +936,7 @@ void ItemsUpdate(const int dt_ms) {
 	} /* Still crashing! */
 	/*ProxyPoolClear(&items.proxies);*/
 	/* Time-step. */
-	LayerForEachMask(items.layer, &timestep_bin);
+	LayerForEachMask(&layer, &timestep_bin);
 	/* Collisions are consumed in {timestep_bin}, but not erased; erase them. */
 	CollisionPoolClear(&items.collisions);
 	assert(ActivePoolSize(&items.actives) == 0);
@@ -1006,7 +964,7 @@ static void draw_bin(const unsigned idx) {
 /** Must call \see{ItemUpdate}, because it sets {sprites.layer}. Use when the
  Lambert GPU shader is loaded. */
 void ItemsDraw(void) {
-	LayerForEachMask(items.layer, &draw_bin);
+	LayerForEachMask(&layer, &draw_bin);
 }
 
 /* Debug info. */

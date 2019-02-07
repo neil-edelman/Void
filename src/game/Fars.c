@@ -21,7 +21,8 @@
 #define LAYER_FORESHORTENING_F 0.2f
 #define LAYER_SIDE_SIZE (3)
 #define LAYER_SIZE (LAYER_SIDE_SIZE * LAYER_SIDE_SIZE)
-static const float layer_space = 1024.0f / LAYER_FORESHORTENING_F;
+#define LAYER_SPACE (1024.0f / LAYER_FORESHORTENING_F)
+static struct Layer layer = LAYER_STATIC_INIT(LAYER_SIDE_SIZE, LAYER_SPACE);
 
 /**************** Declare types. **************/
 
@@ -62,7 +63,6 @@ static void planetoid_migrate(struct Planetoid *const this,
 static struct Fars {
 	struct FarList bins[LAYER_SIZE];
 	struct PlanetoidPool planetoids;
-	struct Layer *layer;
 } fars; /* Not in a valid state until \see{FarsReset}. */
 
 
@@ -113,9 +113,7 @@ void Fars_(void) {
 int Fars(void) {
 	unsigned i;
 	for(i = 0; i < LAYER_SIZE; i++) FarListClear(fars.bins + i);
-	fars.layer = 0;
 	PlanetoidPool(&fars.planetoids);
-	if(!(fars.layer = Layer(LAYER_SIDE_SIZE, layer_space))) return 0;
 	return 1;
 }
 
@@ -140,7 +138,7 @@ static void far_filler(struct Far *const this,
 	this->x.x = class->x;
 	this->x.y = class->y;
 	this->x.theta = 0.0f;
-	this->bin = LayerGetOrtho(fars.layer, &this->x);
+	this->bin = LayerHashOrtho(&layer, &this->x);
 	FarListPush(fars.bins + this->bin, this);
 }
 
@@ -172,8 +170,8 @@ static void draw_bin(const unsigned idx) {
 void FarsDraw(void) {
 	struct Rectangle4f rect;
 	DrawGetScreen(&rect);
-	rectangle4f_expand(&rect, layer_space * 0.5f); /* fixme: maybe? */
+	rectangle4f_expand(&rect, LAYER_SPACE * 0.5f); /* fixme: maybe? */
 	rectangle4f_scale(&rect, LAYER_FORESHORTENING_F);
-	LayerMask(fars.layer, &rect);
-	LayerForEachMask(fars.layer, &draw_bin);
+	LayerMask(&layer, &rect);
+	LayerForEachMask(&layer, &draw_bin);
 }

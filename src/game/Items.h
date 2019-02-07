@@ -19,8 +19,7 @@ typedef void (*LambertOutput)(const struct Ortho3f *const x,
 	const struct AutoImage *const image,
 	const struct AutoImage *const normals);
 
-void Items_(void);
-int Items(void);
+void Items(void);
 struct Ship *Ship(const struct AutoShipClass *const class,
 	const struct Ortho3f *const x, const enum AiType ai);
 struct Debris *Debris(const struct AutoDebris *const class,

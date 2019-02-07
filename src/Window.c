@@ -114,7 +114,7 @@ static int Window(const char *title, int argc, char **argv) {
 /** This is legacy code from 1998 when there was no way to get out of the main
  loop. */
 static void atexit_hack(void) {
-	TimerPause(), Game_(), Draw_(), Fars_(), Items_(), EventsReset();
+	TimerPause(), Game_(), Draw_(), Fars_(), EventsReset();
 }
 
 /** Entry point.
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
 		if(!Glew()) { e = "glew"; break; }
 		Key();
 		if(!Fars()) { e = "fars"; break; }
-		if(!Items()) {e = "items";break; }
+		Items();
 		if(!Draw()) { e = "draw"; break; }
 		if(!Game()) { e = "game"; break; }
 		/* <-- glut */

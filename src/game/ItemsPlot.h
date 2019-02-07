@@ -40,7 +40,7 @@ static void item_to_bin(struct Cover *const cover, void *const plot_void) {
 	/* @fixme Uhmmmmm, how? */
 	if(!(s = cover_to_item(cover))) return;
 	/*if(!(s = cover->proxy_index->item)) return;*/
-	LayerGetBinMarker(items.layer, plot->bin, &to);
+	to = LayerHashToVec(&layer, plot->bin);
 	to.x += 50.0f, to.y += 50.0f;
 	fprintf(plot->fp, "set arrow from %f,%f to %f,%f lw 1 lc rgb \"%s\" "
 		"front;\n", s->x.x, s->x.y, to.x, to.y,
@@ -55,9 +55,8 @@ static void item_to_bin_bin(const unsigned idx, struct PlotData *const plot) {
 /** Draws squares for highlighting bins. Called in \see{space_plot}.
  @implements LayerAcceptPlot */
 static void gnu_shade_bins(const unsigned bin, struct PlotData *const plot) {
-	struct Vec2f marker = { 0.0f, 0.0f };
+	struct Vec2f marker = LayerHashToVec(&layer, bin);
 	assert(plot && bin < LAYER_SIZE);
-	LayerGetBinMarker(items.layer, bin, &marker);
 	fprintf(plot->fp, "# bin %u -> %.1f,%.1f\n", bin, marker.x, marker.y);
 	fprintf(plot->fp, "set object %u rect from %f,%f to %f,%f fc rgb \"%s\" "
 		"fs transparent pattern 4 noborder;\n", plot->object++,
@@ -97,7 +96,7 @@ static void space_plot(void) {
 		/* draw bins as squares behind */
 		fprintf(gnu, "set style fill transparent solid 0.3 noborder;\n");
 		plot.fp = gnu, plot.colour = "#ADD8E6", plot.object = 1;
-		LayerForEachMaskPlot(items.layer, &gnu_shade_bins, &plot);
+		LayerForEachMaskPlot(&layer, &gnu_shade_bins, &plot);
 		/*col.fp = gnu, col.colour = "#D3D3D3";
 		BinPoolBiForEach(update_bins, &gnu_shade_bins, &col);*/
 		/* draw arrows from each of the items to their bins */
@@ -105,7 +104,7 @@ static void space_plot(void) {
 		for(i = 0; i < LAYER_SIZE; i++)
 			ItemListBiForEach(&items.bins[i].items,
 			&print_item_velocity, &plot);
-		LayerForEachMaskPlot(items.layer, &item_to_bin_bin, &plot);
+		LayerForEachMaskPlot(&layer, &item_to_bin_bin, &plot);
 		/* draw the items */
 		fprintf(gnu, "plot \"%s\" using 5:6:7 with circles \\\n"
 			"linecolor rgb(\"#00FF00\") fillstyle transparent "

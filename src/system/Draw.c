@@ -388,6 +388,7 @@ static int texture(struct AutoImage *image) {
 	return tex ? 1 : 0;
 }
 
+#if 0
 /** New texture with {str}.
  \url{http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/},
  \url{http://www.songho.ca/opengl/gl_fbo.html#example}.
@@ -420,6 +421,7 @@ static int text_render(const char *const str) {
 
 	return texture_name;
 }
+#endif
 
 /* Creates a hardcoded lighting texture with the Red the radius and Green the
  angle.

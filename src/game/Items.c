@@ -299,7 +299,6 @@ static void sprite_moved(struct Item *const this) {
 	char a[12];
 	if(bin == this->bin) return;
 	item_to_string(this, &a);
-	printf("Item %s moving bin %u -> %u.\n", a, this->bin, bin);
 	ItemListRemove(this);
 	this->bin = bin;
 	ItemListPush(&items.bins[bin].items, this);
@@ -828,7 +827,6 @@ static void extrapolate(struct Item *const item) {
 	active->item = item;
 	item->active = active;
 	item_to_string(item, &a);
-	printf("Item %s is active in bin %u.\n", a, item->bin);
 	/* This is like a hashmap in space, but it is spread out, so it may cover
 	 multiple bins. The {active} into all bins which it covers. */
 	LayerArea(&layer, &item->box);
@@ -838,7 +836,6 @@ static void extrapolate(struct Item *const item) {
 /** Called in \see{ItemsUpdate}.
  @implements <Bin>Action */
 static void extrapolate_bin(const unsigned idx) {
-	printf("extrapolate: %u\n", idx);
 	ItemListForEach(&items.bins[idx].items, &extrapolate);
 }
 
@@ -940,7 +937,6 @@ void ItemsUpdate(const int dt_ms) {
 	/* Collisions are consumed in {timestep_bin}, but not erased; erase them. */
 	CollisionPoolClear(&items.collisions);
 	assert(ActivePoolSize(&items.actives) == 0);
-	printf("__ItemsUpdate__\n");
 	{
 		unsigned bin_idx;
 		for(bin_idx = 0; bin_idx < LAYER_SIZE; bin_idx++) {

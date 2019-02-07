@@ -31,6 +31,7 @@ static void print_item_velocity(struct Item *item, void *const void_out) {
 		item->x.x + item->v.x * items.dt_ms * 256.0f,
 		item->x.y + item->v.y * items.dt_ms * 256.0f);
 }
+#if 0
 /* @implements <Cover>BiAction */
 static void item_to_bin(struct Cover *const cover, void *const plot_void) {
 	struct PlotData *const plot = plot_void;
@@ -46,6 +47,7 @@ static void item_to_bin(struct Cover *const cover, void *const plot_void) {
 		"front;\n", s->x.x, s->x.y, to.x, to.y,
 		cover->is_corner ? "red" : "pink");
 }
+#endif
 /* @implements LayerAcceptPlot */
 static void item_to_bin_bin(const unsigned idx, struct PlotData *const plot) {
 	assert(plot);

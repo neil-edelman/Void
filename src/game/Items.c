@@ -473,7 +473,8 @@ static void gate_on_collision(const struct Gate *const this) {
 	char a[12];
 	assert(this);
 	item_to_string(&this->base.data, &a);
-	printf("gate_on_collision(%s) strange because gates cannot collide.\n", a);
+	fprintf(stderr,
+		"gate_on_collision(%s): gates rarely (can not) collide?\n", a);
 }
 
 

@@ -225,7 +225,7 @@ static void ship_gate(struct Cover *cs, struct Cover *cg, const float t) {
 	diff.y = s->x.y - g->x.y;
 	if(diff.x * gate_norm.x + diff.y * gate_norm.y < 0) return;
 	/* Behind the horizon at {t = 1}. It's very difficult in our system to do
-	 collisions with less than a frame beproxy the event horizon because we are
+	 collisions with less than a frame because the event horizon because we are
 	 doing it now and we are not finished, so just guess: where the item
 	 would be if it didn't collide with anything on this frame. */
 	diff.x += s->v.x * items.dt_ms;
